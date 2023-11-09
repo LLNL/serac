@@ -154,7 +154,7 @@ public:
         "EquationSolver argument is nullptr in HeatTransfer constructor. It is possible that it was previously moved.");
 
     states_.push_back(&temperature_);
-    //states_.push_back(&temperature_rate_);
+    // states_.push_back(&temperature_rate_);
     adjoints_.push_back(&adjoint_temperature_);
 
     // Create a pack of the primal field and parameter finite element spaces
@@ -788,7 +788,7 @@ public:
     StateManager::loadCheckpointedStates(cycle_, {temperature_});
     StateManager::loadCheckpointedStates(cycle_ - 1, {temperature_n_minus_1});
 
-    double dt   = loadCheckpointedTimestep(cycle_ - 1);
+    double dt = loadCheckpointedTimestep(cycle_ - 1);
 
     temperature_rate_ = temperature_;
     temperature_rate_.Add(-1.0, temperature_n_minus_1);

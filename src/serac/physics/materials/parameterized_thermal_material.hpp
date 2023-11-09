@@ -80,7 +80,6 @@ private:
   double conductivity_offset_;
 };
 
-
 /// Nonlinear isotropic thermal conduction material model
 struct ParameterizedIsotropicConductorWithLinearConductivityVsTemperature {
   /**
@@ -92,7 +91,8 @@ struct ParameterizedIsotropicConductorWithLinearConductivityVsTemperature {
    * added to the parameter value to get the total conductivity.
    * @param d_conductivity_d_temperature Slope for the thermal conductivity as a function of temperature
    */
-  ParameterizedIsotropicConductorWithLinearConductivityVsTemperature(double density = 1.0, double specific_heat_capacity = 1.0,
+  ParameterizedIsotropicConductorWithLinearConductivityVsTemperature(double density                      = 1.0,
+                                                                     double specific_heat_capacity       = 1.0,
                                                                      double conductivity_offset          = 1.0,
                                                                      double d_conductivity_d_temperature = 0.0)
       : density_(density),
@@ -123,7 +123,8 @@ struct ParameterizedIsotropicConductorWithLinearConductivityVsTemperature {
   SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& temperature, const T3& temperature_gradient,
                                     const T4& parameter) const
   {
-    const auto currentConductivity = conductivity_offset_ + get<0>(parameter) + d_conductivity_d_temperature_ * temperature;
+    const auto currentConductivity =
+        conductivity_offset_ + get<0>(parameter) + d_conductivity_d_temperature_ * temperature;
     SLIC_ERROR_ROOT_IF(
         serac::get_value(currentConductivity) < 0.0,
         "Conductivity in the IsotropicConductorWithLinearConductivityVsTemperature model has gone negative.");
@@ -150,7 +151,6 @@ private:
   /// Slope of nonlinear thermal conductivity dependence on temperature
   double d_conductivity_d_temperature_;
 };
-
 
 /// Parameterized thermal source model
 struct ParameterizedSource {
@@ -182,7 +182,6 @@ struct ParameterizedSource {
   static constexpr int numParameters() { return 1; }
 };
 
-
 /// Constant thermal flux boundary model
 struct ParameterizedFlux {
   /// The constant flux applied to the boundary
@@ -212,6 +211,5 @@ struct ParameterizedFlux {
    */
   static constexpr int numParameters() { return 1; }
 };
-
 
 }  // namespace serac::heat_transfer
