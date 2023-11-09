@@ -119,10 +119,9 @@ public:
     };
     // This if-block below breaks up building the Jacobian operator depending if there is Lagrange multiplier
     // enforcement or not
-
-    // The quasistatic operator has blocks if any of the contact interactions are enforced using Lagrange multipliers.
-    // Jacobian operator is an mfem::BlockOperator
     if (contact_.haveLagrangeMultipliers()) {
+      // The quasistatic operator has blocks if any of the contact interactions are enforced using Lagrange multipliers.
+      // Jacobian operator is an mfem::BlockOperator
       J_offsets_ = mfem::Array<int>({0, displacement_.Size(), displacement_.Size() + contact_.numPressureDofs()});
       return std::make_unique<mfem_ext::StdFunctionOperator>(
           displacement_.space().TrueVSize() + contact_.numPressureDofs(), residual_fn,
@@ -160,9 +159,9 @@ public:
             J_operator_ = J_constraint_.get();
             return *J_constraint_;
           });
-    // If all of the contact interactions are penalty, then there will be no blocks.  Jacobian operator is a single
-    // mfem::HypreParMatrix
     } else {
+      // If all of the contact interactions are penalty, then there will be no blocks.  Jacobian operator is a single
+      // mfem::HypreParMatrix
       return std::make_unique<mfem_ext::StdFunctionOperator>(
           displacement_.space().TrueVSize(), residual_fn, [this](const mfem::Vector& u) -> mfem::Operator& {
             auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, shape_displacement_,
