@@ -393,8 +393,6 @@ void ContactData::setPressures([[maybe_unused]] const mfem::Vector& true_pressur
 
 void ContactData::setDisplacements([[maybe_unused]] const mfem::Vector& true_displacement) {}
 
-mfem::Array<int> ContactData::pressureDofOffsets() const { return mfem::Array<int>(); }
-
 #endif
 
 }  // namespace serac

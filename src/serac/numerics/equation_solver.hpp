@@ -209,7 +209,6 @@ public:
   {
     strumpack_solver_.SetKrylovSolver(strumpack::KrylovSolver::DIRECT);
     strumpack_solver_.SetReorderingStrategy(strumpack::ReorderingStrategy::METIS);
-    strumpack_solver_.DisableMatching();
 
     if (print_level == 1) {
       strumpack_solver_.SetPrintFactorStatistics(true);

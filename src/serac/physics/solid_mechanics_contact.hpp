@@ -204,7 +204,7 @@ public:
    */
   void completeSetup() override
   {
-    double dt    = 0.0;
+    double dt = 0.0;
     contact_.update(cycle_, time_, dt);
 
     SolidMechanicsBase::completeSetup();
@@ -213,102 +213,27 @@ public:
   /// @brief Solve the Quasi-static Newton system
   void quasiStaticSolve(double dt) override
   {
+    // we can use the base class method if we don't have Lagrange multipliers
+    if (!contact_.haveLagrangeMultipliers()) {
+      SolidMechanicsBase::quasiStaticSolve(dt);
+      return;
+    }
+
     time_ += dt;
 
-    // the ~85 lines of code below are essentially equivalent to the 1-liner
+    // this method is essentially equivalent to the 1-liner
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
-    // or, with Lagrange multiplier contact enforcement
-    // [u; p] += dot(inv(block_J), dot(block_J_elim[:, dofs], (U(t + dt) - u)[dofs]))
-    // where block_J = | J  B^T |
-    //                 | B   0  |
+    warmStartDisplacement();
 
-    // Update the linearized Jacobian matrix
     // In general, the solution vector is a stacked (block) vector:
     //  | displacement     |
     //  | contact pressure |
     // Contact pressure is only active when solving a contact problem with Lagrange multipliers.
-    // The gradient is not a function of the Lagrange multipliers, so they do not need to be copied to the solution.
-    // However, the solution vector must be sized to the Operator, which includes the Lagrange multipliers.
     mfem::Vector augmented_solution(displacement_.Size() + contact_.numPressureDofs());
-    augmented_solution = 0.0;
     augmented_solution.SetVector(displacement_, 0);
-    residual_with_bcs_->GetGradient(augmented_solution);
+    augmented_solution.SetVector(contact_.mergedPressures(), displacement_.Size());
 
-    du_ = 0.0;
-    for (auto& bc : bcs_.essentials()) {
-      bc.setDofs(du_, time_);
-    }
-
-    auto& constrained_dofs = bcs_.allEssentialTrueDofs();
-    for (int i = 0; i < constrained_dofs.Size(); i++) {
-      int j = constrained_dofs[i];
-      du_[j] -= displacement_(j);
-    }
-
-    dr_ = 0.0;
-    mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, dr_);
-
-    // Update the initial guess for changes in the parameters if this is not the first solve
-    for (std::size_t parameter_index = 0; parameter_index < parameters_.size(); ++parameter_index) {
-      // Compute the change in parameters parameter_diff = parameter_new - parameter_old
-      serac::FiniteElementState parameter_difference = *parameters_[parameter_index].state;
-      parameter_difference -= *parameters_[parameter_index].previous_state;
-
-      // Compute a linearized estimate of the residual forces due to this change in parameter
-      auto drdparam        = serac::get<DERIVATIVE>(d_residual_d_[parameter_index]());
-      auto residual_update = drdparam(parameter_difference);
-
-      // Flip the sign to get the RHS of the Newton update system
-      // J^-1 du = - residual
-      residual_update *= -1.0;
-
-      dr_ += residual_update;
-
-      // Save the current parameter value for the next timestep
-      *parameters_[parameter_index].previous_state = *parameters_[parameter_index].state;
-    }
-
-    for (int i = 0; i < constrained_dofs.Size(); i++) {
-      int j  = constrained_dofs[i];
-      dr_[j] = du_[j];
-    }
-
-    auto& lin_solver = nonlin_solver_->linearSolver();
-
-    // J_operator_ points to a) a HypreParMatrix if no contact Lagrange multipliers are present or
-    //                       b) a BlockOperator if contact Lagrange multipliers are present
-    lin_solver.SetOperator(*J_operator_);
-
-    // solve augmented_solution = (J_operator)^-1 * augmented_residual where
-    // augmented_solution = du_ if no Lagrange multiplier contact, [du_; 0] otherwise
-    // augmented_residual = dr_ if no Lagrange multiplier contact, [dr_; dgap = B*du_] otherwise
-    augmented_solution = 0.0;
-    augmented_solution.SetVector(du_, 0);
-
-    mfem::Vector augmented_residual(augmented_solution.Size());
-    augmented_residual = 0.0;
-    augmented_residual.SetVector(dr_, 0);
-    if (contact_.haveLagrangeMultipliers()) {
-      // calculate dgap = B*du_
-      mfem::Vector dgap(augmented_residual, displacement_.Size(), contact_.numPressureDofs());
-      J_21_->Mult(du_, dgap);
-    }
-    lin_solver.Mult(augmented_residual, augmented_solution);
-
-    // update du_, displacement_, and pressure based on linearized kinematics
-    du_.Set(1.0, mfem::Vector(augmented_solution, 0, displacement_.Size()));
-    displacement_ += du_;
-    // call update to update gaps for new displacements
-    contact_.update(cycle_, time_, dt);
-    // update pressures based on pressures in augmented_solution (for Lagrange multiplier) and updated gaps (for
-    // penalty)
-    contact_.setPressures(mfem::Vector(augmented_solution, displacement_.Size(), contact_.numPressureDofs()));
-
-    // solve the non-linear system resid = 0 and pressure * gap = 0 for Lagrange multiplier contact
-    augmented_solution.SetVector(displacement_, 0);
-    if (contact_.haveLagrangeMultipliers()) {
-      augmented_solution.SetVector(contact_.mergedPressures(), displacement_.Size());
-    }
+    // solve the non-linear system resid = 0 and pressure * gap = 0
     nonlin_solver_->solve(augmented_solution);
     displacement_.Set(1.0, mfem::Vector(augmented_solution, 0, displacement_.Size()));
     contact_.setPressures(mfem::Vector(augmented_solution, displacement_.Size(), contact_.numPressureDofs()));
@@ -332,6 +257,7 @@ protected:
   using SolidMechanicsBase::nonlin_solver_;
   using SolidMechanicsBase::residual_;
   using SolidMechanicsBase::residual_with_bcs_;
+  using SolidMechanicsBase::warmStartDisplacement;
   using SolidMechanicsBase::zero_;
 
   /// Pointer to the Jacobian operator (J_ if no Lagrange multiplier contact, J_constraint_ otherwise)

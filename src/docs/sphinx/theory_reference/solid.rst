@@ -492,7 +492,7 @@ which does not affect the smoothness of the solution since :math:`\mathbf{n}(\ma
 {C^0}^\text{dim}(\Gamma_C^1)` is nodally interpolated.
 
 The expression for contact force is simplified through the assumption that terms that contain
-:math:`\tilde{g}(\bar{\mathbf{x}})` only contribute minimally and are ignored. Note that neglecting these terms affects
+:math:`\tilde{g}(\bar{\mathbf{x}})` only contribute minimally and are ignored. Note that neglecting these terms affect
 angular momentum conservation and energy conservation since the formulation is not variationally consistent. After
 introducing finite element approximations for :math:`\mathbf{x}_1` and :math:`\mathbf{x}_2`, the nodal contact forces
 are
