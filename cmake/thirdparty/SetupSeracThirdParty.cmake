@@ -439,6 +439,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         
         message(STATUS "Tribol support is " ${TRIBOL_FOUND})
     else()
+        set(ENABLE_FORTRAN OFF CACHE BOOL "" FORCE)
         # Otherwise we use the submodule
         message(STATUS "Using Tribol submodule")
         set(BUILD_REDECOMP ${ENABLE_MPI} CACHE BOOL "")
@@ -479,6 +480,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         blt_list_append(TO tribol_exported_targets ELEMENTS redecomp IF BUILD_REDECOMP)
         
         set(TRIBOL_FOUND TRUE CACHE BOOL "" FORCE)
+        set(ENABLE_FORTRAN ON CACHE BOOL "" FORCE)
     endif()
 
     #------------------------------------------------------------------------------
