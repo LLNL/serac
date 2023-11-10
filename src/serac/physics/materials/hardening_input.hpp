@@ -18,8 +18,7 @@
 
 namespace serac {
 
-using var_hardening_t =
-    std::variant<solid_mechanics::PowerLawHardening, solid_mechanics::VoceHardening>;
+using var_hardening_t = std::variant<solid_mechanics::PowerLawHardening, solid_mechanics::VoceHardening>;
 
 struct HardeningInputOptions {
   /**

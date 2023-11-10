@@ -225,10 +225,10 @@ public:
    * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param[in] time The simulation time to initialize the physics module to
    */
-  HeatTransfer(const HeatTransferInputOptions& input_options, const std::string& physics_name, const std::string& mesh_tag,
-               int cycle = 0, double time = 0.0)
-      : HeatTransfer(input_options.nonlin_solver_options, input_options.lin_solver_options, input_options.timestepping_options,
-                     physics_name, mesh_tag, {}, cycle, time)
+  HeatTransfer(const HeatTransferInputOptions& input_options, const std::string& physics_name,
+               const std::string& mesh_tag, int cycle = 0, double time = 0.0)
+      : HeatTransfer(input_options.nonlin_solver_options, input_options.lin_solver_options,
+                     input_options.timestepping_options, physics_name, mesh_tag, {}, cycle, time)
   {
     // This is the only other options stored in the input file that we can use
     // in the initialization stage

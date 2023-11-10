@@ -15,7 +15,7 @@ void SolidMaterialInputOptions::defineInputFileSchema(axom::inlet::Container& co
   container.addDouble("density", "Initial mass density");
 
   // Solid mechanics (neo-hookean, linear isotropic)
-  container.addDouble("mu", "The shear modulus"); // TODO should we have default values? if so, we cannot verify properly
+  container.addDouble("mu", "The shear modulus");
   container.addDouble("K", "The bulk modulus");
 
   // Solid mechanics (j2, j2nonlinear)
@@ -29,41 +29,27 @@ void SolidMaterialInputOptions::defineInputFileSchema(axom::inlet::Container& co
 
   // Verify
   container.registerVerifier([](const axom::inlet::Container& c) -> bool {
-    axom::inlet::InletType double_type = axom::inlet::InletType::Double;
-    axom::inlet::InletType obj_type = axom::inlet::InletType::Object;
-    bool density_present   = c.contains("density") && (c["density"].type() == double_type);
-    bool mu_present        = c.contains("mu") && (c["mu"].type() == double_type);
-    bool K_present         = c.contains("K") && (c["K"].type() == double_type);
-    bool E_present         = c.contains("E") && (c["E"].type() == double_type);
-    bool nu_present        = c.contains("nu") && (c["nu"].type() == double_type);
-    bool Hi_present        = c.contains("Hi") && (c["Hi"].type() == double_type);
-    bool sigma_y_present   = c.contains("sigma_y") && (c["sigma_y"].type() == double_type);
-    bool hardening_present = c.contains("hardening") && (c["hardening"].type() == obj_type);
+    axom::inlet::InletType double_type       = axom::inlet::InletType::Double;
+    axom::inlet::InletType obj_type          = axom::inlet::InletType::Object;
+    bool                   density_present   = c.contains("density") && (c["density"].type() == double_type);
+    bool                   mu_present        = c.contains("mu") && (c["mu"].type() == double_type);
+    bool                   K_present         = c.contains("K") && (c["K"].type() == double_type);
+    bool                   E_present         = c.contains("E") && (c["E"].type() == double_type);
+    bool                   nu_present        = c.contains("nu") && (c["nu"].type() == double_type);
+    bool                   Hi_present        = c.contains("Hi") && (c["Hi"].type() == double_type);
+    bool                   sigma_y_present   = c.contains("sigma_y") && (c["sigma_y"].type() == double_type);
+    bool                   hardening_present = c.contains("hardening") && (c["hardening"].type() == obj_type);
 
     std::string model = c["model"];
     if (model == "NeoHookean" || model == "LinearIsotropic") {
       return density_present && mu_present && K_present && !E_present && !nu_present && !Hi_present &&
-        !sigma_y_present && !hardening_present;
+             !sigma_y_present && !hardening_present;
     } else if (model == "J2") {
-      return density_present && !mu_present && !K_present && E_present && nu_present && Hi_present &&
-        sigma_y_present && !hardening_present;
+      return density_present && !mu_present && !K_present && E_present && nu_present && Hi_present && sigma_y_present &&
+             !hardening_present;
     } else if (model == "J2Nonlinear") {
-      if (density_present && !mu_present && !K_present && E_present && nu_present && !Hi_present &&
-          !sigma_y_present && hardening_present) {
-        bool hardening_sigma_y_present         = c.contains("hardening/sigma_y") && (c["hardening/sigma_y"].type() == double_type);
-        bool hardening_n_present               = c.contains("hardening/n") && (c["hardening/n"].type() == double_type);
-        bool hardening_eps0_present            = c.contains("hardening/eps0") && (c["hardening/eps0"].type() == double_type);
-        bool hardening_sigma_sat_present       = c.contains("hardening/sigma_sat") && (c["hardening/sigma_sat"].type() == double_type);
-        bool hardening_strain_constant_present = c.contains("hardening/strain_constant") && (c["hardening/strain_constant"].type() == double_type);
-        std::string law = c["hardening/law"];
-        if (law == "PowerLawHardening") {
-          return hardening_sigma_y_present && hardening_n_present && hardening_eps0_present &&
-            !hardening_sigma_sat_present && !hardening_strain_constant_present;
-        } else if (law == "VoceHardening") {
-          return hardening_sigma_y_present && !hardening_n_present && !hardening_eps0_present &&
-            hardening_sigma_sat_present && hardening_strain_constant_present;
-        }
-      }
+      return density_present && !mu_present && !K_present && E_present && nu_present && !Hi_present &&
+             !sigma_y_present && hardening_present;
     }
 
     return false;
@@ -82,30 +68,27 @@ serac::var_solid_material_t FromInlet<serac::var_solid_material_t>::operator()(c
   } else if (model == "LinearIsotropic") {
     result = serac::solid_mechanics::LinearIsotropic{.density = base["density"], .K = base["K"], .G = base["mu"]};
   } else if (model == "J2") {
-    result = serac::solid_mechanics::J2{.E = base["E"],
-                                        .nu = base["nu"],
-                                        .Hi = base["Hi"],
-                                        .Hk = base["Hk"],
+    result = serac::solid_mechanics::J2{.E       = base["E"],
+                                        .nu      = base["nu"],
+                                        .Hi      = base["Hi"],
+                                        .Hk      = base["Hk"],
                                         .sigma_y = base["sigma_y"],
                                         .density = base["density"]};
   } else if (model == "J2Nonlinear") {
     serac::var_hardening_t hardening = base["hardening"].get<serac::var_hardening_t>();
 
-    if (std::holds_alternative<serac::solid_mechanics::PowerLawHardening>(hardening))
-    {
+    if (std::holds_alternative<serac::solid_mechanics::PowerLawHardening>(hardening)) {
       result = serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>{
-        .E = base["E"],
-        .nu = base["nu"],
-        .hardening = std::get<serac::solid_mechanics::PowerLawHardening>(hardening),
-        .density = base["density"]};
-    }
-    else if (std::holds_alternative<serac::solid_mechanics::VoceHardening>(hardening))
-    {
+          .E         = base["E"],
+          .nu        = base["nu"],
+          .hardening = std::get<serac::solid_mechanics::PowerLawHardening>(hardening),
+          .density   = base["density"]};
+    } else if (std::holds_alternative<serac::solid_mechanics::VoceHardening>(hardening)) {
       result = serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::VoceHardening>{
-        .E = base["E"],
-        .nu = base["nu"],
-        .hardening = std::get<serac::solid_mechanics::VoceHardening>(hardening),
-        .density = base["density"]};
+          .E         = base["E"],
+          .nu        = base["nu"],
+          .hardening = std::get<serac::solid_mechanics::VoceHardening>(hardening),
+          .density   = base["density"]};
     }
   }
 

@@ -288,9 +288,11 @@ public:
         setMaterial(std::get<serac::solid_mechanics::LinearIsotropic>(mat));
       } else if (std::holds_alternative<serac::solid_mechanics::J2>(mat)) {
         // setMaterial(std::get<serac::solid_mechanics::J2>(mat));
-      } else if (std::holds_alternative<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>>(mat)) {
+      } else if (std::holds_alternative<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>>(
+                     mat)) {
         // setMaterial(std::get<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>>(mat));
-      } else if (std::holds_alternative<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::VoceHardening>>(mat)) {
+      } else if (std::holds_alternative<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::VoceHardening>>(
+                     mat)) {
         // setMaterial(std::get<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::VoceHardening>>(mat));
       } else {
         SLIC_ERROR("Invalid material type.");
