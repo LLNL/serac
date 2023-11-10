@@ -21,7 +21,8 @@
 
 namespace serac {
 
-class ContactTest : public testing::TestWithParam<std::tuple<ContactEnforcement, ContactType, std::string>> {};
+class ContactTest : public testing::TestWithParam<std::tuple<ContactEnforcement, ContactType, std::string>> {
+};
 
 TEST_P(ContactTest, beam)
 {
@@ -42,9 +43,8 @@ TEST_P(ContactTest, beam)
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 1, 0);
   StateManager::setMesh(std::move(mesh), "beam_mesh");
 
-#ifdef MFEM_USE_STRUMPACK
   LinearSolverOptions linear_options{.linear_solver = LinearSolver::Strumpack, .print_level = 1};
-#else
+#ifndef MFEM_USE_STRUMPACK
   SLIC_INFO_ROOT("Contact requires MFEM built with strumpack.");
   return;
 #endif
