@@ -207,7 +207,7 @@ static Domain domain_of_elems(const mfem::Mesh&                                 
   int tet_id  = 0;
   int hex_id  = 0;
 
-  // faces that satisfy the predicate are added to the domain
+  // elements that satisfy the predicate are added to the domain
   int num_elems    = mesh.GetNE();
   int num_vertices = mesh.GetNV();
   for (int i = 0; i < num_elems; i++) {
