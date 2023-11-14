@@ -18,19 +18,22 @@
 
 namespace serac {
 
-BasePhysics::BasePhysics(std::string physics_name, std::string mesh_tag)
+BasePhysics::BasePhysics(std::string physics_name, std::string mesh_tag, int cycle, double time)
     : name_(physics_name),
       mesh_tag_(mesh_tag),
       mesh_(StateManager::mesh(mesh_tag_)),
       comm_(mesh_.GetComm()),
       shape_displacement_(StateManager::shapeDisplacement(mesh_tag_)),
-      time_(StateManager::time(mesh_tag_)),
-      cycle_(StateManager::cycle(mesh_tag_)),
-      ode_time_point_(0.0),
+      time_(time),
+      max_time_(time),
+      min_time_(time),
+      cycle_(cycle),
+      max_cycle_(cycle),
+      min_cycle_(cycle),
+      ode_time_point_(time),
       bcs_(mesh_)
 {
   std::tie(mpi_size_, mpi_rank_) = getMPIInfo(comm_);
-  order_                         = 1;
 
   if (mesh_.Dimension() == 2) {
     shape_displacement_sensitivity_ =
@@ -45,14 +48,19 @@ BasePhysics::BasePhysics(std::string physics_name, std::string mesh_tag)
   StateManager::storeDual(*shape_displacement_sensitivity_);
 }
 
-BasePhysics::BasePhysics(int p, std::string physics_name, std::string mesh_tag) : BasePhysics(physics_name, mesh_tag)
-{
-  order_ = p;
-}
-
 double BasePhysics::time() const { return time_; }
 
 int BasePhysics::cycle() const { return cycle_; }
+
+double BasePhysics::maxTime() const { return max_time_; }
+
+int BasePhysics::maxCycle() const { return max_cycle_; }
+
+double BasePhysics::minTime() const { return min_time_; }
+
+int BasePhysics::minCycle() const { return min_cycle_; }
+
+std::vector<double> BasePhysics::timesteps() const { return timesteps_; }
 
 void BasePhysics::setParameter(const size_t parameter_index, const FiniteElementState& parameter_state)
 {
@@ -277,6 +285,21 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
       mins.push_back(min_value);
     }
   }
+}
+
+FiniteElementState BasePhysics::loadCheckpointedState(const std::string& /*state_name*/, int /*cycle*/) const
+{
+  SLIC_ERROR_ROOT(axom::fmt::format("loadCheckpointedState not implemented for physics module {}.", name_));
+  return *states_[0];
+}
+
+double BasePhysics::loadCheckpointedTimestep(int cycle) const
+{
+  SLIC_ERROR_ROOT_IF(cycle < 0, axom::fmt::format("Negative cycle number requested for physics module {}.", name_));
+  SLIC_ERROR_ROOT_IF(cycle > max_cycle_,
+                     axom::fmt::format("Timestep for cycle {} requested, but physics module has only reached cycle {}.",
+                                       cycle, max_cycle_));
+  return timesteps_[static_cast<size_t>(cycle)];
 }
 
 namespace detail {

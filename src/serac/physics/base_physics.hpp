@@ -46,17 +46,10 @@ public:
    * @brief Empty constructor
    * @param[in] physics_name Name of the physics module instance
    * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
    */
-  BasePhysics(std::string physics_name, std::string mesh_tag);
-
-  /**
-   * @brief Constructor that creates n entries in states_ of order p
-   *
-   * @param[in] p Order of the solver
-   * @param[in] physics_name Name of the physics module instance
-   * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
-   */
-  BasePhysics(int p, std::string physics_name, std::string mesh_tag);
+  BasePhysics(std::string physics_name, std::string mesh_tag, int cycle = 0, double time = 0.0);
 
   /**
    * @brief Construct a new Base Physics object (copy constructor)
@@ -80,6 +73,41 @@ public:
   virtual int cycle() const;
 
   /**
+   * @brief Get the maximum time reached by the forward solver
+   *
+   * @return The maximum time reached by the forward solver
+   */
+  virtual double maxTime() const;
+
+  /**
+   * @brief Get the initial time used by the forward solver
+   *
+   * @return The initial time used by the forward solver
+   */
+  virtual double minTime() const;
+
+  /**
+   * @brief The maximum cycle (timestep iteration number) reached by the forward solver
+   *
+   * @return The maximum cycle reached by the forward solver
+   */
+  virtual int maxCycle() const;
+
+  /**
+   * @brief Get the initial cycle (timestep iteration number) used by the forward solver
+   *
+   * @return The initial cycle used by the forward solver
+   */
+  virtual int minCycle() const;
+
+  /**
+   * @brief Get a vector of the timestep sizes (i.e. \f$\Delta t\f$s) taken by the forward solver
+   *
+   * @return The vector of timestep sizes taken by the foward solver
+   */
+  virtual std::vector<double> timesteps() const;
+
+  /**
    * @brief Complete the setup and allocate the necessary data structures
    *
    * This finializes the underlying data structures in a solver and
@@ -93,14 +121,19 @@ public:
    * @param state_name The name of the Finite Element State primal solution to retrieve
    * @return The named primal Finite Element State
    */
-  virtual const FiniteElementState& state(const std::string& state_name) = 0;
+  virtual const FiniteElementState& state(const std::string& state_name) const = 0;
+
+  /**
+   * @brief Set the primal solution field values of the underlying physics solver
+   */
+  virtual void setState(const std::string&, const FiniteElementState&) = 0;
 
   /**
    * @brief Get a vector of the finite element state primal solution names
    *
    * @return The primal solution names
    */
-  virtual std::vector<std::string> stateNames() = 0;
+  virtual std::vector<std::string> stateNames() const = 0;
 
   /**
    * @brief Accessor for getting named finite element state adjoint solution from the physics modules
@@ -108,7 +141,21 @@ public:
    * @param adjoint_name The name of the Finite Element State adjoint solution to retrieve
    * @return The named adjoint Finite Element State
    */
-  virtual const FiniteElementState& adjoint(const std::string& adjoint_name) = 0;
+  virtual const FiniteElementState& adjoint(const std::string& adjoint_name) const = 0;
+
+  /**
+   * @brief Get a vector of the finite element state adjoint solution names
+   *
+   * @return The adjoint solution names
+   */
+  virtual std::vector<std::string> adjointNames() const { return {}; }
+
+  /**
+   * @brief Accessor for getting the shape displacement field from the physics modules
+   *
+   * @return The shape displacement finite element state
+   */
+  const FiniteElementState& shapeDisplacement() const { return shape_displacement_; }
 
   /**
    * @brief Accessor for getting named finite element state parameter fields from the physics modules
@@ -116,7 +163,7 @@ public:
    * @param parameter_name The name of the Finite Element State parameter to retrieve
    * @return The named parameter Finite Element State
    */
-  const FiniteElementState& parameter(const std::string& parameter_name)
+  const FiniteElementState& parameter(const std::string& parameter_name) const
   {
     for (auto& parameter : parameters_) {
       if (parameter_name == parameter.state->name()) {
@@ -128,6 +175,22 @@ public:
                                       parameter_name, name_));
 
     return *states_[0];
+  }
+
+  /**
+   * @brief Accessor for getting indexed finite element state parameter fields from the physics modules
+   *
+   * @param parameter_index The index of the Finite Element State parameter to retrieve
+   * @return The indexed parameter Finite Element State
+   */
+  const FiniteElementState& parameter(std::size_t parameter_index) const
+  {
+    SLIC_ERROR_ROOT_IF(
+        parameter_index >= parameters_.size(),
+        axom::fmt::format("Parameter index {} requested, but only {} parameters exist in physics module {}.",
+                          parameter_index, parameters_.size(), name_));
+
+    return *parameters_[parameter_index].state;
   }
 
   /**
@@ -147,16 +210,16 @@ public:
   }
 
   /**
-   * @brief Register an externally-constructed FiniteElementState object as the source of values for parameter `i`
+   * @brief Deep copy a parameter field into the internally-owned parameter used for simulations
    *
-   * @param parameter_state the values to use for the specified parameter
    * @param parameter_index the index of the parameter
+   * @param parameter_state the values to use for the specified parameter
    *
    * @pre The discretization space and mesh for this finite element state must be consistent with the arguments
    * provided in the physics module constructor.
    *
-   * @note The memory address of this parameter is stored in the physics module. If the FiniteElementState
-   * given in the argument is modified, the updated parameter value will be used in the physics module.
+   * The physics module constructs its own parameter FiniteElementState in the physics module constructor. This
+   * call sets the internally-owned parameter object by value (i.e. deep copies) from the given argument.
    */
   void setParameter(const size_t parameter_index, const FiniteElementState& parameter_state);
 
@@ -220,21 +283,20 @@ public:
   virtual void advanceTimestep(double dt) = 0;
 
   /**
-   * @brief Solve the adjoint problem
-   * @pre It is expected that the forward analysis is complete and the current states are valid
-   * @note If the essential boundary state for the adjoint is not specified, homogeneous essential boundary conditions
-   * are applied
-   *
-   * @return The computed adjoint finite element states
+   * @brief Set the loads for the adjoint reverse timestep solve
    */
-  virtual const std::unordered_map<std::string, const serac::FiniteElementState&> reverseAdjointTimestep(
-      std::unordered_map<std::string, const serac::FiniteElementDual&> /* adjoint_loads */,
-      std::unordered_map<std::string, const serac::FiniteElementState&> /* adjoint_with_essential_boundary */ = {})
+  virtual void setAdjointLoad(std::unordered_map<std::string, const serac::FiniteElementDual&>)
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Adjoint analysis not defined for physics module {}", name_));
+  }
 
-    // Return a dummy state value to quiet the compiler. This will never get used.
-    return {};
+  /**
+   * @brief Solve the adjoint reverse timestep problem
+   * @pre It is expected that the forward analysis is complete and the current states are valid
+   */
+  virtual void reverseAdjointTimestep()
+  {
+    SLIC_ERROR_ROOT(axom::fmt::format("Adjoint analysis not defined for physics module {}", name_));
   }
 
   /**
@@ -244,6 +306,23 @@ public:
    * @param[in] paraview_output_dir Optional output directory for paraview visualization files
    */
   virtual void outputStateToDisk(std::optional<std::string> paraview_output_dir = {}) const;
+
+  /**
+   * @brief Accessor for getting named finite element state primal solution from the physics modules at a given
+   * checkpointed cycle index
+   *
+   * @param state_name The name of the Finite Element State primal solution to retrieve
+   * @param cycle The cycle to retrieve state from
+   * @return The named primal Finite Element State
+   */
+  virtual FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const;
+
+  /**
+   * @brief Get a timestep increment which has been previously checkpointed at the give cycle
+   * @param cycle The previous 'timestep' number where the timestep increment is requested
+   * @return The timestep increment
+   */
+  virtual double loadCheckpointedTimestep(int cycle) const;
 
   /**
    * @brief Initializes the Sidre structure for simulation summary data
@@ -369,9 +448,34 @@ protected:
   double time_;
 
   /**
+   * @brief The maximum time reached for the forward solver
+   */
+  double max_time_;
+
+  /**
+   * @brief The time the forward solver was initialized to
+   */
+  double min_time_;
+
+  /**
+   * @brief A vector of the timestep sizes (i.e. \f$\Delta t\f$) taken by the forward solver
+   */
+  std::vector<double> timesteps_;
+
+  /**
    * @brief Current cycle (forward pass time iteration count)
    */
   int cycle_;
+
+  /**
+   * @brief The maximum cycle (forward pass iteration count) reached by the forward solver
+   */
+  int max_cycle_;
+
+  /**
+   * @brief The cycle the forward solver was initialized to
+   */
+  int min_cycle_;
 
   /**
    * @brief The value of time at which the ODE solver wants to evaluate the residual
@@ -387,11 +491,6 @@ protected:
    * @brief MPI size
    */
   int mpi_size_;
-
-  /**
-   * @brief Order of basis functions
-   */
-  int order_;
 
   /**
    * @brief DataCollection pointer for optional paraview output

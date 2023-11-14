@@ -145,6 +145,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     # The optional slate dependency is not handled in the MFEM spack package
     depends_on("strumpack~slate~butterflypack", when="+strumpack")
 
+    depends_on("strumpack~openmp", when="+strumpack~openmp")
+
     #
     # Forward variants
     # NOTE: propogating variants to dependencies should be removed when pushing this recipe up to Spack
@@ -233,10 +235,10 @@ class Serac(CachedCMakePackage, CudaPackage):
             depends_on("{0} cuda_arch={1}".format(dep, sm_),
                     when="cuda_arch={0}".format(sm_))
     
-    # Check if these variants are true first
+    # Check if these variants are true and +cuda before adding
     cuda_deps_with_variants = ["raja", "sundials", "tribol", "umpire"]
     for dep in cuda_deps_with_variants:
-        depends_on("{0}+cuda".format(dep), when="+cuda")
+        depends_on("{0}+cuda".format(dep), when="+{0}+cuda".format(dep))
         for sm_ in CudaPackage.cuda_arch_values:
             depends_on("{0} cuda_arch={1}".format(dep, sm_),
                     when="+{0}+cuda cuda_arch={1}".format(dep, sm_))

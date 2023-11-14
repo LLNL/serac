@@ -185,7 +185,9 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
   check_gradient(qoi, simulation.displacement());
 
-  simulation.reverseAdjointTimestep({{"displacement", adjoint_load}});
+  simulation.setAdjointLoad({{"displacement", adjoint_load}});
+
+  simulation.reverseAdjointTimestep();
 
   auto& dqoi_dalpha = simulation.computeTimestepSensitivity(1);
 

@@ -115,8 +115,10 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
   std::unique_ptr<mfem::HypreParVector> assembled_vector(adjoint_load_form.ParallelAssemble());
   adjoint_load = *assembled_vector;
 
+  solid_solver.setAdjointLoad({{"displacement", adjoint_load}});
+
   // Solve the adjoint problem
-  solid_solver.reverseAdjointTimestep({{"displacement", adjoint_load}});
+  solid_solver.reverseAdjointTimestep();
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
   [[maybe_unused]] auto& sensitivity = solid_solver.computeTimestepSensitivity(bulk_parameter_index);
@@ -284,8 +286,10 @@ void finite_difference_shape_test(LoadingType load)
   std::unique_ptr<mfem::HypreParVector> assembled_vector(adjoint_load_form.ParallelAssemble());
   adjoint_load = *assembled_vector;
 
+  solid_solver.setAdjointLoad({{"displacement", adjoint_load}});
+
   // Solve the adjoint problem
-  solid_solver.reverseAdjointTimestep({{"displacement", adjoint_load}});
+  solid_solver.reverseAdjointTimestep();
 
   // Compute the sensitivity (d QOI/ d state * d state/d parameter) given the current adjoint solution
   [[maybe_unused]] auto& sensitivity = solid_solver.computeTimestepShapeSensitivity();
