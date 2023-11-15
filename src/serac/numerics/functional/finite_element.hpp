@@ -17,6 +17,8 @@
 #include "geometry.hpp"
 #include "polynomials.hpp"
 
+#include "serac/numerics/functional/refactor/ndview.hpp"
+
 namespace serac {
 
 /**
@@ -232,6 +234,10 @@ struct QOI {
   static constexpr Family family     = Family::QOI;  ///< the family of the basis functions
 };
 
+struct H1Dynamic {
+  static constexpr Family family = Family::H1;
+};
+
 /**
  * @brief transform information in the parent space  (i.e. values and derivatives w.r.t {xi, eta, zeta})
  * into the physical space (i.e. values and derivatives w.r.t. {x, y, z})
@@ -359,6 +365,8 @@ struct finite_element;
 #include "detail/quadrilateral_H1.inl"
 #include "detail/quadrilateral_Hcurl.inl"
 #include "detail/quadrilateral_L2.inl"
+
+#include "detail/quadrilateral_H1Dynamic.inl"
 
 #include "detail/tetrahedron_H1.inl"
 #include "detail/tetrahedron_L2.inl"

@@ -539,6 +539,58 @@ SERAC_HOST_DEVICE constexpr tensor<T, n> GaussLobattoInterpolationDerivative([[m
   return tensor<T, n>{};
 }
 
+inline SERAC_HOST_DEVICE void GaussLobattoInterpolation(double x, uint32_t n, double * output) {
+  
+  assert(1 <= n && n <= 4);
+
+  if (n == 1) {
+    output[0] = 1.0;
+  }
+  if (n == 2) {
+    output[0] = 1.0 - x;
+    output[1] = x;
+  }
+  if (n == 3) {
+    output[0] = (-1.0 + x) * (-1.0 + 2.0 * x);
+    output[1] = -4.0 * (-1.0 + x) * x;
+    output[2] = x * (-1.0 + 2.0 * x);
+  }
+  if (n == 4) {
+    constexpr double sqrt5 = 2.23606797749978981;
+    output[0] = -(-1.0 + x) * (1.0 + 5.0 * (-1.0 + x) * x);
+    output[1] = -0.5 * sqrt5 * (5.0 + sqrt5 - 10.0 * x) * (-1.0 + x) * x;
+    output[2] = -0.5 * sqrt5 * (-1.0 + x) * x * (-5.0 + sqrt5 + 10.0 * x); 
+    output[3] = x * (1.0 + 5.0 * (-1.0 + x) * x);
+  }
+
+}
+
+inline SERAC_HOST_DEVICE constexpr void GaussLobattoInterpolationDerivative(double x, uint32_t n, double * output) {
+
+  assert(1 <= n && n <= 4);
+
+  if (n == 1) {
+    output[0] = 0.0;
+  }
+  if (n == 2) {
+    output[0] = -1;
+    output[1] = 1;
+  }
+  if (n == 3) {
+    output[0] = -3.0 + 4.0 * x; 
+    output[1] = 4.0 - 8.0 * x; 
+    output[2] = -1.0 + 4.0 * x;
+  }
+  if (n == 4) {
+    constexpr double sqrt5 = 2.23606797749978981;
+    output[0] = -6.0 + 5.0 * (4.0 - 3.0 * x) * x;
+    output[1] = 2.5 * (1.0 + sqrt5 + 2.0 * x * (-1.0 - 3.0 * sqrt5 + 3.0 * sqrt5 * x));
+    output[2] = -2.5 * (-1.0 + sqrt5 + 2.0 * x * (1.0 - 3.0 * sqrt5 + 3.0 * sqrt5 * x));
+    output[3] = 1.0 + 5.0 * x * (-2.0 + 3.0 * x);
+  }
+
+}
+
 /**
  * @brief Lagrange Interpolating polynomials for nodes at Gauss-Legendre points on the interval [0, 1]
  *

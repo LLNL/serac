@@ -32,6 +32,7 @@ set(functional_headers
     )
 
 set(functional_sources 
+    quadrature.cpp 
     element_restriction.cpp 
     geometric_factors.cpp 
     quadrature_data.cpp)
@@ -80,3 +81,5 @@ install(TARGETS              serac_functional
 if(ENABLE_TESTS)
    add_subdirectory(tests)
 endif()
+
+add_subdirectory(refactor)
