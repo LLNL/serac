@@ -57,7 +57,7 @@ struct Domain {
   /**
    * @brief create a domain from some subset of the vertices in an mfem::Mesh
    * @param mesh the entire mesh
-   * @param func predicate function for determining which vertices will be 
+   * @param func predicate function for determining which vertices will be
    * included in this domain. The function's argument is the spatial position of the vertex.
    */
   static Domain ofVertices(const mfem::Mesh& mesh, std::function<bool(vec2)> func);
@@ -68,7 +68,7 @@ struct Domain {
   /**
    * @brief create a domain from some subset of the edges in an mfem::Mesh
    * @param mesh the entire mesh
-   * @param func predicate function for determining which edges will be 
+   * @param func predicate function for determining which edges will be
    * included in this domain. The function's arguments are the list of vertex coordinates and
    * an attribute index (if appropriate).
    */
@@ -80,7 +80,7 @@ struct Domain {
   /**
    * @brief create a domain from some subset of the faces in an mfem::Mesh
    * @param mesh the entire mesh
-   * @param func predicate function for determining which faces will be 
+   * @param func predicate function for determining which faces will be
    * included in this domain. The function's arguments are the list of vertex coordinates and
    * an attribute index (if appropriate).
    */

@@ -140,9 +140,8 @@ SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, const tensor<double, dim, n> x,
 template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, typename test_element,
           typename trial_element_tuple, typename lambda_type, typename state_type, typename derivative_type,
           int... indices>
-void evaluation_kernel_impl(trial_element_tuple          trial_elements, test_element,
-                            const std::vector<const double*>& inputs, double* outputs, const double* positions,
-                            const double* jacobians, lambda_type qf,
+void evaluation_kernel_impl(trial_element_tuple trial_elements, test_element, const std::vector<const double*>& inputs,
+                            double* outputs, const double* positions, const double* jacobians, lambda_type qf,
                             [[maybe_unused]] axom::ArrayView<state_type, 2> qf_state,
                             [[maybe_unused]] derivative_type* qf_derivatives, const int* elements,
                             uint32_t num_elements, bool update_state, camp::int_seq<int, indices...>)
@@ -358,9 +357,9 @@ std::function<void(const std::vector<const double*>&, double*, bool)> evaluation
   auto trial_elements = trial_elements_tuple<geom>(s);
   auto test_element   = get_test_element<geom>(s);
   return [=](const std::vector<const double*>& inputs, double* outputs, bool update_state) {
-    domain_integral::evaluation_kernel_impl<wrt, Q, geom>(trial_elements, test_element, inputs, outputs, positions, jacobians, qf,
-                                                          (*qf_state)[geom], qf_derivatives.get(), elements,
-                                                          num_elements, update_state, s.index_seq);
+    domain_integral::evaluation_kernel_impl<wrt, Q, geom>(trial_elements, test_element, inputs, outputs, positions,
+                                                          jacobians, qf, (*qf_state)[geom], qf_derivatives.get(),
+                                                          elements, num_elements, update_state, s.index_seq);
   };
 }
 

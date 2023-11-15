@@ -9,7 +9,7 @@
  *
  * @brief many of the functions in this file amount to extracting
  *        element indices from an mfem::Mesh like
- * 
+ *
  *    | mfem::Geometry | mfem element id | tri id | quad id |
  *    | -------------- | --------------- | ------ | ------- |
  *    | Triangle       | 0               | 0      |         |
@@ -19,22 +19,20 @@
  *    | Square         | 4               |        | 1       |
  *    | Square         | 5               |        | 2       |
  *    | Square         | 6               |        | 3       |
- * 
+ *
  *  and then evaluating a predicate function to decide whether that
  *  element gets added to a given Domain.
- * 
+ *
  */
 
 #include "serac/numerics/functional/domain.hpp"
 
 namespace serac {
 
-
-
-
-template < int d >
-std::vector< tensor< double, d > > gather(const mfem::Vector & coordinates, mfem::Array<int> ids) {
-  int num_vertices = coordinates.Size() / d;
+template <int d>
+std::vector<tensor<double, d>> gather(const mfem::Vector& coordinates, mfem::Array<int> ids)
+{
+  int                            num_vertices = coordinates.Size() / d;
   std::vector<tensor<double, d>> x(std::size_t(ids.Size()));
   for (int v = 0; v < ids.Size(); v++) {
     for (int j = 0; j < d; j++) {
@@ -102,7 +100,7 @@ static Domain domain_of_edges(const mfem::Mesh& mesh, std::function<T> predicate
     edge_id_to_bdr_id = mesh.GetFaceToBdrElMap();
   }
 
-  int num_edges    = mesh.GetNEdges();
+  int num_edges = mesh.GetNEdges();
   for (int i = 0; i < num_edges; i++) {
     mfem::Array<int> vertex_ids;
     mesh.GetEdgeVertices(i, vertex_ids);
@@ -238,9 +236,8 @@ static Domain domain_of_elems(const mfem::Mesh&                                 
   int hex_id  = 0;
 
   // elements that satisfy the predicate are added to the domain
-  int num_elems    = mesh.GetNE();
+  int num_elems = mesh.GetNE();
   for (int i = 0; i < num_elems; i++) {
-
     mfem::Array<int> vertex_ids;
     mesh.GetElementVertices(i, vertex_ids);
 
@@ -485,7 +482,7 @@ Domain set_operation(set_op op, const Domain& a, const Domain& b)
   }
 
   if (output.dim_ == 3) {
-    output.tet_ids_  = set_operation(op, a.tet_ids_, b.tet_ids_);
+    output.tet_ids_ = set_operation(op, a.tet_ids_, b.tet_ids_);
     output.hex_ids_ = set_operation(op, a.hex_ids_, b.hex_ids_);
   }
 

@@ -331,15 +331,14 @@ std::function<void(const std::vector<const double*>&, double*, bool)> evaluation
   auto trial_elements = trial_elements_tuple<geom>(s);
   auto test_element   = get_test_element<geom>(s);
   return [=](const std::vector<const double*>& inputs, double* outputs, bool /* update state */) {
-    evaluation_kernel_impl<wrt, Q, geom>(trial_elements, test_element, inputs, outputs, positions, jacobians, qf, qf_derivatives.get(), elements,
-                                         num_elements, s.index_seq);
+    evaluation_kernel_impl<wrt, Q, geom>(trial_elements, test_element, inputs, outputs, positions, jacobians, qf,
+                                         qf_derivatives.get(), elements, num_elements, s.index_seq);
 
-//void evaluation_kernel_impl(trial_element_type trial_elements, test_element, const std::vector<const double*>& inputs,
-//                            double* outputs, const double* positions, const double* jacobians, lambda_type qf,
-//                            [[maybe_unused]] derivative_type* qf_derivatives, const int* elements,
-//                            uint32_t num_elements, camp::int_seq<int, indices...>)
-
-
+    // void evaluation_kernel_impl(trial_element_type trial_elements, test_element, const std::vector<const double*>&
+    // inputs,
+    //                            double* outputs, const double* positions, const double* jacobians, lambda_type qf,
+    //                            [[maybe_unused]] derivative_type* qf_derivatives, const int* elements,
+    //                            uint32_t num_elements, camp::int_seq<int, indices...>)
   };
 }
 
