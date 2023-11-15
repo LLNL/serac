@@ -259,9 +259,6 @@ public:
 
     predicted_displacement_.SetSize(true_size);
     predicted_displacement_ = 0.0;
-
-    zero_.SetSize(true_size);
-    zero_ = 0.0;
   }
 
   /**
@@ -963,7 +960,7 @@ public:
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
           const mfem::Vector res =
-              (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+              (*residual_)(u, acceleration_, shape_displacement_, *parameters_[parameter_indices].state...);
 
           // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
           // tracking strategy
@@ -974,10 +971,10 @@ public:
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          auto [r, drdu] =
-              (*residual_)(differentiate_wrt(u), zero_, shape_displacement_, *parameters_[parameter_indices].state...);
-          J_   = assemble(drdu);
-          J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+          auto [r, drdu] = (*residual_)(differentiate_wrt(u), acceleration_, shape_displacement_,
+                                        *parameters_[parameter_indices].state...);
+          J_             = assemble(drdu);
+          J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
         });
   }
@@ -1183,7 +1180,7 @@ public:
     adjoint_essential = 0.0;
 
     if (is_quasistatic_) {
-      auto [_, drdu] = (*residual_)(differentiate_wrt(displacement_), zero_, shape_displacement_,
+      auto [_, drdu] = (*residual_)(differentiate_wrt(displacement_), acceleration_, shape_displacement_,
                                     *parameters_[parameter_indices].state...);
       auto jacobian  = assemble(drdu);
       auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
@@ -1437,17 +1434,14 @@ protected:
   /// @brief Coefficient containing the essential boundary values
   std::shared_ptr<mfem::Coefficient> component_disp_bdr_coef_;
 
-  /// @brief An auxilliary zero vector
-  mfem::Vector zero_;
-
   /// @brief Array functions computing the derivative of the residual with respect to each given parameter
   /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
   /// template parameter.
-  std::array<std::function<decltype((*residual_)(DifferentiateWRT<0>{}, displacement_, zero_, shape_displacement_,
-                                                 *parameters_[parameter_indices].state...))()>,
+  std::array<std::function<decltype((*residual_)(DifferentiateWRT<0>{}, displacement_, acceleration_,
+                                                 shape_displacement_, *parameters_[parameter_indices].state...))()>,
              sizeof...(parameter_indices)>
       d_residual_d_ = {[&]() {
-        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, displacement_, zero_,
+        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, displacement_, acceleration_,
                             shape_displacement_, *parameters_[parameter_indices].state...);
       }...};
 
@@ -1516,7 +1510,7 @@ protected:
   void warmStartDisplacement()
   {
     // Update the linearized Jacobian matrix
-    auto [r, drdu] = (*residual_)(differentiate_wrt(displacement_), zero_, shape_displacement_,
+    auto [r, drdu] = (*residual_)(differentiate_wrt(displacement_), acceleration_, shape_displacement_,
                                   *parameters_[parameter_indices].state...);
     J_             = assemble(drdu);
     J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);

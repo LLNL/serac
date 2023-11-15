@@ -107,7 +107,7 @@ public:
     auto residual_fn = [this](const mfem::Vector& u, mfem::Vector& r) {
       const mfem::Vector u_blk(const_cast<mfem::Vector&>(u), 0, displacement_.Size());
       const mfem::Vector res =
-          (*residual_)(u_blk, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+          (*residual_)(u_blk, acceleration_, shape_displacement_, *parameters_[parameter_indices].state...);
 
       // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
       // tracking strategy
@@ -128,7 +128,7 @@ public:
           // gradient of residual function
           [this](const mfem::Vector& u) -> mfem::Operator& {
             const mfem::Vector u_blk(const_cast<mfem::Vector&>(u), 0, displacement_.Size());
-            auto [r, drdu] = (*residual_)(differentiate_wrt(u_blk), zero_, shape_displacement_,
+            auto [r, drdu] = (*residual_)(differentiate_wrt(u_blk), acceleration_, shape_displacement_,
                                           *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
 
@@ -164,7 +164,7 @@ public:
       // mfem::HypreParMatrix
       return std::make_unique<mfem_ext::StdFunctionOperator>(
           displacement_.space().TrueVSize(), residual_fn, [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, shape_displacement_,
+            auto [r, drdu] = (*residual_)(differentiate_wrt(u), acceleration_, shape_displacement_,
                                           *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
 
@@ -247,6 +247,7 @@ protected:
   using BasePhysics::parameters_;
   using BasePhysics::shape_displacement_;
   using BasePhysics::time_;
+  using SolidMechanicsBase::acceleration_;
   using SolidMechanicsBase::d_residual_d_;
   using SolidMechanicsBase::DERIVATIVE;
   using SolidMechanicsBase::displacement_;
@@ -258,7 +259,6 @@ protected:
   using SolidMechanicsBase::residual_;
   using SolidMechanicsBase::residual_with_bcs_;
   using SolidMechanicsBase::warmStartDisplacement;
-  using SolidMechanicsBase::zero_;
 
   /// Pointer to the Jacobian operator (J_ if no Lagrange multiplier contact, J_constraint_ otherwise)
   mfem::Operator* J_operator_;
