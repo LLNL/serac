@@ -29,6 +29,12 @@
 
 namespace serac {
 
+/**
+ * @brief gather vertex coordinates for a list of vertices
+ *
+ * @param coordinates mfem's 1D list of vertex coordinates
+ * @param ids the list of vertex indices to gather
+ */
 template <int d>
 std::vector<tensor<double, d>> gather(const mfem::Vector& coordinates, mfem::Array<int> ids)
 {
