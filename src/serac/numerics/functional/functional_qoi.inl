@@ -17,18 +17,17 @@ namespace serac {
  * the case of a quantity of interest. The action of its MultTranspose() operator (the
  * only thing it is used for) sums the values from different processors.
  */
-struct QoIProlongation : public mfem::Operator {
+struct QoIProlongation {
+  QoIProlongation() {}
+
   /// @brief create a QoIProlongation for a Quantity of Interest
-  QoIProlongation(MPI_Comm c) : mfem::Operator(1, 1), comm(c) {}
+  QoIProlongation(MPI_Comm c) : comm(c) {}
 
   /// @brief unimplemented: do not use
-  void Mult(const mfem::Vector&, mfem::Vector&) const override
-  {
-    SLIC_ERROR_ROOT("QoIProlongation::Mult() is not defined");
-  }
+  void Mult(const mfem::Vector&, mfem::Vector&) const { SLIC_ERROR_ROOT("QoIProlongation::Mult() is not defined"); }
 
   /// @brief set the value of output to the distributed sum over input values from different processors
-  void MultTranspose(const mfem::Vector& input, mfem::Vector& output) const override
+  void MultTranspose(const mfem::Vector& input, mfem::Vector& output) const
   {
     // const_cast to work around clang@14.0.6 compiler error:
     //   "argument type 'const double *' doesn't match specified 'MPI' type tag that requires 'double *'"
@@ -132,7 +131,7 @@ public:
     }
 
     G_test_ = QoIElementRestriction();
-    P_test_ = new QoIProlongation(trial_fes[0]->GetParMesh()->GetComm());
+    P_test_ = QoIProlongation(trial_fes[0]->GetParMesh()->GetComm());
 
     output_L_.SetSize(1, mem_type);
 
@@ -280,7 +279,7 @@ public:
     }
 
     // scatter-add to compute global residuals
-    P_test_->MultTranspose(output_L_, output_T_);
+    P_test_.MultTranspose(output_L_, output_T_);
 
     return output_T_[0];
   }
@@ -328,7 +327,7 @@ public:
     }
 
     // scatter-add to compute global residuals
-    P_test_->MultTranspose(output_L_, output_T_);
+    P_test_.MultTranspose(output_L_, output_T_);
 
     if constexpr (wrt != NO_DIFFERENTIATION) {
       // if the user has indicated they'd like to evaluate and differentiate w.r.t.
@@ -490,7 +489,7 @@ private:
   /// @brief The output set of local DOF values (i.e., on the current rank)
   mutable mfem::Vector output_L_;
 
-  const mfem::Operator* P_test_;
+  QoIProlongation P_test_;
 
   /// @brief The set of true DOF values, a reference to this member is returned by @p operator()
   mutable mfem::Vector output_T_;
