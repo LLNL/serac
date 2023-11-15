@@ -242,7 +242,7 @@ TEST(domain, of_faces)
 TEST(domain, of_elements)
 {
   {
-    auto   mesh = import_mesh("patch3D_tet_ids_and_hexes.mesh");
+    auto   mesh = import_mesh("patch3D_tets_and_hexes.mesh");
     Domain d0   = Domain::ofElements(mesh, std::function([](std::vector<vec3> vertices, int /*bdr_attr*/) {
                                      return average(vertices)[0] < 0.7;  // x coordinate of face center
                                    }));
@@ -270,7 +270,7 @@ TEST(domain, of_elements)
   }
 
   {
-    auto   mesh = import_mesh("patch2D_tri_ids_and_quads.mesh");
+    auto   mesh = import_mesh("patch2D_tris_and_quads.mesh");
     Domain d0   = Domain::ofElements(
         mesh, std::function([](std::vector<vec2> vertices, int /* attr */) { return average(vertices)[0] < 0.45; }));
     EXPECT_EQ(d0.tri_ids_.size(), 1);
