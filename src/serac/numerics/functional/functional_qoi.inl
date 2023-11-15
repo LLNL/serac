@@ -145,14 +145,6 @@ public:
     }
   }
 
-  /// @brief destructor: deallocate the mfem::Operators that we're responsible for
-  ~Functional()
-  {
-    // delete P_test_;
-    // delete G_test_;
-    // delete G_test_boundary_;
-  }
-
   /**
    * @brief Adds a domain integral term to the Functional object
    * @tparam dim The dimension of the element (2 for quad, 3 for hex, etc)
