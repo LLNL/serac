@@ -1,6 +1,48 @@
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)
+
+/**
+ * @file domain.hpp
+ *
+ * @brief many of the functions in this file amount to extracting
+ *        element indices from an mfem::Mesh like
+ * 
+ *    | mfem::Geometry | mfem element id | tri id | quad id |
+ *    | -------------- | --------------- | ------ | ------- |
+ *    | Triangle       | 0               | 0      |         |
+ *    | Triangle       | 1               | 1      |         |
+ *    | Square         | 2               |        | 0       |
+ *    | Triangle       | 3               | 2      |         |
+ *    | Square         | 4               |        | 1       |
+ *    | Square         | 5               |        | 2       |
+ *    | Square         | 6               |        | 3       |
+ * 
+ *  and then evaluating a predicate function to decide whether that
+ *  element gets added to a given Domain.
+ * 
+ */
+
 #include "serac/numerics/functional/domain.hpp"
 
 namespace serac {
+
+
+
+
+template < int d >
+std::vector< tensor< double, d > > gather(const mfem::Vector & coordinates, mfem::Array<int> ids) {
+  int num_vertices = coordinates.Size() / d;
+  std::vector<tensor<double, d>> x(std::size_t(ids.Size()));
+  for (int v = 0; v < ids.Size(); v++) {
+    for (int j = 0; j < d; j++) {
+      x[uint32_t(v)][j] = coordinates[j * num_vertices + ids[v]];
+    }
+  }
+  return x;
+}
 
 template <int d>
 static Domain domain_of_vertices(const mfem::Mesh& mesh, std::function<bool(tensor<double, d>)> predicate)
@@ -23,7 +65,7 @@ static Domain domain_of_vertices(const mfem::Mesh& mesh, std::function<bool(tens
     }
 
     if (predicate(x)) {
-      output.vertices_.push_back(i);
+      output.vertex_ids_.push_back(i);
     }
   }
 
@@ -61,27 +103,21 @@ static Domain domain_of_edges(const mfem::Mesh& mesh, std::function<T> predicate
   }
 
   int num_edges    = mesh.GetNEdges();
-  int num_vertices = mesh.GetNV();
   for (int i = 0; i < num_edges; i++) {
     mfem::Array<int> vertex_ids;
     mesh.GetEdgeVertices(i, vertex_ids);
 
-    std::vector<tensor<double, d>> x(2);
-    for (int v = 0; v < 2; v++) {
-      for (int j = 0; j < d; j++) {
-        x[uint32_t(v)][j] = vertices[j * num_vertices + vertex_ids[v]];
-      }
-    }
+    auto x = gather<d>(vertices, vertex_ids);
 
     if constexpr (d == 2) {
       int bdr_id = edge_id_to_bdr_id[i];
       int attr   = (bdr_id > 0) ? mesh.GetBdrAttribute(bdr_id) : -1;
       if (predicate(x, attr)) {
-        output.edges_.push_back(i);
+        output.edge_ids_.push_back(i);
       }
     } else {
       if (predicate(x)) {
-        output.edges_.push_back(i);
+        output.edge_ids_.push_back(i);
       }
     }
   }
@@ -131,7 +167,6 @@ static Domain domain_of_faces(const mfem::Mesh&                                 
   int tri_id  = 0;
   int quad_id = 0;
 
-  int num_vertices = mesh.GetNV();
   for (int i = 0; i < num_faces; i++) {
     mfem::Array<int> vertex_ids;
 
@@ -141,12 +176,7 @@ static Domain domain_of_faces(const mfem::Mesh&                                 
       mesh.GetFaceVertices(i, vertex_ids);
     }
 
-    std::vector<tensor<double, d>> x(std::size_t(vertex_ids.Size()));
-    for (int v = 0; v < vertex_ids.Size(); v++) {
-      for (int j = 0; j < d; j++) {
-        x[uint32_t(v)][j] = vertices[j * num_vertices + vertex_ids[v]];
-      }
-    }
+    auto x = gather<d>(vertices, vertex_ids);
 
     int attr;
     if (d == 2) {
@@ -158,10 +188,10 @@ static Domain domain_of_faces(const mfem::Mesh&                                 
 
     if (predicate(x, attr)) {
       if (x.size() == 3) {
-        output.tris_.push_back(tri_id);
+        output.tri_ids_.push_back(tri_id);
       }
       if (x.size() == 4) {
-        output.quads_.push_back(quad_id);
+        output.quad_ids_.push_back(quad_id);
       }
     }
 
@@ -209,44 +239,39 @@ static Domain domain_of_elems(const mfem::Mesh&                                 
 
   // elements that satisfy the predicate are added to the domain
   int num_elems    = mesh.GetNE();
-  int num_vertices = mesh.GetNV();
   for (int i = 0; i < num_elems; i++) {
+
     mfem::Array<int> vertex_ids;
     mesh.GetElementVertices(i, vertex_ids);
 
-    std::vector<tensor<double, d>> x(std::size_t(vertex_ids.Size()));
-    for (int v = 0; v < vertex_ids.Size(); v++) {
-      for (int j = 0; j < d; j++) {
-        x[uint32_t(v)][j] = vertices[j * num_vertices + vertex_ids[v]];
-      }
-    }
+    auto x = gather<d>(vertices, vertex_ids);
 
     bool add = predicate(x, mesh.GetAttribute(i));
 
     switch (x.size()) {
       case 3:
         if (add) {
-          output.tris_.push_back(tri_id);
+          output.tri_ids_.push_back(tri_id);
         }
         tri_id++;
         break;
       case 4:
         if constexpr (d == 2) {
           if (add) {
-            output.quads_.push_back(quad_id);
+            output.quad_ids_.push_back(quad_id);
           }
           quad_id++;
         }
         if constexpr (d == 3) {
           if (add) {
-            output.tets_.push_back(tet_id);
+            output.tet_ids_.push_back(tet_id);
           }
           tet_id++;
         }
         break;
       case 8:
         if (add) {
-          output.hexes_.push_back(hex_id);
+          output.hex_ids_.push_back(hex_id);
         }
         hex_id++;
         break;
@@ -292,8 +317,6 @@ static Domain domain_of_boundary_elems(const mfem::Mesh&                        
   int quad_id = 0;
 
   // faces that satisfy the predicate are added to the domain
-  int num_vertices = mesh.GetNV();
-
   for (int f = 0; f < mesh.GetNumFaces(); f++) {
     // discard faces with the wrong type
     if (mesh.GetFaceInformation(f).IsInterior()) continue;
@@ -303,12 +326,7 @@ static Domain domain_of_boundary_elems(const mfem::Mesh&                        
     mfem::Array<int> vertex_ids;
     mesh.GetFaceVertices(f, vertex_ids);
 
-    std::vector<tensor<double, d>> x(std::size_t(vertex_ids.Size()));
-    for (int v = 0; v < vertex_ids.Size(); v++) {
-      for (int j = 0; j < d; j++) {
-        x[uint32_t(v)][j] = vertices[j * num_vertices + vertex_ids[v]];
-      }
-    }
+    auto x = gather<d>(vertices, vertex_ids);
 
     int bdr_id = face_id_to_bdr_id[f];
     int attr   = (bdr_id > 0) ? mesh.GetBdrAttribute(bdr_id) : -1;
@@ -318,19 +336,19 @@ static Domain domain_of_boundary_elems(const mfem::Mesh&                        
     switch (geom) {
       case mfem::Geometry::SEGMENT:
         if (add) {
-          output.edges_.push_back(edge_id);
+          output.edge_ids_.push_back(edge_id);
         }
         edge_id++;
         break;
       case mfem::Geometry::TRIANGLE:
         if (add) {
-          output.tris_.push_back(tri_id);
+          output.tri_ids_.push_back(tri_id);
         }
         tri_id++;
         break;
       case mfem::Geometry::SQUARE:
         if (add) {
-          output.quads_.push_back(quad_id);
+          output.quad_ids_.push_back(quad_id);
         }
         quad_id++;
         break;
@@ -374,16 +392,16 @@ Domain EntireDomain(const mfem::Mesh& mesh)
 
     switch (geom) {
       case mfem::Geometry::TRIANGLE:
-        output.tris_.push_back(tri_id++);
+        output.tri_ids_.push_back(tri_id++);
         break;
       case mfem::Geometry::SQUARE:
-        output.quads_.push_back(quad_id++);
+        output.quad_ids_.push_back(quad_id++);
         break;
       case mfem::Geometry::TETRAHEDRON:
-        output.tets_.push_back(tet_id++);
+        output.tet_ids_.push_back(tet_id++);
         break;
       case mfem::Geometry::CUBE:
-        output.hexes_.push_back(hex_id++);
+        output.hex_ids_.push_back(hex_id++);
         break;
       default:
         SLIC_ERROR("unsupported element type");
@@ -410,13 +428,13 @@ Domain EntireBoundary(const mfem::Mesh& mesh)
 
     switch (geom) {
       case mfem::Geometry::SEGMENT:
-        output.edges_.push_back(edge_id++);
+        output.edge_ids_.push_back(edge_id++);
         break;
       case mfem::Geometry::TRIANGLE:
-        output.tris_.push_back(tri_id++);
+        output.tri_ids_.push_back(tri_id++);
         break;
       case mfem::Geometry::SQUARE:
-        output.quads_.push_back(quad_id++);
+        output.quad_ids_.push_back(quad_id++);
         break;
       default:
         SLIC_ERROR("unsupported element type");
@@ -454,21 +472,21 @@ Domain set_operation(set_op op, const Domain& a, const Domain& b)
   Domain output{a.mesh_, a.dim_};
 
   if (output.dim_ == 0) {
-    output.vertices_ = set_operation(op, a.vertices_, b.vertices_);
+    output.vertex_ids_ = set_operation(op, a.vertex_ids_, b.vertex_ids_);
   }
 
   if (output.dim_ == 1) {
-    output.edges_ = set_operation(op, a.edges_, b.edges_);
+    output.edge_ids_ = set_operation(op, a.edge_ids_, b.edge_ids_);
   }
 
   if (output.dim_ == 2) {
-    output.tris_  = set_operation(op, a.tris_, b.tris_);
-    output.quads_ = set_operation(op, a.quads_, b.quads_);
+    output.tri_ids_  = set_operation(op, a.tri_ids_, b.tri_ids_);
+    output.quad_ids_ = set_operation(op, a.quad_ids_, b.quad_ids_);
   }
 
   if (output.dim_ == 3) {
-    output.tets_  = set_operation(op, a.tets_, b.tets_);
-    output.hexes_ = set_operation(op, a.hexes_, b.hexes_);
+    output.tet_ids_  = set_operation(op, a.tet_ids_, b.tet_ids_);
+    output.hex_ids_ = set_operation(op, a.hex_ids_, b.hex_ids_);
   }
 
   return output;

@@ -47,8 +47,6 @@ TEST(geometric_factors, with_2D_domains)
     int              qpts_per_elem    = (q * (q + 1)) / 2;
     int              num_elems        = 1;
     EXPECT_EQ(gf.J.Size(), components_per_J * qpts_per_elem * num_elems);
-
-    gf.X.Print(std::cout, 2);
   }
 
   std::cout << std::endl;
@@ -59,8 +57,6 @@ TEST(geometric_factors, with_2D_domains)
     int              qpts_per_elem    = q * q;
     int              num_elems        = 1;
     EXPECT_EQ(gf.J.Size(), components_per_J * qpts_per_elem * num_elems);
-
-    gf.X.Print(std::cout, 2);
   }
 }
 
