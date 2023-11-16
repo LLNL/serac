@@ -277,7 +277,6 @@ void qoi_test(mfem::ParMesh& mesh, H1<p1> trial1, H1<p2> trial2, Dimension<dim>)
   check_gradient(f, U1, U2);
 }
 
-#if 1
 TEST(QoI, DependsOnVectorValuedInput)
 {
   constexpr int p   = 2;
@@ -443,7 +442,6 @@ TEST(QoI, ShapeAndParameter)
   constexpr double expected = 1.6;  // volume of 2 2x2x2 cubes == 16, so expected is 0.1 * 16
   EXPECT_NEAR(val, expected, 1.0e-14);
 }
-#endif
 
 // clang-format off
 TEST(Measure, 2DLinear   ) { qoi_test(*mesh2D, H1<1>{}, Dimension<2>{}, WhichTest::Measure); }
