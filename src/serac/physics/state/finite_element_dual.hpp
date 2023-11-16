@@ -28,7 +28,6 @@ namespace serac {
 class FiniteElementDual : public FiniteElementVector {
 public:
   using FiniteElementVector::FiniteElementVector;
-  using FiniteElementVector::operator=;
   using mfem::Vector::Print;
 
   /**
@@ -57,35 +56,52 @@ public:
     return *this;
   }
 
+  /**
+   * @brief Move assignment
+   *
+   * @param rhs The right hand side input Dual
+   * @return The assigned FiniteElementDual
+   */
   FiniteElementDual& operator=(FiniteElementDual&& rhs)
   {
     std::unique_ptr<mfem::ParLinearForm> lf(std::move(rhs.linear_form_));
-    FiniteElementVector::                operator=(rhs);
-    this->linear_form_                           = std::move(lf);
-    return *this;
-  }
 
-  FiniteElementDual& operator=(const FiniteElementVector& rhs)
-  {
     FiniteElementVector::operator=(rhs);
-    if (linear_form_) {
-      fillLinearForm(*linear_form_);
-    }
+
+    this->linear_form_ = std::move(lf);
     return *this;
   }
 
+  /**
+   * @brief Copy assignment with HypreParVector
+   *
+   * @param rhs The right hand side input HypreParVector
+   * @return The assigned FiniteElementDual
+   */
   FiniteElementDual& operator=(const mfem::HypreParVector& rhs)
   {
     FiniteElementVector::operator=(rhs);
     return *this;
   }
 
+  /**
+   * @brief Copy assignment with mfem::Vector
+   *
+   * @param rhs The right hand side input Dual
+   * @return The assigned FiniteElementDual
+   */
   FiniteElementDual& operator=(const mfem::Vector& rhs)
   {
     FiniteElementVector::operator=(rhs);
     return *this;
   }
 
+  /**
+   * @brief Copy assignment with double
+   *
+   * @param rhs The right hand side input double
+   * @return The assigned FiniteElementDual
+   */
   FiniteElementDual& operator=(double rhs)
   {
     FiniteElementVector::operator=(rhs);

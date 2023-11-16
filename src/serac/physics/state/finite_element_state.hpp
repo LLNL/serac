@@ -48,7 +48,6 @@ inline bool is_vector_valued(const GeneralCoefficient& coef)
 class FiniteElementState : public FiniteElementVector {
 public:
   using FiniteElementVector::FiniteElementVector;
-  using FiniteElementVector::operator=;
   using mfem::Vector::Print;
 
   /**
@@ -78,12 +77,60 @@ public:
   }
 
   /**
+   * @brief Move assignment
+   *
+   * @param rhs The right hand side input State
+   * @return The assigned FiniteElementState
+   */
+  FiniteElementState& operator=(FiniteElementState&& rhs)
+  {
+    FiniteElementVector::operator=(rhs);
+    return *this;
+  }
+
+  /**
+   * @brief Copy assignment with HypreParVector
+   *
+   * @param rhs The right hand side input HypreParVector
+   * @return The assigned FiniteElementState
+   */
+  FiniteElementState& operator=(const mfem::HypreParVector& rhs)
+  {
+    FiniteElementVector::operator=(rhs);
+    return *this;
+  }
+
+  /**
+   * @brief Copy assignment with mfem::Vector
+   *
+   * @param rhs The right hand side input State
+   * @return The assigned FiniteElementState
+   */
+  FiniteElementState& operator=(const mfem::Vector& rhs)
+  {
+    FiniteElementVector::operator=(rhs);
+    return *this;
+  }
+
+  /**
+   * @brief Copy assignment with double
+   *
+   * @param rhs The right hand side input double
+   * @return The assigned FiniteElementState
+   */
+  FiniteElementState& operator=(double rhs)
+  {
+    FiniteElementVector::operator=(rhs);
+    return *this;
+  }
+
+  /**
    * @brief Fill a user-provided grid function based on the underlying true vector
    *
    * This distributes true vector dofs to the finite element (local) dofs  by multiplying the true dofs
    * by the prolongation operator.
    *
-   * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
+   * @see <a href="https://mfem.org/pri-State-vec/">MFEM documentation</a> for details
    *
    */
   void fillGridFunction(mfem::ParGridFunction& grid_function) const { grid_function.SetFromTrueDofs(*this); }
@@ -94,7 +141,7 @@ public:
    * This distributes the grid function dofs to the true vector dofs by multiplying by the
    * restriction operator.
    *
-   * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
+   * @see <a href="https://mfem.org/pri-State-vec/">MFEM documentation</a> for details
    *
    * @param grid_function The grid function used to initialize the underlying true vector.
    */
