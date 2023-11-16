@@ -153,8 +153,20 @@ public:
         !nonlin_solver_,
         "EquationSolver argument is nullptr in HeatTransfer constructor. It is possible that it was previously moved.");
 
+    // Check for dynamic mode
+    if (timestepping_opts.timestepper != TimestepMethod::QuasiStatic) {
+      ode_.SetTimestepper(timestepping_opts.timestepper);
+      ode_.SetEnforcementMethod(timestepping_opts.enforcement_method);
+      is_quasistatic_ = false;
+    } else {
+      is_quasistatic_ = true;
+    }
+
     states_.push_back(&temperature_);
-    // states_.push_back(&temperature_rate_);
+    if (!is_quasistatic_) {
+      //states_.push_back(&temperature_rate_);
+    }
+
     adjoints_.push_back(&adjoint_temperature_);
 
     // Create a pack of the primal field and parameter finite element spaces
@@ -183,15 +195,6 @@ public:
         test_space, trial_spaces);
 
     nonlin_solver_->setOperator(residual_with_bcs_);
-
-    // Check for dynamic mode
-    if (timestepping_opts.timestepper != TimestepMethod::QuasiStatic) {
-      ode_.SetTimestepper(timestepping_opts.timestepper);
-      ode_.SetEnforcementMethod(timestepping_opts.enforcement_method);
-      is_quasistatic_ = false;
-    } else {
-      is_quasistatic_ = true;
-    }
 
     dt_          = 0.0;
     previous_dt_ = -1.0;
@@ -597,7 +600,13 @@ public:
    *
    * @return The primal solution names
    */
-  virtual std::vector<std::string> stateNames() const override { return std::vector<std::string>{{"temperature"}}; }
+  virtual std::vector<std::string> stateNames() const override {
+    if (is_quasistatic_) {
+      return std::vector<std::string>{{"temperature"}};
+    } else {
+      return std::vector<std::string>{{"temperature", "temperature_rate"}};
+    }
+  }
 
   /**
    * @brief Accessor for getting named finite element state adjoint solution from the physics modules
@@ -846,6 +855,10 @@ public:
   {
     if (state_name == "temperature") {
       FiniteElementState previous_state = temperature_;
+      StateManager::loadCheckpointedStates(cycle, {previous_state});
+      return previous_state;
+    } else if (state_name == "temperature_rate") {
+      FiniteElementState previous_state = temperature_rate_;
       StateManager::loadCheckpointedStates(cycle, {previous_state});
       return previous_state;
     }
