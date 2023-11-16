@@ -1105,11 +1105,8 @@ public:
       // the material state buffers to be updated
       residual_->update_qdata = true;
 
-      // this seems like the wrong way to be doing this assignment, but
-      // reactions_ = residual(displacement, ...);
-      // isn't currently supported
-      reactions_.Vector::operator=(
-          (*residual_)(displacement_, acceleration_, shape_displacement_, *parameters_[parameter_indices].state...));
+      reactions_ =
+          (*residual_)(displacement_, acceleration_, shape_displacement_, *parameters_[parameter_indices].state...);
 
       residual_->update_qdata = false;
     }

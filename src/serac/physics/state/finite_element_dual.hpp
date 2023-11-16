@@ -57,6 +57,41 @@ public:
     return *this;
   }
 
+  FiniteElementDual& operator=(FiniteElementDual&& rhs)
+  {
+    std::unique_ptr<mfem::ParLinearForm> lf(std::move(rhs.linear_form_));
+    FiniteElementVector::                operator=(rhs);
+    this->linear_form_                           = std::move(lf);
+    return *this;
+  }
+
+  FiniteElementDual& operator=(const FiniteElementVector& rhs)
+  {
+    FiniteElementVector::operator=(rhs);
+    if (linear_form_) {
+      fillLinearForm(*linear_form_);
+    }
+    return *this;
+  }
+
+  FiniteElementDual& operator=(const mfem::HypreParVector& rhs)
+  {
+    FiniteElementVector::operator=(rhs);
+    return *this;
+  }
+
+  FiniteElementDual& operator=(const mfem::Vector& rhs)
+  {
+    FiniteElementVector::operator=(rhs);
+    return *this;
+  }
+
+  FiniteElementDual& operator=(double rhs)
+  {
+    FiniteElementVector::operator=(rhs);
+    return *this;
+  }
+
   /**
    * @brief Fill a user-provided linear form based on the underlying true vector
    *
