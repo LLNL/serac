@@ -130,7 +130,7 @@ public:
    * This distributes true vector dofs to the finite element (local) dofs  by multiplying the true dofs
    * by the prolongation operator.
    *
-   * @see <a href="https://mfem.org/pri-State-vec/">MFEM documentation</a> for details
+   * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
    *
    */
   void fillGridFunction(mfem::ParGridFunction& grid_function) const { grid_function.SetFromTrueDofs(*this); }
@@ -141,7 +141,7 @@ public:
    * This distributes the grid function dofs to the true vector dofs by multiplying by the
    * restriction operator.
    *
-   * @see <a href="https://mfem.org/pri-State-vec/">MFEM documentation</a> for details
+   * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
    *
    * @param grid_function The grid function used to initialize the underlying true vector.
    */
