@@ -281,7 +281,7 @@ public:
       time_ += dt;
 
       // Set the ODE time point for the time-varying loads in quasi-static problems
-      ode_time_point_ += time_;
+      ode_time_point_ = time_;
 
       // Project the essential boundary coefficients
       for (auto& bc : bcs_.essentials()) {
