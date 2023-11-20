@@ -440,7 +440,7 @@ public:
    *  at most one of which may be of the type `differentiate_wrt_this(mfem::Vector)`
    */
   template <uint32_t wrt, typename... T>
-  typename operator_paren_return<wrt>::type operator()(DifferentiateWRT<wrt>, const T&... args)
+  typename operator_paren_return<wrt>::type operator()(DifferentiateWRT<wrt>, double t, const T&... args)
   {
     const mfem::Vector* input_T[] = {&static_cast<const mfem::Vector&>(args)...};
 
@@ -465,7 +465,7 @@ public:
         }
       }
 
-      integral.Mult(input_E_[type], output_E_[type], wrt, update_qdata);
+      integral.Mult(t, input_E_[type], output_E_[type], wrt, update_qdata);
 
       // scatter-add to compute residuals on the local processor
       G_test_[type].ScatterAdd(output_E_[type], output_L_);
@@ -495,7 +495,7 @@ public:
 
   /// @overload
   template <typename... T>
-  auto operator()(const T&... args)
+  auto operator()(double t, const T&... args)
   {
     constexpr int num_differentiated_arguments = (std::is_same_v<T, differentiate_wrt_this> + ...);
     static_assert(num_differentiated_arguments <= 1,
@@ -505,7 +505,7 @@ public:
 
     [[maybe_unused]] constexpr uint32_t i = index_of_differentiation<T...>();
 
-    return (*this)(DifferentiateWRT<i>{}, args...);
+    return (*this)(DifferentiateWRT<i>{}, t, args...);
   }
 
   // TODO: expose this feature a better way

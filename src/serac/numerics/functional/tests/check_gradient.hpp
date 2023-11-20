@@ -13,14 +13,14 @@
 #include "serac/numerics/functional/functional.hpp"
 
 template <typename T>
-void check_gradient(serac::Functional<T>& f, const mfem::Vector& U, double epsilon = 1.0e-4)
+void check_gradient(serac::Functional<T>& f, double t, const mfem::Vector& U, double epsilon = 1.0e-4)
 {
   int seed = 42;
 
   mfem::Vector dU(U.Size());
   dU.Randomize(seed);
 
-  auto [value, dfdU]                                = f(serac::differentiate_wrt(U));
+  auto [value, dfdU]                                = f(t, serac::differentiate_wrt(U));
   std::unique_ptr<mfem::HypreParMatrix> dfdU_matrix = assemble(dfdU);
 
   // jacobian vector products
@@ -39,7 +39,7 @@ void check_gradient(serac::Functional<T>& f, const mfem::Vector& U, double epsil
   for (int i = 0; i < 5; i++) {
     auto U_plus_small = U;
     U_plus_small.Add((i - 2) * epsilon, dU);
-    f_values[i] = f(U_plus_small);
+    f_values[i] = f(t, U_plus_small);
   }
 
   // forward-difference approximations

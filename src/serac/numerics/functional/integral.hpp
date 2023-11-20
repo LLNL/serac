@@ -61,7 +61,7 @@ struct Integral {
    * other path-dependent materials, this flag should only be set to `true` once a solution to the nonlinear system has
    * been found.
    */
-  void Mult(const std::vector<mfem::BlockVector>& input_E, mfem::BlockVector& output_E, uint32_t differentiation_index,
+  void Mult(double t, const std::vector<mfem::BlockVector>& input_E, mfem::BlockVector& output_E, uint32_t differentiation_index,
             bool update_state) const
   {
     output_E = 0.0;
@@ -75,7 +75,7 @@ struct Integral {
       for (std::size_t i = 0; i < active_trial_spaces_.size(); i++) {
         inputs[i] = input_E[uint32_t(active_trial_spaces_[i])].GetBlock(geometry).Read();
       }
-      func(inputs, output_E.GetBlock(geometry).ReadWrite(), update_state);
+      func(t, inputs, output_E.GetBlock(geometry).ReadWrite(), update_state);
     }
   }
 
@@ -123,7 +123,7 @@ struct Integral {
   Domain domain_;
 
   /// @brief signature of integral evaluation kernel
-  using eval_func = std::function<void(const std::vector<const double*>&, double*, bool)>;
+  using eval_func = std::function<void(double, const std::vector<const double*>&, double*, bool)>;
 
   /// @brief kernels for integral evaluation over each type of element
   std::map<mfem::Geometry::Type, eval_func> evaluation_;
