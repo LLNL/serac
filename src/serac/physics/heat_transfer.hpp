@@ -231,15 +231,11 @@ public:
       if (std::holds_alternative<serac::heat_transfer::LinearIsotropicConductor>(mat)) {
         SLIC_INFO("Setting LinearIsotropicConductor material");
         setMaterial(std::get<serac::heat_transfer::LinearIsotropicConductor>(mat));
-      } else if (std::holds_alternative<serac::heat_transfer::LinearConductor<2>>(mat)) {
-        auto x = std::get<serac::heat_transfer::LinearConductor<2>>(mat);
-        SLIC_INFO("Setting LinearConductor<2> material");
+      } else if (std::holds_alternative<serac::heat_transfer::LinearConductor<dim>>(mat)) {
+        auto x = std::get<serac::heat_transfer::LinearConductor<dim>>(mat);
+        SLIC_INFO("Setting LinearConductor<dim> material");
         setMaterial(x);
-      } else if (std::holds_alternative<serac::heat_transfer::LinearConductor<3>>(mat)) {
-        SLIC_INFO("Setting LinearConductor<3> material");
-        auto x = std::get<serac::heat_transfer::LinearConductor<3>>(mat);
-        setMaterial(x);
-      }
+      } 
     }
 
     if (input_options.initial_temperature) {
