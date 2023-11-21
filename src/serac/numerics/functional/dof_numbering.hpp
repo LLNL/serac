@@ -2,7 +2,7 @@
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
-// SPDX-License-Identifier: (BSD-3-Clause)#pragma once
+// SPDX-License-Identifier: (BSD-3-Clause)
 #pragma once
 
 #include "mfem.hpp"
@@ -23,13 +23,13 @@ namespace serac {
  * lexicographically, to facilitate creating the CSR matrix graph.
  */
 struct ElemInfo {
-  uint32_t       global_row_;  ///< The global row number
-  uint32_t       global_col_;  ///< The global column number
-  uint32_t       local_row_;   ///< The local row number
-  uint32_t       local_col_;   ///< The global column number
-  uint32_t       element_id_;  ///< The element ID
-  int            sign_;        ///< The orientation of the element
-  Integral::Type type;         ///< Which kind of Integral this entry comes from
+  uint32_t     global_row_;  ///< The global row number
+  uint32_t     global_col_;  ///< The global column number
+  uint32_t     local_row_;   ///< The local row number
+  uint32_t     local_col_;   ///< The global column number
+  uint32_t     element_id_;  ///< The element ID
+  int          sign_;        ///< The orientation of the element
+  Domain::Type type;         ///< Which kind of Integral this entry comes from
 };
 
 /**

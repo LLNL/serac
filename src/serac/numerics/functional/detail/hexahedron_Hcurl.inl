@@ -287,7 +287,6 @@ struct finite_element<mfem::Geometry::CUBE, Hcurl<p>> {
         break;
     }
 
-    using vec3     = tensor<double, 3>;
     using source_t = decltype(dot(get<0>(get<0>(in_t{})), vec3{}) + dot(get<1>(get<0>(in_t{})), vec3{}));
     using flux_t   = decltype(dot(get<0>(get<1>(in_t{})), vec3{}) + dot(get<1>(get<1>(in_t{})), vec3{}));
 

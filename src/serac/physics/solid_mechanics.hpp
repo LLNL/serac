@@ -259,9 +259,6 @@ public:
 
     predicted_displacement_.SetSize(true_size);
     predicted_displacement_ = 0.0;
-
-    zero_.SetSize(true_size);
-    zero_ = 0.0;
   }
 
   /**
@@ -342,7 +339,7 @@ public:
   }
 
   /// @brief Destroy the SolidMechanics Functional object
-  ~SolidMechanics() {}
+  virtual ~SolidMechanics() {}
 
   /**
    * @brief Create a shared ptr to a quadrature data buffer for the given material type
@@ -965,7 +962,7 @@ public:
   }
 
   /// @brief Build the quasi-static operator corresponding to the total Lagrangian formulation
-  std::unique_ptr<mfem_ext::StdFunctionOperator> buildQuasistaticOperator()
+  virtual std::unique_ptr<mfem_ext::StdFunctionOperator> buildQuasistaticOperator()
   {
     // the quasistatic case is entirely described by the residual,
     // there is no ordinary differential equation
@@ -975,7 +972,7 @@ public:
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
           const mfem::Vector res =
-              (*residual_)(u, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+              (*residual_)(u, acceleration_, shape_displacement_, *parameters_[parameter_indices].state...);
 
           // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
           // tracking strategy
@@ -986,10 +983,10 @@ public:
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          auto [r, drdu] =
-              (*residual_)(differentiate_wrt(u), zero_, shape_displacement_, *parameters_[parameter_indices].state...);
-          J_   = assemble(drdu);
-          J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+          auto [r, drdu] = (*residual_)(differentiate_wrt(u), acceleration_, shape_displacement_,
+                                        *parameters_[parameter_indices].state...);
+          J_             = assemble(drdu);
+          J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
         });
   }
@@ -1024,12 +1021,6 @@ public:
 
     if (is_quasistatic_) {
       residual_with_bcs_ = buildQuasistaticOperator();
-
-      // the residual calculation uses the old stiffness matrix
-      // to help apply essential boundary conditions, so we
-      // compute J here to prime the pump for the first solve
-      residual_with_bcs_->GetGradient(displacement_);
-
     } else {
       // the dynamic case is described by a residual function and a second order
       // ordinary differential equation. Here, we define the residual function in
@@ -1084,64 +1075,16 @@ public:
   }
 
   /// @brief Solve the Quasi-static Newton system
-  void quasiStaticSolve(double dt)
+  virtual void quasiStaticSolve(double dt)
   {
     time_ += dt;
 
-    // the ~20 lines of code below are essentially equivalent to the 1-liner
+    // Set the ODE time point for the time-varying loads in quasi-static problems
+    ode_time_point_ = time_;
+
+    // this method is essentially equivalent to the 1-liner
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
-
-    // Update the linearized Jacobian matrix
-    auto [r, drdu] = (*residual_)(differentiate_wrt(displacement_), zero_, shape_displacement_,
-                                  *parameters_[parameter_indices].state...);
-    J_             = assemble(drdu);
-    J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
-
-    du_ = 0.0;
-    for (auto& bc : bcs_.essentials()) {
-      bc.setDofs(du_, time_);
-    }
-
-    auto& constrained_dofs = bcs_.allEssentialTrueDofs();
-    for (int i = 0; i < constrained_dofs.Size(); i++) {
-      int j = constrained_dofs[i];
-      du_[j] -= displacement_(j);
-    }
-
-    dr_ = 0.0;
-    mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, dr_);
-
-    // Update the initial guess for changes in the parameters if this is not the first solve
-    for (std::size_t parameter_index = 0; parameter_index < parameters_.size(); ++parameter_index) {
-      // Compute the change in parameters parameter_diff = parameter_new - parameter_old
-      serac::FiniteElementState parameter_difference = *parameters_[parameter_index].state;
-      parameter_difference -= *parameters_[parameter_index].previous_state;
-
-      // Compute a linearized estimate of the residual forces due to this change in parameter
-      auto drdparam        = serac::get<DERIVATIVE>(d_residual_d_[parameter_index]());
-      auto residual_update = drdparam(parameter_difference);
-
-      // Flip the sign to get the RHS of the Newton update system
-      // J^-1 du = - residual
-      residual_update *= -1.0;
-
-      dr_ += residual_update;
-
-      // Save the current parameter value for the next timestep
-      *parameters_[parameter_index].previous_state = *parameters_[parameter_index].state;
-    }
-
-    for (int i = 0; i < constrained_dofs.Size(); i++) {
-      int j  = constrained_dofs[i];
-      dr_[j] = du_[j];
-    }
-
-    auto& lin_solver = nonlin_solver_->linearSolver();
-
-    lin_solver.SetOperator(*J_);
-
-    lin_solver.Mult(dr_, du_);
-    displacement_ += du_;
+    warmStartDisplacement();
 
     nonlin_solver_->solve(displacement_);
   }
@@ -1252,7 +1195,7 @@ public:
     adjoint_essential = 0.0;
 
     if (is_quasistatic_) {
-      auto [_, drdu] = (*residual_)(differentiate_wrt(displacement_), zero_, shape_displacement_,
+      auto [_, drdu] = (*residual_)(differentiate_wrt(displacement_), acceleration_, shape_displacement_,
                                     *parameters_[parameter_indices].state...);
       auto jacobian  = assemble(drdu);
       auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
@@ -1469,7 +1412,7 @@ protected:
    */
   mfem_ext::SecondOrderODE ode2_;
 
-  /// Assembled sparse matrix for the Jacobian
+  /// Assembled sparse matrix for the Jacobian df/du (11 block if using Lagrange multiplier contact)
   std::unique_ptr<mfem::HypreParMatrix> J_;
 
   /// rows and columns of J_ that have been separated out
@@ -1506,17 +1449,14 @@ protected:
   /// @brief Coefficient containing the essential boundary values
   std::shared_ptr<mfem::Coefficient> component_disp_bdr_coef_;
 
-  /// @brief An auxilliary zero vector
-  mfem::Vector zero_;
-
   /// @brief Array functions computing the derivative of the residual with respect to each given parameter
   /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
   /// template parameter.
-  std::array<std::function<decltype((*residual_)(DifferentiateWRT<0>{}, displacement_, zero_, shape_displacement_,
-                                                 *parameters_[parameter_indices].state...))()>,
+  std::array<std::function<decltype((*residual_)(DifferentiateWRT<0>{}, displacement_, acceleration_,
+                                                 shape_displacement_, *parameters_[parameter_indices].state...))()>,
              sizeof...(parameter_indices)>
       d_residual_d_ = {[&]() {
-        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, displacement_, zero_,
+        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, displacement_, acceleration_,
                             shape_displacement_, *parameters_[parameter_indices].state...);
       }...};
 
@@ -1577,6 +1517,64 @@ protected:
       }
     }
     return constrained_dofs;
+  }
+
+  /**
+   * @brief Sets the Dirichlet BCs for the current time and computes an initial guess for parameters and displacement
+   */
+  void warmStartDisplacement()
+  {
+    // Update the linearized Jacobian matrix
+    auto [r, drdu] = (*residual_)(differentiate_wrt(displacement_), acceleration_, shape_displacement_,
+                                  *parameters_[parameter_indices].state...);
+    J_             = assemble(drdu);
+    J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+
+    du_ = 0.0;
+    for (auto& bc : bcs_.essentials()) {
+      bc.setDofs(du_, time_);
+    }
+
+    auto& constrained_dofs = bcs_.allEssentialTrueDofs();
+    for (int i = 0; i < constrained_dofs.Size(); i++) {
+      int j = constrained_dofs[i];
+      du_[j] -= displacement_(j);
+    }
+
+    dr_ = 0.0;
+    mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, dr_);
+
+    // Update the initial guess for changes in the parameters if this is not the first solve
+    for (std::size_t parameter_index = 0; parameter_index < parameters_.size(); ++parameter_index) {
+      // Compute the change in parameters parameter_diff = parameter_new - parameter_old
+      serac::FiniteElementState parameter_difference = *parameters_[parameter_index].state;
+      parameter_difference -= *parameters_[parameter_index].previous_state;
+
+      // Compute a linearized estimate of the residual forces due to this change in parameter
+      auto drdparam        = serac::get<DERIVATIVE>(d_residual_d_[parameter_index]());
+      auto residual_update = drdparam(parameter_difference);
+
+      // Flip the sign to get the RHS of the Newton update system
+      // J^-1 du = - residual
+      residual_update *= -1.0;
+
+      dr_ += residual_update;
+
+      // Save the current parameter value for the next timestep
+      *parameters_[parameter_index].previous_state = *parameters_[parameter_index].state;
+    }
+
+    for (int i = 0; i < constrained_dofs.Size(); i++) {
+      int j  = constrained_dofs[i];
+      dr_[j] = du_[j];
+    }
+
+    auto& lin_solver = nonlin_solver_->linearSolver();
+
+    lin_solver.SetOperator(*J_);
+
+    lin_solver.Mult(dr_, du_);
+    displacement_ += du_;
   }
 };
 
