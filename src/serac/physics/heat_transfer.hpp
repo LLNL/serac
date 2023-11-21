@@ -235,7 +235,7 @@ public:
         auto x = std::get<serac::heat_transfer::LinearConductor<dim>>(mat);
         SLIC_INFO("Setting LinearConductor<dim> material");
         setMaterial(x);
-      } 
+      }
     }
 
     if (input_options.initial_temperature) {
