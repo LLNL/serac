@@ -24,12 +24,12 @@ void HardeningInputOptions::defineInputFileSchema(axom::inlet::Container& contai
 
   // Verify
   container.registerVerifier([](const axom::inlet::Container& c) -> bool {
-    axom::inlet::InletType double_type = axom::inlet::InletType::Double;
-    bool sigma_y_present               = c.contains("sigma_y") && (c["sigma_y"].type() == double_type);
-    bool n_present                     = c.contains("n") && (c["n"].type() == double_type);
-    bool eps0_present                  = c.contains("eps0") && (c["eps0"].type() == double_type);
-    bool sigma_sat_present             = c.contains("sigma_sat") && (c["sigma_sat"].type() == double_type);
-    bool strain_constant_present       = c.contains("strain_constant") && (c["strain_constant"].type() == double_type);
+    axom::inlet::InletType double_type       = axom::inlet::InletType::Double;
+    bool                   sigma_y_present   = c.contains("sigma_y") && (c["sigma_y"].type() == double_type);
+    bool                   n_present         = c.contains("n") && (c["n"].type() == double_type);
+    bool                   eps0_present      = c.contains("eps0") && (c["eps0"].type() == double_type);
+    bool                   sigma_sat_present = c.contains("sigma_sat") && (c["sigma_sat"].type() == double_type);
+    bool strain_constant_present = c.contains("strain_constant") && (c["strain_constant"].type() == double_type);
 
     std::string law = c["law"];
     if (law == "PowerLawHardening") {

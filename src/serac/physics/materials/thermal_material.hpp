@@ -168,7 +168,7 @@ struct LinearConductor {
     return serac::tuple{density_ * specific_heat_capacity_, -1.0 * conductivity_ * temperature_gradient};
   }
 
-private:
+  // private:
   /// Density
   double density_;
 

@@ -287,7 +287,10 @@ public:
       } else if (std::holds_alternative<serac::solid_mechanics::LinearIsotropic>(mat)) {
         setMaterial(std::get<serac::solid_mechanics::LinearIsotropic>(mat));
       } else if (std::holds_alternative<serac::solid_mechanics::J2>(mat)) {
-        // setMaterial(std::get<serac::solid_mechanics::J2>(mat));
+        // solid_mechanics::J2::State initial_state{};
+        // auto state = createQuadratureDataBuffer(initial_state);
+        // auto j2_material = std::get<serac::solid_mechanics::J2>(mat);
+        // setMaterial(j2_material, state);
       } else if (std::holds_alternative<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>>(
                      mat)) {
         // setMaterial(std::get<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>>(mat));
