@@ -286,9 +286,7 @@ public:
       } else if (std::holds_alternative<serac::solid_mechanics::J2>(mat)) {
         if constexpr (dim == 3) {
           solid_mechanics::J2::State initial_state{};
-          auto                       state       = createQuadratureDataBuffer(initial_state);
-          auto                       j2_material = std::get<serac::solid_mechanics::J2>(mat);
-          setMaterial(j2_material, state);
+          setMaterial(std::get<serac::solid_mechanics::J2>(mat), createQuadratureDataBuffer(initial_state));
         } else {
           SLIC_ERROR_ROOT("J2 materials only work for 3D simulations");
         }
@@ -296,10 +294,8 @@ public:
                      mat)) {
         if constexpr (dim == 3) {
           serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>::State initial_state{};
-          auto state = createQuadratureDataBuffer(initial_state);
-          auto j2_material =
-              std::get<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>>(mat);
-          setMaterial(j2_material, state);
+          setMaterial(std::get<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>>(mat),
+                      createQuadratureDataBuffer(initial_state));
         } else {
           SLIC_ERROR_ROOT("J2Nonlinear materials only work for 3D simulations");
         }
@@ -307,9 +303,8 @@ public:
                      mat)) {
         if constexpr (dim == 3) {
           serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::VoceHardening>::State initial_state{};
-          auto state       = createQuadratureDataBuffer(initial_state);
-          auto j2_material = std::get<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::VoceHardening>>(mat);
-          setMaterial(j2_material, state);
+          setMaterial(std::get<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::VoceHardening>>(mat),
+                      createQuadratureDataBuffer(initial_state));
         } else {
           SLIC_ERROR_ROOT("J2Nonlinear materials only work for 3D simulations");
         }

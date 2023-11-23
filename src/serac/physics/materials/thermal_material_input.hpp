@@ -40,6 +40,17 @@ struct ThermalMaterialInputOptions {
  * @tparam The object to be created by Inlet
  */
 template <>
+struct FromInlet<std::vector<std::vector<double>>> {
+  /// @brief Returns created object from Inlet container
+  std::vector<std::vector<double>> operator()(const axom::inlet::Container& base);
+};
+
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by Inlet
+ */
+template <>
 struct FromInlet<serac::var_thermal_material_t> {
   /// @brief Returns created object from Inlet container
   serac::var_thermal_material_t operator()(const axom::inlet::Container& base);

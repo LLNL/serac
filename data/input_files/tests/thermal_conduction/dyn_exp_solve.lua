@@ -61,17 +61,23 @@ thermal_conduction = {
         {
             model = "LinearConductor",
             dim = 2,
-            kappa_tensor = {5.0,  0.01, -- TODO make 2d-array
-                            0.01, 1.0},
+            kappa_tensor =
+            {
+                row1 = {5.0,  0.01},
+                row2 = {0.01, 1.0 }
+            },
             cp = 2,
             density = 1
         },
         {
             model = "LinearConductor",
             dim = 3,
-            kappa_tensor = {1.5,  0.01, 0.0, -- TODO make 2d-array
-                            0.01, 1.0,  0.0,
-                            0.0,  0.0,  1.0},
+            kappa_tensor =
+            {
+                row1 = {1.5,  0.01, 0.0},
+                row2 = {0.01, 1.0,  0.0},
+                row3 = {0.0,  0.0,  1.0}
+            },
             cp = 2,
             density = 1
         },
