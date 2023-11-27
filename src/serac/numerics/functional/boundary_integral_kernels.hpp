@@ -331,8 +331,8 @@ auto evaluation_kernel(
 {
   auto trial_elements = trial_elements_tuple<geom>(s);
   auto test_element   = get_test_element<geom>(s);
-  return [=](double t, const std::vector<const double*>& inputs, double* outputs, bool /* update state */) {
-    evaluation_kernel_impl<wrt, Q, geom>(trial_elements, test_element, t, inputs, outputs, positions, jacobians, qf,
+  return [=](double time, const std::vector<const double*>& inputs, double* outputs, bool /* update state */) {
+    evaluation_kernel_impl<wrt, Q, geom>(trial_elements, test_element, time, inputs, outputs, positions, jacobians, qf,
                                          qf_derivatives.get(), elements, num_elements, s.index_seq);
   };
 }
