@@ -149,7 +149,7 @@ TEST(LiquidCrystalElastomer, Brighenti)
   Functional<double(H1<p, dim>)> avgYDispQoI({&solid_solver.displacement().space()});
   avgYDispQoI.AddSurfaceIntegral(
       DependsOn<0>{},
-      [=](auto position, auto displacement) {
+      [=](double /*t*/, auto position, auto displacement) {
         auto [X, dX_dxi] = position;
         auto [u, du_dxi] = displacement;
         auto n           = normalize(cross(dX_dxi));
@@ -160,18 +160,18 @@ TEST(LiquidCrystalElastomer, Brighenti)
   Functional<double(H1<p, dim>)> area({&solid_solver.displacement().space()});
   area.AddSurfaceIntegral(
       DependsOn<>{},
-      [=](auto position) {
+      [=](double /*t*/, auto position) {
         auto X = get<0>(position);
         return (X[1] > 0.99 * ly) ? 1.0 : 0.0;
       },
       pmesh);
 
-  double initial_area = area(solid_solver.displacement());
+  double t = 0.0;
+  double initial_area = area(t, solid_solver.displacement());
   SLIC_INFO_ROOT("... Initial Area of the top surface: " << initial_area);
 
   // initializations for quasi-static problem
   int    num_steps = 3;
-  double t         = 0.0;
   double tmax      = 1.0;
   double dt        = tmax / num_steps;
   double gblDispYmax;
@@ -192,8 +192,8 @@ TEST(LiquidCrystalElastomer, Brighenti)
     solid_solver.outputStateToDisk(output_filename);
 
     // get QoI
-    double current_qoi  = avgYDispQoI(solid_solver.displacement());
-    double current_area = area(solid_solver.displacement());
+    double current_qoi  = avgYDispQoI(t, solid_solver.displacement());
+    double current_area = area(t, solid_solver.displacement());
 
     // get displacement info
     if (outputDispInfo) {
