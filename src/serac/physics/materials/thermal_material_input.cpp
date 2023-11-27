@@ -73,9 +73,7 @@ std::vector<std::vector<double>> FromInlet<std::vector<std::vector<double>>>::op
 
   result.push_back(base["row1"].get<std::vector<double>>());
   result.push_back(base["row2"].get<std::vector<double>>());
-
-  std::vector<double> row3 = base["row3"].get<std::vector<double>>();
-  if (row3.size() > 0) result.push_back(row3);
+  result.push_back(base["row3"].get<std::vector<double>>());
 
   return result;
 }
