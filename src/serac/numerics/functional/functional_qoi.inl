@@ -17,18 +17,17 @@ namespace serac {
  * the case of a quantity of interest. The action of its MultTranspose() operator (the
  * only thing it is used for) sums the values from different processors.
  */
-struct QoIProlongation : public mfem::Operator {
+struct QoIProlongation {
+  QoIProlongation() {}
+
   /// @brief create a QoIProlongation for a Quantity of Interest
-  QoIProlongation(MPI_Comm c) : mfem::Operator(1, 1), comm(c) {}
+  QoIProlongation(MPI_Comm c) : comm(c) {}
 
   /// @brief unimplemented: do not use
-  void Mult(const mfem::Vector&, mfem::Vector&) const override
-  {
-    SLIC_ERROR_ROOT("QoIProlongation::Mult() is not defined");
-  }
+  void Mult(const mfem::Vector&, mfem::Vector&) const { SLIC_ERROR_ROOT("QoIProlongation::Mult() is not defined"); }
 
   /// @brief set the value of output to the distributed sum over input values from different processors
-  void MultTranspose(const mfem::Vector& input, mfem::Vector& output) const override
+  void MultTranspose(const mfem::Vector& input, mfem::Vector& output) const
   {
     // const_cast to work around clang@14.0.6 compiler error:
     //   "argument type 'const double *' doesn't match specified 'MPI' type tag that requires 'double *'"
@@ -90,7 +89,7 @@ public:
 
     auto mem_type = mfem::Device::GetMemoryType();
 
-    for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
+    for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
       input_E_[type].resize(num_trial_spaces);
     }
 
@@ -99,8 +98,8 @@ public:
 
       input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
 
-      for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
-        if (type == Integral::Type::Domain) {
+      for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
+        if (type == Domain::Type::Elements) {
           G_trial_[type][i] = BlockElementRestriction(trial_fes[i]);
         } else {
           G_trial_[type][i] = BlockElementRestriction(trial_fes[i], FaceType::BOUNDARY);
@@ -113,9 +112,9 @@ public:
       }
     }
 
-    for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
+    for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
       std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> counts{};
-      if (type == Integral::Type::Domain) {
+      if (type == Domain::Type::Elements) {
         counts = geometry_counts(*mesh);
       } else {
         counts = boundary_geometry_counts(*mesh);
@@ -132,7 +131,7 @@ public:
     }
 
     G_test_ = QoIElementRestriction();
-    P_test_ = new QoIProlongation(trial_fes[0]->GetParMesh()->GetComm());
+    P_test_ = QoIProlongation(trial_fes[0]->GetParMesh()->GetComm());
 
     output_L_.SetSize(1, mem_type);
 
@@ -146,35 +145,44 @@ public:
     }
   }
 
-  /// @brief destructor: deallocate the mfem::Operators that we're responsible for
-  ~Functional()
-  {
-    // delete P_test_;
-    // delete G_test_;
-    // delete G_test_boundary_;
-  }
-
   /**
    * @brief Adds a domain integral term to the Functional object
    * @tparam dim The dimension of the element (2 for quad, 3 for hex, etc)
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] integrand The user-provided quadrature function, see @p Integral
-   * @param[in] domain The domain on which to evaluate the integral
+   * @param[in] mesh The domain on which to evaluate the integral
    * @param[in] qdata The data structure containing per-quadrature-point data
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
    */
   template <int dim, int... args, typename lambda, typename qpt_data_type = Nothing>
-  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain,
+  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& mesh,
                          std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
   {
-    if (domain.GetNE() == 0) return;
+    if (mesh.GetNE() == 0) return;
 
-    SLIC_ERROR_ROOT_IF(dim != domain.Dimension(), "invalid mesh dimension for domain integral");
+    SLIC_ERROR_ROOT_IF(dim != mesh.Dimension(), "invalid mesh dimension for domain integral");
 
-    check_for_unsupported_elements(domain);
-    check_for_missing_nodal_gridfunc(domain);
+    check_for_unsupported_elements(mesh);
+    check_for_missing_nodal_gridfunc(mesh);
+
+    using signature = test(decltype(serac::type<args>(trial_spaces))...);
+    integrals_.push_back(
+        MakeDomainIntegral<signature, Q, dim>(EntireDomain(mesh), integrand, qdata, std::vector<uint32_t>{args...}));
+  }
+
+  /// @overload
+  template <int dim, int... args, typename lambda, typename qpt_data_type = Nothing>
+  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, Domain& domain,
+                         std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
+  {
+    if (domain.mesh_.GetNE() == 0) return;
+
+    SLIC_ERROR_ROOT_IF(dim != domain.mesh_.Dimension(), "invalid mesh dimension for domain integral");
+
+    check_for_unsupported_elements(domain.mesh_);
+    check_for_missing_nodal_gridfunc(domain.mesh_);
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
     integrals_.push_back(
@@ -185,7 +193,7 @@ public:
    * @tparam dim The dimension of the boundary element (1 for line, 2 for quad, etc)
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @param[in] integrand The user-provided quadrature function, see @p Integral
-   * @param[in] domain The domain on which to evaluate the integral
+   * @param[in] mesh The domain on which to evaluate the integral
    *
    * @brief Adds a boundary integral term to the Functional object
    *
@@ -193,12 +201,28 @@ public:
    * and @a spatial_dim template parameter
    */
   template <int dim, int... args, typename lambda, typename qpt_data_type = void>
-  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& mesh)
   {
-    auto num_bdr_elements = domain.GetNBE();
+    auto num_bdr_elements = mesh.GetNBE();
     if (num_bdr_elements == 0) return;
 
-    check_for_missing_nodal_gridfunc(domain);
+    check_for_missing_nodal_gridfunc(mesh);
+
+    using signature = test(decltype(serac::type<args>(trial_spaces))...);
+    integrals_.push_back(
+        MakeBoundaryIntegral<signature, Q, dim>(EntireBoundary(mesh), integrand, std::vector<uint32_t>{args...}));
+  }
+
+  /// @overload
+  template <int dim, int... args, typename lambda>
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, const Domain& domain)
+  {
+    auto num_bdr_elements = domain.mesh_.GetNBE();
+    if (num_bdr_elements == 0) return;
+
+    SLIC_ERROR_ROOT_IF(dim != domain.dim_, "invalid domain of integration for boundary integral");
+
+    check_for_missing_nodal_gridfunc(domain.mesh_);
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
     integrals_.push_back(MakeBoundaryIntegral<signature, Q, dim>(domain, integrand, std::vector<uint32_t>{args...}));
@@ -263,10 +287,10 @@ public:
 
     // this is used to mark when gather operations have been performed,
     // to avoid doing them more than once per trial space
-    bool already_computed[Integral::num_types]{};  // default initializes to `false`
+    bool already_computed[Domain::num_types]{};  // default initializes to `false`
 
     for (auto& integral : integrals_) {
-      auto type = integral.type;
+      auto type = integral.domain_.type_;
 
       if (!already_computed[type]) {
         G_trial_[type][which].Gather(input_L_[which], input_E_[type][which]);
@@ -280,7 +304,7 @@ public:
     }
 
     // scatter-add to compute global residuals
-    P_test_->MultTranspose(output_L_, output_T_);
+    P_test_.MultTranspose(output_L_, output_T_);
 
     return output_T_[0];
   }
@@ -308,10 +332,10 @@ public:
 
     // this is used to mark when operations have been performed,
     // to avoid doing them more than once
-    bool already_computed[Integral::num_types][num_trial_spaces]{};  // default initializes to `false`
+    bool already_computed[Domain::num_types][num_trial_spaces]{};  // default initializes to `false`
 
     for (auto& integral : integrals_) {
-      auto type = integral.type;
+      auto type = integral.domain_.type_;
 
       for (auto i : integral.active_trial_spaces_) {
         if (!already_computed[type][i]) {
@@ -328,7 +352,7 @@ public:
     }
 
     // scatter-add to compute global residuals
-    P_test_->MultTranspose(output_L_, output_T_);
+    P_test_.MultTranspose(output_L_, output_T_);
 
     if constexpr (wrt != NO_DIFFERENTIATION) {
       // if the user has indicated they'd like to evaluate and differentiate w.r.t.
@@ -401,11 +425,11 @@ private:
 
       gradient_L_ = 0.0;
 
-      std::map<mfem::Geometry::Type, ExecArray<double, 3, exec>> element_gradients[Integral::num_types];
+      std::map<mfem::Geometry::Type, ExecArray<double, 3, exec>> element_gradients[Domain::num_types];
 
       for (auto& integral : form_.integrals_) {
-        auto& K_elem             = element_gradients[integral.type];
-        auto& trial_restrictions = form_.G_trial_[integral.type][which_argument].restrictions;
+        auto& K_elem             = element_gradients[integral.domain_.type_];
+        auto& trial_restrictions = form_.G_trial_[integral.domain_.type_][which_argument].restrictions;
 
         if (K_elem.empty()) {
           for (auto& [geom, trial_restriction] : trial_restrictions) {
@@ -419,7 +443,7 @@ private:
         integral.ComputeElementGradients(K_elem, which_argument);
       }
 
-      for (auto type : Integral::Types) {
+      for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
         auto& K_elem             = element_gradients[type];
         auto& trial_restrictions = form_.G_trial_[type][which_argument].restrictions;
 
@@ -477,20 +501,20 @@ private:
   /// @brief The input set of local DOF values (i.e., on the current rank)
   mutable mfem::Vector input_L_[num_trial_spaces];
 
-  BlockElementRestriction G_trial_[Integral::num_types][num_trial_spaces];
+  BlockElementRestriction G_trial_[Domain::num_types][num_trial_spaces];
 
-  mutable std::vector<mfem::BlockVector> input_E_[Integral::num_types];
+  mutable std::vector<mfem::BlockVector> input_E_[Domain::num_types];
 
   std::vector<Integral> integrals_;
 
-  mutable mfem::BlockVector output_E_[Integral::num_types];
+  mutable mfem::BlockVector output_E_[Domain::num_types];
 
   QoIElementRestriction G_test_;
 
   /// @brief The output set of local DOF values (i.e., on the current rank)
   mutable mfem::Vector output_L_;
 
-  const mfem::Operator* P_test_;
+  QoIProlongation P_test_;
 
   /// @brief The set of true DOF values, a reference to this member is returned by @p operator()
   mutable mfem::Vector output_T_;

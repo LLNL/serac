@@ -185,7 +185,7 @@ double computeSolidMechanicsQoiAdjustingInitialDisplacement(SolidMechanics<p, di
                   "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
 
   disp.Add(pertubation, derivative_direction);
-  solid_solver.setDisplacement(disp);
+  solid_solver.setState("displacement", disp);
 
   return computeSolidMechanicsQoi(solid_solver, ts_info);
 }
@@ -200,7 +200,7 @@ double computeSolidMechanicsQoiAdjustingInitialVelocity(SolidMechanics<p, dim>& 
                   "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
 
   velo.Add(pertubation, derivative_direction);
-  solid_solver.setVelocity(velo);
+  solid_solver.setState("velocity", velo);
 
   return computeSolidMechanicsQoi(solid_solver, ts_info);
 }
