@@ -442,11 +442,13 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         if(${PROJECT_NAME} STREQUAL "smith")
             include(serac/tribol/cmake/TribolMacros.cmake)
             add_subdirectory(${PROJECT_SOURCE_DIR}/serac/tribol/src  ${CMAKE_BINARY_DIR}/tribol)
+            # NOTE: This needs to be removed when Tribol PR #45 is merged and serac is updated
             tribol_configure_file(${PROJECT_SOURCE_DIR}/serac/tribol/src/tribol/config.hpp.in
                                   ${PROJECT_BINARY_DIR}/serac/tribol/include/tribol/config.hpp)
         else()
             include(tribol/cmake/TribolMacros.cmake)
             add_subdirectory(${PROJECT_SOURCE_DIR}/tribol/src ${CMAKE_BINARY_DIR}/tribol)
+            # NOTE: This needs to be removed when Tribol PR #45 is merged and serac is updated
             tribol_configure_file(${PROJECT_SOURCE_DIR}/tribol/src/tribol/config.hpp.in
                                   ${PROJECT_BINARY_DIR}/tribol/include/tribol/config.hpp)
         endif()
