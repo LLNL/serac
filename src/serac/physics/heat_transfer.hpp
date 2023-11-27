@@ -440,7 +440,7 @@ public:
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
-        [source_function, this](auto x, auto temperature, auto /* dtemp_dt */, auto shape, auto... params) {
+        [source_function, this](double /*t*/, auto x, auto temperature, auto /* dtemp_dt */, auto shape, auto... params) {
           // Get the value and the gradient from the input tuple
           auto [u, du_dX] = temperature;
           auto [p, dp_dX] = shape;

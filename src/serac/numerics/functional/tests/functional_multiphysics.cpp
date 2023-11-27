@@ -56,7 +56,7 @@ TEST(FunctionalMultiphysics, NonlinearThermalTest3D)
 
   residual.AddVolumeIntegral(
       DependsOn<0, 1>{},
-      [=](auto x, auto temperature, auto dtemperature_dt) {
+      [=](double /*t*/, auto x, auto temperature, auto dtemperature_dt) {
         auto [u, du_dx]      = temperature;
         auto [du_dt, unused] = dtemperature_dt;
         auto source          = rho * cp * du_dt * du_dt - (100 * x[0] * x[1]);
@@ -67,7 +67,7 @@ TEST(FunctionalMultiphysics, NonlinearThermalTest3D)
 
   residual.AddSurfaceIntegral(
       DependsOn<0, 1>{},
-      [=](auto position, auto temperature, auto dtemperature_dt) {
+      [=](double /*t*/, auto position, auto temperature, auto dtemperature_dt) {
         auto [X, dX_dxi] = position;
         auto [u, _0]     = temperature;
         auto [du_dt, _1] = dtemperature_dt;
@@ -75,9 +75,10 @@ TEST(FunctionalMultiphysics, NonlinearThermalTest3D)
       },
       *mesh3D);
 
-  mfem::Vector r = residual(U, dU_dt);
+  double t = 0.0;
+  mfem::Vector r = residual(t, U, dU_dt);
 
-  check_gradient(residual, U, dU_dt);
+  check_gradient(residual, t, U, dU_dt);
 }
 
 int main(int argc, char* argv[])

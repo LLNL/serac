@@ -80,7 +80,7 @@ void check_gradient(serac::Functional<T>& f, double t, const mfem::Vector& U, do
 }
 
 template <typename T>
-void check_gradient(serac::Functional<T>& f, const mfem::Vector& U, double t, const mfem::Vector& dU_dt, double epsilon = 1.0e-4)
+void check_gradient(serac::Functional<T>& f, double t, const mfem::Vector& U, const mfem::Vector& dU_dt, double epsilon = 1.0e-4)
 {
   int seed = 42;
 
@@ -110,7 +110,7 @@ void check_gradient(serac::Functional<T>& f, const mfem::Vector& U, double t, co
     for (int i = 0; i < 5; i++) {
       auto U_plus_small = U;
       U_plus_small.Add((i - 2) * epsilon, dU);
-      f_values[i] = f(U_plus_small, dU_dt);
+      f_values[i] = f(t, U_plus_small, dU_dt);
     }
 
     // forward-difference approximations
@@ -151,7 +151,7 @@ void check_gradient(serac::Functional<T>& f, const mfem::Vector& U, double t, co
   }
 
   {
-    auto [value, df_ddU_dt]                                = f(U, serac::differentiate_wrt(dU_dt));
+    auto [value, df_ddU_dt]                                = f(t, U, serac::differentiate_wrt(dU_dt));
     std::unique_ptr<mfem::HypreParMatrix> df_ddU_dt_matrix = assemble(df_ddU_dt);
 
     // jacobian vector products
@@ -168,7 +168,7 @@ void check_gradient(serac::Functional<T>& f, const mfem::Vector& U, double t, co
     for (int i = 0; i < 5; i++) {
       auto dU_dt_plus_small = dU_dt;
       dU_dt_plus_small.Add((i - 2) * epsilon, ddU_dt);
-      f_values[i] = f(U, dU_dt_plus_small);
+      f_values[i] = f(t, U, dU_dt_plus_small);
     }
 
     // forward-difference approximations

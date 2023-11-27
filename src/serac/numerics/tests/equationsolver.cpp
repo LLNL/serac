@@ -59,7 +59,7 @@ TEST_P(EquationSolverSuite, All)
 
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [&](auto, auto scalar) {
+      [&](double /*t*/, auto, auto scalar) {
         auto [u, du_dx] = scalar;
         auto source     = 0.5 * sin(u);
         auto flux       = du_dx;
