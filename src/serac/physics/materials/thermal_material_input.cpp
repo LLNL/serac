@@ -37,30 +37,25 @@ void ThermalMaterialInputOptions::defineInputFileSchema(axom::inlet::Container& 
     bool                   kappa_present        = c.contains("kappa") && (c["kappa"].type() == double_type);
     bool                   dim_present          = c.contains("dim") && (c["dim"].type() == int_type);
     bool                   kappa_tensor_present = c.contains("kappa_tensor") && (c["kappa_tensor"].type() == obj_type);
-    
+
     if (model == "LinearIsotropicConductor") {
       return density_present && cp_present && kappa_present && !dim_present && !kappa_tensor_present;
     } else if (model == "LinearConductor") {
-      if (density_present && cp_present && !kappa_present && dim_present && kappa_tensor_present)
-      {
+      if (density_present && cp_present && !kappa_present && dim_present && kappa_tensor_present) {
         // Verify rows of kappa tensor struct is an array of doubles and is of proper size
-        int dim           = c["dim"];
+        int  dim          = c["dim"];
         bool row1_present = c.contains("kappa_tensor/row1") && (c["kappa_tensor/row1"].type() == coll_type);
         bool row2_present = c.contains("kappa_tensor/row2") && (c["kappa_tensor/row2"].type() == coll_type);
         bool row3_present = c.contains("kappa_tensor/row3") && (c["kappa_tensor/row3"].type() == coll_type);
         auto row1_size    = c["kappa_tensor/row1"].get<std::vector<double>>().size();
         auto row2_size    = c["kappa_tensor/row2"].get<std::vector<double>>().size();
         auto row3_size    = c["kappa_tensor/row3"].get<std::vector<double>>().size();
-        
-        if (dim == 2)
-        {
-          return row1_present && (row1_size == 2) &&
-                 row2_present && (row2_size == 2) &&
-                 !row3_present;
+
+        if (dim == 2) {
+          return row1_present && (row1_size == 2) && row2_present && (row2_size == 2) && !row3_present;
         } else if (dim == 3) {
-          return row1_present && (row1_size == 3) &&
-                 row2_present && (row2_size == 3) &&
-                 row3_present && (row3_size == 3);
+          return row1_present && (row1_size == 3) && row2_present && (row2_size == 3) && row3_present &&
+                 (row3_size == 3);
         }
       }
     }

@@ -229,12 +229,9 @@ public:
     // in the initialization stage
     for (const auto& mat : input_options.materials) {
       if (std::holds_alternative<serac::heat_transfer::LinearIsotropicConductor>(mat)) {
-        SLIC_INFO("Setting LinearIsotropicConductor material");
         setMaterial(std::get<serac::heat_transfer::LinearIsotropicConductor>(mat));
       } else if (std::holds_alternative<serac::heat_transfer::LinearConductor<dim>>(mat)) {
-        auto x = std::get<serac::heat_transfer::LinearConductor<dim>>(mat);
-        SLIC_INFO("Setting LinearConductor<dim> material");
-        setMaterial(x);
+        setMaterial(std::get<serac::heat_transfer::LinearConductor<dim>>(mat));
       }
     }
 

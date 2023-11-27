@@ -18,11 +18,11 @@
 
 namespace serac {
 
-// This variant holds all possible heat transfer materials that can be utilized in our Input Deck
+/// @brief Holds all possible heat transfer materials that can be utilized in our Input Deck
 using var_thermal_material_t = std::variant<heat_transfer::LinearIsotropicConductor, heat_transfer::LinearConductor<2>,
                                             heat_transfer::LinearConductor<3>>;
 
-// FIXME: this should be namespaced but i get an unused function error (depite using it in `heat_transfer_input.cpp`)
+/// @brief Contains function that defines the schema for heat transfer materials
 struct ThermalMaterialInputOptions {
   /**
    * @brief Input file parameters specific to this class
