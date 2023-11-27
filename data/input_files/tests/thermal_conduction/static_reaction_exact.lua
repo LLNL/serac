@@ -64,7 +64,7 @@ thermal_conduction = {
     order = 3,
 
     -- material parameters
-    kappa = 1.0,
+    materials = { { model = "LinearIsotropicConductor", kappa = 1.0, cp = 1.0, density = 1.0 }, },
 
     -- add a nonlinear reaction
     nonlinear_reaction = {

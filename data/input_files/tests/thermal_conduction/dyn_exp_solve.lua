@@ -51,37 +51,7 @@ thermal_conduction = {
     order = 2,
 
     -- material parameters
-    materials = {
-        {
-            model = "LinearIsotropicConductor",
-            kappa = 0.5,
-            cp = 2,
-            density = 1
-        },
-        {
-            model = "LinearConductor",
-            dim = 2,
-            kappa_tensor =
-            {
-                row1 = {5.0,  0.01},
-                row2 = {0.01, 1.0 }
-            },
-            cp = 2,
-            density = 1
-        },
-        {
-            model = "LinearConductor",
-            dim = 3,
-            kappa_tensor =
-            {
-                row1 = {1.5,  0.01, 0.0},
-                row2 = {0.01, 1.0,  0.0},
-                row3 = {0.0,  0.0,  1.0}
-            },
-            cp = 2,
-            density = 1
-        },
-    },
+    materials = { { model = "LinearIsotropicConductor", kappa = 0.5, cp = 0.5, density = 0.5 }, },
 
     -- initial conditions
     initial_temperature = {
