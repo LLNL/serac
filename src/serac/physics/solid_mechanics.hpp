@@ -1074,6 +1074,9 @@ public:
   {
     time_ += dt;
 
+    // Set the ODE time point for the time-varying loads in quasi-static problems
+    ode_time_point_ = time_;
+
     // this method is essentially equivalent to the 1-liner
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
     warmStartDisplacement();

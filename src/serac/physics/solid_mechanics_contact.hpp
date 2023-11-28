@@ -221,6 +221,9 @@ public:
 
     time_ += dt;
 
+    // Set the ODE time point for the time-varying loads in quasi-static problems
+    ode_time_point_ = time_;
+
     // this method is essentially equivalent to the 1-liner
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
     warmStartDisplacement();
@@ -256,6 +259,7 @@ protected:
   using SolidMechanicsBase::J_;
   using SolidMechanicsBase::J_e_;
   using SolidMechanicsBase::nonlin_solver_;
+  using SolidMechanicsBase::ode_time_point_;
   using SolidMechanicsBase::residual_;
   using SolidMechanicsBase::residual_with_bcs_;
   using SolidMechanicsBase::warmStartDisplacement;
