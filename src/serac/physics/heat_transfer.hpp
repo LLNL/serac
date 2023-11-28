@@ -331,7 +331,7 @@ public:
      * @brief Evaluate integrand
      */
     template <typename X, typename T, typename dT_dt, typename Shape, typename... Params>
-    auto operator()(double time, X x, T temperature, dT_dt dtemp_dt, Shape shape, Params... params)
+    auto operator()(double /*time*/, X x, T temperature, dT_dt dtemp_dt, Shape shape, Params... params)
     {
       // Get the value and the gradient from the input tuple
       auto [u, du_dX] = temperature;
@@ -1010,8 +1010,8 @@ protected:
   std::array<std::function<decltype((*residual_)(DifferentiateWRT<0>{}, 0.0, temperature_, temperature_rate_,
                                                  shape_displacement_, *parameters_[parameter_indices].state...))(double)>,
              sizeof...(parameter_indices)>
-      d_residual_d_ = {[&](double time) {
-        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, time, temperature_, temperature_rate_,
+      d_residual_d_ = {[&](double TIME) {
+        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, TIME, temperature_, temperature_rate_,
                             shape_displacement_, *parameters_[parameter_indices].state...);
       }...};
 };
