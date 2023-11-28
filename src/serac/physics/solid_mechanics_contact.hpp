@@ -105,9 +105,10 @@ public:
   std::unique_ptr<mfem_ext::StdFunctionOperator> buildQuasistaticOperator() override
   {
     auto residual_fn = [this](const mfem::Vector& u, mfem::Vector& r) {
+      double dummy_time = 0.0;
       const mfem::Vector u_blk(const_cast<mfem::Vector&>(u), 0, displacement_.Size());
       const mfem::Vector res =
-          (*residual_)(u_blk, acceleration_, shape_displacement_, *parameters_[parameter_indices].state...);
+          (*residual_)(dummy_time, u_blk, acceleration_, shape_displacement_, *parameters_[parameter_indices].state...);
 
       // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
       // tracking strategy
@@ -127,8 +128,10 @@ public:
           displacement_.space().TrueVSize() + contact_.numPressureDofs(), residual_fn,
           // gradient of residual function
           [this](const mfem::Vector& u) -> mfem::Operator& {
+            double dummy_time = 0.0;
+
             const mfem::Vector u_blk(const_cast<mfem::Vector&>(u), 0, displacement_.Size());
-            auto [r, drdu] = (*residual_)(differentiate_wrt(u_blk), acceleration_, shape_displacement_,
+            auto [r, drdu] = (*residual_)(dummy_time, differentiate_wrt(u_blk), acceleration_, shape_displacement_,
                                           *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
 
@@ -164,7 +167,9 @@ public:
       // mfem::HypreParMatrix
       return std::make_unique<mfem_ext::StdFunctionOperator>(
           displacement_.space().TrueVSize(), residual_fn, [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] = (*residual_)(differentiate_wrt(u), acceleration_, shape_displacement_,
+            double dummy_time = 0.0;
+
+            auto [r, drdu] = (*residual_)(dummy_time, differentiate_wrt(u), acceleration_, shape_displacement_,
                                           *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
 

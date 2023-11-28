@@ -222,7 +222,7 @@ void partial_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](auto x, auto temperature) {
+      [=](double /*t*/, auto x, auto temperature) {
         auto [u, du_dx] = temperature;
         auto source     = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
         auto flux       = d10 * u + dot(d11, du_dx);
@@ -232,7 +232,7 @@ void partial_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [=](auto position, auto temperature) {
+      [=](double /*t*/, auto position, auto temperature) {
         auto [X, dX_dxi] = position;
         auto [u, du_dxi] = temperature;
         return X[0] + X[1] - cos(u);

@@ -106,7 +106,7 @@ void elasticity_test(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [=](auto position, auto displacement) {
+      [=](double /*t*/, auto position, auto displacement) {
         auto [X, dX_dxi] = position;
         auto [u, du_dxi] = displacement;
         return u * X[0];

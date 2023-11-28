@@ -95,7 +95,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   // residual.AddBoundaryIntegral(
   //    Dimension<dim-1>{},
   //    DependsOn<0>{},
-  //    [&]([[maybe_unused]] auto x, [[maybe_unused]] auto temperature) { return 1.0; },
+  //    [&](double /*t*/, [[maybe_unused]] auto x, [[maybe_unused]] auto temperature) { return 1.0; },
   //    mesh);
 
   // Compute the residual using standard MFEM methods

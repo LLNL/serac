@@ -96,7 +96,7 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [&](auto position, auto temperature) {
+      [&](double /*t*/, auto position, auto temperature) {
         auto [X, dX_dxi] = position;
         auto [u, unused] = temperature;
 
@@ -177,7 +177,7 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [&](auto position, auto temperature) {
+      [&](double /*t*/, auto position, auto temperature) {
         auto [X, dX_dxi] = position;
         auto [u, unused] = temperature;
 

@@ -305,7 +305,7 @@ void functional_test_3D(mfem::ParMesh& mesh, double tolerance)
   auto div_f = [c](auto x) { return tr(dot(c, grad_monomials<p>(x))); };
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<1>{},
-      [=](auto X, auto shape_displacement) {
+      [=](double /*t*/, auto X, auto shape_displacement) {
         auto [u, du_dx] = shape_displacement;
         return serac::tuple{div_f(X + u) * det(I + du_dx), zero{}};
       },
@@ -314,7 +314,7 @@ void functional_test_3D(mfem::ParMesh& mesh, double tolerance)
   auto f = [c](auto x) { return dot(c, monomials<p>(x)); };
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<1>{},
-      [=](auto position, auto shape_displacement) {
+      [=](double /*t*/, auto position, auto shape_displacement) {
         auto [X, dX_dxi]     = position;
         auto [u, du_dxi]     = shape_displacement;
         auto n               = normalize(cross(dX_dxi + du_dxi));

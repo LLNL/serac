@@ -120,7 +120,7 @@ template <typename lambda, int dim, int n, typename qpt_data_type, typename... T
 SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, dim, n> x, qpt_data_type* qpt_data,
                                       bool update_state, const T&... inputs)
 {
-  using return_type = decltype(qf(tensor<double, dim>{}, qpt_data[0], T{}[0]...));
+  using return_type = decltype(qf(double{}, tensor<double, dim>{}, qpt_data[0], T{}[0]...));
   tensor<return_type, n> outputs{};
   for (int i = 0; i < n; i++) {
     tensor<double, dim> x_q;
