@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
   std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex-flat.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+   std::string mesh_tag{"mesh}"}; auto& pmesh = serac::StateManager::setMesh(std::move(mesh));
 
   // orient fibers in the beam like below (horizontal when y < 0.5, vertical when y > 0.5):
   //
@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
   double max_order_param = 0.7;
 
   // Parameter 1
-  FiniteElementState orderParam(StateManager::newState(FiniteElementState::Options{.order = p, .name = "orderParam"}));
+  FiniteElementState orderParam(pmesh, L2<0>{}, "orderParam");
   orderParam = max_order_param;
 
   // Parameter 2
@@ -115,7 +115,7 @@ int main(int argc, char* argv[])
   // Perform the quasi-static solve
   int num_steps = 10;
 
-  solid_solver.outputState("sol_lce_bertoldi");
+  solid_solver.outputStateToDisk("sol_lce_bertoldi");
 
   double t    = 0.0;
   double tmax = 1.0;
@@ -144,7 +144,7 @@ int main(int argc, char* argv[])
 
     t += dt;
     solid_solver.advanceTimestep(dt);
-    solid_solver.outputState("sol_lce_bertoldi");
+    solid_solver.outputStateToDisk("sol_lce_bertoldi");
 
     orderParam = max_order_param * (tmax - t) / tmax;
   }

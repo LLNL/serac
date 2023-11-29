@@ -48,7 +48,8 @@ int main(int argc, char* argv[])
   auto initial_mesh = buildMeshFromFile(filename);
   auto mesh = mesh::refineAndDistribute(std::move(initial_mesh), serial_refinement, parallel_refinement);
 
-  serac::StateManager::setMesh(std::move(mesh));
+  std::string mesh_tag{"mesh}"};
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // Construct a functional-based solid mechanics solver
   LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
@@ -66,7 +67,7 @@ int main(int argc, char* argv[])
                                               .max_iterations = 12,
                                               .print_level    = 1};
   SolidMechanics<p, dim, Parameters<L2<p>, L2<p>, L2<p> > > solid_solver(
-      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional");
+      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional", mesh_tag);
 
   // Material properties
   double density         = 1.0;    // [Kg / mm3]
@@ -97,12 +98,11 @@ int main(int argc, char* argv[])
   }
 
   // Parameter 1
-  FiniteElementState orderParam(StateManager::newState(FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "orderParam"}));
+  FiniteElementState orderParam(pmesh, L2<0>{}, "orderParam");
   orderParam = max_order_param;
 
   // Parameter 2
-  FiniteElementState gammaParam(StateManager::newState(
-      FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "gammaParam"}));
+  FiniteElementState gammaParam(pmesh, L2<0>{}, "gammaParam");
   bool               heterogeneousGammaField = problemID == 2 ? true : false;
   auto               gammaFunc = [heterogeneousGammaField, gamma_angle](const mfem::Vector& x, double) -> double {
     if (heterogeneousGammaField) {
@@ -128,8 +128,7 @@ int main(int argc, char* argv[])
   gammaParam.project(gammaCoef);
 
   // Paremetr 3
-  FiniteElementState        etaParam(StateManager::newState(
-      FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "etaParam"}));
+  FiniteElementState etaParam(pmesh, L2<0>{}, "etaParam");
   auto                      etaFunc = [eta_angle](const mfem::Vector& /*x*/, double) -> double { return eta_angle; };
   mfem::FunctionCoefficient etaCoef(etaFunc);
   etaParam.project(etaCoef);
@@ -165,11 +164,11 @@ int main(int argc, char* argv[])
 
   // Perform the quasi-static solve
   std::string outputFilename = "sol_lce_bertoldi_amr_test_no_border_with_qoi_ref_0";
-  solid_solver.outputState(outputFilename);
+  solid_solver.outputStateToDisk(outputFilename);
 
   // QoI for output
   // --------------
-  auto& pmesh = serac::StateManager::mesh();
+  // auto& pmesh = serac::StateManager::mesh();
   Functional<double(H1<p, dim>, serac::L2<p>, serac::L2<p>, serac::L2<p>)> strainEnergyQoI(
       {&solid_solver.displacement().space(), &orderParam.space(), &gammaParam.space(), &etaParam.space()});
   strainEnergyQoI.AddDomainIntegral(
@@ -209,7 +208,7 @@ int main(int argc, char* argv[])
     }
 
     solid_solver.advanceTimestep(dt);
-    solid_solver.outputState(outputFilename);
+    solid_solver.outputStateToDisk(outputFilename);
 
     // Compute QoI
     double current_qoi = strainEnergyQoI(solid_solver.displacement(), orderParam, gammaParam, etaParam);
@@ -220,7 +219,8 @@ int main(int argc, char* argv[])
     adjoint_load = *assemble(dqoi_du);
 
     // Solve adjoint problem
-    solid_solver.solveAdjoint({{"displacement", adjoint_load}});
+    solid_solver.setAdjointLoad({{"displacement", adjoint_load}});
+    solid_solver.reverseAdjointTimestep();
 
     // Output data
     auto&                 fes             = solid_solver.displacement().space();
@@ -278,7 +278,7 @@ int main(int argc, char* argv[])
   auto new_mesh = buildMeshFromFile(filename);
   int numElems = new_mesh.GetNE();
 
-  auto dQoIdp = solid_solver.computeSensitivity(GAMMA_INDEX);
+  auto dQoIdp = solid_solver.computeTimestepSensitivity(GAMMA_INDEX);
   mfem::HypreParVector* assembledVector(const_cast<mfem::ParLinearForm &>(dQoIdp.linearForm()).ParallelAssemble());
 
   // Construct grid function from hypre vector
@@ -412,7 +412,7 @@ int main(int argc, char* argv[])
 // std::cout<<"......... 4 ........."<<std::endl;
 //   // Perform the quasi-static solve
 //   std::string outputFilename_amr = "sol_lce_bertoldi_amr_test_no_border_with_qoi_ref_0_refined_mesh";
-//   solid_solver_amr.outputState(outputFilename_amr);
+//   solid_solver_amr.outputStateToDisk(outputFilename_amr);
 
 //   // QoI for output
 //   // --------------
@@ -447,7 +447,7 @@ int main(int argc, char* argv[])
 //     }
 
 //     solid_solver_amr.advanceTimestep(dt);
-//     solid_solver_amr.outputState(outputFilename_amr);
+//     solid_solver_amr.outputStateToDisk(outputFilename_amr);
 
 //     // Compute QoI
 //     double current_qoi = strainEnergyQoI_amr(solid_solver_amr.displacement(), orderParam_amr, gammaParam_amr, etaParam_amr);

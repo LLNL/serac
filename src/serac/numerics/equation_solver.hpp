@@ -164,16 +164,18 @@ public:
   /**
    * @brief Factor and solve the linear system y = Op^{-1} x using DSuperLU
    *
-   * @param x The input RHS vector
-   * @param y The output solution vector
+   * @param input The input RHS vector
+   * @param output The output solution vector
    */
-  void Mult(const mfem::Vector& x, mfem::Vector& y) const;
+  void Mult(const mfem::Vector& input, mfem::Vector& output) const;
 
   /**
    * @brief Set the underlying matrix operator to use in the solution algorithm
    *
    * @param op The matrix operator to factorize with SuperLU
-   * @pre This operator must be an assembled HypreParMatrix for compatibility with SuperLU
+   * @pre This operator must be an assembled HypreParMatrix or a BlockOperator
+   * with all blocks either null or HypreParMatrixs for compatibility with
+   * SuperLU
    */
   void SetOperator(const mfem::Operator& op);
 
@@ -192,6 +194,7 @@ private:
   mfem::SuperLUSolver superlu_solver_;
 };
 
+#ifdef MFEM_USE_STRUMPACK
 /**
  * @brief A wrapper class for using the MFEM Strumpack solver with a HypreParMatrix
  */
@@ -206,7 +209,6 @@ public:
   {
     strumpack_solver_.SetKrylovSolver(strumpack::KrylovSolver::DIRECT);
     strumpack_solver_.SetReorderingStrategy(strumpack::ReorderingStrategy::METIS);
-    strumpack_solver_.DisableMatching();
 
     if (print_level == 1) {
       strumpack_solver_.SetPrintFactorStatistics(true);
@@ -217,10 +219,10 @@ public:
   /**
    * @brief Factor and solve the linear system y = Op^{-1} x using Strumpack
    *
-   * @param x The input RHS vector
-   * @param y The output solution vector
+   * @param input The input RHS vector
+   * @param output The output solution vector
    */
-  void Mult(const mfem::Vector& x, mfem::Vector& y) const;
+  void Mult(const mfem::Vector& input, mfem::Vector& output) const;
 
   /**
    * @brief Set the underlying matrix operator to use in the solution algorithm
@@ -244,6 +246,8 @@ private:
    */
   mfem::STRUMPACKSolver strumpack_solver_;
 };
+
+#endif
 
 /**
  * @brief Build a nonlinear solver using the nonlinear option struct

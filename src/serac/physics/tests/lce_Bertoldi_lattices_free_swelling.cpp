@@ -63,7 +63,8 @@ int main(int argc, char* argv[])
   auto initial_mesh = buildMeshFromFile(inputFilename);
   auto mesh = mesh::refineAndDistribute(std::move(initial_mesh), serial_refinement, parallel_refinement);
 
-  serac::StateManager::setMesh(std::move(mesh));
+   std::string mesh_tag{"mesh}"}; 
+   auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // Construct a functional-based solid mechanics solver
   // LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
@@ -75,7 +76,7 @@ int main(int argc, char* argv[])
                                               .max_iterations = 50,
                                               .print_level    = 1};
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
-      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional");
+      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional", mesh_tag);
 
   // Material properties
   double density         = 1.0;    // [Kg / mm3]
@@ -88,12 +89,11 @@ int main(int argc, char* argv[])
   double eta_angle       = 0.0;
 
   // Parameter 1
-  FiniteElementState orderParam(StateManager::newState(FiniteElementState::Options{.order = p, .name = "orderParam"}));
+  FiniteElementState orderParam(pmesh, L2<0>{}, "orderParam");
   orderParam = max_order_param;
 
   // Parameter 2
-  FiniteElementState gammaParam(StateManager::newState(
-      FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "gammaParam"}));
+  FiniteElementState gammaParam(pmesh, L2<0>{}, "gammaParam");
   auto gammaFunc = [=](const mfem::Vector& x, double) -> double {
     double alignmentAngle = 0.0;
     double t = 0.25e-3;
@@ -196,8 +196,7 @@ int main(int argc, char* argv[])
   gammaParam.project(gammaCoef);
 
   // Paremetr 3
-  FiniteElementState        etaParam(StateManager::newState(
-      FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "etaParam"}));
+  FiniteElementState        etaParam(pmesh, L2<0>{}, "etaParam");
   auto                      etaFunc = [eta_angle](const mfem::Vector& /*x*/, double) -> double { return eta_angle; };
   mfem::FunctionCoefficient etaCoef(etaFunc);
   etaParam.project(etaCoef);
@@ -304,7 +303,7 @@ int main(int argc, char* argv[])
   double dt   = tmax / num_steps;
 
   solid_solver.advanceTimestep(dt);
-  solid_solver.outputState(outputFilename);
+  solid_solver.outputStateToDisk(outputFilename);
 
   if (rank == 0) {
     std::cout << "\n\n###############################" 
@@ -326,7 +325,7 @@ int main(int argc, char* argv[])
     }
 
     solid_solver.advanceTimestep(dt);
-    solid_solver.outputState(outputFilename);
+    solid_solver.outputStateToDisk(outputFilename);
 
     auto&                 fes             = solid_solver.displacement().space();
     mfem::ParGridFunction displacement_gf = solid_solver.displacement().gridFunction();

@@ -24,6 +24,8 @@
 
 #include "serac/numerics/functional/element_restriction.hpp"
 
+#include "serac/numerics/functional/domain.hpp"
+
 #include <array>
 #include <vector>
 
@@ -68,7 +70,7 @@ struct Index {
 };
 
 /// function for verifying that the mesh has been fully initialized
-void check_for_missing_nodal_gridfunc(const mfem::Mesh& mesh)
+inline void check_for_missing_nodal_gridfunc(const mfem::Mesh& mesh)
 {
   if (mesh.GetNodes() == nullptr) {
     SLIC_ERROR_ROOT(
@@ -86,7 +88,7 @@ void check_for_missing_nodal_gridfunc(const mfem::Mesh& mesh)
 }
 
 /// function for verifying that there are no unsupported element types in the mesh
-void check_for_unsupported_elements(const mfem::Mesh& mesh)
+inline void check_for_unsupported_elements(const mfem::Mesh& mesh)
 {
   int num_elements = mesh.GetNE();
   for (int e = 0; e < num_elements; e++) {
@@ -106,7 +108,7 @@ void check_for_unsupported_elements(const mfem::Mesh& mesh)
  * @return a pair containing the new finite element space and associated finite element collection
  */
 template <typename function_space>
-std::pair<std::unique_ptr<mfem::ParFiniteElementSpace>, std::unique_ptr<mfem::FiniteElementCollection>>
+inline std::pair<std::unique_ptr<mfem::ParFiniteElementSpace>, std::unique_ptr<mfem::FiniteElementCollection>>
 generateParFiniteElementSpace(mfem::ParMesh* mesh)
 {
   const int                                      dim = mesh->Dimension();
@@ -219,7 +221,7 @@ public:
   {
     auto mem_type = mfem::Device::GetMemoryType();
 
-    for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
+    for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
       input_E_[type].resize(num_trial_spaces);
     }
 
@@ -229,8 +231,8 @@ public:
       input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
 
       // L->E
-      for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
-        if (type == Integral::Type::Domain) {
+      for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
+        if (type == Domain::Type::Elements) {
           G_trial_[type][i] = BlockElementRestriction(trial_fes[i]);
         } else {
           G_trial_[type][i] = BlockElementRestriction(trial_fes[i], FaceType::BOUNDARY);
@@ -243,8 +245,8 @@ public:
       }
     }
 
-    for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
-      if (type == Integral::Type::Domain) {
+    for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
+      if (type == Domain::Type::Elements) {
         G_test_[type] = BlockElementRestriction(test_fes);
       } else {
         G_test_[type] = BlockElementRestriction(test_fes, FaceType::BOUNDARY);
@@ -291,6 +293,23 @@ public:
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
     integrals_.push_back(
+        MakeDomainIntegral<signature, Q, dim>(EntireDomain(domain), integrand, qdata, std::vector<uint32_t>{args...}));
+  }
+
+  /// @overload
+  template <int dim, int... args, typename lambda, typename qpt_data_type = Nothing>
+  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, Domain& domain,
+                         std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
+  {
+    if (domain.mesh_.GetNE() == 0) return;
+
+    SLIC_ERROR_ROOT_IF(dim != domain.mesh_.Dimension(), "invalid mesh dimension for domain integral");
+
+    check_for_unsupported_elements(domain.mesh_);
+    check_for_missing_nodal_gridfunc(domain.mesh_);
+
+    using signature = test(decltype(serac::type<args>(trial_spaces))...);
+    integrals_.push_back(
         MakeDomainIntegral<signature, Q, dim>(domain, integrand, qdata, std::vector<uint32_t>{args...}));
   }
 
@@ -310,6 +329,22 @@ public:
     if (num_bdr_elements == 0) return;
 
     check_for_missing_nodal_gridfunc(domain);
+
+    using signature = test(decltype(serac::type<args>(trial_spaces))...);
+    integrals_.push_back(
+        MakeBoundaryIntegral<signature, Q, dim>(EntireBoundary(domain), integrand, std::vector<uint32_t>{args...}));
+  }
+
+  /// @overload
+  template <int dim, int... args, typename lambda>
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, const Domain& domain)
+  {
+    auto num_bdr_elements = domain.mesh_.GetNBE();
+    if (num_bdr_elements == 0) return;
+
+    SLIC_ERROR_ROOT_IF(dim != domain.dim_, "invalid domain of integration for boundary integral");
+
+    check_for_missing_nodal_gridfunc(domain.mesh_);
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
     integrals_.push_back(MakeBoundaryIntegral<signature, Q, dim>(domain, integrand, std::vector<uint32_t>{args...}));
@@ -373,10 +408,10 @@ public:
 
     // this is used to mark when gather operations have been performed,
     // to avoid doing them more than once per trial space
-    bool already_computed[Integral::num_types]{};  // default initializes to `false`
+    bool already_computed[Domain::num_types]{};  // default initializes to `false`
 
     for (auto& integral : integrals_) {
-      auto type = integral.type;
+      auto type = integral.domain_.type_;
 
       if (!already_computed[type]) {
         G_trial_[type][which].Gather(input_L_[which], input_E_[type][which]);
@@ -418,10 +453,10 @@ public:
 
     // this is used to mark when operations have been performed,
     // to avoid doing them more than once
-    bool already_computed[Integral::num_types][num_trial_spaces]{};  // default initializes to `false`
+    bool already_computed[Domain::num_types][num_trial_spaces]{};  // default initializes to `false`
 
     for (auto& integral : integrals_) {
-      auto type = integral.type;
+      auto type = integral.domain_.type_;
 
       for (auto i : integral.active_trial_spaces_) {
         if (!already_computed[type][i]) {
@@ -492,7 +527,7 @@ private:
     Gradient(Functional<test(trials...), exec>& f, uint32_t which = 0)
         : mfem::Operator(f.test_space_->GetTrueVSize(), f.trial_space_[which]->GetTrueVSize()),
           form_(f),
-          lookup_tables(f.G_test_[Integral::Domain], f.G_trial_[Integral::Domain][which]),
+          lookup_tables(f.G_test_[Domain::Type::Elements], f.G_trial_[Domain::Type::Elements][which]),
           which_argument(which),
           test_space_(f.test_space_),
           trial_space_(f.trial_space_[which]),
@@ -532,12 +567,12 @@ private:
 
       double* values = new double[lookup_tables.nnz]{};
 
-      std::map<mfem::Geometry::Type, ExecArray<double, 3, exec>> element_gradients[Integral::num_types];
+      std::map<mfem::Geometry::Type, ExecArray<double, 3, exec>> element_gradients[Domain::num_types];
 
       for (auto& integral : form_.integrals_) {
-        auto& K_elem             = element_gradients[integral.type];
-        auto& test_restrictions  = form_.G_test_[integral.type].restrictions;
-        auto& trial_restrictions = form_.G_trial_[integral.type][which_argument].restrictions;
+        auto& K_elem             = element_gradients[integral.domain_.type_];
+        auto& test_restrictions  = form_.G_test_[integral.domain_.type_].restrictions;
+        auto& trial_restrictions = form_.G_trial_[integral.domain_.type_][which_argument].restrictions;
 
         if (K_elem.empty()) {
           for (auto& [geom, test_restriction] : test_restrictions) {
@@ -554,7 +589,7 @@ private:
         integral.ComputeElementGradients(K_elem, which_argument);
       }
 
-      for (auto type : Integral::Types) {
+      for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
         auto& K_elem             = element_gradients[type];
         auto& test_restrictions  = form_.G_test_[type].restrictions;
         auto& trial_restrictions = form_.G_trial_[type][which_argument].restrictions;
@@ -669,15 +704,15 @@ private:
   /// @brief The input set of local DOF values (i.e., on the current rank)
   mutable mfem::Vector input_L_[num_trial_spaces];
 
-  BlockElementRestriction G_trial_[Integral::num_types][num_trial_spaces];
+  BlockElementRestriction G_trial_[Domain::num_types][num_trial_spaces];
 
-  mutable std::vector<mfem::BlockVector> input_E_[Integral::num_types];
+  mutable std::vector<mfem::BlockVector> input_E_[Domain::num_types];
 
   std::vector<Integral> integrals_;
 
-  mutable mfem::BlockVector output_E_[Integral::num_types];
+  mutable mfem::BlockVector output_E_[Domain::num_types];
 
-  BlockElementRestriction G_test_[Integral::num_types];
+  BlockElementRestriction G_test_[Domain::num_types];
 
   /// @brief The output set of local DOF values (i.e., on the current rank)
   mutable mfem::Vector output_L_;

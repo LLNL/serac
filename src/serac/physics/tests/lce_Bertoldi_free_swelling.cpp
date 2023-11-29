@@ -52,7 +52,8 @@ int main(int argc, char* argv[])
       // mfem::Mesh(mfem::Mesh::MakeCartesian3D(20 * nElem, 10 * nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
       mfem::Mesh(mfem::Mesh::MakeCartesian3D(70 * nElem, 7 * nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
   auto mesh = mesh::refineAndDistribute(std::move(cuboid), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+  std::string mesh_tag{"mesh}"}; 
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // Side set ordering for MFEM Cartesian mesh:
   // SS-1: XY bottom plane
@@ -99,7 +100,7 @@ int main(int argc, char* argv[])
                                               .max_iterations = 10,
                                               .print_level    = 1};
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
-      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_free_swelling");
+      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_free_swelling", mesh_tag);
 
   // -------------------
   // Material properties
@@ -117,12 +118,12 @@ int main(int argc, char* argv[])
   LiquidCrystalElastomerBertoldi lceMat(density, young_modulus, possion_ratio, max_order_param, beta_param);
 
   // Parameter 1
-  FiniteElementState orderParam(StateManager::newState(FiniteElementState::Options{.order = p, .name = "orderParam"}));
+  FiniteElementState orderParam(pmesh, L2<0>{}, "orderParam");
   orderParam = max_order_param;
 
   // Parameter 2
   FiniteElementState gammaParam(
-      StateManager::newState(FiniteElementState::Options{.order = p, .element_type = ElementType::L2,  .name = "gammaParam"}));
+      pmesh, L2<0>{}, "gammaParam");
 
   int  lceArrangementTag = 1;
   auto gammaFunc         = [lceArrangementTag](const mfem::Vector& x, double) -> double {
@@ -183,7 +184,7 @@ int main(int argc, char* argv[])
 
   // Paremetr 3
   FiniteElementState etaParam(
-      StateManager::newState(FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "etaParam"}));
+      pmesh, L2<0>{}, "etaParam");
   auto                      etaFunc = [](const mfem::Vector& /*x*/, double) -> double { return 0.0; };
   mfem::FunctionCoefficient etaCoef(etaFunc);
   etaParam.project(etaCoef);
@@ -225,7 +226,7 @@ int main(int argc, char* argv[])
 
   solid_solver.advanceTimestep(dt);
   std::string outputFilename = "sol_lce_bertoldi_free_swelling_log_pile_mat";
-  solid_solver.outputState(outputFilename);
+  solid_solver.outputStateToDisk(outputFilename);
 
 
   for (int i = 0; i < num_steps; i++) {
@@ -240,7 +241,7 @@ int main(int argc, char* argv[])
                 << "\n... Using two gamma angles" << std::endl;
     }
     solid_solver.advanceTimestep(dt);
-    solid_solver.outputState(outputFilename);
+    solid_solver.outputStateToDisk(outputFilename);
 
     // FiniteElementState& displacement = solid_solver.displacement();
     mfem::ParGridFunction displacement_gf = solid_solver.displacement().gridFunction();

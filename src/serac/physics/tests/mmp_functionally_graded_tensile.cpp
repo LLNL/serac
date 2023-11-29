@@ -68,7 +68,9 @@ int main(int argc, char* argv[])
       mfem::Mesh(mfem::Mesh::MakeCartesian3D( 30 * nElem, 3 * nElem, 2 * nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
 #endif
   auto mesh = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid);
-  serac::StateManager::setMesh(std::move(mesh));
+  
+  std::string mesh_tag{"mesh}"};
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // Construct a functional-based solid mechanics solver
   // IterativeSolverOptions          default_linear_options    = {.rel_tol     = 1.0e-6,
@@ -85,7 +87,7 @@ int main(int argc, char* argv[])
                                               .print_level    = 1};
 
   SolidMechanics<p, dim, Parameters<L2<p>, L2<p> > > solid_solver(
-    nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "mmp_solid_functional");
+    nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "mmp_solid_functional", mesh_tag);
 
   // Material properties
   double density            = 1.0;
@@ -117,8 +119,7 @@ int main(int argc, char* argv[])
   }
 
   // Parameter 1
-  FiniteElementState EmodParam(StateManager::newState(
-      FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "EmodParam"}));
+  FiniteElementState EmodParam(pmesh, L2<0>{}, "EmodParam");
   auto               EmodFunc = [=](const mfem::Vector& x, double) -> double {
     double Emod = 1.0;
     if (probTag_ < 5) {
@@ -150,8 +151,7 @@ int main(int argc, char* argv[])
   EmodParam.project(EmodCoef);
 
   // Parameter 2
-  FiniteElementState GmodParam(StateManager::newState(
-      FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "GmodParam"}));
+  FiniteElementState GmodParam(pmesh, L2<0>{}, "EmodParam");
   auto               GmodFunc = [=](const mfem::Vector& x, double) -> double {
     double Emod = 1.0;
     if (probTag_ < 5) {
@@ -277,7 +277,7 @@ int main(int argc, char* argv[])
 
   outputFilename += std::to_string(probTag_);
 
-  solid_solver.outputState(outputFilename);
+  solid_solver.outputStateToDisk(outputFilename);
 
   double t    = 0.0;
   double tmax = 1.0;
@@ -308,7 +308,7 @@ int main(int argc, char* argv[])
     }
 
     solid_solver.advanceTimestep(dt);
-    solid_solver.outputState(outputFilename);
+    solid_solver.outputStateToDisk(outputFilename);
 
     //     auto [K, K_e] = solid_solver.stiffnessMatrix();
     //     K.Print("Kmat");

@@ -76,7 +76,7 @@ In general, this process looks something like the following:
      data uninitialized (aka ``nullptr``).  After we create the ``FiniteElementState`` we register its underlying
      ``GridFunction`` in the ``MFEMSidreDataCollection`` and zero it out.
 
-  #. When the user wishes to save simulation state to disk, they can call ``outputState()`` on their physics module.
+  #. When the user wishes to save simulation state to disk, they can call ``outputStateToDisk()`` on their physics module.
      FIXME: This could be confusing because this will call the global ``StateManager::save()`` which will save all
      data associated with a particular mesh. In particular we wouldn't want users to save twice if they have two
      physics modules on the same mesh (by calling ``outputState`` on each).

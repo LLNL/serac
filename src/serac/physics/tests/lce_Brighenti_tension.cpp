@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
 #endif
   auto mesh = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid);
 
-  serac::StateManager::setMesh(std::move(mesh));
+   std::string mesh_tag{"mesh}"}; auto& pmesh = serac::StateManager::setMesh(std::move(mesh));
 
   double             initial_temperature = 25 + 273;  // 300.0;
   double             final_temperature   = 430.0;
@@ -202,7 +202,7 @@ int main(int argc, char* argv[])
 #else
   std::string output_filename  = "sol_lce_tensile_temp";
 #endif
-  solid_solver.outputState(output_filename);
+  solid_solver.outputStateToDisk(output_filename);
 
   // QoI for output:
   auto&                          pmesh = serac::StateManager::mesh();
@@ -246,7 +246,7 @@ int main(int argc, char* argv[])
     }
 
     solid_solver.advanceTimestep(dt);
-    solid_solver.outputState(output_filename);
+    solid_solver.outputStateToDisk(output_filename);
 
     double current_qoi  = avgYDispQoI(solid_solver.displacement());
     double current_area = area(solid_solver.displacement());

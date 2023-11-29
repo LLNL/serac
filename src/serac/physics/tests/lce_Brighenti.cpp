@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
   std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex-flat.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+   std::string mesh_tag{"mesh}"}; auto& pmesh = serac::StateManager::setMesh(std::move(mesh));
 
   double             initial_temperature = 300.0;
   double             final_temperature   = 400.0;
@@ -108,7 +108,7 @@ int main(int argc, char* argv[])
   // Perform the quasi-static solve
   int num_steps = 10;
 
-  solid_solver.outputState("sol_lce_test");
+  solid_solver.outputStateToDisk("sol_lce_test");
 
   double t    = 0.0;
   double tmax = 1.0;
@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
   for (int i = 0; i < num_steps; i++) {
     t += dt;
     solid_solver.advanceTimestep(dt);
-    solid_solver.outputState("sol_lce_test");
+    solid_solver.outputStateToDisk("sol_lce_test");
 
     temperature = initial_temperature * (1.0 - (t / tmax)) + final_temperature * (t / tmax);
   }

@@ -52,12 +52,12 @@ void EquationSolver::solve(mfem::Vector& x) const
   nonlin_solver_->Mult(zero, x);
 }
 
-void SuperLUSolver::Mult(const mfem::Vector& x, mfem::Vector& y) const
+void SuperLUSolver::Mult(const mfem::Vector& input, mfem::Vector& output) const
 {
   SLIC_ERROR_ROOT_IF(!superlu_mat_, "Operator must be set prior to solving with SuperLU");
 
   // Use the underlying MFEM-based solver and SuperLU matrix type to solve the system
-  superlu_solver_.Mult(x, y);
+  superlu_solver_.Mult(input, output);
 }
 
 /**
@@ -79,13 +79,17 @@ std::unique_ptr<mfem::HypreParMatrix> buildMonolithicMatrix(const mfem::BlockOpe
 
   for (int i = 0; i < row_blocks; ++i) {
     for (int j = 0; j < col_blocks; ++j) {
-      auto* hypre_block =
-          const_cast<mfem::HypreParMatrix*>(dynamic_cast<const mfem::HypreParMatrix*>(&block_operator.GetBlock(i, j)));
-      SLIC_ERROR_ROOT_IF(
-          !hypre_block,
-          "Trying to use a direct solver on a block operator that does not contain HypreParMatrix blocks.");
+      // checks for presence of empty (null) blocks, which happen fairly common in multirank contact
+      if (!block_operator.IsZeroBlock(i, j)) {
+        auto* hypre_block = const_cast<mfem::HypreParMatrix*>(
+            dynamic_cast<const mfem::HypreParMatrix*>(&block_operator.GetBlock(i, j)));
+        SLIC_ERROR_ROOT_IF(!hypre_block,
+                           "Trying to use SuperLU on a block operator that does not contain HypreParMatrix blocks.");
 
-      hypre_blocks(i, j) = hypre_block;
+        hypre_blocks(i, j) = hypre_block;
+      } else {
+        hypre_blocks(i, j) = nullptr;
+      }
     }
   }
 
@@ -115,12 +119,14 @@ void SuperLUSolver::SetOperator(const mfem::Operator& op)
   superlu_solver_.SetOperator(*superlu_mat_);
 }
 
-void StrumpackSolver::Mult(const mfem::Vector& x, mfem::Vector& y) const
+#ifdef MFEM_USE_STRUMPACK
+
+void StrumpackSolver::Mult(const mfem::Vector& input, mfem::Vector& output) const
 {
   SLIC_ERROR_ROOT_IF(!strumpack_mat_, "Operator must be set prior to solving with Strumpack");
 
   // Use the underlying MFEM-based solver and Strumpack matrix type to solve the system
-  strumpack_solver_.Mult(x, y);
+  strumpack_solver_.Mult(input, output);
 }
 
 void StrumpackSolver::SetOperator(const mfem::Operator& op)
@@ -144,6 +150,8 @@ void StrumpackSolver::SetOperator(const mfem::Operator& op)
 
   strumpack_solver_.SetOperator(*strumpack_mat_);
 }
+
+#endif
 
 std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions nonlinear_opts, MPI_Comm comm)
 {
@@ -202,10 +210,14 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
     return {std::move(lin_solver), nullptr};
   }
 
+#ifdef MFEM_USE_STRUMPACK
+
   if (linear_opts.linear_solver == LinearSolver::Strumpack) {
     auto lin_solver = std::make_unique<StrumpackSolver>(linear_opts.print_level, comm);
     return {std::move(lin_solver), nullptr};
   }
+
+#endif
 
   std::unique_ptr<mfem::IterativeSolver> iter_lin_solver;
 

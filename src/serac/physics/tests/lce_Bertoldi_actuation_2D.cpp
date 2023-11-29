@@ -116,22 +116,23 @@ int main(int argc, char* argv[])
 
   auto mesh = mesh::refineAndDistribute(std::move(initial_mesh), serial_refinement, parallel_refinement);
 
+  std::string mesh_tag{"mesh}"};
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
 #ifdef CUSTOM_SOLVER
-  mfem::ParMesh *pmesh = serac::StateManager::setMesh(std::move(mesh));
 
   // ---------------------
   // Custom solver options
   // ---------------------
   // _custom_solver_start
-  auto nonlinear_solver = std::make_unique<mfem::NewtonSolver>(pmesh->GetComm());
+  auto nonlinear_solver = std::make_unique<mfem::NewtonSolver>(pmesh.GetComm());
   // auto nonlinear_solver = std::make_unique<mfem::KINSolver>(pmesh->GetComm(), KIN_LINESEARCH, true);
   nonlinear_solver->SetPrintLevel(1);
   nonlinear_solver->SetMaxIter(50);
   nonlinear_solver->SetAbsTol(1.0e-10);
   nonlinear_solver->SetRelTol(1.0e-6);
 
-  auto linear_solver = std::make_unique<mfem::HypreGMRES>(pmesh->GetComm());
+  auto linear_solver = std::make_unique<mfem::HypreGMRES>(pmesh.GetComm());
   linear_solver->SetPrintLevel(0);
   linear_solver->SetMaxIter(1000);
   linear_solver->SetKDim(500);
@@ -146,11 +147,10 @@ int main(int argc, char* argv[])
       std::move(nonlinear_solver), std::move(linear_solver), std::move(preconditioner));
 
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
-      std::move(equation_solver), solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional");
+      std::move(equation_solver), solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional", mesh_tag);
   // _custom_solver_end
 
 #else
-  serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
   LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
@@ -161,7 +161,7 @@ int main(int argc, char* argv[])
                                               .max_iterations = 15,
                                               .print_level    = 1};
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
-      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional");
+      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional",mesh_tag);
 #endif
 
   // Material properties
@@ -174,12 +174,11 @@ int main(int argc, char* argv[])
   double eta_angle       = 0.0;
 
   // Parameter 1
-  FiniteElementState orderParam(StateManager::newState(FiniteElementState::Options{.order = p, .name = "orderParam"}));
+  FiniteElementState orderParam(pmesh, L2<0>{}, "orderParam");
   orderParam = max_order_param;
 
   // Parameter 2
-  FiniteElementState gammaParam(StateManager::newState(
-      FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "gammaParam"}));
+  FiniteElementState gammaParam(pmesh, L2<0>{}, "gammaParam");
   auto               gammaFunc = [gamma_angle](const mfem::Vector&, double) -> double {
     return gamma_angle;
   };
@@ -187,8 +186,7 @@ int main(int argc, char* argv[])
   gammaParam.project(gammaCoef);
 
   // Paremetr 3
-  FiniteElementState        etaParam(StateManager::newState(
-      FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "etaParam"}));
+  FiniteElementState        etaParam(pmesh, L2<0>{}, "etaParam");
   auto                      etaFunc = [eta_angle](const mfem::Vector& /*x*/, double) -> double { return eta_angle; };
   mfem::FunctionCoefficient etaCoef(etaFunc);
   etaParam.project(etaCoef);
@@ -266,7 +264,7 @@ int main(int argc, char* argv[])
 
   // Perform the quasi-static solve
   std::string outputFilename = "sol_lce_bertoldi_actuation_2D_order_pinned_nodes";
-  solid_solver.outputState(outputFilename);
+  solid_solver.outputStateToDisk(outputFilename);
 
   int num_steps = 10;
   double t    = 0.0;
@@ -288,7 +286,7 @@ int main(int argc, char* argv[])
     }
 
     solid_solver.advanceTimestep(dt);
-    solid_solver.outputState(outputFilename);
+    solid_solver.outputStateToDisk(outputFilename);
 
     auto&                 fes             = solid_solver.displacement().space();
     mfem::ParGridFunction displacement_gf = solid_solver.displacement().gridFunction();
@@ -337,7 +335,7 @@ int main(int argc, char* argv[])
 
   // Make up an adjoint load which can also be viewed as a
   // sensitivity of some qoi with respect to displacement
-  mfem::ParLinearForm adjoint_load_form(&solid_solver.displacement().space());
+  mfem::ParLinearForm adjoint_load_form(const_cast<mfem::ParFiniteElementSpace*>(&solid_solver.displacement().space()));
   adjoint_load_form = 1.0;
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
@@ -347,8 +345,9 @@ int main(int argc, char* argv[])
   adjoint_load = *assembled_vector;
 
   // Solve the adjoint problem
-  solid_solver.solveAdjoint({{"displacement", adjoint_load}});
-  solid_solver.outputState(outputFilename);
+  solid_solver.setAdjointLoad({{"displacement", adjoint_load}});
+  solid_solver.reverseAdjointTimestep();
+  solid_solver.outputStateToDisk(outputFilename);
 
   if (rank == 0) {
     std::cout << "\n... Solved adjoint problem... " << std::endl;

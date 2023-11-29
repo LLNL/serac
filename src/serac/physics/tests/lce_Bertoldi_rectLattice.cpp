@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
 
 #endif
 
-  serac::StateManager::setMesh(std::move(mesh));
+   std::string mesh_tag{"mesh}"}; auto& pmesh = serac::StateManager::setMesh(std::move(mesh));
 
   // orient fibers in the beam like below (horizontal when y < 0.5, vertical when y > 0.5):
   //
@@ -137,7 +137,7 @@ int main(int argc, char* argv[])
   }
 
   // Parameter 1
-  FiniteElementState orderParam(StateManager::newState(FiniteElementState::Options{.order = p, .name = "orderParam"}));
+  FiniteElementState orderParam(pmesh, L2<0>{}, "orderParam");
   orderParam = max_order_param;
 
   // Parameter 2
@@ -213,7 +213,7 @@ int main(int argc, char* argv[])
       std::cout << "...... Wrong problem ID ......" << std::endl;
       exit(0);
   }
-  solid_solver.outputState(outputFilename);
+  solid_solver.outputStateToDisk(outputFilename);
 
   double t    = 0.0;
   double tmax = 1.0;
@@ -229,7 +229,7 @@ int main(int argc, char* argv[])
 
     t += dt;
     solid_solver.advanceTimestep(dt);
-    solid_solver.outputState(outputFilename);
+    solid_solver.outputStateToDisk(outputFilename);
 
     orderParam = max_order_param * (tmax - t) / tmax;
   }

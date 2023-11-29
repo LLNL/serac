@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
       mfem::Mesh(mfem::Mesh::MakeCartesian3D(2 * nElem, 40 * nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
 #endif
   auto mesh = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid);
-  serac::StateManager::setMesh(std::move(mesh));
+   std::string mesh_tag{"mesh}"}; auto& pmesh = serac::StateManager::setMesh(std::move(mesh));
 
   // orient fibers in the beam like below (horizontal when y < 0.5, vertical when y > 0.5):
   //
@@ -101,7 +101,7 @@ int main(int argc, char* argv[])
   double max_order_param = 0.2;
 
   // Parameter 1
-  FiniteElementState orderParam(StateManager::newState(FiniteElementState::Options{.order = p, .name = "orderParam"}));
+  FiniteElementState orderParam(pmesh, L2<0>{}, "orderParam");
   orderParam = max_order_param;
 
   // Parameter 2
@@ -220,7 +220,7 @@ int main(int argc, char* argv[])
 #else
   std::string outputFilename   = "sol_lce_bertoldi_tensile_disp";
 #endif
-  solid_solver.outputState(outputFilename);
+  solid_solver.outputStateToDisk(outputFilename);
 
   double t    = 0.0;
   double tmax = 1.0;
@@ -243,7 +243,7 @@ int main(int argc, char* argv[])
 
     t += dt;
     solid_solver.advanceTimestep(dt);
-    solid_solver.outputState(outputFilename);
+    solid_solver.outputStateToDisk(outputFilename);
 
     if (outputDispInfo) {
       // FiniteElementState &displacement = solid_solver.displacement();

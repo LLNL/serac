@@ -22,7 +22,7 @@ TEST(BoundaryCond, SimpleRepeatedDofs)
   constexpr int      ATTR = 1;
   auto               mesh = mfem::Mesh::MakeCartesian2D(N, N, mfem::Element::TRIANGLE);
   mfem::ParMesh      par_mesh(MPI_COMM_WORLD, mesh);
-  FiniteElementState state(par_mesh);
+  FiniteElementState state(par_mesh, H1<1>{});
 
   for (int i = 0; i < par_mesh.GetNBE(); i++) {
     par_mesh.GetBdrElement(i)->SetAttribute(ATTR);
@@ -48,7 +48,7 @@ TEST(BoundaryCond, DirectTrueDofs)
   constexpr int      N    = 15;
   auto               mesh = mfem::Mesh::MakeCartesian2D(N, N, mfem::Element::TRIANGLE);
   mfem::ParMesh      par_mesh(MPI_COMM_WORLD, mesh);
-  FiniteElementState state(par_mesh);
+  FiniteElementState state(par_mesh, H1<1>{});
 
   BoundaryConditionManager bcs(par_mesh);
 

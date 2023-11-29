@@ -274,22 +274,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
  
         set(MFEM_FOUND TRUE CACHE BOOL "" FORCE)
 
-        # Temporary hack to inject the hdf5_hl after netcdf and before hdf5
-        # This should go away when mfem fixes their FindNetCDF.cmake
-        get_target_property(_mfem_libraries mfem INTERFACE_LINK_LIBRARIES)
-        list(FIND _mfem_libraries ${NETCDF_DIR}/lib/libnetcdf.a _index)
-        math(EXPR _index "${_index} + 1")
-        list(INSERT _mfem_libraries ${_index} ${HDF5_C_LIBRARY_hdf5_hl})
-        list(APPEND _mfem_libraries STRUMPACK::strumpack)
-        target_link_libraries(mfem PUBLIC ${_mfem_libraries})
-        #set_property(TARGET mfem PROPERTY
-        #                      INTERFACE_LINK_LIBRARIES ${_mfem_libraries})
-        #set_property(TARGET mfem PROPERTY
-        #                      LINK_LIBRARIES ${_mfem_libraries})
-
-        blt_print_target_properties(TARGET STRUMPACK::strumpack)
-        blt_print_target_properties(TARGET mfem)
-
         # Patch the mfem target with the correct include directories
         get_target_property(_mfem_includes mfem INCLUDE_DIRECTORIES)
         target_include_directories(mfem SYSTEM INTERFACE ${_mfem_includes})
@@ -395,56 +379,26 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
         set(AXOM_FOUND TRUE CACHE BOOL "" FORCE)
 
-        # Alias axom builtin thirdparty targets under axom namespace
-        if(NOT TARGET axom::fmt)
-            add_library(axom::fmt ALIAS fmt)
-        endif()
-        if(NOT TARGET axom::cli11)
-            add_library(axom::cli11 ALIAS cli11)
-        endif()
-
-        if(TARGET axom::sidre)
-            target_link_libraries(axom::sidre PUBLIC STRUMPACK::strumpack)
-        else()
+        if (STRUMPACK_DIR)
             target_link_libraries(sidre PUBLIC STRUMPACK::strumpack)
         endif()
 
-        if(NOT TARGET axom)
-            # New axom target case where all components have individual libraries
+        # Alias Axom's builtin thirdparty targets under axom namespace
+        foreach(_comp ${AXOM_COMPONENTS_ENABLED};cli11;fmt)
+            add_library(axom::${_comp} ALIAS ${_comp})
+        endforeach()
 
-            # Create convenience target that bundles all Axom targets (axom)
-            # This normally happens in axom's installed config file
-            add_library(axom INTERFACE IMPORTED)
+        # Create convenience target that bundles all Axom targets (axom)
+        # This normally happens in axom's installed config file
+        add_library(axom INTERFACE IMPORTED)
+        target_link_libraries(axom INTERFACE ${AXOM_COMPONENTS_ENABLED})
 
-            set(AXOM_COMPONENTS_ENABLED
-              core;lumberjack;slic;slam;primal;sidre;mint;spin;inlet;klee;quest;multimat)
-            target_link_libraries(axom INTERFACE ${AXOM_COMPONENTS_ENABLED})
-
-            if(ENABLE_OPENMP)
-                target_link_libraries(axom INTERFACE openmp)
-            endif()
-
-            # Mark the axom includes as "system" and filter unallowed directories
-            get_target_property(_dirs core INTERFACE_INCLUDE_DIRECTORIES)
-            set_property(TARGET core 
-                         PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-                         "${_dirs}")
-            set_property(TARGET core 
-                         APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                         "${_dirs}")
-        else()
-            # Old axom way where there is a singular combined axom library
-
-            # Mark the axom includes as "system" and filter unallowed directories
-            get_target_property(_dirs axom INTERFACE_INCLUDE_DIRECTORIES)
-            list(REMOVE_ITEM _dirs ${PROJECT_SOURCE_DIR})
-            set_property(TARGET axom 
-                         PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-                         "${_dirs}")
-            set_property(TARGET axom 
-                         APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                         "${_dirs}")
+        if(ENABLE_OPENMP)
+            target_link_libraries(core INTERFACE openmp)
         endif()
+
+        blt_convert_to_system_includes(TARGET core)
+
         set(ENABLE_FORTRAN ON CACHE BOOL "" FORCE)
     endif()
 
@@ -533,6 +487,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #---------------------------------------------------------------------------
     set(_imported_targets
         axom
+        axom::mfem
         conduit
         conduit::conduit_mpi
         conduit::conduit
@@ -540,7 +495,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         conduit_relay_mpi_io
         conduit_blueprint
         conduit_blueprint_mpi
-        axom::mfem)
+        tribol::mfem)
 
     foreach(_target ${_imported_targets})
         if(TARGET ${_target})

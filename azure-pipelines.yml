@@ -6,8 +6,8 @@
 #
 
 variables:
-  Clang_10_ImageName: 'seracllnl/tpls:clang-10_08-26-23_22h-25m'
-  GCC_11_ImageName: 'seracllnl/tpls:gcc-11_08-26-23_22h-25m'
+  Clang_10_ImageName: 'seracllnl/tpls:clang-10_11-04-23_07h-20m'
+  GCC_11_ImageName: 'seracllnl/tpls:gcc-11_11-04-23_07h-20m'
 
 jobs:
 - job: Build_and_Test

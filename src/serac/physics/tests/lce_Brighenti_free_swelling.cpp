@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
   std::string filename = SERAC_REPO_DIR "/data/meshes/LCE_freeSwelling_nonDim_rect.g";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+   std::string mesh_tag{"mesh}"}; auto& pmesh = serac::StateManager::setMesh(std::move(mesh));
 
   double             initial_temperature = 290;  // 270.0; //300.0;
   double             final_temperature   = 400;  // 380.0; // 430.0;
@@ -176,7 +176,7 @@ int main(int argc, char* argv[])
 
   // Perform the quasi-static solve
   std::string output_filename = "sol_lce_free_swelling_00d";
-  solid_solver.outputState(output_filename);
+  solid_solver.outputStateToDisk(output_filename);
 
   double t    = 0.0;
   double tmax = 1.0;
@@ -184,7 +184,7 @@ int main(int argc, char* argv[])
 
   for (int i = 0; i < num_steps; i++) {
     solid_solver.advanceTimestep(dt);
-    solid_solver.outputState(output_filename);
+    solid_solver.outputStateToDisk(output_filename);
 
     FiniteElementState& displacement = solid_solver.displacement();
     auto&               fes          = displacement.space();

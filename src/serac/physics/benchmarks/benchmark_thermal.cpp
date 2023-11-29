@@ -35,7 +35,7 @@ void functional_test_static()
       (dim == 2) ? SERAC_REPO_DIR "/data/meshes/star.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+   std::string mesh_tag{"mesh}"}; auto& pmesh = serac::StateManager::setMesh(std::move(mesh));
 
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
@@ -80,7 +80,7 @@ void functional_test_static()
   thermal_solver.advanceTimestep(dt);
 
   // Output the sidre-based plot files
-  thermal_solver.outputState();
+  thermal_solver.outputStateToDisk();
 }
 
 template <int p, int dim>
@@ -102,7 +102,7 @@ void functional_test_dynamic()
       (dim == 2) ? SERAC_REPO_DIR "/data/meshes/star.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+   std::string mesh_tag{"mesh}"}; auto& pmesh = serac::StateManager::setMesh(std::move(mesh));
 
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
@@ -142,12 +142,12 @@ void functional_test_dynamic()
   double dt = 0.25;
 
   for (int i = 0; i < 4; ++i) {
-    thermal_solver.outputState();
+    thermal_solver.outputStateToDisk();
     thermal_solver.advanceTimestep(dt);
   }
 
   // Output the sidre-based plot files
-  thermal_solver.outputState();
+  thermal_solver.outputStateToDisk();
 }
 
 int main(int argc, char* argv[])
