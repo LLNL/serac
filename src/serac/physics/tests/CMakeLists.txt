@@ -34,6 +34,7 @@ set(solver_tests
     lce_Bertoldi_amr_test.cpp
     lce_Bertoldi_amr_test_refined_run.cpp
     lce_Bertoldi_lattices_compression.cpp
+    lce_Bertoldi_lattices_compression_2D_geom.cpp
     lce_Bertoldi_lattices_free_swelling.cpp
     lce_Bertoldi_logpile_simplified_lattice.cpp
     lce_Bertoldi_actuation_2D.cpp

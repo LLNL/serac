@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
   int serial_refinement   = 0;
   int parallel_refinement = 0;
 
-  if (problemID==0){parallel_refinement = 1;}
+  if (problemID<3){parallel_refinement = 1;}
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -47,13 +47,15 @@ int main(int argc, char* argv[])
   std::string inputFilename;
   switch (problemID) {
     case 0:
-      inputFilename = SERAC_REPO_DIR "/data/meshes/reEntrantHoneycomb_newGeometry_noBorders_quarterSym.g";
+      inputFilename = SERAC_REPO_DIR "/data/meshes/dbgLogPileNoSymm.g";;
       break;
     case 1:
-      inputFilename = SERAC_REPO_DIR "/data/meshes/dbgLogPileQuarterSymm.g";
+      inputFilename = SERAC_REPO_DIR "/data/meshes/dbgLogPileNoSymm.g";
       break;
     case 2:
-      inputFilename = SERAC_REPO_DIR "/data/meshes/quarterDomainLogPile.g";
+      inputFilename = SERAC_REPO_DIR "/data/meshes/dbgLogPileNoSymm.g";
+      std::cout << "...... Problem used for debugging. do not run in current configuration ......" << std::endl;
+      exit(0);
       break;
     default:
       std::cout << "...... Wrong problem ID ......" << std::endl;
@@ -72,18 +74,17 @@ int main(int argc, char* argv[])
   NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::Newton,
                                               .relative_tol   = 1.0e-8,
                                               .absolute_tol   = 1.0e-12,
-                                              .max_iterations = 50,
+                                              .max_iterations = 10,
                                               .print_level    = 1};
   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
       nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional");
 
   // Material properties
   double density         = 1.0;    // [Kg / mm3]
-  double young_modulus   = 9.34e5;  // 4.0e5 [Kg /s2 / mm]
-  double possion_ratio   = 0.45;   // 0.49;   // 0.48 // 
-  double beta_param      = 5.75e5; // 2.31e5; // 2.31e5; // [Kg /s2 / mm] 
+  double young_modulus   = 9.34e6;  // 4.0e5 [Kg /s2 / mm]
+  double possion_ratio   = 0.495;   // 0.49;   // 0.48 // 
+  double beta_param      = 5.75e5; // 5.20e5; // 2.31e5; // [Kg /s2 / mm] 
   double max_order_param = 0.40;   // 0.20;   // 0.45; //
-  double min_order_param = 0.05;   // 0.20;   // 0.45; //
   double gamma_angle     = M_PI_2;
   double eta_angle       = 0.0;
 
@@ -94,102 +95,8 @@ int main(int argc, char* argv[])
   // Parameter 2
   FiniteElementState gammaParam(StateManager::newState(
       FiniteElementState::Options{.order = p, .element_type = ElementType::L2, .name = "gammaParam"}));
-  auto gammaFunc = [=](const mfem::Vector& x, double) -> double {
+  auto gammaFunc = [=](const mfem::Vector& /*x*/, double) -> double {
     double alignmentAngle = 0.0;
-    double t = 0.25e-3;
-    double L = 6.0e-3;
-    double l = 4.0e-3 - t;
-
-    switch (problemID) {
-      case 0:
-      {
-        // vertical walls
-        if (x[0]<=t || x[0]>=L-2*t      // first and last colums
-        || (x[0]>=l/2-t && x[0]<=l/2+t) // second column
-        || (x[0]>=l-t && x[0]<=l+t) ) { // third column
-          alignmentAngle = M_PI_2;
-        }
-        // upwards inclined (excluding vertical walls)
-        else if ( (x[1]>l             && (x[0]<l/2 || x[0]>l) )
-        || ( (x[1]>0.0 && x[1]<l/2)   && (x[0]<l/2 || x[0]>l) )
-        || ( (x[1]>-l && x[1]<-l/2)   && (x[0]<l/2 || x[0]>l) )
-        ) {
-          alignmentAngle = 0.1920; // 11.31 degrees
-        }
-        // downwards incline (excluding vertical walls)
-        else {
-          alignmentAngle = -0.1920; // -11.31 degrees
-        }
-        break;
-      }
-
-      case 1:
-      {
-        if ((x[0] >= 1.70e-3 && x[0] <= 2.00e-3) && (
-          (x[2] <= 0.20e-3) ||
-          (x[2] >= 0.30e-3 && x[2] <= 0.30e-3+0.20e-3) ||
-          (x[2] >= 0.60e-3 && x[2] <= 0.60e-3+0.20e-3) ||
-          (x[2] >= 0.90e-3 && x[2] <= 0.90e-3+0.20e-3)
-        )) { 
-          alignmentAngle = M_PI_2;
-        }
-        else if ( x[0] >= 5.70e-3 ) { 
-          alignmentAngle = M_PI_2;
-        }
-        else
-        {
-          alignmentAngle = 0.0;
-        }
-        break;
-      }
-
-      case 2:
-      {
-        if ((x[0] >= 1.70e-3 && x[0] <= 2.00e-3) && (
-          (x[2] <= 0.20e-3) ||
-          (x[2] >= 0.30e-3 && x[2] <= 0.30e-3+0.20e-3) ||
-          (x[2] >= 0.60e-3 && x[2] <= 0.60e-3+0.20e-3) ||
-          (x[2] >= 0.90e-3 && x[2] <= 0.90e-3+0.20e-3) ||
-          (x[2] >= 1.20e-3 && x[2] <= 1.20e-3+0.20e-3) ||
-          (x[2] >= 1.50e-3 && x[2] <= 1.50e-3+0.20e-3) ||
-          (x[2] >= 1.80e-3 && x[2] <= 1.80e-3+0.20e-3) ||
-          (x[2] >= 2.10e-3 && x[2] <= 2.10e-3+0.20e-3) ||
-          (x[2] >= 2.40e-3 && x[2] <= 2.40e-3+0.20e-3) ||
-          (x[2] >= 2.70e-3 && x[2] <= 2.70e-3+0.20e-3) ||
-          (x[2] >= 3.00e-3 && x[2] <= 3.00e-3+0.20e-3) ||
-          (x[2] >= 3.30e-3 && x[2] <= 3.30e-3+0.20e-3) ||
-          (x[2] >= 3.60e-3 && x[2] <= 3.60e-3+0.20e-3) ||
-          (x[2] >= 3.90e-3 && x[2] <= 3.90e-3+0.20e-3) ||
-          (x[2] >= 4.20e-3 && x[2] <= 4.20e-3+0.20e-3) ||
-          (x[2] >= 4.50e-3 && x[2] <= 4.50e-3+0.20e-3) ||
-          (x[2] >= 4.80e-3 && x[2] <= 4.80e-3+0.20e-3) ||
-          (x[2] >= 5.10e-3 && x[2] <= 5.10e-3+0.20e-3) ||
-          (x[2] >= 5.40e-3 && x[2] <= 5.40e-3+0.20e-3) ||
-          (x[2] >= 5.70e-3 && x[2] <= 5.70e-3+0.20e-3) ||
-          (x[2] >= 6.00e-3 && x[2] <= 6.00e-3+0.20e-3) ||
-          (x[2] >= 6.30e-3 && x[2] <= 6.30e-3+0.20e-3) ||
-          (x[2] >= 6.60e-3 && x[2] <= 6.60e-3+0.20e-3) ||
-          (x[2] >= 6.90e-3 && x[2] <= 6.90e-3+0.20e-3)
-        )) { 
-          alignmentAngle = M_PI_2;
-        }
-        else if ( x[0] >= 5.70e-3 ) { 
-          alignmentAngle = M_PI_2;
-        }
-        else
-        {
-          alignmentAngle = 0.0;
-        }
-        break;
-      }
-      
-      default:
-      {
-          std::cout << "...... Wrong problem ID ......" << std::endl;
-          exit(0);
-      }
-    }
-
     return alignmentAngle;
   };
   mfem::FunctionCoefficient gammaCoef(gammaFunc);
@@ -216,60 +123,34 @@ int main(int argc, char* argv[])
 
   solid_solver.setMaterial(DependsOn<ORDER_INDEX, GAMMA_INDEX, ETA_INDEX>{}, lceMat);
 
+  auto zeroDisp = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; };
+  solid_solver.setDisplacementBCs({2}, zeroDisp); 
+
   auto zeroFunc = [](const mfem::Vector /*x*/) { return 0.0; };
-  solid_solver.setDisplacementBCs({1}, zeroFunc, 0);  // left face x-dir disp = 0
-  solid_solver.setDisplacementBCs({2}, zeroFunc, 1);  // bottom face y-dir disp = 0
-  // solid_solver.setDisplacementBCs({3}, zeroFunc, 2);  // back face z-dir disp = 0
-  // solid_solver.setDisplacementBCs({3}, zeroFunc, 2);  // back face z-dir disp = 0
-  // solid_solver.setDisplacementBCs({6}, zeroFunc, 2);  // back face z-dir disp = 0
+  solid_solver.setDisplacementBCs({3}, zeroFunc, 2);  // back face z-dir disp = 0
 
-  auto is_on_bottom = [=](const mfem::Vector& x) {
+  double targetDisp = -2.0e-3;
+  if (problemID==1)
+  {
+    targetDisp = -2.4e-3;
+  }
 
+  auto is_on_top = [=](const mfem::Vector& x) {
     bool tag = false;
-    switch (problemID) {
-      case 0:
-      {
-        if (x(2) < -4.99e-3) {
-          tag = true;
-        }
-        break;
-      }
-      case 1:
-      {
-        if (x(2) < 5.0e-5) {
-          tag = true;
-        }
-        break;
-      }
-      case 2:
-      {
-        if (x(2) < 7.5e-5) {
-          tag = true;
-        }
-        break;
-      }
-      default:
-        std::cout << "...... Wrong problem ID ......" << std::endl;
-        exit(0);
+    // if (x(1) > 6.374999e-3) {
+    if (x(1) > 5e-3) {
+      tag = true;
     }
     return tag;
   };
 
-  auto zero_scalar   = [](const mfem::Vector&) { return 0.0; };
-  solid_solver.setDisplacementBCs(is_on_bottom, zero_scalar, 2);
-
-  // auto is_on_top = [](const mfem::Vector& x) {
-  //   if (x(2) > 1.10e-3) {
-  //     return true;
-  //   }
-  //   return false;
-  // };
-  // auto scalar_offset = [](const mfem::Vector&) { return -2e-4; };
-  // solid_solver.setDisplacementBCs(is_on_top, scalar_offset, 2);
+  auto scalar_offset = [=](const mfem::Vector&, double t) { return targetDisp*(t+0.1); };
+  solid_solver.setDisplacementBCs(is_on_top, scalar_offset, 1);
   
-  ////////////////////
+  // auto nonZeroFunc = [](const mfem::Vector /*x*/) { return -3.6e-3; };
+  // solid_solver.setDisplacementBCs({4}, nonZeroFunc, 1);  // back face z-dir disp = 0
 
-  double iniDispVal = 1.0e-7;
+  double iniDispVal = 1.0e-8;
   auto ini_displacement = [=](const mfem::Vector&, mfem::Vector& u) -> void { u = iniDispVal; };
   solid_solver.setDisplacement(ini_displacement);
 
@@ -280,49 +161,46 @@ int main(int argc, char* argv[])
   std::string outputFilename;
   switch (problemID) {
     case 0:
-      outputFilename = "sol_honeycomb_3x3_free_swelling_quarter";
+      outputFilename = "sol_log_pile_rect_dbg";
       break;
     case 1:
-      outputFilename = "sol_logpile_3x3_free_swelling_dbg";
-      break;
-    case 2:
-      outputFilename = "sol_logpile_3x3_free_swelling_quarter";
+      outputFilename = "sol_log_pile_rect_3D";
       break;
     default:
       std::cout << "...... Wrong problem ID ......" << std::endl;
       exit(0);
   }
 
-  int num_steps = 20;
-  if(problemID>0)
+  solid_solver.outputState(outputFilename);
+
+  int num_steps = 10;
+  if (problemID==1)
   {
-    num_steps = 60;
+    num_steps = 20;
   }
-    
+
   double t    = 0.0;
   double tmax = 1.0;
   double dt   = tmax / num_steps;
-
-  solid_solver.advanceTimestep(dt);
-  solid_solver.outputState(outputFilename);
 
   if (rank == 0) {
     std::cout << "\n\n###############################" 
     << "\n... problemID: " << problemID 
     << "\n###############################" << std::endl;
   }
-
-
+  
   for (int i = 0; i < num_steps; i++) {
     // orderParam = max_order_param * (tmax - t) / tmax;
-    orderParam = min_order_param + (max_order_param - min_order_param) * std::pow((tmax - t) / tmax, 1.0);
-    // orderParam = 0.75*max_order_param + 0.25*std::pow((tmax - t) / tmax, 1.0);
+    // orderParam = max_order_param * std::pow((tmax - t) / tmax, 1.0);
 
     if (rank == 0) {
       std::cout << "\n\n............................"
                 << "\n... Entering time step: " << i + 1 << " (/" << num_steps << ")"
                 << "\n............................\n"
-                << "\n... Using order parameter: " << min_order_param + (max_order_param - min_order_param) * std::pow((tmax - t) / tmax, 1.0) << ", gamma = " << gamma_angle << ", and eta = " << eta_angle << std::endl;
+                << "\n... Using order parameter = " << max_order_param << ", gamma = " << gamma_angle << ", and eta = " << eta_angle
+                << "\n... Using target displacement =  " << targetDisp * (t+0.1) // maxYDisp * t / tmax 
+                << "\n... At total time =  " << t 
+                << std::endl << std::endl;
     }
 
     solid_solver.advanceTimestep(dt);

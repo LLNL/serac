@@ -26,7 +26,7 @@ using namespace serac;
 // #define ALT_ITER_SOLVER
 #undef ALT_ITER_SOLVER 
 
-const static int problemID = 4;
+const static int problemID = 1;
 
 int main(int argc, char* argv[])
 {
@@ -382,11 +382,12 @@ int main(int argc, char* argv[])
     }
     else if (problemID==1)
     {
-      solid_solver.setDisplacementBCs({1}, zeroFunc, 1);  // left face y-dir disp = 0
+      // solid_solver.setDisplacementBCs({1}, zeroFunc, 1);  // left face y-dir disp = 0
       
       auto is_on_right = [=](const mfem::Vector& x) {
         bool tag = false;
-        if (x(0) > 5.65e-3) {
+        // if (x(0) > 5.65e-3) {
+        if (x(0) > 5.6e-3) {
           tag = true;
         }
         return tag;
@@ -400,7 +401,8 @@ int main(int argc, char* argv[])
 
       auto is_on_left = [=](const mfem::Vector& x) {
         bool tag = false;
-        if (x(0) < 1.0e-4) {
+        // if (x(0) < 1.0e-4) {
+        if (x(0) < -5.6e-3) {
           tag = true;
         }
         return tag;
@@ -413,7 +415,7 @@ int main(int argc, char* argv[])
   {
     auto is_on_bottom = [=](const mfem::Vector& x) {
       bool tag = false;
-      if (x(1) < -5.9e-3) {
+      if (x(1) < -5.8e-3) {
         tag = true;
       }
       return tag;
@@ -429,7 +431,8 @@ int main(int argc, char* argv[])
       } 
       else
       {
-        if (x(1) < -5.9e-3 && x(2) > 3.6e-5 && x(2) < 3.7e-5) {
+        // if (x(1) < -5.9e-3 && x(2) > 3.6e-5 && x(2) < 3.7e-5) {
+        if (x(1) < -5.85e-3 && x(2) > 3.55e-5 && x(2) < 3.75e-5) {
           tag = true;
         }
       }
@@ -442,7 +445,8 @@ int main(int argc, char* argv[])
 
     auto is_on_top = [=](const mfem::Vector& x) {
       bool tag = false;
-      if (x(1) > 5.9e-3) {
+      // if (x(1) > 5.9e-3) {
+        if (x(1) > 5.8e-3) {
         tag = true;
       }
       return tag;
@@ -458,7 +462,8 @@ int main(int argc, char* argv[])
 
     auto is_on_bottom = [=](const mfem::Vector& x) {
       bool tag = false;
-      if (x(1) < -5.9e-3) {
+      // if (x(1) < -5.9e-3) {
+      if (x(1) < -5.8e-3) {
         tag = true;
       }
       return tag;
@@ -488,7 +493,7 @@ int main(int argc, char* argv[])
       outputFilename = "sol_honeycomb_3x3_compression_vertical";
       break;
     case 1:
-      outputFilename = "sol_honeycomb_3x3_compression_horizontal";
+      outputFilename = "sol_honeycomb_3x3_compression_horizontal_fixed";
       break;
     case 2:
       outputFilename = "sol_honeycomb_3x3_compression_quarter";
@@ -513,13 +518,24 @@ int main(int argc, char* argv[])
   }
   else if (problemID==1)
   {
-    num_steps = 100;
+    num_steps = 50;
   }
+  else if (problemID==4)
+  {
+    num_steps = 50;
+  }
+
 
   double t    = 0.0;
   double tmax = 1.0;
   double dt   = tmax / num_steps;
 
+  if (rank == 0) {
+    std::cout << "\n\n###############################" 
+    << "\n... problemID: " << problemID 
+    << "\n###############################" << std::endl;
+  }
+  
   for (int i = 0; i < num_steps; i++) {
     // orderParam = max_order_param * (tmax - t) / tmax;
     // orderParam = max_order_param * std::pow((tmax - t) / tmax, 1.0);
