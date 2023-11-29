@@ -1758,7 +1758,7 @@ For brevity, only one instance is displayed here.
      - 
      - |uncheck|
    * - model
-     - The model of material
+     - The model of material (e.g. NeoHookean)
      - 
      - 
      - |check|
@@ -1805,7 +1805,7 @@ Description: Hardening law
      - 
      - |uncheck|
    * - law
-     - Name of the hardening law
+     - Name of the hardening law (e.g. PowerLawHardening, VoceHardening)
      - 
      - 
      - |check|
