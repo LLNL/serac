@@ -11,7 +11,7 @@ namespace serac {
 void HardeningInputOptions::defineInputFileSchema(axom::inlet::Container& container)
 {
   // Shared between both hardening laws
-  container.addString("law", "Name of the hardening law").required(true);
+  container.addString("law", "Name of the hardening law (e.g. PowerLawHardening)").required(true);
   container.addDouble("sigma_y", "Yield strength");
 
   // PowerLawHardening

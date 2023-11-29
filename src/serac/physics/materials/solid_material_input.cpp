@@ -11,7 +11,7 @@ namespace serac {
 void SolidMaterialInputOptions::defineInputFileSchema(axom::inlet::Container& container)
 {
   // Define schema with each solid material parameter
-  container.addString("model", "The model of material").required(true);
+  container.addString("model", "The model of material (e.g. NeoHookean)").required(true);
   container.addDouble("density", "Initial mass density");
 
   // Solid mechanics (neo-hookean, linear isotropic)
