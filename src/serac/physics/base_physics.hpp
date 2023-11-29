@@ -498,6 +498,16 @@ protected:
   mutable std::unique_ptr<mfem::ParaViewDataCollection> paraview_dc_;
 
   /**
+   * @brief A optional map of the dual names and duals in grid function form for paraview output
+   */
+  mutable std::unordered_map<std::string, std::unique_ptr<mfem::ParGridFunction>> paraview_dual_grid_functions_;
+
+  /**
+   * @brief A optional view of the shape sensitivity in grid funciton form for paraview output
+   */
+  mutable std::unique_ptr<mfem::ParGridFunction> shape_sensitivity_grid_function_;
+
+  /**
    * @brief Boundary condition manager instance
    */
   BoundaryConditionManager bcs_;

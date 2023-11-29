@@ -137,6 +137,18 @@ void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_d
         max_order_in_fields = std::max(max_order_in_fields, state->space().GetOrder(0));
       }
 
+      for (const FiniteElementDual* dual : duals_) {
+        // These are really const calls, but MFEM doesn't label them as such
+        serac::FiniteElementDual* non_const_dual = const_cast<serac::FiniteElementDual*>(dual);
+
+        paraview_dual_grid_functions_[dual->name()] =
+            std::make_unique<mfem::ParGridFunction>(const_cast<mfem::ParFiniteElementSpace*>(&dual->space()));
+        non_const_dual->space().GetRestrictionMatrix()->MultTranspose(*dual,
+                                                                      *paraview_dual_grid_functions_[dual->name()]);
+        max_order_in_fields = std::max(max_order_in_fields, dual->space().GetOrder(0));
+        paraview_dc_->RegisterField(dual->name(), paraview_dual_grid_functions_[dual->name()].get());
+      }
+
       for (auto& parameter : parameters_) {
         paraview_dc_->RegisterField(parameter.state->name(), &parameter.state->gridFunction());
         max_order_in_fields = std::max(max_order_in_fields, parameter.state->space().GetOrder(0));
@@ -144,6 +156,13 @@ void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_d
 
       paraview_dc_->RegisterField(shape_displacement_.name(), &shape_displacement_.gridFunction());
       max_order_in_fields = std::max(max_order_in_fields, shape_displacement_.space().GetOrder(0));
+
+      shape_sensitivity_grid_function_ =
+          std::make_unique<mfem::ParGridFunction>(&shape_displacement_sensitivity_->space());
+      shape_displacement_sensitivity_->space().GetRestrictionMatrix()->MultTranspose(*shape_displacement_sensitivity_,
+                                                                                     *shape_sensitivity_grid_function_);
+      max_order_in_fields = std::max(max_order_in_fields, shape_displacement_sensitivity_->space().GetOrder(0));
+      paraview_dc_->RegisterField(shape_displacement_sensitivity_->name(), shape_sensitivity_grid_function_.get());
 
       // Set the options for the paraview output files
       paraview_dc_->SetLevelsOfDetail(max_order_in_fields);
@@ -154,10 +173,18 @@ void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_d
       for (const FiniteElementState* state : states_) {
         state->gridFunction();  // update grid function values
       }
+      for (const FiniteElementDual* dual : duals_) {
+        // These are really const calls, but MFEM doesn't label them as such
+        serac::FiniteElementDual* non_const_dual = const_cast<serac::FiniteElementDual*>(dual);
+        non_const_dual->space().GetRestrictionMatrix()->MultTranspose(*dual,
+                                                                      *paraview_dual_grid_functions_[dual->name()]);
+      }
       for (auto& parameter : parameters_) {
         parameter.state->gridFunction();
       }
       shape_displacement_.gridFunction();
+      shape_displacement_sensitivity_->space().GetRestrictionMatrix()->MultTranspose(*shape_displacement_sensitivity_,
+                                                                                     *shape_sensitivity_grid_function_);
     }
 
     // Set the current time, cycle, and requested paraview directory
