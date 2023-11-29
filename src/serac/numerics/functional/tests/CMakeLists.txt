@@ -63,10 +63,15 @@ if(ENABLE_CUDA)
     blt_add_executable(NAME functional_cuda
                        SOURCES functional_cuda.cpp
                        DEPENDS_ON gtest serac_functional serac_state ${functional_depends} cuda)
-
+target_compile_definitions(functional_cuda PUBLIC RAJA_ENABLE_CUDA)
     blt_add_executable(NAME functional_basic_h1_scalar_cuda
                        SOURCES functional_basic_h1_scalar.cpp
                        DEPENDS_ON gtest serac_functional serac_state ${functional_depends} cuda)
+
+    blt_add_executable(NAME functional_basic_h1_vector_cuda
+                       SOURCES functional_basic_h1_vector.cpp
+                       DEPENDS_ON gtest serac_functional serac_state ${functional_depends} cuda)
     
     target_compile_definitions(functional_basic_h1_scalar_cuda PUBLIC ENABLE_CUDA)
+    target_compile_definitions(functional_basic_h1_vector_cuda PUBLIC USE_CUDA)
 endif()

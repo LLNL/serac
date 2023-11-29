@@ -15,6 +15,8 @@
 #include "mfem.hpp"
 #include <RAJA/RAJA.hpp>
 #include <RAJA/index/RangeSegment.hpp>
+#include "umpire/Allocator.hpp"
+#include "umpire/ResourceManager.hpp"
 #include "serac/infrastructure/logger.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/quadrature.hpp"
@@ -26,9 +28,31 @@
 #include "serac/numerics/functional/element_restriction.hpp"
 
 #include <array>
+#include <axom/core/Types.hpp>
 #include <axom/core/memory_management.hpp>
 #include <mfem/fem/geom.hpp>
 #include <vector>
+
+namespace {
+
+template <typename DataType>
+DataType* copy_data(DataType* source_data, std::size_t size, const std::string& destination)
+{
+  auto& rm             = umpire::ResourceManager::getInstance();
+  auto  dest_allocator = rm.getAllocator(destination);
+
+  DataType* dest_data = static_cast<DataType*>(dest_allocator.allocate(size * sizeof(DataType)));
+
+  // _sphinx_tag_tut_copy_start
+  rm.copy(dest_data, source_data);
+  // _sphinx_tag_tut_copy_end
+
+  return dest_data;
+
+  // dest_allocator.deallocate(dest_data);
+}
+
+}  // namespace
 
 namespace serac {
 
@@ -196,6 +220,7 @@ class Functional<test(trials...), exec> {
                                                         mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
   static constexpr mfem::Geometry::Type simplex_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT,
                                                            mfem::Geometry::TRIANGLE, mfem::Geometry::TETRAHEDRON};
+
 public:
   class Gradient;
 
@@ -494,7 +519,6 @@ public:
   /// @brief flag for denoting when a residual evaluation should update the material state buffers
   bool update_qdata;
 
-
   /**
    * @brief mfem::Operator representing the gradient matrix that
    * can compute the action of the gradient (with operator()),
@@ -533,7 +557,8 @@ public:
       form_.ActionOfGradient(dx, df_, which_argument);
       return df_;
     }
-    public:
+
+  public:
     /// @brief assemble element matrices and form an mfem::HypreParMatrix
     std::unique_ptr<mfem::HypreParMatrix> assemble()
     {
@@ -575,49 +600,52 @@ public:
         auto K_elem             = element_gradients[type];
         auto test_restrictions  = form_.G_test_[type].restrictions;
         auto trial_restrictions = form_.G_trial_[type][which_argument].restrictions;
-        std::cout << "HERE\n";
-        if (K_elem.empty())
-          std::cout << "K ELEM EMPTY\n";
+
         for (auto pair : K_elem) {
-          mfem::Geometry::Type geom = pair.first;
-          auto elem_matrices = pair.second;
-          auto test_restiction = test_restrictions[geom];
-          auto trial_restriction = trial_restrictions[geom];
-          axom::Array<DoF, 1, axom::MemorySpace::Device> test_vdofs(test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components);
-          axom::Array<DoF, 1, axom::MemorySpace::Device> trial_vdofs(trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components);
+          mfem::Geometry::Type geom              = pair.first;
+          auto                 elem_matrices     = pair.second;
+          auto                 test_restriction  = test_restrictions[geom];
+          auto                 trial_restriction = trial_restrictions[geom];
 
-          #if defined(USE_CUDA)
-            std::cout << "USING CUDA :)\n";
-            using policy = RAJA::cuda_exec<512>;
-          #else
-            using policy = RAJA::simd_exec;
-          #endif
-              printf("HERE 42\n");
-            // for each element in the domain
-          RAJA::forall<policy>(
-            RAJA::TypedRangeSegment<uint32_t>(0, elem_matrices.shape()[0]),
-            [=] RAJA_HOST_DEVICE(axom::IndexType e) mutable {
-            test_restiction.GetElementVDofs(e, test_vdofs.data());
-            trial_restriction.GetElementVDofs(e, trial_vdofs.data());
+          // for each element in the domain
+          for (axom::IndexType e = 0; e < elem_matrices.shape()[0]; e++) {
+            auto& rm        = umpire::ResourceManager::getInstance();
+            auto  allocator = rm.getAllocator("HOST");
+#ifdef USE_CUDA
+            auto* elem_matrices_data = copy_data(elem_matrices.data(), elem_matrices.size(), "HOST");
+            axom::Array<double, 3, axom::MemorySpace::Host> elem_matrices_host(
+                test_restriction.num_elements, trial_restriction.nodes_per_elem * trial_restriction.components,
+                test_restriction.nodes_per_elem * test_restriction.components);
+            elem_matrices_host = elem_matrices;
+#else
+            auto elem_matrices_host = elem_matrices;
+#endif
 
-            for (int i = 0; i < int(elem_matrices.shape()[1]); i++) {
-              int col = int(trial_vdofs.data()[i].index());
+            size_t test_vdofs_sz  = test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components;
+            size_t trial_vdofs_sz = trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components;
+            DoF*   test_vdofs     = static_cast<DoF*>(allocator.allocate(test_vdofs_sz * sizeof(DoF)));
+            DoF*   trial_vdofs    = static_cast<DoF*>(allocator.allocate(trial_vdofs_sz * sizeof(DoF)));
+            test_restriction.GetElementVDofs(e, test_vdofs);
+            trial_restriction.GetElementVDofs(e, trial_vdofs);
 
-              for (int j = 0; j < int(elem_matrices.shape()[2]); j++) {
-                int row = int(test_vdofs.data()[j].index());
+            for (uint32_t i = 0; i < uint32_t(elem_matrices.shape()[1]); i++) {
+              int col = int(trial_vdofs[i].index());
 
-                int sign = test_vdofs.data()[j].sign() * trial_vdofs.data()[i].sign();
+              for (uint32_t j = 0; j < uint32_t(elem_matrices.shape()[2]); j++) {
+                int row = int(test_vdofs[j].index());
+
+                int sign = test_vdofs[j].sign() * trial_vdofs[i].sign();
 
                 // note: col / row appear backwards here, because the element matrix kernel
                 //       is actually transposed, as a result of being row-major storage.
                 //
                 //       This is kind of confusing, and will be fixed in a future refactor
                 //       of the element gradient kernel implementation
-                
-                values[lookup_tables(row, col)] += sign * elem_matrices(e, i, j);
+                [[maybe_unused]] auto nz = lookup_tables(row, col);
+                values[lookup_tables(row, col)] += sign * elem_matrices_host(e, i, j);
               }
             }
-          });
+          }
         }
       }
 

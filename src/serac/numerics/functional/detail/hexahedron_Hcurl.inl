@@ -255,7 +255,8 @@ struct finite_element<mfem::Geometry::CUBE, Hcurl<p>> {
   }
 
   template <typename in_t, int q>
-  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q * q> input, const TensorProductQuadratureRule<q>&)
+  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q * q> input,
+                                                    const TensorProductQuadratureRule<q>&)
   {
     constexpr bool                     apply_weights = false;
     constexpr tensor<double, q, p>     B1            = calculate_B1<apply_weights, q>();

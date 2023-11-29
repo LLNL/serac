@@ -240,7 +240,8 @@ struct finite_element<mfem::Geometry::TRIANGLE, H1<p, c> > {
   }
 
   template <typename in_t, int q>
-  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q*(q + 1) / 2> input, const TensorProductQuadratureRule<q>&)
+  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q*(q + 1) / 2> input,
+                                                    const TensorProductQuadratureRule<q>&)
   {
     using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, 2>{}));
     using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, 2>{}));

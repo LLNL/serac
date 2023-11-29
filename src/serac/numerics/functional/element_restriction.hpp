@@ -212,8 +212,12 @@ struct ElementRestriction {
   /// the number of nodes in each element
   uint64_t nodes_per_elem;
 
-  /// a 2D array (num_elements-by-nodes_per_elem) holding the dof info extracted from the finite element space
+/// a 2D array (num_elements-by-nodes_per_elem) holding the dof info extracted from the finite element space
+#ifdef USE_CUDA
+  axom::Array<DoF, 2, axom::MemorySpace::Device> dof_info;
+#else
   axom::Array<DoF, 2, axom::MemorySpace::Host> dof_info;
+#endif
 
   /// whether the underlying dofs are arranged "byNodes" or "byVDim"
   mfem::Ordering::Type ordering;

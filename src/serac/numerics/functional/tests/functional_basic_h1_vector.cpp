@@ -24,6 +24,60 @@
 using namespace serac;
 using namespace serac::profiling;
 
+template <int dim>
+struct MixedModelOne {
+  template <typename unused_type, typename displacement_type>
+  SERAC_HOST_DEVICE auto operator()(unused_type, displacement_type displacement)
+  {
+    constexpr static auto d11 =
+        1.0 * make_tensor<dim + 1, dim, dim + 2, dim>([](int i, int j, int k, int l) { return i - j + 2 * k - 3 * l; });
+    auto [u, du_dx] = displacement;
+    auto source     = zero{};
+    auto flux       = double_dot(d11, du_dx);
+    return serac::tuple{source, flux};
+  }
+};
+
+template <int dim>
+struct MixedModelTwo {
+  template <typename position_type, typename displacement_type>
+  SERAC_HOST_DEVICE auto operator()(position_type position, displacement_type displacement)
+  {
+    constexpr static auto s11 = 1.0 * make_tensor<dim + 1, dim + 2>([](int i, int j) { return i * i - j; });
+    auto [X, dX_dxi]          = position;
+    auto [u, du_dxi]          = displacement;
+    return dot(s11, u) * X[0];
+  }
+};
+
+template <int dim>
+struct ElasticityTestModelOne {
+  template <typename position_type, typename displacement_type>
+  SERAC_HOST_DEVICE auto operator()(position_type, displacement_type displacement)
+  {
+    constexpr static auto d00 = make_tensor<dim, dim>([](int i, int j) { return i + 2 * j + 1; });
+    constexpr static auto d01 = make_tensor<dim, dim, dim>([](int i, int j, int k) { return i + 2 * j - k + 1; });
+    constexpr static auto d10 = make_tensor<dim, dim, dim>([](int i, int j, int k) { return i + 3 * j - 2 * k; });
+    constexpr static auto d11 =
+        make_tensor<dim, dim, dim, dim>([](int i, int j, int k, int l) { return i - j + 2 * k - 3 * l + 1; });
+    auto [u, du_dx] = displacement;
+    auto source     = dot(d00, u) + double_dot(d01, du_dx);
+    auto flux       = dot(d10, u) + double_dot(d11, du_dx);
+    return serac::tuple{source, flux};
+  }
+};
+
+template <int dim>
+struct ElasticityTestModelTwo {
+  template <typename position_type, typename displacement_type>
+  SERAC_HOST_DEVICE auto operator()(position_type position, displacement_type displacement)
+  {
+    auto [X, dX_dxi] = position;
+    auto [u, du_dxi] = displacement;
+    return u * X[0];
+  }
+};
+
 template <int p, int dim>
 void weird_mixed_test(std::unique_ptr<mfem::ParMesh>& mesh)
 {
@@ -37,34 +91,18 @@ void weird_mixed_test(std::unique_ptr<mfem::ParMesh>& mesh)
   mfem::Vector U(trial_fes->TrueVSize());
   U.Randomize();
 
-  Functional<test_space(trial_space)> residual(test_fes.get(), {trial_fes.get()});
-
-  auto d11 =
-      1.0 * make_tensor<dim + 1, dim, dim + 2, dim>([](int i, int j, int k, int l) { return i - j + 2 * k - 3 * l; });
-
-  auto s11 = 1.0 * make_tensor<dim + 1, dim + 2>([](int i, int j) { return i * i - j; });
+#ifdef USE_CUDA
+  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(test_fes.get(), {trial_fes.get()});
+#else
+  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(test_fes.get(), {trial_fes.get()});
+#endif
 
   // note: this is not really an elasticity problem, it's testing source and flux
   // terms that have the appropriate shapes to ensure that all the differentiation
   // code works as intended
-  residual.AddDomainIntegral(
-      Dimension<dim>{}, DependsOn<0>{},
-      [=](auto /* x */, auto displacement) {
-        auto [u, du_dx] = displacement;
-        auto source     = zero{};
-        auto flux       = double_dot(d11, du_dx);
-        return serac::tuple{source, flux};
-      },
-      *mesh);
+  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, MixedModelOne<dim>{}, *mesh);
 
-  residual.AddBoundaryIntegral(
-      Dimension<dim - 1>{}, DependsOn<0>{},
-      [=](auto position, auto displacement) {
-        auto [X, dX_dxi] = position;
-        auto [u, du_dxi] = displacement;
-        return dot(s11, u) * X[0];
-      },
-      *mesh);
+  residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, MixedModelTwo<dim>{}, *mesh);
 
   check_gradient(residual, U);
 }
@@ -82,35 +120,18 @@ void elasticity_test(std::unique_ptr<mfem::ParMesh>& mesh)
   mfem::Vector U(trial_fes->TrueVSize());
   U.Randomize();
 
-  Functional<test_space(trial_space)> residual(test_fes.get(), {trial_fes.get()});
-
-  [[maybe_unused]] auto d00 = make_tensor<dim, dim>([](int i, int j) { return i + 2 * j + 1; });
-  [[maybe_unused]] auto d01 = make_tensor<dim, dim, dim>([](int i, int j, int k) { return i + 2 * j - k + 1; });
-  [[maybe_unused]] auto d10 = make_tensor<dim, dim, dim>([](int i, int j, int k) { return i + 3 * j - 2 * k; });
-  [[maybe_unused]] auto d11 =
-      make_tensor<dim, dim, dim, dim>([](int i, int j, int k, int l) { return i - j + 2 * k - 3 * l + 1; });
+#ifdef USE_CUDA
+  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(test_fes.get(), {trial_fes.get()});
+#else
+  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(test_fes.get(), {trial_fes.get()});
+#endif
 
   // note: this is not really an elasticity problem, it's testing source and flux
   // terms that have the appropriate shapes to ensure that all the differentiation
   // code works as intended
-  residual.AddDomainIntegral(
-      Dimension<dim>{}, DependsOn<0>{},
-      [=](auto /* x */, auto displacement) {
-        auto [u, du_dx] = displacement;
-        auto source     = dot(d00, u) + double_dot(d01, du_dx);
-        auto flux       = dot(d10, u) + double_dot(d11, du_dx);
-        return serac::tuple{source, flux};
-      },
-      *mesh);
+  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, ElasticityTestModelOne<dim>{}, *mesh);
 
-  residual.AddBoundaryIntegral(
-      Dimension<dim - 1>{}, DependsOn<0>{},
-      [=](auto position, auto displacement) {
-        auto [X, dX_dxi] = position;
-        auto [u, du_dxi] = displacement;
-        return u * X[0];
-      },
-      *mesh);
+  residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, ElasticityTestModelTwo<dim>{}, *mesh);
 
   check_gradient(residual, U);
 }
