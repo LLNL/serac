@@ -181,9 +181,21 @@ public:
                        "EquationSolver argument is nullptr in SolidMechanics constructor. It is possible that it was "
                        "previously moved.");
 
+    // Check for dynamic mode
+    if (timestepping_opts.timestepper != TimestepMethod::QuasiStatic) {
+      ode2_.SetTimestepper(timestepping_opts.timestepper);
+      ode2_.SetEnforcementMethod(timestepping_opts.enforcement_method);
+      is_quasistatic_ = false;
+    } else {
+      is_quasistatic_ = true;
+    }
+
     states_.push_back(&displacement_);
-    states_.push_back(&velocity_);
-    states_.push_back(&acceleration_);
+    if (!is_quasistatic_) {
+      states_.push_back(&velocity_);
+      states_.push_back(&acceleration_);
+    }
+
     adjoints_.push_back(&adjoint_displacement_);
 
     duals_.push_back(&reactions_);
@@ -235,15 +247,6 @@ public:
       // method as of Hypre version v2.26.0. Instead, we just set the system size for Hypre. This is a temporary work
       // around as it will decrease the effectiveness of the preconditioner.
       amg_prec->SetSystemsOptions(dim, true);
-    }
-
-    // Check for dynamic mode
-    if (timestepping_opts.timestepper != TimestepMethod::QuasiStatic) {
-      ode2_.SetTimestepper(timestepping_opts.timestepper);
-      ode2_.SetEnforcementMethod(timestepping_opts.enforcement_method);
-      is_quasistatic_ = false;
-    } else {
-      is_quasistatic_ = true;
     }
 
     int true_size = velocity_.space().TrueVSize();
@@ -648,7 +651,11 @@ public:
    */
   std::vector<std::string> stateNames() const override
   {
-    return std::vector<std::string>{{"displacement"}, {"velocity"}, {"acceleration"}};
+    if (is_quasistatic_) {
+      return std::vector<std::string>{{"displacement"}};
+    } else {
+      return std::vector<std::string>{{"displacement"}, {"velocity"}, {"acceleration"}};
+    }
   }
 
   /**
