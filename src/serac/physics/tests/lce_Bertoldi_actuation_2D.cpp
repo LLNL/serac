@@ -146,7 +146,7 @@ int main(int argc, char* argv[])
   auto equation_solver = std::make_unique<serac::EquationSolver>(
       std::move(nonlinear_solver), std::move(linear_solver), std::move(preconditioner));
 
-  SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
+  SolidMechanics<p, dim, Parameters<L2<0>, L2<0>, L2<0> > > solid_solver(
       std::move(equation_solver), solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional", mesh_tag);
   // _custom_solver_end
 
@@ -160,7 +160,7 @@ int main(int argc, char* argv[])
                                               .absolute_tol   = 1.0e-14,
                                               .max_iterations = 15,
                                               .print_level    = 1};
-  SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
+  SolidMechanics<p, dim, Parameters<L2<0>, L2<0>, L2<0> > > solid_solver(
       nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional",mesh_tag);
 #endif
 

@@ -96,7 +96,7 @@ int main(int argc, char* argv[])
 
 #endif
 
-   std::string mesh_tag{"mesh}"}; auto& pmesh = serac::StateManager::setMesh(std::move(mesh));
+   std::string mesh_tag{"mesh"}; auto& pmesh = serac::StateManager::setMesh(std::move(mesh));
 
   // Construct a functional-based solid mechanics solver
   LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
                                               .absolute_tol   = 1.0e-14,
                                               .max_iterations = 25,
                                               .print_level    = 1};
-  SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
+  SolidMechanics<p, dim, Parameters<L2<0>, L2<0>, L2<0> > > solid_solver(
       nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional",mesh_tag);
       
 //   IterativeNonlinearSolverOptions default_nonlinear_options = {.rel_tol       = 1.0e-6,
@@ -137,12 +137,12 @@ int main(int argc, char* argv[])
 //   custom_solver->SetMaxIter(700);
 //   custom_solver->SetKDim(500);
 
-//   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
+//   SolidMechanics<p, dim, Parameters<L2<0>, L2<0>, L2<0> > > solid_solver(
 //       {CustomSolverOptions{custom_solver.get()}, default_nonlinear_options}, GeometricNonlinearities::Off,
 //       "lce_solid_functional");
 // #else
 //   DirectSolverOptions linear_sol_options = {};
-//   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
+//   SolidMechanics<p, dim, Parameters<L2<0>, L2<0>, L2<0> > > solid_solver(
 //       {linear_sol_options, default_nonlinear_options}, GeometricNonlinearities::Off, "lce_solid_functional");
 // #endif
 

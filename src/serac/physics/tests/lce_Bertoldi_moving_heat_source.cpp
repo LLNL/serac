@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
 
   auto mesh = mesh::refineAndDistribute(std::move(cuboid), serial_refinement, parallel_refinement);
 
-  std::string mesh_tag{"mesh}"}; 
+  std::string mesh_tag{"mesh"}; 
   auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // Construct a functional-based solid mechanics solver
@@ -60,8 +60,9 @@ int main(int argc, char* argv[])
   // .nonlin_solver = serac::NonlinearSolver::KINPicard};
   // .nonlin_solver = serac::NonlinearSolver::KINFP};
 
-  SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
-      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional", mesh_tag);
+  SolidMechanics<p, dim, Parameters<L2<0>, L2<0>, L2<0> > > solid_solver(
+      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, 
+      "lce_solid_free_swelling", mesh_tag, {"orderParam", "gammaParam", "etaParam"});
 
   // Material properties
   double density         = 1.0;

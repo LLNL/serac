@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
 #endif
   auto mesh = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid);
 
-   std::string mesh_tag{"mesh}"}; auto& pmesh = serac::StateManager::setMesh(std::move(mesh));
+   std::string mesh_tag{"mesh"}; auto& pmesh = serac::StateManager::setMesh(std::move(mesh));
 
   double             initial_temperature = 25 + 273;  // 300.0;
   double             final_temperature   = 430.0;

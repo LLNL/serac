@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
   auto initial_mesh = buildMeshFromFile(inputFilename);
   auto mesh = mesh::refineAndDistribute(std::move(initial_mesh), serial_refinement, parallel_refinement);
 
-  std::string mesh_tag{"mesh}"}; 
+  std::string mesh_tag{"mesh"}; 
   auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // Construct a functional-based solid mechanics solver
@@ -75,10 +75,11 @@ int main(int argc, char* argv[])
   NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::Newton,
                                               .relative_tol   = 1.0e-8,
                                               .absolute_tol   = 1.0e-12,
-                                              .max_iterations = 10,
+                                              .max_iterations = 25,
                                               .print_level    = 1};
-  SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
-      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional", mesh_tag);
+  SolidMechanics<p, dim, Parameters<L2<0>, L2<0>, L2<0> > > solid_solver(
+      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, 
+      "lce_solid_free_swelling", mesh_tag, {"orderParam", "gammaParam", "etaParam"});
 
   // Material properties
   double density         = 1.0;    // [Kg / mm3]
@@ -137,14 +138,17 @@ int main(int argc, char* argv[])
   auto is_on_top = [=](const mfem::Vector& x) {
     bool tag = false;
     // if (x(1) > 6.374999e-3) {
-    if (x(1) > 5e-3) {
+    if (x(1) > 4e-3) {
       tag = true;
     }
     return tag;
   };
 
-  auto scalar_offset = [=](const mfem::Vector&, double t) { return targetDisp*(t+0.1); };
+  auto scalar_offset = [=](const mfem::Vector&, double t) { return targetDisp*(t+0.01); };
   solid_solver.setDisplacementBCs(is_on_top, scalar_offset, 1);
+
+  // auto compression_disp = [=](const mfem::Vector&) { return 0.01*targetDisp; }; // { return targetDisp*(t+0.1); };
+  // solid_solver.setDisplacementBCs({4}, compression_disp, 1);  // back face z-dir disp = 0
   
   // auto nonZeroFunc = [](const mfem::Vector /*x*/) { return -3.6e-3; };
   // solid_solver.setDisplacementBCs({4}, nonZeroFunc, 1);  // back face z-dir disp = 0
@@ -197,7 +201,7 @@ int main(int argc, char* argv[])
                 << "\n... Entering time step: " << i + 1 << " (/" << num_steps << ")"
                 << "\n............................\n"
                 << "\n... Using order parameter = " << max_order_param << ", gamma = " << gamma_angle << ", and eta = " << eta_angle
-                << "\n... Using target displacement =  " << targetDisp * (t+0.1) // maxYDisp * t / tmax 
+                << "\n... Using target displacement =  " << targetDisp * (t+0.01) // maxYDisp * t / tmax 
                 << "\n... At total time =  " << t 
                 << std::endl << std::endl;
     }

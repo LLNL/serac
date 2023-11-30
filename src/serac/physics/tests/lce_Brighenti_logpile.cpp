@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
   std::string filename = SERAC_REPO_DIR "/data/meshes/LCE_finalLogMesh_2layers_coarse.g";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-   std::string mesh_tag{"mesh}"}; auto& pmesh = serac::StateManager::setMesh(std::move(mesh));
+   std::string mesh_tag{"mesh"}; auto& pmesh = serac::StateManager::setMesh(std::move(mesh));
 
   double             initial_temperature = 290;  // 270.0; //300.0;
   double             final_temperature   = 400;  // 380.0; // 430.0;

@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
   auto initial_mesh = buildMeshFromFile(inputFilename);
   auto mesh = mesh::refineAndDistribute(std::move(initial_mesh), serial_refinement, parallel_refinement);
 
-   std::string mesh_tag{"mesh}"}; 
+   std::string mesh_tag{"mesh"}; 
    auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // Construct a functional-based solid mechanics solver
@@ -75,8 +75,9 @@ int main(int argc, char* argv[])
                                               .absolute_tol   = 1.0e-12,
                                               .max_iterations = 50,
                                               .print_level    = 1};
-  SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
-      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional", mesh_tag);
+  SolidMechanics<p, dim, Parameters<L2<0>, L2<0>, L2<0> > > solid_solver(
+      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, 
+      "lce_solid_free_swelling", mesh_tag, {"orderParam", "gammaParam", "etaParam"});
 
   // Material properties
   double density         = 1.0;    // [Kg / mm3]

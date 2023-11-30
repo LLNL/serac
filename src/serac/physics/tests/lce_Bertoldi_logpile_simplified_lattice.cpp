@@ -74,8 +74,9 @@ int main(int argc, char* argv[])
                                               .absolute_tol   = 1.0e-14,
                                               .max_iterations = 15,
                                               .print_level    = 1};
-  SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
-      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "lce_solid_functional", mesh_tag);
+  SolidMechanics<p, dim, Parameters<L2<0>, L2<0>, L2<0> > > solid_solver(
+      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, 
+      "lce_solid_free_swelling", mesh_tag, {"orderParam", "gammaParam", "etaParam"});
 
 //   IterativeNonlinearSolverOptions default_nonlinear_options = {.rel_tol       = 1.0e-6,
 //                                                                .abs_tol       = 1.0e-8,
@@ -97,12 +98,12 @@ int main(int argc, char* argv[])
 //   custom_solver->SetMaxIter(700);
 //   custom_solver->SetKDim(500);
 
-//   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
+//   SolidMechanics<p, dim, Parameters<L2<0>, L2<0>, L2<0> > > solid_solver(
 //       {CustomSolverOptions{custom_solver.get()}, default_nonlinear_options}, GeometricNonlinearities::Off,
 //       "lce_solid_functional");
 // #else
 //   DirectSolverOptions linear_sol_options = {};
-//   SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
+//   SolidMechanics<p, dim, Parameters<L2<0>, L2<0>, L2<0> > > solid_solver(
 //       {linear_sol_options, default_nonlinear_options}, GeometricNonlinearities::Off, "lce_solid_functional");
 // #endif
 

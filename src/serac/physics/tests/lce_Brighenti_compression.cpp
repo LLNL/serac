@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
   ::mfem::Mesh cuboid = mfem::Mesh(
       mfem::Mesh::MakeCartesian3D(4 * nElem, 4 * nElem, nElem, mfem::Element::HEXAHEDRON, 8.5 / 2, 8.5 / 2, 2.162 / 2));
   auto mesh = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, cuboid);
-   std::string mesh_tag{"mesh}"}; auto& pmesh = serac::StateManager::setMesh(std::move(mesh));
+   std::string mesh_tag{"mesh"}; auto& pmesh = serac::StateManager::setMesh(std::move(mesh));
 
   double             initial_temperature = 290;  // 300.0;
   double             final_temperature   = 400;  // 430.0;

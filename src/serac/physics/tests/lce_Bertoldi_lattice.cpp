@@ -75,7 +75,7 @@ TEST(LiquidCrystalElastomer, Bertoldi)
                                               .print_level    = 1};
 #endif
 
-  SolidMechanics<p, dim, Parameters<H1<p>, L2<p>, L2<p> > > solid_solver(
+  SolidMechanics<p, dim, Parameters<L2<0>, L2<0>, L2<0> > > solid_solver(
       nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::Off,
       "lce_solid_functional", mesh_tag, {"order", "eta", "gamma"});
 
