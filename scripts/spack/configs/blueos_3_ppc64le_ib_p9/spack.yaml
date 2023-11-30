@@ -54,6 +54,7 @@ spack:
         szip: [libszip, libaec]
         tbb: [intel-tbb]
         jpeg: [libjpeg-turbo, libjpeg]
+        zlib-api: [zlib]
     py-numpy:
       variants: ~blas~lapack
 
