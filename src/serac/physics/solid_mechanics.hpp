@@ -959,9 +959,9 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          double dummy_time = 0.0;
+          
           const mfem::Vector res =
-              (*residual_)(dummy_time, u, acceleration_, shape_displacement_, *parameters_[parameter_indices].state...);
+              (*residual_)(ode_time_point_, u, acceleration_, shape_displacement_, *parameters_[parameter_indices].state...);
 
           // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
           // tracking strategy
@@ -972,9 +972,9 @@ public:
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          double dummy_time = 0.0;
+          
 
-          auto [r, drdu] = (*residual_)(dummy_time, differentiate_wrt(u), acceleration_, shape_displacement_,
+          auto [r, drdu] = (*residual_)(ode_time_point_, differentiate_wrt(u), acceleration_, shape_displacement_,
                                         *parameters_[parameter_indices].state...);
           J_             = assemble(drdu);
           J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
@@ -1020,9 +1020,9 @@ public:
           displacement_.space().TrueVSize(),
 
           [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
-            double dummy_time = 0.0;
+            
             add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
-            const mfem::Vector res = (*residual_)(dummy_time, predicted_displacement_, d2u_dt2, shape_displacement_,
+            const mfem::Vector res = (*residual_)(ode_time_point_, predicted_displacement_, d2u_dt2, shape_displacement_,
                                                   *parameters_[parameter_indices].state...);
 
             // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
@@ -1033,18 +1033,18 @@ public:
           },
 
           [this](const mfem::Vector& d2u_dt2) -> mfem::Operator& {
-            double dummy_time = 0.0;
+            
             add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
 
             // K := dR/du
             auto K =
-                serac::get<DERIVATIVE>((*residual_)(dummy_time, differentiate_wrt(predicted_displacement_), d2u_dt2,
+                serac::get<DERIVATIVE>((*residual_)(ode_time_point_, differentiate_wrt(predicted_displacement_), d2u_dt2,
                                                     shape_displacement_, *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/da
             auto M =
-                serac::get<DERIVATIVE>((*residual_)(dummy_time, predicted_displacement_, differentiate_wrt(d2u_dt2),
+                serac::get<DERIVATIVE>((*residual_)(ode_time_point_, predicted_displacement_, differentiate_wrt(d2u_dt2),
                                                     shape_displacement_, *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
@@ -1116,9 +1116,9 @@ public:
       // this seems like the wrong way to be doing this assignment, but
       // reactions_ = residual(displacement, ...);
       // isn't currently supported
-      double dummy_time = 0.0;
+      
       reactions_.Vector::operator=(
-          (*residual_)(dummy_time, displacement_, acceleration_, shape_displacement_, *parameters_[parameter_indices].state...));
+          (*residual_)(ode_time_point_, displacement_, acceleration_, shape_displacement_, *parameters_[parameter_indices].state...));
 
       residual_->update_qdata = false;
     }
@@ -1188,10 +1188,10 @@ public:
     mfem::HypreParVector adjoint_essential(displacement_adjoint_load_);
     adjoint_essential = 0.0;
 
-    double dummy_time = 0.0;
+    
 
     if (is_quasistatic_) {
-      auto [_, drdu] = (*residual_)(dummy_time, differentiate_wrt(displacement_), acceleration_, shape_displacement_,
+      auto [_, drdu] = (*residual_)(ode_time_point_, differentiate_wrt(displacement_), acceleration_, shape_displacement_,
                                     *parameters_[parameter_indices].state...);
       auto jacobian  = assemble(drdu);
       auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
@@ -1223,12 +1223,12 @@ public:
     double dt_n   = loadCheckpointedTimestep(cycle_ - 1);
 
     // K := dR/du
-    auto K = serac::get<DERIVATIVE>((*residual_)(dummy_time, differentiate_wrt(displacement_), acceleration_, shape_displacement_,
+    auto K = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, differentiate_wrt(displacement_), acceleration_, shape_displacement_,
                                                  *parameters_[parameter_indices].state...));
     std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
     // M := dR/da
-    auto M = serac::get<DERIVATIVE>((*residual_)(dummy_time, displacement_, differentiate_wrt(acceleration_), shape_displacement_,
+    auto M = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, displacement_, differentiate_wrt(acceleration_), shape_displacement_,
                                                  *parameters_[parameter_indices].state...));
     std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
@@ -1285,9 +1285,8 @@ public:
     SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
                     axom::fmt::format("Invalid parameter index '{}' requested for sensitivity."));
 
-    double dummy_time = 0.0;
 
-    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](dummy_time));
+    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](ode_time_point_));
     auto drdparam_mat = assemble(drdparam);
 
     drdparam_mat->MultTranspose(adjoint_displacement_, *parameters_[parameter_field].sensitivity);
@@ -1305,7 +1304,7 @@ public:
    */
   FiniteElementDual& computeTimestepShapeSensitivity() override
   {
-    auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, ode_time_point_, acceleration_,
+    auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, ode_time_point_, displacement_, acceleration_,
                                                         shape_displacement_, *parameters_[parameter_indices].state...));
 
     auto drdshape_mat = assemble(drdshape);
