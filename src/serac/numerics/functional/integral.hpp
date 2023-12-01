@@ -61,8 +61,8 @@ struct Integral {
    * other path-dependent materials, this flag should only be set to `true` once a solution to the nonlinear system has
    * been found.
    */
-  void Mult(double t, const std::vector<mfem::BlockVector>& input_E, mfem::BlockVector& output_E, uint32_t differentiation_index,
-            bool update_state) const
+  void Mult(double t, const std::vector<mfem::BlockVector>& input_E, mfem::BlockVector& output_E,
+            uint32_t differentiation_index, bool update_state) const
   {
     output_E = 0.0;
 

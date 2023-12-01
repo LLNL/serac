@@ -257,7 +257,7 @@ void functional_test_2D(mfem::ParMesh& mesh, double tolerance)
       },
       mesh);
 
-  double t = 0.0;
+  double t        = 0.0;
   auto [r, drdU2] = residual(t, U1, serac::differentiate_wrt(U2));
   EXPECT_NEAR(mfem::InnerProduct(r, ones), 0.0, tolerance);
 
@@ -323,7 +323,7 @@ void functional_test_3D(mfem::ParMesh& mesh, double tolerance)
       },
       mesh);
 
-  double t = 0.0;
+  double t        = 0.0;
   auto [r, drdU2] = residual(t, U1, serac::differentiate_wrt(U2));
   EXPECT_NEAR(mfem::InnerProduct(r, ones), 0.0, tolerance);
 

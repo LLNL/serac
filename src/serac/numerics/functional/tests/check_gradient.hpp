@@ -80,7 +80,8 @@ void check_gradient(serac::Functional<T>& f, double t, const mfem::Vector& U, do
 }
 
 template <typename T>
-void check_gradient(serac::Functional<T>& f, double t, const mfem::Vector& U, const mfem::Vector& dU_dt, double epsilon = 1.0e-4)
+void check_gradient(serac::Functional<T>& f, double t, const mfem::Vector& U, const mfem::Vector& dU_dt,
+                    double epsilon = 1.0e-4)
 {
   int seed = 42;
 

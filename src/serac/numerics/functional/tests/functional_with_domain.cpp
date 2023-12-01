@@ -318,7 +318,8 @@ TEST(qoi, partial_boundary)
   Domain top_boundary = Domain::ofBoundaryElements(*mesh, on_top);
 
   qoi.AddBoundaryIntegral(
-      Dimension<dim - 1>{}, DependsOn</*nothing*/>{}, [=](double /*t*/, auto /*position*/) { return 1.0; }, top_boundary);
+      Dimension<dim - 1>{}, DependsOn</*nothing*/>{}, [=](double /*t*/, auto /*position*/) { return 1.0; },
+      top_boundary);
 
   double time = 0.0;
 
@@ -355,8 +356,8 @@ TEST(qoi, partial_domain)
   qoi.AddDomainIntegral(
       Dimension<dim>{}, DependsOn</*nothing*/>{}, [=](double /*t*/, auto /*position*/) { return 1.0; }, left);
 
-  double time = 0.0;
-  auto volume = qoi(time, U);
+  double time   = 0.0;
+  auto   volume = qoi(time, U);
 
   EXPECT_NEAR(volume, 4.0, 1.0e-14);
 }

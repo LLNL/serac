@@ -166,7 +166,7 @@ TEST(LiquidCrystalElastomer, Brighenti)
       },
       pmesh);
 
-  double t = 0.0;
+  double t            = 0.0;
   double initial_area = area(t, solid_solver.displacement());
   SLIC_INFO_ROOT("... Initial Area of the top surface: " << initial_area);
 

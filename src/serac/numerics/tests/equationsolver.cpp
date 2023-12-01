@@ -83,8 +83,8 @@ TEST_P(EquationSolverSuite, All)
       },
       [&residual, &J](const mfem::Vector& x) -> mfem::Operator& {
         double dummy_time = 0.0;
-        auto [val, grad] = residual(dummy_time, differentiate_wrt(x));
-        J                = assemble(grad);
+        auto [val, grad]  = residual(dummy_time, differentiate_wrt(x));
+        J                 = assemble(grad);
         return *J;
       });
 

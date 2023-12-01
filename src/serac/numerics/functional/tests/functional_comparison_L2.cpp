@@ -105,7 +105,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   r1 -= (*F);
 
   // Compute the residual using weak form
-  double t = 0.0;
+  double t        = 0.0;
   auto [r2, drdU] = residual(t, differentiate_wrt(U));
 
   mfem::Vector diff(r1.Size());

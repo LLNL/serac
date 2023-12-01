@@ -104,12 +104,13 @@ template <int i, int dim, typename... trials, typename lambda>
 auto get_derivative_type(lambda qf)
 {
   using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim>>::type...>;
-  return tuple{get_gradient(apply_qf(qf, double{}, tensor<double, dim + 1>{}, make_dual_wrt<i>(qf_arguments{}))), zero{}};
+  return tuple{get_gradient(apply_qf(qf, double{}, tensor<double, dim + 1>{}, make_dual_wrt<i>(qf_arguments{}))),
+               zero{}};
 };
 
 template <typename lambda, int n, typename... T>
-auto batch_apply_qf(lambda qf, double t, const tensor<double, 2, n>& positions, const tensor<double, 1, 2, n>& jacobians,
-                    const T&... inputs)
+auto batch_apply_qf(lambda qf, double t, const tensor<double, 2, n>& positions,
+                    const tensor<double, 1, 2, n>& jacobians, const T&... inputs)
 {
   constexpr int dim = 2;
   using first_arg_t = serac::tuple<tensor<double, dim>, tensor<double, dim>>;
@@ -130,8 +131,8 @@ auto batch_apply_qf(lambda qf, double t, const tensor<double, 2, n>& positions, 
 }
 
 template <typename lambda, int n, typename... T>
-auto batch_apply_qf(lambda qf, double t, const tensor<double, 3, n>& positions, const tensor<double, 2, 3, n>& jacobians,
-                    const T&... inputs)
+auto batch_apply_qf(lambda qf, double t, const tensor<double, 3, n>& positions,
+                    const tensor<double, 2, 3, n>& jacobians, const T&... inputs)
 {
   constexpr int dim = 3;
   using first_arg_t = serac::tuple<tensor<double, dim>, tensor<double, dim, dim - 1>>;
@@ -156,11 +157,10 @@ auto batch_apply_qf(lambda qf, double t, const tensor<double, 3, n>& positions, 
 /// @trial_elements the element type for each trial space
 template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, typename test_element,
           typename trial_element_type, typename lambda_type, typename derivative_type, int... indices>
-void evaluation_kernel_impl(trial_element_type trial_elements, test_element, 
-                            double t, const std::vector<const double*>& inputs,
-                            double* outputs, const double* positions, const double* jacobians, lambda_type qf,
-                            [[maybe_unused]] derivative_type* qf_derivatives, const int* elements,
-                            uint32_t num_elements, camp::int_seq<int, indices...>)
+void evaluation_kernel_impl(trial_element_type trial_elements, test_element, double t,
+                            const std::vector<const double*>& inputs, double* outputs, const double* positions,
+                            const double* jacobians, lambda_type qf, [[maybe_unused]] derivative_type* qf_derivatives,
+                            const int* elements, uint32_t num_elements, camp::int_seq<int, indices...>)
 {
   // mfem provides this information as opaque arrays of doubles,
   // so we reinterpret the pointer with
@@ -325,9 +325,8 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, d
 
 template <uint32_t wrt, int Q, mfem::Geometry::Type geom, typename signature, typename lambda_type,
           typename derivative_type>
-auto evaluation_kernel(
-    signature s, lambda_type qf, const double* positions, const double* jacobians,
-    std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
+auto evaluation_kernel(signature s, lambda_type qf, const double* positions, const double* jacobians,
+                       std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {
   auto trial_elements = trial_elements_tuple<geom>(s);
   auto test_element   = get_test_element<geom>(s);

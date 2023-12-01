@@ -75,7 +75,7 @@ TEST(FunctionalMultiphysics, NonlinearThermalTest3D)
       },
       *mesh3D);
 
-  double t = 0.0;
+  double       t = 0.0;
   mfem::Vector r = residual(t, U, dU_dt);
 
   check_gradient(residual, t, U, dU_dt);

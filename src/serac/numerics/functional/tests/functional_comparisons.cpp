@@ -125,7 +125,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   r1 -= (*F);
 
   // Compute the residual using functional
-  double t = 0.0;
+  double       t  = 0.0;
   mfem::Vector r2 = residual(t, U);
 
   mfem::Vector diff(r1.Size());
@@ -247,7 +247,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   mfem::Vector r1(U.Size());
   J_mfem->Mult(U, r1);
   r1 -= (*F);
-  double t = 0.0;
+  double       t  = 0.0;
   mfem::Vector r2 = residual(t, U);
 
   mfem::Vector diff(r1.Size());

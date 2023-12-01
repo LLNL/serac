@@ -67,8 +67,8 @@ SERAC_HOST_DEVICE struct QFunctionArgument<Hcurl<p>, Dimension<3> > {
 /// @brief layer of indirection needed to unpack the entries of the argument tuple
 SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <typename lambda, typename coords_type, typename T, typename qpt_data_type, int... i>
-SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, double t, coords_type&& x_q, qpt_data_type&& qpt_data, const T& arg_tuple,
-                                       std::integer_sequence<int, i...>)
+SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, double t, coords_type&& x_q, qpt_data_type&& qpt_data,
+                                       const T& arg_tuple, std::integer_sequence<int, i...>)
 {
   if constexpr (std::is_same<typename std::decay<qpt_data_type>::type, Nothing>::value) {
     return qf(t, x_q, serac::get<i>(arg_tuple)...);
@@ -141,8 +141,8 @@ template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, type
           typename trial_element_tuple, typename lambda_type, typename state_type, typename derivative_type,
           int... indices>
 void evaluation_kernel_impl(trial_element_tuple trial_elements, test_element, double t,
-                            const std::vector<const double*>& inputs,
-                            double* outputs, const double* positions, const double* jacobians, lambda_type qf,
+                            const std::vector<const double*>& inputs, double* outputs, const double* positions,
+                            const double* jacobians, lambda_type qf,
                             [[maybe_unused]] axom::ArrayView<state_type, 2> qf_state,
                             [[maybe_unused]] derivative_type* qf_derivatives, const int* elements,
                             uint32_t num_elements, bool update_state, camp::int_seq<int, indices...>)
@@ -350,17 +350,16 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, d
 
 template <uint32_t wrt, int Q, mfem::Geometry::Type geom, typename signature, typename lambda_type, typename state_type,
           typename derivative_type>
-auto evaluation_kernel(
-    signature s, lambda_type qf, const double* positions, const double* jacobians,
-    std::shared_ptr<QuadratureData<state_type> > qf_state, std::shared_ptr<derivative_type> qf_derivatives,
-    const int* elements, uint32_t num_elements)
+auto evaluation_kernel(signature s, lambda_type qf, const double* positions, const double* jacobians,
+                       std::shared_ptr<QuadratureData<state_type> > qf_state,
+                       std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {
   auto trial_elements = trial_elements_tuple<geom>(s);
   auto test_element   = get_test_element<geom>(s);
   return [=](double time, const std::vector<const double*>& inputs, double* outputs, bool update_state) {
-    domain_integral::evaluation_kernel_impl<wrt, Q, geom>(trial_elements, test_element, time, inputs, outputs, positions,
-                                                          jacobians, qf, (*qf_state)[geom], qf_derivatives.get(),
-                                                          elements, num_elements, update_state, s.index_seq);
+    domain_integral::evaluation_kernel_impl<wrt, Q, geom>(
+        trial_elements, test_element, time, inputs, outputs, positions, jacobians, qf, (*qf_state)[geom],
+        qf_derivatives.get(), elements, num_elements, update_state, s.index_seq);
   };
 }
 

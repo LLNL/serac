@@ -111,7 +111,7 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   mfem::Vector r1(U.Size());
   J->Mult(U, r1);
   r1 += (*F);
-  double t = 0.0;
+  double       t  = 0.0;
   mfem::Vector r2 = residual(t, U);
 
   check_gradient(residual, t, U);
@@ -191,7 +191,7 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
   mfem::Vector r1(U.Size());
   J->Mult(U, r1);
   r1 += (*F);
-  double t = 0.0;
+  double       t  = 0.0;
   mfem::Vector r2 = residual(t, U);
 
   mfem::Vector diff(r1.Size());
