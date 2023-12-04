@@ -169,10 +169,10 @@ void evaluation_kernel_impl(trial_element_tuple_type          trial_elements, te
   // for each element in the domain
   RAJA::forall<policy>(
       RAJA::TypedRangeSegment<uint32_t>(0, num_elements),
-      [J, x, qf, u, qpts_per_elem, rule, r, qf_state, qf_derivatives, update_state] RAJA_HOST_DEVICE(uint32_t e) {
-        // load the jacobians and positions for each quadrature point in this element
+      [J, x, qf, u, qpts_per_elem, rule, r, qf_state, qf_derivatives, update_state] SERAC_HOST_DEVICE(uint32_t e) {
         auto J_e = J[e];
         auto x_e = x[e];
+        // load the jacobians and positions for each quadrature point in this element
 
         // Avoid unused warning/error ([[maybe_unused]] is not possible in the capture list)
         //(void)u;
@@ -195,6 +195,7 @@ void evaluation_kernel_impl(trial_element_tuple_type          trial_elements, te
         // note: the weird immediately-invoked lambda expression is
         // a workaround for a bug in GCC(<12.0) where it fails to
         // decide which function overload to use, and crashes
+        
         auto qf_outputs = [&]() {
           if constexpr (std::is_same_v<state_type, Nothing>) {
             return batch_apply_qf_no_qdata(qf, x_e, get<indices>(qf_inputs)...);
@@ -218,6 +219,7 @@ void evaluation_kernel_impl(trial_element_tuple_type          trial_elements, te
 
         // (batch) integrate the material response against the test-space basis functions
         test_element_type::integrate(get_value(qf_outputs), rule, &r[e]);
+        
       });
   return;
 }
@@ -299,7 +301,7 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
 #endif
 
   // for each element in the domain
-  RAJA::forall<policy>(RAJA::TypedRangeSegment<uint32_t>(0, num_elements), [=] RAJA_HOST_DEVICE(uint32_t e) {
+  RAJA::forall<policy>(RAJA::TypedRangeSegment<uint32_t>(0, num_elements), [=] SERAC_HOST_DEVICE(uint32_t e) {
     // (batch) interpolate each quadrature point's value
     auto qf_inputs = trial_element::interpolate(du[e], rule);
 
@@ -358,9 +360,9 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
 #endif
 
   // for each element in the domain
-  RAJA::forall<policy>(RAJA::TypedRangeSegment<std::size_t>(0, num_elements), [=] RAJA_HOST_DEVICE(std::size_t e) {
+  RAJA::forall<policy>(RAJA::TypedRangeSegment<std::size_t>(0, num_elements), [=] SERAC_HOST_DEVICE(std::size_t e) {
     static constexpr bool is_QOI_2   = test::family == Family::QOI;
-    auto*                 output_ptr = reinterpret_cast<typename test_element::dof_type*>(&dK(e, 0, 0));
+    [[maybe_unused]] auto*                 output_ptr = reinterpret_cast<typename test_element::dof_type*>(&dK(e, 0, 0));
 
     tensor<padded_derivative_type, nquad> derivatives{};
     for (int q = 0; q < nquad; q++) {

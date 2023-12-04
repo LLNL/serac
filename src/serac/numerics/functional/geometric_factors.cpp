@@ -1,6 +1,10 @@
 #include "serac/numerics/functional/geometric_factors.hpp"
 #include "serac/numerics/functional/finite_element.hpp"
 
+#include <RAJA/index/RangeSegment.hpp>
+#include <RAJA/RAJA.hpp>
+#include <iostream>
+
 namespace serac {
 
 /**
@@ -17,7 +21,7 @@ template <int Q, mfem::Geometry::Type geom, typename function_space>
 void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobians_q, const mfem::Vector& positions_e,
                                uint32_t num_elements)
 {
-  static constexpr TensorProductQuadratureRule<Q> rule{};
+  constexpr TensorProductQuadratureRule<Q> rule{};
 
   constexpr int spatial_dim   = function_space::components;
   constexpr int geometry_dim  = dimension_of(geom);
@@ -26,13 +30,28 @@ void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobian
   using element_type  = finite_element<geom, function_space>;
   using position_type = tensor<double, spatial_dim, qpts_per_elem>;
   using jacobian_type = tensor<double, geometry_dim, spatial_dim, qpts_per_elem>;
+  if (jacobians_q.UseDevice()) {
+    std::cout << "jacobians using device backend\n";
+  }
 
+  if (positions_q.UseDevice()) {
+    std::cout << "pos q using device backend\n";
+  }
+
+  if (positions_e.UseDevice()) {
+    std::cout << "pos e using device backend\n";
+  }
   auto X_q = reinterpret_cast<position_type*>(positions_q.ReadWrite());
   auto J_q = reinterpret_cast<jacobian_type*>(jacobians_q.ReadWrite());
   auto X   = reinterpret_cast<const typename element_type::dof_type*>(positions_e.Read());
-
+#if defined(USE_CUDA)
+  using policy = RAJA::cuda_exec<512>;
+#else
+  using policy = RAJA::simd_exec;
+#endif
   // for each element in the domain
-  for (uint32_t e = 0; e < num_elements; e++) {
+  //RAJA::forall<policy>(RAJA::TypedRangeSegment<uint32_t>(0, num_elements), [=] SERAC_HOST_DEVICE(uint32_t e) {
+    for (uint32_t e = 0; e < num_elements; ++e) {
     // load the positions for the nodes in this element
     auto X_e = X[e];
 
@@ -54,7 +73,8 @@ void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobian
         }
       }
     }
-  }
+    }
+  //});
 }
 
 GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry::Type g)

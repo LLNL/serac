@@ -329,7 +329,10 @@ struct GradientAssemblyLookupTables {
     col_ind.resize(nnz);
 
     row_ptr[0] = 0;
-    col_ind[0] = int(entries[0].column);
+
+    if (!nz_LUT.empty()) {
+      col_ind[0] = int(entries[0].column);
+    }
 
     for (uint32_t i = 1; i < nnz; i++) {
       nz_LUT[entries[i]] = i;

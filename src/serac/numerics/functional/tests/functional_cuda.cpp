@@ -32,7 +32,7 @@ struct TestThermalModelOne {
   [[maybe_unused]] static constexpr double a = 1.7;
   [[maybe_unused]] static constexpr double b = 0.0;
   template <typename X, typename Temp>
-  RAJA_HOST_DEVICE auto operator()([[maybe_unused]] X x, [[maybe_unused]] Temp temperature)
+  SERAC_HOST_DEVICE auto operator()([[maybe_unused]] X x, [[maybe_unused]] Temp temperature)
   {
     // get the value and the gradient from the input tuple
     auto [u, du_dx] = temperature;

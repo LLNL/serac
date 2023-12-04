@@ -36,7 +36,7 @@
 #cmakedefine SERAC_USE_LUA
 #cmakedefine SERAC_USE_MFEM
 #cmakedefine SERAC_USE_MPI
-#cmakedefine SERAC_USE_TRIBOL
+//#cmakedefine SERAC_USE_TRIBOL
 #cmakedefine SERAC_USE_ADIAK
 #cmakedefine SERAC_USE_CALIPER
 #cmakedefine SERAC_USE_RAJA

@@ -56,34 +56,28 @@ struct DoF {
   uint64_t bits;
 
   /// default ctor
-  RAJA_HOST_DEVICE
   DoF() : bits{} {}
 
   /// copy ctor
-  RAJA_HOST_DEVICE
   DoF(const DoF& other) : bits{other.bits} {}
 
   /// create a `DoF` from the given index, sign and orientation values
-  RAJA_HOST_DEVICE
   DoF(uint64_t index, uint64_t sign = 0, uint64_t orientation = 0)
       : bits((sign & 0x1ULL << sign_shift) + ((orientation & 0x7ULL) << orientation_shift) + index)
   {
   }
 
   /// copy assignment operator
-  RAJA_HOST_DEVICE
   void operator=(const DoF& other) { bits = other.bits; }
 
   /// get the sign field of this `DoF`
-  RAJA_HOST_DEVICE
   int sign() const { return (bits & sign_mask) ? -1 : 1; }
 
   /// get the orientation field of this `DoF`
-  RAJA_HOST_DEVICE
   uint64_t orientation() const { return ((bits & orientation_mask) >> orientation_shift); }
 
   /// get the index field of this `DoF`
-  RAJA_HOST_DEVICE
+  
   uint64_t index() const { return (bits & index_mask); }
 };
 
@@ -181,11 +175,11 @@ struct ElementRestriction {
    * @param i the index of the element
    * @param dofs (output) the DoFs associated with element `i`
    */
-  RAJA_HOST_DEVICE
+  
   void GetElementVDofs(int i, DoF* vdofs) const;
 
   /// get the dof information for a given node / component
-  RAJA_HOST_DEVICE
+  
   DoF GetVDof(DoF node, uint64_t component) const;
 
   /// "L->E" in mfem parlance, each element gathers the values that belong to it, and stores them in the "E-vector"
