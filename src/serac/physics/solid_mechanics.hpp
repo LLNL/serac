@@ -279,8 +279,6 @@ public:
                        input_options.timestepping_options, input_options.geom_nonlin, physics_name, mesh_tag, {}, cycle,
                        time)
   {
-    // This is the only other options stored in the input file that we can use
-    // in the initialization stage
     for (auto& mat : input_options.materials) {
       if (std::holds_alternative<serac::solid_mechanics::NeoHookean>(mat)) {
         setMaterial(std::get<serac::solid_mechanics::NeoHookean>(mat));

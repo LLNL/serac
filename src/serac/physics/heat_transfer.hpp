@@ -229,8 +229,6 @@ public:
       : HeatTransfer(input_options.nonlin_solver_options, input_options.lin_solver_options,
                      input_options.timestepping_options, physics_name, mesh_tag, {}, cycle, time)
   {
-    // This is the only other options stored in the input file that we can use
-    // in the initialization stage
     for (const auto& mat : input_options.materials) {
       if (std::holds_alternative<serac::heat_transfer::LinearIsotropicConductor>(mat)) {
         setMaterial(std::get<serac::heat_transfer::LinearIsotropicConductor>(mat));
