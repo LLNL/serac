@@ -720,8 +720,8 @@ public:
                                                              // fact that the displacement, acceleration, and shape
                                                              // fields are always-on and come first, so the `n`th
                                                              // parameter will actually be argument `n + NUM_STATE_VARS`
-        [this, material](double /*t*/, auto /*x*/, auto& state, auto displacement, auto acceleration, auto shape,
-                         auto... params) {
+        [material, geom_nonlin = geom_nonlin_](double /*t*/, auto /*x*/, auto& state, auto displacement,
+                                               auto acceleration, auto shape, auto... params) {
           auto du_dX   = get<DERIVATIVE>(displacement);
           auto d2u_dt2 = get<VALUE>(acceleration);
           auto dp_dX   = get<DERIVATIVE>(shape);
@@ -743,7 +743,7 @@ public:
 
           auto dx_dX = 0.0 * du_dX + dp_dX + I;
 
-          if (geom_nonlin_ == GeometricNonlinearities::On) {
+          if (geom_nonlin == GeometricNonlinearities::On) {
             dx_dX += du_dX;
           }
 
@@ -819,13 +819,12 @@ public:
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
-        [body_force, this](double /*t*/, auto x, auto /* displacement */, auto /* acceleration */, auto shape,
-                           auto... params) {
+        [body_force](double t, auto x, auto /* displacement */, auto /* acceleration */, auto shape, auto... params) {
           // note: this assumes that the body force function is defined
           // per unit volume in the reference configuration
           auto p     = get<VALUE>(shape);
           auto dp_dX = get<DERIVATIVE>(shape);
-          return serac::tuple{-1.0 * body_force(x + p, ode_time_point_, params...) * det(dp_dX + I), zero{}};
+          return serac::tuple{-1.0 * body_force(x + p, t, params...) * det(dp_dX + I), zero{}};
         },
         mesh_);
   }
@@ -864,8 +863,8 @@ public:
   {
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
-        [this, traction_function](double t, auto X, auto /* displacement */, auto /* acceleration */, auto shape,
-                                  auto... params) {
+        [traction_function](double t, auto X, auto /* displacement */, auto /* acceleration */, auto shape,
+                            auto... params) {
           auto x = X + shape;
           auto n = cross(get<DERIVATIVE>(x));
 
@@ -916,12 +915,12 @@ public:
   {
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
-        [this, pressure_function](double t, auto X, auto displacement, auto /* acceleration */, auto shape,
-                                  auto... params) {
+        [pressure_function, geom_nonlin = geom_nonlin_](double t, auto X, auto displacement, auto /* acceleration */,
+                                                        auto shape, auto... params) {
           // Calculate the position and normal in the shape perturbed deformed configuration
           auto x = X + shape + 0.0 * displacement;
 
-          if (geom_nonlin_ == GeometricNonlinearities::On) {
+          if (geom_nonlin == GeometricNonlinearities::On) {
             x = x + displacement;
           }
 

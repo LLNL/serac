@@ -444,8 +444,7 @@ public:
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
-        [source_function, this](double /*t*/, auto x, auto temperature, auto /* dtemp_dt */, auto shape,
-                                auto... params) {
+        [source_function](double t, auto x, auto temperature, auto /* dtemp_dt */, auto shape, auto... params) {
           // Get the value and the gradient from the input tuple
           auto [u, du_dX] = temperature;
           auto [p, dp_dX] = shape;
@@ -459,7 +458,7 @@ public:
 
           auto du_dx = dot(du_dX, inv(I_plus_dp_dX));
 
-          auto source = source_function(x + p, ode_time_point_, u, du_dx, params...);
+          auto source = source_function(x + p, t, u, du_dx, params...);
 
           // Return the source and the flux as a tuple
           return serac::tuple{-1.0 * source * det(I_plus_dp_dX), serac::zero{}};
@@ -500,7 +499,7 @@ public:
   {
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
-        [this, flux_function](double /*t*/, auto X, auto u, auto /* dtemp_dt */, auto shape, auto... params) {
+        [flux_function](double t, auto X, auto u, auto /* dtemp_dt */, auto shape, auto... params) {
           auto temp = get<VALUE>(u);
           auto x    = X + shape;
           auto n    = cross(get<DERIVATIVE>(x));
@@ -514,7 +513,7 @@ public:
           // = q * (w_new / w_old) * w_old
           // = q * w_new
           auto area_correction = norm(n) / norm(cross(get<DERIVATIVE>(X)));
-          return flux_function(x, normalize(n), ode_time_point_, temp, params...) * area_correction;
+          return flux_function(x, normalize(n), t, temp, params...) * area_correction;
         },
         mesh_);
   }
