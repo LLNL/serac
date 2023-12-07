@@ -873,6 +873,8 @@ public:
    */
   FiniteElementDual& computeTimestepSensitivity(size_t parameter_field) override
   {
+    // TODO: the time is likely not being handled correctly on the reverse pass, but we don't
+    //       have tests to confirm.
     auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](ode_time_point_));
     auto drdparam_mat = assemble(drdparam);
 
