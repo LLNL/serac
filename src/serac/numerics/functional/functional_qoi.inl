@@ -312,6 +312,7 @@ public:
   /**
    * @brief this function lets the user evaluate the serac::Functional with the given trial space values
    *
+   * @param t the time
    * @param args the input T-vectors
    *
    * note: it accepts exactly `num_trial_spaces` arguments of type mfem::Vector. Additionally, one of those
