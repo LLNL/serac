@@ -436,6 +436,7 @@ public:
    * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
    *
    * @tparam T the types of the arguments passed in
+   * @param t the time
    * @param args the trial space dofs used to carry out the calculation,
    *  at most one of which may be of the type `differentiate_wrt_this(mfem::Vector)`
    */

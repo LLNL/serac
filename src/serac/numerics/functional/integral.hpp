@@ -51,6 +51,7 @@ struct Integral {
    * @brief evaluate the integral, optionally storing q-function derivatives with respect to
    *        a specific trial space.
    *
+   * @param t the time
    * @param input_E a collection (one for each trial space) of block vectors (block index corresponds to the element
    * geometry) containing input values for each element.
    * @param output_E a block vector (block index corresponds to the element geometry) of the output values for each
