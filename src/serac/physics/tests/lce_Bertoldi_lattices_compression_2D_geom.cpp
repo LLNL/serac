@@ -28,30 +28,6 @@ using namespace serac;
 
 const static int problemID = 0;
 
-////////////////////////////////////////////////////////////////////////////////////////
-class StdFunctionVectorCoefficient : public mfem::VectorCoefficient {
-public:
-  StdFunctionVectorCoefficient(int dim, std::function<void(mfem::Vector &, mfem::Vector &)> func): 
-  mfem::VectorCoefficient(dim), func_(func)
-  {}
-
-  void Eval(mfem::Vector &V, mfem::ElementTransformation &T, const mfem::IntegrationPoint &ip)
-  {
-    double x[T.GetSpaceDim()];
-    mfem::Vector transip(x, T.GetSpaceDim());
-
-    T.Transform(ip, transip);
-    func_(transip, V);
-    V[0] = 0.0;
-    V[2] = 0.0;
-  }
-
-private:
-  std::function<void(mfem::Vector &, mfem::Vector &)> func_;
-};
-
-////////////////////////////////////////////////////////////////////////////////////////
-
 int main(int argc, char* argv[])
 {
   auto [num_procs, rank] = serac::initialize(argc, argv);
@@ -71,8 +47,8 @@ int main(int argc, char* argv[])
   std::string inputFilename;
   switch (problemID) {
     case 0:
-      inputFilename = SERAC_REPO_DIR "/data/meshes/dbgLogPileNoSymm.g";
-      // inputFilename = SERAC_REPO_DIR "/data/meshes/dbgLogPileNoSymm_thicker.g";
+      // inputFilename = SERAC_REPO_DIR "/data/meshes/dbgLogPileNoSymm.g";
+      inputFilename = SERAC_REPO_DIR "/data/meshes/dbgLogPileNoSymm_thicker.g";
       break;
     case 1:
       inputFilename = SERAC_REPO_DIR "/data/meshes/dbgLogPileNoSymm.g";
@@ -100,7 +76,7 @@ int main(int argc, char* argv[])
   NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::Newton,
                                               .relative_tol   = 1.0e-8,
                                               .absolute_tol   = 1.0e-12,
-                                              .max_iterations = 1,
+                                              .max_iterations = 25,
                                               .print_level    = 1};
   SolidMechanics<p, dim, Parameters<L2<0>, L2<0>, L2<0> > > solid_solver(
       nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, 
@@ -170,7 +146,7 @@ int main(int argc, char* argv[])
     return tag;
   };
 
-  auto scalar_offset = [=](const mfem::Vector&, double t) { return targetDisp*(t+0.01); };
+  auto scalar_offset = [=](const mfem::Vector&, double t) { return targetDisp*t; };
   solid_solver.setDisplacementBCs(is_on_top, scalar_offset, 1);
   solid_solver.setDisplacementBCs({4}, zeroFunc, 0);
   // solid_solver.setDisplacementBCs({4}, zeroFunc, 2);
@@ -211,8 +187,9 @@ int main(int argc, char* argv[])
   }
 
   double t    = 0.0;
-  double tmax = 1.0;
+  double tmax = 0.5;
   double dt   = tmax / num_steps;
+  // double prev_t = 0.0;
 
   if (rank == 0) {
     std::cout << "\n\n###############################" 
@@ -247,7 +224,7 @@ int main(int argc, char* argv[])
                 << "\n... Entering time step: " << i + 1 << " (/" << num_steps << ")"
                 << "\n............................\n"
                 << "\n... Using order parameter = " << max_order_param << ", gamma = " << gamma_angle << ", and eta = " << eta_angle
-                << "\n... Using target displacement =  " << targetDisp * (t+0.01) // maxYDisp * t / tmax 
+                << "\n... Using target displacement =  " << targetDisp * t // maxYDisp * t / tmax 
                 << "\n... At total time =  " << t 
                 << std::endl << std::endl;
     }
@@ -301,14 +278,20 @@ int main(int argc, char* argv[])
     // QoI for output:
     mfem::ParFiniteElementSpace reactions_fes(solid_solver.reactions().space());
     mfem::ParGridFunction       reactionsAtTop(&reactions_fes);
-    auto topTag = [=](const mfem::Vector& x, mfem::Vector& output) {
-      output= 0.0;
+    // auto topTag = [=](const mfem::Vector& x, mfem::Vector& output) {
+    //   output= 0.0;
+    //   if (x(1) > topBoundaryYCoord) {
+    //     output = 1.0;
+    //   }
+    // };
+    // // mfem::FunctionCoefficient topTagCoeff(topTag);
+    // StdFunctionVectorCoefficient topTagCoeff(3, topTag);
+    mfem::VectorFunctionCoefficient topTagCoeff(dim, [=](const mfem::Vector& x, mfem::Vector& f) {
+      f = 0.0;
       if (x(1) > topBoundaryYCoord) {
-        output = 1.0;
+        f(1) = 1.0;
       }
-    };
-    // mfem::FunctionCoefficient topTagCoeff(topTag);
-    StdFunctionVectorCoefficient topTagCoeff(3, topTag);
+    });
 
     reactionsAtTop.ProjectCoefficient(topTagCoeff);
     
@@ -326,49 +309,49 @@ int main(int argc, char* argv[])
 
 /////////////////////////////////////////////////////////////////////////////////////
 
-    auto temp_mesh = buildMeshFromFile(inputFilename);
-    mfem::ParMesh *temp_pmesh = new mfem::ParMesh(MPI_COMM_WORLD, temp_mesh);
-    // auto temp_pmesh = mesh::refineAndDistribute(std::move(temp_mesh), serial_refinement, parallel_refinement);
+    // auto temp_mesh = buildMeshFromFile(inputFilename);
+    // mfem::ParMesh *temp_pmesh = new mfem::ParMesh(MPI_COMM_WORLD, temp_mesh);
+    // // auto temp_pmesh = mesh::refineAndDistribute(std::move(temp_mesh), serial_refinement, parallel_refinement);
     
-    auto h1_fec = mfem::H1_FECollection(1, 3);
-    mfem::ParFiniteElementSpace h1_fes(temp_pmesh, &h1_fec, 1);
-    mfem::ParGridFunction tempGF(&h1_fes);
-    // mfem::FunctionCoefficient tempTopTagCoeff(
-    //   [=](const mfem::Vector& x) {
-    //   double output= 0.0;
+    // auto h1_fec = mfem::H1_FECollection(1, 3);
+    // mfem::ParFiniteElementSpace h1_fes(temp_pmesh, &h1_fec, 1);
+    // mfem::ParGridFunction tempGF(&h1_fes);
+    // // mfem::FunctionCoefficient tempTopTagCoeff(
+    // //   [=](const mfem::Vector& x) {
+    // //   double output= 0.0;
+    // //   if (x(1) > topBoundaryYCoord) {
+    // //     output = 1.0;
+    // //   }
+    // //   return output;
+    // // });
+    // mfem::VectorFunctionCoefficient tempTopTagCoeff(3, 
+    //   [=](const mfem::Vector& x, mfem::Vector& f) {
+    //   f(0) = 0.0;
+    //   f(2) = 0.0;
     //   if (x(1) > topBoundaryYCoord) {
-    //     output = 1.0;
+    //     f(1) = 1.0;
     //   }
-    //   return output;
     // });
-    mfem::VectorFunctionCoefficient tempTopTagCoeff(3, 
-      [=](const mfem::Vector& x, mfem::Vector& f) {
-      f(0) = 0.0;
-      f(2) = 0.0;
-      if (x(1) > topBoundaryYCoord) {
-        f(1) = 1.0;
-      }
-    });
-    tempGF.ProjectCoefficient(tempTopTagCoeff);
+    // tempGF.ProjectCoefficient(tempTopTagCoeff);
 
-    // mfem::HypreParVector* assembledVector(const_cast<mfem::ParLinearForm &> (reactionLF.ParallelAssemble()));
-    // mfem::ParGridFunction tempReactionGF(reactionLF.ParFESpace(), assembledVector);
+    // // mfem::HypreParVector* assembledVector(const_cast<mfem::ParLinearForm &> (reactionLF.ParallelAssemble()));
+    // // mfem::ParGridFunction tempReactionGF(reactionLF.ParFESpace(), assembledVector);
 
-    mfem::Vector tempReactionGF(reactions_fes.GetTrueVSize());
-    const_cast<mfem::ParLinearForm &> (reactionLF).ParallelAssemble(tempReactionGF);
+    // mfem::Vector tempReactionGF(reactions_fes.GetTrueVSize());
+    // const_cast<mfem::ParLinearForm &> (reactionLF).ParallelAssemble(tempReactionGF);
     
-    mfem::ParGridFunction tempReactions(&h1_fes);
-    for (int k = 0; k < 3*numDofs; k++) {
-      tempReactions(k) = tempReactionGF(k);
-    }
+    // mfem::ParGridFunction tempReactions(&h1_fes);
+    // for (int k = 0; k < 3*numDofs; k++) {
+    //   tempReactions(k) = tempReactionGF(k);
+    // }
 
-    mfem::ParaViewDataCollection vis("tempCheckMesh", temp_pmesh);
-    vis.RegisterField("tempGF", &tempGF);
-    vis.RegisterField("reactions", &tempReactions);
-    vis.SetCycle(1);
-    vis.SetTime(1);
-    vis.Save();
-    exit(0);
+    // mfem::ParaViewDataCollection vis("tempCheckMesh", temp_pmesh);
+    // vis.RegisterField("tempGF", &tempGF);
+    // vis.RegisterField("reactions", &tempReactions);
+    // vis.SetCycle(1);
+    // vis.SetTime(1);
+    // vis.Save();
+    // exit(0);
 /////////////////////////////////////////////////////////////////////////////////////
 
     t += dt;
