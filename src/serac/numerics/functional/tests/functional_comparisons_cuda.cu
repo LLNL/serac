@@ -43,7 +43,7 @@ static constexpr double b = 2.1;
 template <int dim>
 struct thermal_qfunction {
   template <typename x_t, typename temperature_t>
-  __host__ __device__ auto operator()(x_t x, temperature_t temperature) const
+  __host__ __device__ auto operator()(double /*t*/, x_t x, temperature_t temperature) const
   {
     // get the value and the gradient from the input tuple
     auto [u, du_dx] = temperature;
@@ -56,7 +56,7 @@ struct thermal_qfunction {
 template <int dim>
 struct elastic_qfunction {
   template <typename x_t, typename displacement_t>
-  __host__ __device__ auto operator()(x_t x, displacement_t displacement) const
+  __host__ __device__ auto operator()(double /*t*/, x_t x, displacement_t displacement) const
   {
     // get the value and the gradient from the input tuple
     auto [u, du_dx]           = displacement;
@@ -71,7 +71,7 @@ struct elastic_qfunction {
 template <int dim>
 struct hcurl_qfunction {
   template <typename x_t, typename vector_potential_t>
-  __host__ __device__ auto operator()(x_t x, vector_potential_t vector_potential) const
+  __host__ __device__ auto operator()(double /*t*/, x_t x, vector_potential_t vector_potential) const
   {
     auto [A, curl_A] = vector_potential;
     auto J_term      = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
