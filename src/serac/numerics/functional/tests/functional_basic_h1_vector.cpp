@@ -49,7 +49,7 @@ void weird_mixed_test(std::unique_ptr<mfem::ParMesh>& mesh)
   // code works as intended
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](auto /* x */, auto displacement) {
+      [=](double /*t*/, auto /* x */, auto displacement) {
         auto [u, du_dx] = displacement;
         auto source     = zero{};
         auto flux       = double_dot(d11, du_dx);
@@ -59,14 +59,15 @@ void weird_mixed_test(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [=](auto position, auto displacement) {
+      [=](double /*t*/, auto position, auto displacement) {
         auto [X, dX_dxi] = position;
         auto [u, du_dxi] = displacement;
         return dot(s11, u) * X[0];
       },
       *mesh);
 
-  check_gradient(residual, U);
+  double t = 0.0;
+  check_gradient(residual, t, U);
 }
 
 template <int p, int dim>
@@ -95,7 +96,7 @@ void elasticity_test(std::unique_ptr<mfem::ParMesh>& mesh)
   // code works as intended
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](auto /* x */, auto displacement) {
+      [=](double /*t*/, auto /* x */, auto displacement) {
         auto [u, du_dx] = displacement;
         auto source     = dot(d00, u) + double_dot(d01, du_dx);
         auto flux       = dot(d10, u) + double_dot(d11, du_dx);
@@ -105,14 +106,15 @@ void elasticity_test(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [=](auto position, auto displacement) {
+      [=](double /*t*/, auto position, auto displacement) {
         auto [X, dX_dxi] = position;
         auto [u, du_dxi] = displacement;
         return u * X[0];
       },
       *mesh);
 
-  check_gradient(residual, U);
+  double t = 0.0;
+  check_gradient(residual, t, U);
 }
 
 void test_suite(std::string meshfile)

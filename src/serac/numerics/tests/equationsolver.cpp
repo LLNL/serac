@@ -59,7 +59,7 @@ TEST_P(EquationSolverSuite, All)
 
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [&](auto, auto scalar) {
+      [&](double /*t*/, auto, auto scalar) {
         auto [u, du_dx] = scalar;
         auto source     = 0.5 * sin(u);
         auto flux       = du_dx;
@@ -73,14 +73,18 @@ TEST_P(EquationSolverSuite, All)
         // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
         // tracking strategy
         // See https://github.com/mfem/mfem/issues/3531
-        const mfem::Vector res = residual(x);
+
+        double dummy_time = 0.0;
+
+        const mfem::Vector res = residual(dummy_time, x);
 
         r = res;
-        r -= residual(x_exact);
+        r -= residual(dummy_time, x_exact);
       },
       [&residual, &J](const mfem::Vector& x) -> mfem::Operator& {
-        auto [val, grad] = residual(differentiate_wrt(x));
-        J                = assemble(grad);
+        double dummy_time = 0.0;
+        auto [val, grad]  = residual(dummy_time, differentiate_wrt(x));
+        J                 = assemble(grad);
         return *J;
       });
 

@@ -72,7 +72,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   // Add the total domain residual term to the functional
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](auto x, auto temperature) {
+      [=](double /*t*/, auto x, auto temperature) {
         auto [u, du_dx] = temperature;
         auto source     = a * u * u - (100 * x[0] * x[1]);
         auto flux       = b * du_dx;
@@ -82,14 +82,15 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [=](auto position, auto temperature) {
+      [=](double /*t*/, auto position, auto temperature) {
         auto [X, dX_dxi] = position;
         auto u           = get<0>(temperature);
         return X[0] + X[1] - cos(u);
       },
       mesh);
 
-  check_gradient(residual, U);
+  double t = 0.0;
+  check_gradient(residual, t, U);
 
   serac::profiling::finalize();
 }
@@ -118,7 +119,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   // Add the total domain residual term to the functional
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](auto /*x*/, auto displacement) {
+      [=](double /*t*/, auto /*x*/, auto displacement) {
         // get the value and the gradient from the input tuple
         auto [u, du_dx] = displacement;
         auto source     = a * u * u[0];
@@ -129,7 +130,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [=](auto position, auto displacement) {
+      [=](double /*t*/, auto position, auto displacement) {
         auto [X, dX_dxi] = position;
         auto u           = get<0>(displacement);
         auto n           = normalize(cross(dX_dxi));
@@ -137,7 +138,8 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
       },
       mesh);
 
-  check_gradient(residual, U);
+  double t = 0.0;
+  check_gradient(residual, t, U);
 
   serac::profiling::finalize();
 }
