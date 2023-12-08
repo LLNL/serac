@@ -12,8 +12,6 @@
 
 #pragma once
 
-#include "mfem.hpp"
-
 #include "serac/physics/solid_mechanics.hpp"
 #include "serac/physics/contact/contact_data.hpp"
 
@@ -48,17 +46,19 @@ public:
    * @param lin_opts The linear solver options for solving the linearized Jacobian equations
    * @param timestepping_opts The timestepping options for the solid mechanics time evolution operator
    * @param geom_nonlin Flag to include geometric nonlinearities
-   * @param name An optional name for the physics module instance
-   * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
+   * @param physics_name A name for the physics module instance
+   * @param mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param parameter_names A vector of the names of the requested parameter fields
+   * @param cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param time The simulation time to initialize the physics module to
    */
   SolidMechanicsContact(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
-                        const serac::TimesteppingOptions timestepping_opts,
-                        const GeometricNonlinearities    geom_nonlin = GeometricNonlinearities::On,
-                        const std::string& name = "", mfem::ParMesh* pmesh = nullptr)
+                        const serac::TimesteppingOptions timestepping_opts, const GeometricNonlinearities geom_nonlin,
+                        const std::string& physics_name, std::string mesh_tag,
+                        std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0)
       : SolidMechanicsContact(
-            std::make_unique<EquationSolver>(nonlinear_opts, lin_opts,
-                                             StateManager::mesh(StateManager::collectionID(pmesh)).GetComm()),
-            timestepping_opts, geom_nonlin, name, pmesh)
+            std::make_unique<EquationSolver>(nonlinear_opts, lin_opts, StateManager::mesh(mesh_tag).GetComm()),
+            timestepping_opts, geom_nonlin, physics_name, mesh_tag, parameter_names, cycle, time)
   {
   }
 
@@ -68,14 +68,19 @@ public:
    * @param solver The nonlinear equation solver for the implicit solid mechanics equations
    * @param timestepping_opts The timestepping options for the solid mechanics time evolution operator
    * @param geom_nonlin Flag to include geometric nonlinearities
-   * @param name An optional name for the physics module instance
-   * @param pmesh The mesh to conduct the simulation on, if different than the default mesh
+   * @param physics_name A name for the physics module instance
+   * @param mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param parameter_names A vector of the names of the requested parameter fields
+   * @param cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param time The simulation time to initialize the physics module to
    */
   SolidMechanicsContact(std::unique_ptr<serac::EquationSolver> solver,
-                        const serac::TimesteppingOptions       timestepping_opts,
-                        const GeometricNonlinearities          geom_nonlin = GeometricNonlinearities::On,
-                        const std::string& name = "", mfem::ParMesh* pmesh = nullptr)
-      : SolidMechanicsBase(std::move(solver), timestepping_opts, geom_nonlin, name, pmesh), contact_(mesh_)
+                        const serac::TimesteppingOptions timestepping_opts, const GeometricNonlinearities geom_nonlin,
+                        const std::string& physics_name, std::string mesh_tag,
+                        std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0)
+      : SolidMechanicsBase(std::move(solver), timestepping_opts, geom_nonlin, physics_name, mesh_tag, parameter_names,
+                           cycle, time),
+        contact_(mesh_)
   {
   }
 
@@ -83,10 +88,14 @@ public:
    * @brief Construct a new Nonlinear SolidMechanicsContact Solver object
    *
    * @param[in] input_options The solver information parsed from the input file
-   * @param[in] name An optional name for the physics module instance. Note that this is NOT the mesh tag.
+   * @param[in] physics_name A name for the physics module instance
+   * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
    */
-  SolidMechanicsContact(const SolidMechanicsInputOptions& input_options, const std::string& name = "")
-      : SolidMechanicsBase(input_options, name), contact_(mesh_)
+  SolidMechanicsContact(const SolidMechanicsInputOptions& input_options, const std::string& physics_name,
+                        std::string mesh_tag, int cycle = 0, double time = 0.0)
+      : SolidMechanicsBase(input_options, physics_name, mesh_tag, cycle, time), contact_(mesh_)
   {
   }
 
@@ -95,8 +104,8 @@ public:
   {
     auto residual_fn = [this](const mfem::Vector& u, mfem::Vector& r) {
       const mfem::Vector u_blk(const_cast<mfem::Vector&>(u), 0, displacement_.Size());
-      const mfem::Vector res =
-          (*residual_)(u_blk, zero_, shape_displacement_, *parameters_[parameter_indices].state...);
+      const mfem::Vector res = (*residual_)(ode_time_point_, u_blk, acceleration_, shape_displacement_,
+                                            *parameters_[parameter_indices].state...);
 
       // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
       // tracking strategy
@@ -106,14 +115,18 @@ public:
       contact_.residualFunction(u, r);
       r_blk.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
     };
+    // This if-block below breaks up building the Jacobian operator depending if there is Lagrange multiplier
+    // enforcement or not
     if (contact_.haveLagrangeMultipliers()) {
+      // The quasistatic operator has blocks if any of the contact interactions are enforced using Lagrange multipliers.
+      // Jacobian operator is an mfem::BlockOperator
       J_offsets_ = mfem::Array<int>({0, displacement_.Size(), displacement_.Size() + contact_.numPressureDofs()});
       return std::make_unique<mfem_ext::StdFunctionOperator>(
           displacement_.space().TrueVSize() + contact_.numPressureDofs(), residual_fn,
           // gradient of residual function
           [this](const mfem::Vector& u) -> mfem::Operator& {
             const mfem::Vector u_blk(const_cast<mfem::Vector&>(u), 0, displacement_.Size());
-            auto [r, drdu] = (*residual_)(differentiate_wrt(u_blk), zero_, shape_displacement_,
+            auto [r, drdu] = (*residual_)(ode_time_point_, differentiate_wrt(u_blk), acceleration_, shape_displacement_,
                                           *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
 
@@ -145,9 +158,11 @@ public:
             return *J_constraint_;
           });
     } else {
+      // If all of the contact interactions are penalty, then there will be no blocks.  Jacobian operator is a single
+      // mfem::HypreParMatrix
       return std::make_unique<mfem_ext::StdFunctionOperator>(
           displacement_.space().TrueVSize(), residual_fn, [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] = (*residual_)(differentiate_wrt(u), zero_, shape_displacement_,
+            auto [r, drdu] = (*residual_)(ode_time_point_, differentiate_wrt(u), acceleration_, shape_displacement_,
                                           *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
 
@@ -176,7 +191,7 @@ public:
                              const std::set<int>& bdry_attr_surf2, ContactOptions contact_opts)
   {
     SLIC_ERROR_ROOT_IF(!is_quasistatic_, "Contact can only be applied to quasistatic problems.");
-    SLIC_ERROR_ROOT_IF(order_ > 1, "Contact can only be applied to linear (order = 1) meshes.");
+    SLIC_ERROR_ROOT_IF(order > 1, "Contact can only be applied to linear (order = 1) meshes.");
     contact_.addContactInteraction(interaction_id, bdry_attr_surf1, bdry_attr_surf2, contact_opts);
   }
 
@@ -187,10 +202,8 @@ public:
    */
   void completeSetup() override
   {
-    int    cycle = 0;
-    double time  = 0.0;
-    double dt    = 0.0;
-    contact_.update(cycle, time, dt);
+    double dt = 0.0;
+    contact_.update(cycle_, time_, dt);
 
     SolidMechanicsBase::completeSetup();
   }
@@ -198,103 +211,30 @@ public:
   /// @brief Solve the Quasi-static Newton system
   void quasiStaticSolve(double dt) override
   {
+    // we can use the base class method if we don't have Lagrange multipliers
+    if (!contact_.haveLagrangeMultipliers()) {
+      SolidMechanicsBase::quasiStaticSolve(dt);
+      return;
+    }
+
     time_ += dt;
 
-    // the ~85 lines of code below are essentially equivalent to the 1-liner
-    // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
-    // or, with Lagrange multiplier contact enforcement
-    // [u; p] += dot(inv(block_J), dot(block_J_elim[:, dofs], (U(t + dt) - u)[dofs]))
-    // where block_J = | J  B^T |
-    //                 | B   0  |
+    // Set the ODE time point for the time-varying loads in quasi-static problems
+    ode_time_point_ = time_;
 
-    // Update the linearized Jacobian matrix
+    // this method is essentially equivalent to the 1-liner
+    // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
+    warmStartDisplacement();
+
     // In general, the solution vector is a stacked (block) vector:
     //  | displacement     |
     //  | contact pressure |
     // Contact pressure is only active when solving a contact problem with Lagrange multipliers.
-    // The gradient is not a function of the Lagrange multipliers, so they do not need to be copied to the solution.
-    // However, the solution vector must be sized to the Operator, which includes the Lagrange multipliers.
     mfem::Vector augmented_solution(displacement_.Size() + contact_.numPressureDofs());
-    augmented_solution = 0.0;
     augmented_solution.SetVector(displacement_, 0);
-    residual_with_bcs_->GetGradient(augmented_solution);
+    augmented_solution.SetVector(contact_.mergedPressures(), displacement_.Size());
 
-    du_ = 0.0;
-    for (auto& bc : bcs_.essentials()) {
-      bc.setDofs(du_, time_);
-    }
-
-    auto& constrained_dofs = bcs_.allEssentialTrueDofs();
-    for (int i = 0; i < constrained_dofs.Size(); i++) {
-      int j = constrained_dofs[i];
-      du_[j] -= displacement_(j);
-    }
-
-    dr_ = 0.0;
-    mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, dr_);
-
-    // Update the initial guess for changes in the parameters if this is not the first solve
-    for (std::size_t parameter_index = 0; parameter_index < parameters_.size(); ++parameter_index) {
-      // Compute the change in parameters parameter_diff = parameter_new - parameter_old
-      serac::FiniteElementState parameter_difference = *parameters_[parameter_index].state;
-      parameter_difference -= *parameters_[parameter_index].previous_state;
-
-      // Compute a linearized estimate of the residual forces due to this change in parameter
-      auto drdparam        = serac::get<DERIVATIVE>(d_residual_d_[parameter_index]());
-      auto residual_update = drdparam(parameter_difference);
-
-      // Flip the sign to get the RHS of the Newton update system
-      // J^-1 du = - residual
-      residual_update *= -1.0;
-
-      dr_ += residual_update;
-
-      // Save the current parameter value for the next timestep
-      *parameters_[parameter_index].previous_state = *parameters_[parameter_index].state;
-    }
-
-    for (int i = 0; i < constrained_dofs.Size(); i++) {
-      int j  = constrained_dofs[i];
-      dr_[j] = du_[j];
-    }
-
-    auto& lin_solver = nonlin_solver_->linearSolver();
-
-    // J_operator_ points to a) a HypreParMatrix if no contact Lagrange multipliers are present or
-    //                       b) a BlockOperator if contact Lagrange multipliers are present
-    lin_solver.SetOperator(*J_operator_);
-
-    // solve augmented_solution = (J_operator)^-1 * augmented_residual where
-    // augmented_solution = du_ if no Lagrange multiplier contact, [du_; 0] otherwise
-    // augmented_residual = dr_ if no Lagrange multiplier contact, [dr_; dgap = B*du_] otherwise
-    augmented_solution = 0.0;
-    augmented_solution.SetVector(du_, 0);
-
-    mfem::Vector augmented_residual(augmented_solution.Size());
-    augmented_residual = 0.0;
-    augmented_residual.SetVector(dr_, 0);
-    if (contact_.haveLagrangeMultipliers()) {
-      // calculate dgap = B*du_
-      mfem::Vector dgap(augmented_residual, displacement_.Size(), contact_.numPressureDofs());
-      J_21_->Mult(du_, dgap);
-    }
-    lin_solver.Mult(augmented_residual, augmented_solution);
-
-    // update du_, displacement_, and pressure based on linearized kinematics
-    du_.Set(1.0, mfem::Vector(augmented_solution, 0, displacement_.Size()));
-    displacement_ += du_;
-    // call update to update gaps for new displacements
-    contact_.setDisplacements(displacement_);
-    contact_.update(cycle_, time_, dt);
-    // update pressures based on pressures in augmented_solution (for Lagrange multiplier) and updated gaps (for
-    // penalty)
-    contact_.setPressures(mfem::Vector(augmented_solution, displacement_.Size(), contact_.numPressureDofs()));
-
-    // solve the non-linear system resid = 0 and pressure * gap = 0 for Lagrange multiplier contact
-    augmented_solution.SetVector(displacement_, 0);
-    if (contact_.haveLagrangeMultipliers()) {
-      augmented_solution.SetVector(contact_.mergedPressures(), displacement_.Size());
-    }
+    // solve the non-linear system resid = 0 and pressure * gap = 0
     nonlin_solver_->solve(augmented_solution);
     displacement_.Set(1.0, mfem::Vector(augmented_solution, 0, displacement_.Size()));
     contact_.setPressures(mfem::Vector(augmented_solution, displacement_.Size(), contact_.numPressureDofs()));
@@ -305,10 +245,10 @@ protected:
   using BasePhysics::cycle_;
   using BasePhysics::is_quasistatic_;
   using BasePhysics::mesh_;
-  using BasePhysics::order_;
   using BasePhysics::parameters_;
   using BasePhysics::shape_displacement_;
   using BasePhysics::time_;
+  using SolidMechanicsBase::acceleration_;
   using SolidMechanicsBase::d_residual_d_;
   using SolidMechanicsBase::DERIVATIVE;
   using SolidMechanicsBase::displacement_;
@@ -317,9 +257,10 @@ protected:
   using SolidMechanicsBase::J_;
   using SolidMechanicsBase::J_e_;
   using SolidMechanicsBase::nonlin_solver_;
+  using SolidMechanicsBase::ode_time_point_;
   using SolidMechanicsBase::residual_;
   using SolidMechanicsBase::residual_with_bcs_;
-  using SolidMechanicsBase::zero_;
+  using SolidMechanicsBase::warmStartDisplacement;
 
   /// Pointer to the Jacobian operator (J_ if no Lagrange multiplier contact, J_constraint_ otherwise)
   mfem::Operator* J_operator_;

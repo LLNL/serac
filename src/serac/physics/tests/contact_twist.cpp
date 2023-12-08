@@ -7,8 +7,6 @@
 #include "serac/physics/solid_mechanics_contact.hpp"
 
 #include <functional>
-#include <mfem/fem/coefficient.hpp>
-#include <redecomp/common/TypeDefs.hpp>
 #include <set>
 #include <string>
 
@@ -22,11 +20,11 @@
 #include "serac/serac_config.hpp"
 
 #include "tribol/interface/mfem_tribol.hpp"
+#include "redecomp/common/TypeDefs.hpp"
 
 namespace serac {
 
-class ContactTest : public testing::TestWithParam<std::tuple<ContactEnforcement, ContactType, std::string>> {
-};
+class ContactTest : public testing::TestWithParam<std::tuple<ContactEnforcement, ContactType, std::string>> {};
 
 TEST_P(ContactTest, twist)
 {
@@ -45,7 +43,7 @@ TEST_P(ContactTest, twist)
   std::string filename = SERAC_REPO_DIR "/data/meshes/twohex_for_contact.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 3, 0);
-  StateManager::setMesh(std::move(mesh));
+  StateManager::setMesh(std::move(mesh), "twist_mesh");
 
   LinearSolverOptions linear_options{.linear_solver = LinearSolver::SuperLU, .print_level = 1};
 
@@ -62,8 +60,8 @@ TEST_P(ContactTest, twist)
                                  .penalty     = 1.0e5};
 
   SolidMechanicsContact<p, dim> solid_solver(nonlinear_options, linear_options,
-                                                                       solid_mechanics::default_quasistatic_options,
-                                                                       GeometricNonlinearities::On, name);
+                                             solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On,
+                                             name, "twist_mesh");
 
   solid_mechanics::NeoHookean mat{1.0, 10.0, 10.0};
   solid_solver.setMaterial(mat);
@@ -76,13 +74,14 @@ TEST_P(ContactTest, twist)
   double time = 0.0;
   solid_solver.setDisplacementBCs({6}, [&time](const mfem::Vector& x, mfem::Vector& u) {
     u.SetSize(dim);
-    u    = 0.0;
-    if (time <= 3.0 + 1.0e-12)
-    {
+    u = 0.0;
+    if (time <= 3.0 + 1.0e-12) {
       u[2] = -time * 0.02;
     } else {
-      u[0] = (std::cos(redecomp::pi / 40.0 * (time - 3.0)) - 1.0) * (x[0] - 0.5) - std::sin(redecomp::pi / 40.0 * (time - 3.0)) * (x[1] - 0.5);
-      u[1] = std::sin(redecomp::pi / 40.0 * (time - 3.0)) * (x[0] - 0.5) + (std::cos(redecomp::pi / 40.0 * (time - 3.0)) - 1.0) * (x[1] - 0.5);
+      u[0] = (std::cos(redecomp::pi / 40.0 * (time - 3.0)) - 1.0) * (x[0] - 0.5) -
+             std::sin(redecomp::pi / 40.0 * (time - 3.0)) * (x[1] - 0.5);
+      u[1] = std::sin(redecomp::pi / 40.0 * (time - 3.0)) * (x[0] - 0.5) +
+             (std::cos(redecomp::pi / 40.0 * (time - 3.0)) - 1.0) * (x[1] - 0.5);
       u[2] = -0.06;
     }
   });
@@ -94,21 +93,20 @@ TEST_P(ContactTest, twist)
   solid_solver.completeSetup();
 
   std::string paraview_name = name + "_paraview";
-  solid_solver.outputState(paraview_name);
+  solid_solver.outputStateToDisk(paraview_name);
 
   tribol::saveRedecompMesh(0);
 
   // Perform the quasi-static solve
   double dt = 1.0;
 
-  for (int i{0}; i < 23; ++i)
-  {
+  for (int i{0}; i < 23; ++i) {
     time += dt;
 
     solid_solver.advanceTimestep(dt);
 
     // Output the sidre-based plot files
-    solid_solver.outputState(paraview_name);
+    solid_solver.outputStateToDisk(paraview_name);
 
     tribol::saveRedecompMesh(i + 1);
   }

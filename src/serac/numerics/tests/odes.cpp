@@ -257,7 +257,7 @@ double first_order_ode_test(int nsteps, ode_type type, constraint_type constrain
 
   // although these test problems don't really apply to a finite element mesh,
   // the tools in serac require that these finite element data structures exist
-  serac::FiniteElementState dummy(mesh, FiniteElementState::Options{.order = 1, .name = "dummy"});
+  serac::FiniteElementState dummy(mesh, H1<1>{}, "dummy");
 
   if (constraint == SINE_WAVE) {
     auto coef = std::make_shared<mfem::FunctionCoefficient>(sine_wave);
@@ -378,7 +378,7 @@ double second_order_ode_test(int nsteps, ode_type type, constraint_type constrai
 
   // although these test problems don't really apply to a finite element mesh,
   // the tools in serac require that these finite element data structures exist
-  serac::FiniteElementState dummy(mesh, FiniteElementState::Options{.order = 1, .name = "dummy"});
+  serac::FiniteElementState dummy(mesh, H1<1>{}, "dummy");
 
   if (constraint == SINE_WAVE) {
     auto coef = std::make_shared<mfem::FunctionCoefficient>(sine_wave);

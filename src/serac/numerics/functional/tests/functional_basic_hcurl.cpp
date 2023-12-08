@@ -52,7 +52,7 @@ void hcurl_test_2D()
 
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](auto /*x*/, auto vector_potential) {
+      [=](double /*t*/, auto /*x*/, auto vector_potential) {
         auto [A, curl_A] = vector_potential;
         auto source      = dot(d00, A) + d01 * curl_A;
         auto flux        = dot(d10, A) + d11 * curl_A;
@@ -60,7 +60,7 @@ void hcurl_test_2D()
       },
       *mesh);
 
-  check_gradient(residual, U);
+  check_gradient(residual, t, U);
 }
 
 template <int p>
@@ -93,7 +93,7 @@ void hcurl_test_3D()
 
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](auto /*x*/, auto vector_potential) {
+      [=](double /*t*/, auto /*x*/, auto vector_potential) {
         auto [A, curl_A] = vector_potential;
         auto source      = dot(d00, A) + dot(d01, curl_A);
         auto flux        = dot(d10, A) + dot(d11, curl_A);
@@ -101,7 +101,7 @@ void hcurl_test_3D()
       },
       *mesh);
 
-  check_gradient(residual, U);
+  check_gradient(residual, t, U);
 }
 
 TEST(basic, hcurl_test_2D_linear) { hcurl_test_2D<1>(); }

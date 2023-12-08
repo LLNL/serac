@@ -7,8 +7,6 @@
 #include "serac/physics/solid_mechanics_contact.hpp"
 
 #include <functional>
-#include <mfem/fem/coefficient.hpp>
-#include <redecomp/common/TypeDefs.hpp>
 #include <set>
 #include <string>
 
@@ -22,11 +20,11 @@
 #include "serac/serac_config.hpp"
 
 #include "tribol/interface/mfem_tribol.hpp"
+#include "redecomp/common/TypeDefs.hpp"
 
 namespace serac {
 
-class ContactTest : public testing::TestWithParam<std::tuple<ContactEnforcement, ContactType, std::string>> {
-};
+class ContactTest : public testing::TestWithParam<std::tuple<ContactEnforcement, ContactType, std::string>> {};
 
 TEST_P(ContactTest, sphere)
 {
@@ -45,7 +43,7 @@ TEST_P(ContactTest, sphere)
   std::string filename = SERAC_REPO_DIR "/data/meshes/twist_sphere.mesh";
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 0, 0);
-  StateManager::setMesh(std::move(mesh));
+  StateManager::setMesh(std::move(mesh), "sphere_mesh");
 
   LinearSolverOptions linear_options{.linear_solver = LinearSolver::SuperLU, .print_level = 1};
 
@@ -61,19 +59,17 @@ TEST_P(ContactTest, sphere)
                                  .type        = std::get<1>(GetParam()),
                                  .penalty     = 1.0e5};
 
-  SolidMechanicsContact<p, dim, Parameters<L2<0>, L2<0>>> solid_solver(nonlinear_options, linear_options,
-                                                                       solid_mechanics::default_quasistatic_options,
-                                                                       GeometricNonlinearities::On, name);
+  SolidMechanicsContact<p, dim, Parameters<L2<0>, L2<0>>> solid_solver(
+      nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On,
+      name, "sphere_mesh");
 
-  FiniteElementState       K_field(StateManager::newState(
-      FiniteElementState::Options{.order = 0, .element_type = ElementType::L2, .name = "bulk_mod"}));
+  FiniteElementState       K_field(StateManager::newState(L2<0, 3>{}, "bulk_mod", "ironing_mesh"));
   mfem::Vector             K_values({10.0, 100.0});
   mfem::PWConstCoefficient K_coeff(K_values);
   K_field.project(K_coeff);
   solid_solver.setParameter(0, K_field);
 
-  FiniteElementState       G_field(StateManager::newState(
-      FiniteElementState::Options{.order = 0, .element_type = ElementType::L2, .name = "shear_mod"}));
+  FiniteElementState       G_field(StateManager::newState(L2<0, 3>{}, "shear_mod", "ironing_mesh"));
   mfem::Vector             G_values({0.25, 2.5});
   mfem::PWConstCoefficient G_coeff(G_values);
   G_field.project(G_coeff);
@@ -90,13 +86,14 @@ TEST_P(ContactTest, sphere)
   double time = 0.0;
   solid_solver.setDisplacementBCs({10}, [&time](const mfem::Vector& x, mfem::Vector& u) {
     u.SetSize(dim);
-    u    = 0.0;
-    if (time <= 3.0 + 1.0e-12)
-    {
+    u = 0.0;
+    if (time <= 3.0 + 1.0e-12) {
       u[2] = -time * 0.02;
     } else {
-      u[0] = (std::cos(redecomp::pi / 40.0 * (time - 3.0)) - 1.0) * (x[0] - 0.5) - std::sin(redecomp::pi / 40.0 * (time - 3.0)) * (x[1] - 0.5);
-      u[1] = std::sin(redecomp::pi / 40.0 * (time - 3.0)) * (x[0] - 0.5) + (std::cos(redecomp::pi / 40.0 * (time - 3.0)) - 1.0) * (x[1] - 0.5);
+      u[0] = (std::cos(redecomp::pi / 40.0 * (time - 3.0)) - 1.0) * (x[0] - 0.5) -
+             std::sin(redecomp::pi / 40.0 * (time - 3.0)) * (x[1] - 0.5);
+      u[1] = std::sin(redecomp::pi / 40.0 * (time - 3.0)) * (x[0] - 0.5) +
+             (std::cos(redecomp::pi / 40.0 * (time - 3.0)) - 1.0) * (x[1] - 0.5);
       u[2] = -0.06;
     }
   });
@@ -108,21 +105,20 @@ TEST_P(ContactTest, sphere)
   solid_solver.completeSetup();
 
   std::string paraview_name = name + "_paraview";
-  solid_solver.outputState(paraview_name);
+  solid_solver.outputStateToDisk(paraview_name);
 
   tribol::saveRedecompMesh(0);
 
   // Perform the quasi-static solve
   double dt = 1.0;
 
-  for (int i{0}; i < 23; ++i)
-  {
+  for (int i{0}; i < 23; ++i) {
     time += dt;
 
     solid_solver.advanceTimestep(dt);
 
     // Output the sidre-based plot files
-    solid_solver.outputState(paraview_name);
+    solid_solver.outputStateToDisk(paraview_name);
 
     tribol::saveRedecompMesh(i + 1);
   }

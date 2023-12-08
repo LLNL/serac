@@ -35,7 +35,10 @@ int main(int argc, char* argv[])
   // _main_init_end
   // _create_mesh_start
   auto mesh = serac::mesh::refineAndDistribute(serac::buildRectangleMesh(10, 10));
-  serac::StateManager::setMesh(std::move(mesh));
+
+  std::string mesh_tag{"mesh"};
+
+  serac::StateManager::setMesh(std::move(mesh), mesh_tag);
   // _create_mesh_end
 
   // _create_module_start
@@ -43,9 +46,9 @@ int main(int argc, char* argv[])
   constexpr int order = 1;
   constexpr int dim   = 2;
 
-  serac::HeatTransfer<order, dim> heat_transfer(serac::heat_transfer::default_nonlinear_options,
-                                                serac::heat_transfer::default_linear_options,
-                                                serac::heat_transfer::default_static_options);
+  serac::HeatTransfer<order, dim> heat_transfer(
+      serac::heat_transfer::default_nonlinear_options, serac::heat_transfer::default_linear_options,
+      serac::heat_transfer::default_static_options, "thermal_solver", mesh_tag);
   // _create_module_end
 
   // _conductivity_start
@@ -68,11 +71,10 @@ int main(int argc, char* argv[])
 
   // _run_sim_start
   heat_transfer.completeSetup();
-  heat_transfer.outputState();
+  heat_transfer.outputStateToDisk();
 
-  double dt;
-  heat_transfer.advanceTimestep(dt);
-  heat_transfer.outputState();
+  heat_transfer.advanceTimestep(1.0);
+  heat_transfer.outputStateToDisk();
   // _run_sim_end
 
   // _exit_start

@@ -88,9 +88,9 @@ public:
    * contact interaction. TiedNormal and Frictionless (the two type supported in Tribol) correspond to scalar normal
    * pressure. Only linear (order = 1) pressure fields are supported.
    *
-   * @return Pressure true degrees of freedom on each contact interaction (merged into one mfem::Vector)
+   * @return Pressure true degrees of freedom on each contact interaction (merged into one mfem::HypreParVector)
    */
-  mfem::Vector mergedPressures() const;
+  mfem::HypreParVector mergedPressures() const;
 
   /**
    * @brief Returns nodal gaps from all contact interactions on the contact surface true degrees of freedom
@@ -100,9 +100,9 @@ public:
    * linear (order = 1) gap fields are supported.
    *
    * @param [in] zero_inactive Sets inactive t-dofs to zero gap
-   * @return Nodal gap true degrees of freedom on each contact interaction (merged into one mfem::Vector)
+   * @return Nodal gap true degrees of freedom on each contact interaction (merged into one mfem::HypreParVector)
    */
-  mfem::Vector mergedGaps(bool zero_inactive = false) const;
+  mfem::HypreParVector mergedGaps(bool zero_inactive = false) const;
 
   /**
    * @brief Returns a 2x2 block Jacobian on displacement/pressure true degrees of
@@ -179,17 +179,15 @@ public:
    */
   int numPressureDofs() const { return num_pressure_dofs_; };
 
-  /**
-   * @brief True degree of freedom offsets for each contact constraint
-   *
-   * @note Only includes constraints with Lagrange multiplier enforcement
-   *
-   * @return True degree of freedom offsets as an Array
-   */
-  mfem::Array<int> pressureDofOffsets() const;
-
 private:
 #ifdef SERAC_USE_TRIBOL
+  /**
+   * @brief Computes interaction pressure T-dof offsets and global pressure T-dof offsets
+   *
+   * @note Only non-zero on constraints with Lagrange multiplier enforcement
+   */
+  void updateDofOffsets() const;
+
   /**
    * @brief The volume mesh for the problem
    */
@@ -214,20 +212,52 @@ private:
 #endif
 
   /**
-   * @brief Offsets giving size of each Jacobian contribution
-   */
-  mutable mfem::Array<int> jacobian_offsets_;
-
-  /**
    * @brief True if any of the contact interactions are enforced using Lagrange
    * multipliers
    */
   bool have_lagrange_multipliers_;
 
   /**
-   * @brief Pressure T-dof count
+   * @brief Pressure T-dof count (only including pressure fields with Lagrange multiplier enforcement)
    */
   int num_pressure_dofs_;
+
+  /**
+   * @brief Tracks whether the Jacobian and pressure offsets need to be updated
+   *
+   * The offsets need to be updated when a new contact interaction is added.
+   *
+   */
+  mutable bool offsets_up_to_date_;
+
+  /**
+   * @brief Offsets giving size of each block Jacobian contribution
+   *
+   * Size = 3, first block: displacement, second block: pressure Lagrange multipliers
+   *
+   * @note This is mutable so it can be updated when pressures/gaps/Jacobians are retrieved.
+   */
+  mutable mfem::Array<int> jacobian_offsets_;
+
+  /**
+   * @brief Get the interaction offset vector tracking number of on-rank pressure T-dofs per interaction
+   *
+   * Sized to number of contact interactions + 1. Only non-zero on contact interactions with Lagrange multiplier
+   * enforcement.
+   *
+   * @note This is mutable so it can be updated when pressures/gaps/Jacobians are retrieved.
+   */
+  mutable mfem::Array<int> pressure_dof_offsets_;
+
+  /**
+   * @brief Get global offset vector for pressure T-dofs
+   *
+   * Sized to number of ranks if HYPRE_AssumedPartitionCheck() is false; sized to 3 if true. Tracks global offsets of
+   * total Lagrange multiplier-enforced pressure dofs.
+   *
+   * @note This is mutable so it can be updated when pressures/gaps/Jacobians are retrieved.
+   */
+  mutable mfem::Array<HYPRE_BigInt> global_pressure_dof_offsets_;
 };
 
 }  // namespace serac

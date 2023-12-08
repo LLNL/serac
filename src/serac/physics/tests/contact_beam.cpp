@@ -40,19 +40,26 @@ TEST_P(ContactTest, beam)
   // Construct the appropriate dimension mesh and give it to the data store
   std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex-with-contact-block.mesh";
 
-  // NOTE: The number of MPI ranks must be <= the min number of elements on a
-  // contact face until Tribol PR #23 is included in Serac's Tribol
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 2, 0);
-  StateManager::setMesh(std::move(mesh));
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 1, 0);
+  StateManager::setMesh(std::move(mesh), "beam_mesh");
 
-  LinearSolverOptions linear_options{.linear_solver = LinearSolver::SuperLU, .print_level = 1};
+  LinearSolverOptions linear_options{.linear_solver = LinearSolver::Strumpack, .print_level = 1};
+#ifndef MFEM_USE_STRUMPACK
+  SLIC_INFO_ROOT("Contact requires MFEM built with strumpack.");
+  return;
+#endif
 
-  // NOTE: kinsol does not appear to be working with penalty
   NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
                                            .relative_tol   = 1.0e-12,
                                            .absolute_tol   = 1.0e-12,
                                            .max_iterations = 200,
                                            .print_level    = 1};
+#ifdef MFEM_USE_SUNDIALS
+  // KINFullStep is preferred, but has issues when active set is enabled
+  if (std::get<1>(GetParam()) == ContactType::TiedNormal) {
+    nonlinear_options.nonlin_solver = NonlinearSolver::KINFullStep;
+  }
+#endif
 
   ContactOptions contact_options{.method      = ContactMethod::SingleMortar,
                                  .enforcement = std::get<0>(GetParam()),
@@ -61,7 +68,7 @@ TEST_P(ContactTest, beam)
 
   SolidMechanicsContact<p, dim> solid_solver(nonlinear_options, linear_options,
                                              solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On,
-                                             name);
+                                             name, "beam_mesh");
 
   double                      K = 10.0;
   double                      G = 0.25;
@@ -85,32 +92,34 @@ TEST_P(ContactTest, beam)
   // Finalize the data structures
   solid_solver.completeSetup();
 
-  std::string paraview_name = name + "_paraview";
-  solid_solver.outputState(paraview_name);
+  // std::string paraview_name = name + "_paraview";
+  // solid_solver.outputStateToDisk(paraview_name);
 
   // Perform the quasi-static solve
   double dt = 1.0;
   solid_solver.advanceTimestep(dt);
 
   // Output the sidre-based plot files
-  solid_solver.outputState(paraview_name);
+  // solid_solver.outputStateToDisk(paraview_name);
 
   // Check the l2 norm of the displacement dofs
   auto u_l2 = mfem::ParNormlp(solid_solver.displacement(), 2, MPI_COMM_WORLD);
   if (std::get<1>(GetParam()) == ContactType::TiedNormal) {
-    EXPECT_NEAR(3.3257055635785537, u_l2, 2.0e-2);
+    EXPECT_NEAR(1.465, u_l2, 1.0e-2);
   } else if (std::get<1>(GetParam()) == ContactType::Frictionless) {
-    EXPECT_NEAR(3.4771738496372739, u_l2, 1.0e-2);
+    EXPECT_NEAR(1.526, u_l2, 1.0e-2);
   }
 }
 
-// NOTE: if Penalty is first and Lagrange Multiplier is second, super LU gives a
-// zero diagonal error
-INSTANTIATE_TEST_SUITE_P(tribol, ContactTest,
-                         testing::Values(std::make_tuple(ContactEnforcement::LagrangeMultiplier, ContactType::Frictionless, "lagrange_multiplier_frictionless"),
-                                         std::make_tuple(ContactEnforcement::LagrangeMultiplier, ContactType::TiedNormal, "lagrange_multiplier_tiednormal"),
-                                         std::make_tuple(ContactEnforcement::Penalty, ContactType::Frictionless, "penalty_frictionless"),
-                                         std::make_tuple(ContactEnforcement::Penalty, ContactType::TiedNormal, "penalty_tiednormal")));
+// NOTE: if Penalty is first and Lagrange Multiplier is second, SuperLU gives a zero diagonal error
+INSTANTIATE_TEST_SUITE_P(
+    tribol, ContactTest,
+    testing::Values(std::make_tuple(ContactEnforcement::Penalty, ContactType::TiedNormal, "penalty_tiednormal"),
+                    std::make_tuple(ContactEnforcement::Penalty, ContactType::Frictionless, "penalty_frictionless"),
+                    std::make_tuple(ContactEnforcement::LagrangeMultiplier, ContactType::TiedNormal,
+                                    "lagrange_multiplier_tiednormal"),
+                    std::make_tuple(ContactEnforcement::LagrangeMultiplier, ContactType::Frictionless,
+                                    "lagrange_multiplier_frictionless")));
 
 }  // namespace serac
 

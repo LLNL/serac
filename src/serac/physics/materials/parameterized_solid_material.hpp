@@ -86,14 +86,15 @@ struct ParameterizedNeoHookeanSolid {
   SERAC_HOST_DEVICE auto operator()(State& /*state*/, const DispGradType& du_dX, const BulkType& DeltaK,
                                     const ShearType& DeltaG) const
   {
-    using std::log;
+    using std::log1p;
     constexpr auto I         = Identity<dim>();
     auto           K         = K0 + get<0>(DeltaK);
     auto           G         = G0 + get<0>(DeltaG);
     auto           lambda    = K - (2.0 / dim) * G;
     auto           B_minus_I = du_dX * transpose(du_dX) + transpose(du_dX) + du_dX;
-    auto           J         = det(I + du_dX);
-    return (lambda * log(J) * I + G * B_minus_I) / J;
+    auto           J_minus_1 = detApIm1(du_dX);
+    auto           J         = J_minus_1 + 1;
+    return (lambda * log1p(J_minus_1) * I + G * B_minus_I) / J;
   }
 
   /**

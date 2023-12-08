@@ -40,18 +40,19 @@ TEST_P(ContactTest, patch)
   // Construct the appropriate dimension mesh and give it to the data store
   std::string filename = SERAC_REPO_DIR "/data/meshes/twohex_for_contact.mesh";
 
-  // NOTE: The number of MPI ranks must be <= the min number of elements on a
-  // contact face until Tribol PR #23 is included in Serac's Tribol
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 2, 0);
-  StateManager::setMesh(std::move(mesh));
+  StateManager::setMesh(std::move(mesh), "patch_mesh");
 
-  LinearSolverOptions linear_options{.linear_solver = LinearSolver::SuperLU, .print_level = 1};
+  LinearSolverOptions linear_options{.linear_solver = LinearSolver::Strumpack, .print_level = 1};
+#ifndef MFEM_USE_STRUMPACK
+  SLIC_INFO_ROOT("Contact requires MFEM built with strumpack.");
+  return;
+#endif
 
-  // NOTE: kinsol does not appear to be working with penalty
   NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
                                            .relative_tol   = 1.0e-12,
                                            .absolute_tol   = 1.0e-12,
-                                           .max_iterations = 20,
+                                           .max_iterations = 200,
                                            .print_level    = 1};
 
   ContactOptions contact_options{.method      = ContactMethod::SingleMortar,
@@ -61,7 +62,7 @@ TEST_P(ContactTest, patch)
 
   SolidMechanicsContact<p, dim> solid_solver(nonlinear_options, linear_options,
                                              solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On,
-                                             name);
+                                             name, "patch_mesh");
 
   double                      K = 10.0;
   double                      G = 0.25;
@@ -84,15 +85,15 @@ TEST_P(ContactTest, patch)
   // Finalize the data structures
   solid_solver.completeSetup();
 
-  std::string paraview_name = name + "_paraview";
-  solid_solver.outputState(paraview_name);
+  // std::string paraview_name = name + "_paraview";
+  // solid_solver.outputStateToDisk(paraview_name);
 
   // Perform the quasi-static solve
   double dt = 1.0;
   solid_solver.advanceTimestep(dt);
 
   // Output the sidre-based plot files
-  solid_solver.outputState(paraview_name);
+  // solid_solver.outputStateToDisk(paraview_name);
 
   // Check the l2 norm of the displacement dofs
   auto                            c = (3.0 * K - 2.0 * G) / (3.0 * K + G);
@@ -101,7 +102,8 @@ TEST_P(ContactTest, patch)
     u[1] = 0.25 * 0.01 * c * x[1];
     u[2] = -0.5 * 0.01 * x[2];
   });
-  mfem::ParGridFunction           elasticity_sol(&solid_solver.displacement().space());
+  mfem::ParFiniteElementSpace     elasticity_fes(solid_solver.reactions().space());
+  mfem::ParGridFunction           elasticity_sol(&elasticity_fes);
   elasticity_sol.ProjectCoefficient(elasticity_sol_coeff);
   mfem::ParGridFunction approx_error(elasticity_sol);
   approx_error -= solid_solver.displacement().gridFunction();

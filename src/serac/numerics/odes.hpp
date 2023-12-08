@@ -108,7 +108,7 @@ public:
    * @param[in] du_dt The first time derivative of u
    * @param[out] d2u_dt2 The second time derivative of u
    */
-  void Mult(const mfem::Vector& u, const mfem::Vector& du_dt, mfem::Vector& d2u_dt2) const
+  void Mult(const mfem::Vector& u, const mfem::Vector& du_dt, mfem::Vector& d2u_dt2) const override
   {
     Solve(t, 0.0, 0.0, u, du_dt, d2u_dt2);
   }
@@ -123,7 +123,7 @@ public:
    * @param[out] d2u_dt2 The second time derivative of u
    */
   void ImplicitSolve(const double c0, const double c1, const mfem::Vector& u, const mfem::Vector& du_dt,
-                     mfem::Vector& d2u_dt2)
+                     mfem::Vector& d2u_dt2) override
   {
     Solve(t, c0, c1, u, du_dt, d2u_dt2);
   }
@@ -131,7 +131,7 @@ public:
   /**
      The FirstOrder recast that can be used by a first order ode solver
    */
-  void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt);
+  void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) override;
 
   /**
    * @brief Configures the Dirichlet enforcement method to use
@@ -162,6 +162,13 @@ public:
    * @brief Get a reference to the current state
    */
   const State& GetState() { return state_; }
+
+  /**
+   * @brief Query the timestep method for the ode solver
+   *
+   * @return The timestep method used by the underlying ode solver
+   */
+  TimestepMethod GetTimestepper() { return timestepper_; }
 
 private:
   /**
@@ -214,6 +221,8 @@ private:
   mutable mfem::Vector U_plus_;
   mutable mfem::Vector dU_dt_;
   mutable mfem::Vector d2U_dt2_;
+
+  serac::TimestepMethod timestepper_;
 };
 
 /**
@@ -338,6 +347,13 @@ public:
     }
   }
 
+  /**
+   * @brief Query the timestep method for the ode solver
+   *
+   * @return The timestep method used by the underlying ode solver
+   */
+  TimestepMethod GetTimestepper() { return timestepper_; }
+
 private:
   /**
    * @brief Internal implementation used for mfem::TDO::Mult and mfem::TDO::ImplicitSolve\
@@ -378,6 +394,8 @@ private:
   mutable mfem::Vector U_;
   mutable mfem::Vector U_plus_;
   mutable mfem::Vector dU_dt_;
+
+  TimestepMethod timestepper_;
 };
 
 }  // namespace serac::mfem_ext

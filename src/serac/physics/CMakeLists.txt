@@ -19,6 +19,7 @@ endif()
 
 set(physics_sources
     base_physics.cpp
+    solid_mechanics.cpp
     heat_transfer_input.cpp
     solid_mechanics_input.cpp
     thermomechanics_input.cpp

@@ -23,8 +23,7 @@
 
 namespace serac {
 
-class ContactTest : public testing::TestWithParam<std::tuple<ContactEnforcement, ContactType, std::string>> {
-};
+class ContactTest : public testing::TestWithParam<std::tuple<ContactEnforcement, ContactType, std::string>> {};
 
 TEST_P(ContactTest, beam2)
 {
@@ -45,7 +44,7 @@ TEST_P(ContactTest, beam2)
   // NOTE: The number of MPI ranks must be <= the min number of elements on a
   // contact face until Tribol PR #23 is included in Serac's Tribol
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 2, 0);
-  StateManager::setMesh(std::move(mesh));
+  StateManager::setMesh(std::move(mesh), "beam_mesh");
 
   LinearSolverOptions linear_options{.linear_solver = LinearSolver::SuperLU, .print_level = 1};
 
@@ -62,18 +61,16 @@ TEST_P(ContactTest, beam2)
                                  .penalty     = 1.0e3};
 
   SolidMechanicsContact<p, dim, Parameters<L2<0>, L2<0>>> solid_solver(nonlinear_options, linear_options,
-                                             solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On,
-                                             name);
+                                                                       solid_mechanics::default_quasistatic_options,
+                                                                       GeometricNonlinearities::On, name, "beam_mesh");
 
-  FiniteElementState       K_field(StateManager::newState(
-      FiniteElementState::Options{.order = 0, .element_type = ElementType::L2, .name = "bulk_mod"}));
+  FiniteElementState       K_field(StateManager::newState(L2<0, 3>{}, "bulk_mod", "ironing_mesh"));
   mfem::Vector             K_values({10.0, 10.0, 100.0});
   mfem::PWConstCoefficient K_coeff(K_values);
   K_field.project(K_coeff);
   solid_solver.setParameter(0, K_field);
 
-  FiniteElementState       G_field(StateManager::newState(
-      FiniteElementState::Options{.order = 0, .element_type = ElementType::L2, .name = "shear_mod"}));
+  FiniteElementState       G_field(StateManager::newState(L2<0, 3>{}, "shear_mod", "ironing_mesh"));
   mfem::Vector             G_values({0.25, 0.25, 2.5});
   mfem::PWConstCoefficient G_coeff(G_values);
   G_field.project(G_coeff);
@@ -101,21 +98,20 @@ TEST_P(ContactTest, beam2)
   solid_solver.completeSetup();
 
   std::string paraview_name = name + "_paraview";
-  solid_solver.outputState(paraview_name);
+  solid_solver.outputStateToDisk(paraview_name);
 
   tribol::saveRedecompMesh(0);
 
   // Perform the quasi-static solve
   double dt = 1.0;
 
-  for (int i{0}; i < 25; ++i)
-  {
+  for (int i{0}; i < 25; ++i) {
     time += dt;
 
     solid_solver.advanceTimestep(dt);
 
     // Output the sidre-based plot files
-    solid_solver.outputState(paraview_name);
+    solid_solver.outputStateToDisk(paraview_name);
 
     tribol::saveRedecompMesh(i + 1);
   }
@@ -132,7 +128,8 @@ TEST_P(ContactTest, beam2)
 // NOTE: if Penalty is first and Lagrange Multiplier is second, super LU gives a
 // zero diagonal error
 INSTANTIATE_TEST_SUITE_P(tribol, ContactTest,
-                         testing::Values(std::make_tuple(ContactEnforcement::Penalty, ContactType::Frictionless, "penalty_frictionless")));
+                         testing::Values(std::make_tuple(ContactEnforcement::Penalty, ContactType::Frictionless,
+                                                         "penalty_frictionless")));
 
 }  // namespace serac
 
