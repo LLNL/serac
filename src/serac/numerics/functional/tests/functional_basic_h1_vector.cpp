@@ -6,7 +6,7 @@
 
 #include <fstream>
 #include <iostream>
-
+#define USE_CUDA
 #include "mfem.hpp"
 
 #include <gtest/gtest.h>
@@ -23,28 +23,6 @@
 
 using namespace serac;
 using namespace serac::profiling;
-
-#ifdef USE_CUDA
-#include <cuda_runtime.h>
-namespace {
-  void printCUDAMemUsage() {
-    int deviceCount = 0;
-    cudaGetDeviceCount(&deviceCount);
-    for (int i = 0; i < deviceCount; ++i) {
-        cudaSetDevice(i);
-
-        size_t freeBytes, totalBytes;
-        cudaMemGetInfo(&freeBytes, &totalBytes);
-        size_t usedBytes = totalBytes - freeBytes;
-
-        std::cout << "Device Number: " << i << std::endl;
-        std::cout << " Total Memory (MB): " << (totalBytes / 1024.0 / 1024.0) << std::endl;
-        std::cout << " Free Memory (MB): " << (freeBytes / 1024.0 / 1024.0) << std::endl;
-        std::cout << " Used Memory (MB): " << (usedBytes / 1024.0 / 1024.0) << std::endl;
-    }
-  }
-}
-#endif
 
 template <int dim>
 struct MixedModelOne {
@@ -179,14 +157,16 @@ void test_suite(std::string meshfile)
   }
 }
 
-TEST(VectorValuedH1, test_suite_tris) { test_suite("/data/meshes/patch2D_tris.mesh"); }
-TEST(VectorValuedH1, test_suite_quads) { test_suite("/data/meshes/patch2D_quads.mesh"); }
+ //TEST(VectorValuedH1, test_suite_tris) { test_suite("/data/meshes/patch2D_tris.mesh"); }
+ //TEST(VectorValuedH1, test_suite_quads) { test_suite("/data/meshes/patch2D_quads.mesh"); }
 //TEST(VectorValuedH1, test_suite_tris_and_quads) { test_suite("/data/meshes/patch2D_tris_and_quads.mesh"); }
 
 //TEST(VectorValuedH1, test_suite_tets) { test_suite("/data/meshes/patch3D_tets.mesh"); }
 
-//TEST(VectorValuedH1, test_suite_hexes) { test_suite("/data/meshes/patch3D_hexes.mesh"); }
-//TEST(VectorValuedH1, test_suite_tets_and_hexes) { test_suite("/data/meshes/patch3D_tets_and_hexes.mesh"); }
+
+ TEST(VectorValuedH1, test_suite_hexes) { test_suite("/data/meshes/patch3D_hexes.mesh"); }
+
+ TEST(VectorValuedH1, test_suite_tets_and_hexes) { test_suite("/data/meshes/patch3D_tets_and_hexes.mesh"); }
 
 int main(int argc, char* argv[])
 {
@@ -199,11 +179,18 @@ int main(int argc, char* argv[])
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
   axom::slic::SimpleLogger logger;
-#ifdef USE_CUDA
-printCUDAMemUsage();
-#endif
+//cudaSetDevice(0);
+//cudaDeviceReset();
+//#ifdef USE_CUDA
+//printCUDAMemUsage();
+//#endif
+//cudaSetDevice(2);
+cudaDeviceSynchronize();
   int result = RUN_ALL_TESTS();
-
+cudaDeviceSynchronize();
+//#ifdef USE_CUDA
+//printCUDAMemUsage();
+//#endif
   MPI_Finalize();
 
   return result;

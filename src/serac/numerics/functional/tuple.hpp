@@ -187,7 +187,15 @@ struct tuple_size {
 };
 
 template <class... Types>
+struct tuple_size_ptr {
+};
+
+template <class... Types>
 struct tuple_size<serac::tuple<Types...>> : std::integral_constant<std::size_t, sizeof...(Types)> {
+};
+
+template <class... Types>
+struct tuple_size_ptr<serac::tuple<Types*...>> : std::integral_constant<std::size_t, sizeof...(Types)> {
 };
 
 /**

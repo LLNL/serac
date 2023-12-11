@@ -22,11 +22,15 @@ project(serac LANGUAGES CXX C)
 # MPI is required in Serac.
 set(ENABLE_MPI ON CACHE BOOL "")
 
+
 if (ENABLE_CUDA)
+    add_compile_definitions(USE_CUDA)
+    set(SERAC_USE_CUDA ON CACHE BOOL "")
     set(SERAC_USE_CUDA ON CACHE BOOL "")
     set(RAJA_ENABLE_CUDA ON CACHE BOOL "")
     set(AXOM_USE_CUDA ON CACHE BOOL "")
 endif()
+
 
 if (NOT MPI_C_COMPILER OR NOT MPI_CXX_COMPILER)
     message(FATAL_ERROR 

@@ -1848,6 +1848,31 @@ SERAC_HOST_DEVICE constexpr int size(const tensor<T, n...>&)
 }
 
 /**
+ * @brief returns the total number of stored values in a tensor
+ *
+ * @tparam T the datatype stored in the tensor
+ * @tparam n the extents of each dimension
+ * @return the total number of values stored in the tensor
+ */
+template <typename T, int... n>
+SERAC_HOST_DEVICE constexpr int size(const tensor<T, n...>*)
+{
+  return (n * ... * 1);
+}
+
+/**
+ * @brief returns the total number of stored values in a tensor
+ *
+ * @tparam T the datatype stored in the tensor
+ * @tparam n the extents of each dimension
+ * @return the total number of values stored in the tensor
+ */
+SERAC_HOST_DEVICE constexpr int size(const zero*)
+{
+  return 1;
+}
+
+/**
  * @overload
  * @brief overload of size() for `double`, we say a double "stores" 1 value
  */

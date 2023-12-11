@@ -31,49 +31,49 @@ struct QFunctionArgument;
 
 /// @overload
 template <int p>
-struct QFunctionArgument<H1<p, 1>, Dimension<1>> {
+RAJA_HOST_DEVICE struct QFunctionArgument<H1<p, 1>, Dimension<1>> {
   using type = serac::tuple<double, double>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p, int dim>
-struct QFunctionArgument<H1<p, 1>, Dimension<dim>> {
+RAJA_HOST_DEVICE struct QFunctionArgument<H1<p, 1>, Dimension<dim>> {
   using type = serac::tuple<double, tensor<double, dim>>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p, int c>
-struct QFunctionArgument<H1<p, c>, Dimension<1>> {
+RAJA_HOST_DEVICE struct QFunctionArgument<H1<p, c>, Dimension<1>> {
   using type = serac::tuple<tensor<double, c>, tensor<double, c>>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p, int c, int dim>
-struct QFunctionArgument<H1<p, c>, Dimension<dim>> {
+RAJA_HOST_DEVICE struct QFunctionArgument<H1<p, c>, Dimension<dim>> {
   using type = serac::tuple<tensor<double, c>, tensor<double, c, dim>>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p>
-struct QFunctionArgument<L2<p, 1>, Dimension<1>> {
+RAJA_HOST_DEVICE struct QFunctionArgument<L2<p, 1>, Dimension<1>> {
   using type = serac::tuple<double, double>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p, int dim>
-struct QFunctionArgument<L2<p, 1>, Dimension<dim>> {
+RAJA_HOST_DEVICE struct QFunctionArgument<L2<p, 1>, Dimension<dim>> {
   using type = serac::tuple<double, tensor<double, dim>>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p, int c>
-struct QFunctionArgument<L2<p, c>, Dimension<1>> {
+RAJA_HOST_DEVICE struct QFunctionArgument<L2<p, c>, Dimension<1>> {
   using type = serac::tuple<tensor<double, c>, tensor<double, c>>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p, int c, int dim>
-struct QFunctionArgument<L2<p, c>, Dimension<dim>> {
+RAJA_HOST_DEVICE struct QFunctionArgument<L2<p, c>, Dimension<dim>> {
   using type = serac::tuple<tensor<double, c>, tensor<double, c, dim>>;  ///< what will be passed to the q-function
 };
 
@@ -106,14 +106,14 @@ SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, const serac::tup
 }
 
 template <int i, int dim, typename... trials, typename lambda>
-SERAC_HOST_DEVICE auto get_derivative_type(lambda qf)
+RAJA_HOST_DEVICE auto get_derivative_type(lambda qf)
 {
   using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim>>::type...>;
   return tuple{get_gradient(apply_qf(qf, tensor<double, dim + 1>{}, make_dual_wrt<i>(qf_arguments{}))), zero{}};
 };
 
 template <typename lambda, int n, typename... T>
-SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, const tensor<double, 2, n>& positions,
+RAJA_HOST_DEVICE auto batch_apply_qf(lambda qf, const tensor<double, 2, n>& positions,
                                      const tensor<double, 1, 2, n>& jacobians, const T&... inputs)
 {
   constexpr int dim = 2;
@@ -135,7 +135,7 @@ SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, const tensor<double, 2, n>& pos
 }
 
 template <typename lambda, int n, typename... T>
-SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, const tensor<double, 3, n>& positions,
+RAJA_HOST_DEVICE auto batch_apply_qf(lambda qf, const tensor<double, 3, n>& positions,
                                      const tensor<double, 2, 3, n>& jacobians, const T&... inputs)
 {
   constexpr int dim = 3;
@@ -189,7 +189,7 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, con
   // for each element in the domain
   RAJA::forall<policy>(
       RAJA::TypedRangeSegment<uint32_t>(0, num_elements),
-      [J, x, qf, u, rule, r, qpts_per_elem, qf_derivatives] SERAC_HOST_DEVICE(uint32_t e) {
+      [J, x, qf, u, rule, r, qpts_per_elem, qf_derivatives] RAJA_HOST_DEVICE(uint32_t e) {
         // load the jacobians and positions for each quadrature point in this element
         auto J_e = J[e];
         auto x_e = x[e];
@@ -221,7 +221,7 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, con
 
 //clang-format off
 template <typename S, typename T>
-SERAC_HOST_DEVICE auto chain_rule(const S& dfdx, const T& dx)
+RAJA_HOST_DEVICE auto chain_rule(const S& dfdx, const T& dx)
 {
   return serac::chain_rule(serac::get<0>(serac::get<0>(dfdx)), serac::get<0>(dx)) +
          serac::chain_rule(serac::get<1>(serac::get<0>(dfdx)), serac::get<1>(dx));
@@ -229,7 +229,7 @@ SERAC_HOST_DEVICE auto chain_rule(const S& dfdx, const T& dx)
 //clang-format on
 
 template <typename derivative_type, int n, typename T>
-SERAC_HOST_DEVICE auto batch_apply_chain_rule(derivative_type* qf_derivatives, const tensor<T, n>& inputs)
+RAJA_HOST_DEVICE auto batch_apply_chain_rule(derivative_type* qf_derivatives, const tensor<T, n>& inputs)
 {
   using return_type = decltype(chain_rule(derivative_type{}, T{}));
   tensor<tuple<return_type, zero>, n> outputs{};
@@ -284,7 +284,7 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
 #endif
 
   // for each element in the domain
-  RAJA::forall<policy>(RAJA::TypedRangeSegment<uint32_t>(0, num_elements), [=] SERAC_HOST_DEVICE(uint32_t e) {
+  RAJA::forall<policy>(RAJA::TypedRangeSegment<uint32_t>(0, num_elements), [=] RAJA_HOST_DEVICE(uint32_t e) {
     // (batch) interpolate each quadrature point's value
     auto qf_inputs = trial_element::interpolate(du[e], rule);
 
@@ -340,7 +340,7 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
 #endif
 
   // for each element in the domain
-  RAJA::forall<policy>(RAJA::TypedRangeSegment<std::size_t>(0, num_elements), [=] SERAC_HOST_DEVICE(std::size_t e) {
+  RAJA::forall<policy>(RAJA::TypedRangeSegment<std::size_t>(0, num_elements), [=] RAJA_HOST_DEVICE(std::size_t e) {
     auto* output_ptr = reinterpret_cast<typename test_element::dof_type*>(&dK(e, 0, 0));
 
     tensor<derivatives_type, nquad> derivatives{};

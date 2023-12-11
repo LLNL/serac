@@ -14,7 +14,53 @@
 #include <RAJA/RAJA.hpp>
 #include <array>
 #include <cstdint>
+#include <umpire/ResourceManager.hpp>
+#ifdef USE_CUDA
+#include <cuda_runtime.h>
+namespace {
+  void printCUDAMemUsage() {
+    int deviceCount = 0;
+    cudaGetDeviceCount(&deviceCount);
+    for (int i = 0; i < deviceCount; ++i) {
+        cudaSetDevice(i);
 
+        size_t freeBytes, totalBytes;
+        cudaMemGetInfo(&freeBytes, &totalBytes);
+        size_t usedBytes = totalBytes - freeBytes;
+
+        std::cout << "Device Number: " << i << std::endl;
+        std::cout << " Total Memory (MB): " << (totalBytes / 1024.0 / 1024.0) << std::endl;
+        std::cout << " Free Memory (MB): " << (freeBytes / 1024.0 / 1024.0) << std::endl;
+        std::cout << " Used Memory (MB): " << (usedBytes / 1024.0 / 1024.0) << std::endl;
+    }
+  }
+
+template <typename DataType>
+DataType* copy_data(DataType* source_data, std::size_t size, const std::string& destination)
+{
+  auto& rm             = umpire::ResourceManager::getInstance();
+  auto  dest_allocator = rm.getAllocator(destination);
+
+  DataType* dest_data = static_cast<DataType*>(dest_allocator.allocate(size * sizeof(DataType)));
+
+  // _sphinx_tag_tut_copy_start
+  rm.copy(dest_data, source_data);
+  // _sphinx_tag_tut_copy_end
+
+  return dest_data;
+}
+
+
+template <typename DataType>
+void deallocate(DataType* data, const std::string& destination)
+{
+  auto& rm             = umpire::ResourceManager::getInstance();
+  auto  dest_allocator = rm.getAllocator(destination);
+  dest_allocator.deallocate(data);
+}
+
+}
+#endif
 namespace serac {
 
 namespace domain_integral {
@@ -158,25 +204,40 @@ void evaluation_kernel_impl(trial_element_tuple_type          trial_elements, te
 
   [[maybe_unused]] tuple u = {
       reinterpret_cast<const typename decltype(type<indices>(trial_elements))::dof_type*>(inputs[indices])...};
-
-#if defined(USE_CUDA)
+#define USE_CUDA
+#ifdef USE_CUDA
   std::cout << "USING CUDA :)\n";
+  printCUDAMemUsage();
+  cudaSetDevice(0);
   using policy = RAJA::cuda_exec<512>;
+  auto& rm             = umpire::ResourceManager::getInstance();
+  auto  dest_allocator = rm.getAllocator("DEVICE");
+
+  auto device_J = copy_data(J, serac::size(J), "DEVICE");
+  auto device_x = copy_data(x, serac::size(x), "DEVICE");
+  auto device_r = copy_data(r, serac::size(r), "DEVICE");
+
+  // These more complex types require a helper struct to deduce the data structure size.
+  decltype(u)* device_u = static_cast<decltype(u)*>(dest_allocator.allocate(tuple_size_ptr<decltype(u)>::value));
+  rm.copy(device_u, &u);
+  auto device_qf_derivatives = static_cast<derivative_type*>(dest_allocator.allocate(tuple_size<derivative_type>::value));
+  rm.copy(device_qf_derivatives, qf_derivatives);
 #else
   using policy = RAJA::simd_exec;
 #endif
 
+
   // for each element in the domain
   RAJA::forall<policy>(
       RAJA::TypedRangeSegment<uint32_t>(0, num_elements),
-      [J, x, qf, u, qpts_per_elem, rule, r, qf_state, qf_derivatives, update_state] SERAC_HOST_DEVICE(uint32_t e) {
-        auto J_e = J[e];
-        auto x_e = x[e];
+      [device_J, device_x, qf, device_u, qpts_per_elem, rule, device_r, qf_state, device_qf_derivatives, update_state] SERAC_HOST_DEVICE(uint32_t e) {
+        auto J_e = device_J[e];
+        auto x_e = device_x[e];
         // load the jacobians and positions for each quadrature point in this element
 
         // Avoid unused warning/error ([[maybe_unused]] is not possible in the capture list)
         //(void)u;
-        (void)qf_derivatives;
+        (void)device_qf_derivatives;
         (void)qpts_per_elem;
         (void)update_state;
         (void)qf_state;
@@ -184,7 +245,7 @@ void evaluation_kernel_impl(trial_element_tuple_type          trial_elements, te
         static constexpr trial_element_tuple_type empty_trial_element{};
         // batch-calculate values / derivatives of each trial space, at each quadrature point
         [[maybe_unused]] tuple qf_inputs = {promote_each_to_dual_when<indices == differentiation_index>(
-            get<indices>(empty_trial_element).interpolate(get<indices>(u)[e], rule))...};
+            get<indices>(empty_trial_element).interpolate(get<indices>(device_u)[e], rule))...};
 
         // use J_e to transform values / derivatives on the parent element
         // to the to the corresponding values / derivatives on the physical element
@@ -213,14 +274,27 @@ void evaluation_kernel_impl(trial_element_tuple_type          trial_elements, te
         // won't need to be applied in the action_of_gradient and element_gradient kernels
         if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
           for (int q = 0; q < leading_dimension(qf_outputs); q++) {
-            qf_derivatives[e * uint32_t(qpts_per_elem) + uint32_t(q)] = get_gradient(qf_outputs[q]);
+            device_qf_derivatives[e * uint32_t(qpts_per_elem) + uint32_t(q)] = get_gradient(qf_outputs[q]);
           }
         }
 
         // (batch) integrate the material response against the test-space basis functions
-        test_element_type::integrate(get_value(qf_outputs), rule, &r[e]);
+        test_element_type::integrate(get_value(qf_outputs), rule, &device_r[e]);
         
       });
+
+    rm.copy(&J, device_J);
+    rm.copy(&x, device_x);
+    rm.copy(&r, device_r);
+
+    rm.copy(&u, device_u);
+    rm.copy(qf_derivatives, device_qf_derivatives);
+
+    deallocate(device_J);
+    deallocate(device_x);
+    deallocate(device_u);
+    deallocate(device_r);
+    deallocate(device_qf_derivatives);
   return;
 }
 
