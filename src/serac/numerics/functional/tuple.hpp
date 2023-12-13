@@ -199,6 +199,32 @@ struct tuple_size_ptr<serac::tuple<Types*...>> : std::integral_constant<std::siz
 };
 
 /**
+ * @brief returns the total number of stored values in a tensor
+ *
+ * @tparam T the datatype stored in the tensor
+ * @tparam n the extents of each dimension
+ * @return the total number of values stored in the tensor
+ */
+ template <class... Types>
+SERAC_HOST_DEVICE constexpr int size(const serac::tuple<Types...>)
+{
+  return tuple_size<serac::tuple<Types...>>::value;
+}
+
+/**
+ * @brief returns the total number of stored values in a tensor
+ *
+ * @tparam T the datatype stored in the tensor
+ * @tparam n the extents of each dimension
+ * @return the total number of values stored in the tensor
+ */
+ template <class... Types>
+SERAC_HOST_DEVICE constexpr int size(const serac::tuple<Types*...>)
+{
+  return tuple_size_ptr<serac::tuple<Types*...>>::value;
+}
+
+/**
  * @tparam i the tuple index to access
  * @tparam T the types stored in the tuple
  * @brief return a reference to the ith tuple entry

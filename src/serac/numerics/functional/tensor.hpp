@@ -1879,7 +1879,7 @@ SERAC_HOST_DEVICE constexpr int size(const zero*)
 SERAC_HOST_DEVICE constexpr int size(const double&) { return 1; }
 
 /// @overload
-SERAC_HOST_DEVICE constexpr int size(zero) { return 0; }
+SERAC_HOST_DEVICE constexpr int size(zero) { return 1; }
 
 /**
  * @brief a function for querying the ith dimension of a tensor

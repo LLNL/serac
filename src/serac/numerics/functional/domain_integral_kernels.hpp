@@ -195,9 +195,11 @@ void evaluation_kernel_impl(trial_element_tuple_type          trial_elements, te
 {
   // mfem provides this information as opaque arrays of doubles,
   // so we reinterpret the pointer with
+  using X_Type = typename batched_position<geom, Q>::type;
+  using J_Type = typename batched_jacobian<geom, Q>::type;
   auto                           r = reinterpret_cast<typename test_element_type::dof_type*>(outputs);
-  auto                           x = reinterpret_cast<const typename batched_position<geom, Q>::type*>(positions);
-  auto                           J = reinterpret_cast<const typename batched_jacobian<geom, Q>::type*>(jacobians);
+  auto                           x = const_cast<X_Type*>(reinterpret_cast<const X_Type*>(positions));
+  auto                           J = const_cast<J_Type*>(reinterpret_cast<const J_Type*>(jacobians));
   TensorProductQuadratureRule<Q> rule{};
 
   auto qpts_per_elem = num_quadrature_points(geom, Q);
@@ -213,14 +215,14 @@ void evaluation_kernel_impl(trial_element_tuple_type          trial_elements, te
   auto& rm             = umpire::ResourceManager::getInstance();
   auto  dest_allocator = rm.getAllocator("DEVICE");
 
-  auto device_J = copy_data(J, serac::size(J), "DEVICE");
-  auto device_x = copy_data(x, serac::size(x), "DEVICE");
+  auto device_J = copy_data((J), serac::size(J), "DEVICE");
+  auto device_x = copy_data((x), serac::size(x), "DEVICE");
   auto device_r = copy_data(r, serac::size(r), "DEVICE");
 
   // These more complex types require a helper struct to deduce the data structure size.
-  decltype(u)* device_u = static_cast<decltype(u)*>(dest_allocator.allocate(tuple_size_ptr<decltype(u)>::value));
+  decltype(u)* device_u = static_cast<decltype(u)*>(dest_allocator.allocate(serac::size(u)));
   rm.copy(device_u, &u);
-  auto device_qf_derivatives = static_cast<derivative_type*>(dest_allocator.allocate(tuple_size<derivative_type>::value));
+  auto device_qf_derivatives = static_cast<derivative_type*>(dest_allocator.allocate(serac::size(*qf_derivatives)));
   rm.copy(device_qf_derivatives, qf_derivatives);
 #else
   using policy = RAJA::simd_exec;
@@ -245,7 +247,7 @@ void evaluation_kernel_impl(trial_element_tuple_type          trial_elements, te
         static constexpr trial_element_tuple_type empty_trial_element{};
         // batch-calculate values / derivatives of each trial space, at each quadrature point
         [[maybe_unused]] tuple qf_inputs = {promote_each_to_dual_when<indices == differentiation_index>(
-            get<indices>(empty_trial_element).interpolate(get<indices>(device_u)[e], rule))...};
+            get<indices>(empty_trial_element).interpolate(get<indices>(*device_u)[e], rule))...};
 
         // use J_e to transform values / derivatives on the parent element
         // to the to the corresponding values / derivatives on the physical element
@@ -283,18 +285,16 @@ void evaluation_kernel_impl(trial_element_tuple_type          trial_elements, te
         
       });
 
-    rm.copy(&J, device_J);
-    rm.copy(&x, device_x);
     rm.copy(&r, device_r);
 
     rm.copy(&u, device_u);
     rm.copy(qf_derivatives, device_qf_derivatives);
 
-    deallocate(device_J);
-    deallocate(device_x);
-    deallocate(device_u);
-    deallocate(device_r);
-    deallocate(device_qf_derivatives);
+    deallocate(device_J, "DEVICE");
+    deallocate(device_x, "DEVICE");
+    deallocate(device_u, "DEVICE");
+    deallocate(device_r, "DEVICE");
+    deallocate(device_qf_derivatives, "DEVICE");
   return;
 }
 
