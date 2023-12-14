@@ -19,7 +19,7 @@
 
 namespace serac {
 
-/// @brief All possible solid mechanics materials that can be utilized in our Input Deck
+/// @brief All possible solid mechanics materials that can be utilized in our input file
 using var_solid_material_t =
     std::variant<solid_mechanics::NeoHookean, solid_mechanics::LinearIsotropic, solid_mechanics::J2,
                  solid_mechanics::J2Nonlinear<solid_mechanics::PowerLawHardening>,

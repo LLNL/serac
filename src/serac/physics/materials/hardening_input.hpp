@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file solid_material_input.hpp
+ * @file hardening_input.hpp
  *
  * @brief This file contains functions for reading a material from input files
  */
@@ -18,7 +18,7 @@
 
 namespace serac {
 
-/// @brief Holds all possible isotropic hardening laws that can be utilized in our Input Deck
+/// @brief Holds all possible isotropic hardening laws that can be utilized in our input file
 using var_hardening_t = std::variant<solid_mechanics::PowerLawHardening, solid_mechanics::VoceHardening>;
 
 /// @brief Contains function that defines the schema for hardening laws
