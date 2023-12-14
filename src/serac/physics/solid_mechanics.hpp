@@ -279,15 +279,39 @@ public:
                        input_options.timestepping_options, input_options.geom_nonlin, physics_name, mesh_tag, {}, cycle,
                        time)
   {
-    // This is the only other options stored in the input file that we can use
-    // in the initialization stage
-    // TODO: move these material parameters out of the SolidMechanicsInputOptions
-    if (input_options.material_nonlin) {
-      solid_mechanics::NeoHookean mat{input_options.initial_mass_density, input_options.K, input_options.mu};
-      setMaterial(mat);
-    } else {
-      solid_mechanics::LinearIsotropic mat{input_options.initial_mass_density, input_options.K, input_options.mu};
-      setMaterial(mat);
+    for (auto& mat : input_options.materials) {
+      if (std::holds_alternative<serac::solid_mechanics::NeoHookean>(mat)) {
+        setMaterial(std::get<serac::solid_mechanics::NeoHookean>(mat));
+      } else if (std::holds_alternative<serac::solid_mechanics::LinearIsotropic>(mat)) {
+        setMaterial(std::get<serac::solid_mechanics::LinearIsotropic>(mat));
+      } else if (std::holds_alternative<serac::solid_mechanics::J2>(mat)) {
+        if constexpr (dim == 3) {
+          solid_mechanics::J2::State initial_state{};
+          setMaterial(std::get<serac::solid_mechanics::J2>(mat), createQuadratureDataBuffer(initial_state));
+        } else {
+          SLIC_ERROR_ROOT("J2 materials only work for 3D simulations");
+        }
+      } else if (std::holds_alternative<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>>(
+                     mat)) {
+        if constexpr (dim == 3) {
+          serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>::State initial_state{};
+          setMaterial(std::get<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>>(mat),
+                      createQuadratureDataBuffer(initial_state));
+        } else {
+          SLIC_ERROR_ROOT("J2Nonlinear materials only work for 3D simulations");
+        }
+      } else if (std::holds_alternative<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::VoceHardening>>(
+                     mat)) {
+        if constexpr (dim == 3) {
+          serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::VoceHardening>::State initial_state{};
+          setMaterial(std::get<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::VoceHardening>>(mat),
+                      createQuadratureDataBuffer(initial_state));
+        } else {
+          SLIC_ERROR_ROOT("J2Nonlinear materials only work for 3D simulations");
+        }
+      } else {
+        SLIC_ERROR("Invalid material type.");
+      }
     }
 
     if (input_options.initial_displacement) {
