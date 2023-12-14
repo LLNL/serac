@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "serac/infrastructure/input.hpp"
+#include "serac/physics/materials/thermal_material_input.hpp"
 #include "serac/physics/common.hpp"
 
 namespace serac {
@@ -55,22 +55,10 @@ struct HeatTransferInputOptions {
   TimesteppingOptions timestepping_options;
 
   /**
-   * @brief The conductivity parameter
+   * @brief The material options
    *
    */
-  double kappa;
-
-  /**
-   * @brief The specific heat capacity
-   *
-   */
-  double cp;
-
-  /**
-   * @brief The mass density
-   *
-   */
-  double rho;
+  std::vector<var_thermal_material_t> materials;
 
   /**
    * @brief Source function coefficient

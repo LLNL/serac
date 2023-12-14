@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "serac/infrastructure/input.hpp"
+#include "serac/physics/materials/solid_material_input.hpp"
 #include "serac/physics/common.hpp"
 
 namespace serac {
@@ -55,37 +55,16 @@ struct SolidMechanicsInputOptions {
   TimesteppingOptions timestepping_options;
 
   /**
-   * @brief The shear modulus
-   *
-   */
-  // TODO: Move to material options
-  double mu;
-
-  /**
-   * @brief The bulk modulus
-   *
-   */
-  // TODO: Move to material options
-  double K;
-
-  /**
-   * @brief Initial density
-   *
-   */
-  // TODO: Move to material options
-  double initial_mass_density;
-
-  /**
    * @brief Geometric nonlinearities flag
    *
    */
   GeometricNonlinearities geom_nonlin;
 
   /**
-   * @brief Material nonlinearities flag
+   * @brief The material options
    *
    */
-  bool material_nonlin;
+  std::vector<var_solid_material_t> materials;
 
   /**
    * @brief Boundary condition information

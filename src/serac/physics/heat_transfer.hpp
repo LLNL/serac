@@ -14,6 +14,7 @@
 
 #include "mfem.hpp"
 
+#include "serac/infrastructure/initialize.hpp"
 #include "serac/physics/common.hpp"
 #include "serac/physics/heat_transfer_input.hpp"
 #include "serac/physics/base_physics.hpp"
@@ -21,6 +22,7 @@
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
+#include "serac/physics/materials/thermal_material.hpp"
 
 namespace serac {
 
@@ -216,31 +218,39 @@ public:
   /**
    * @brief Construct a new Nonlinear HeatTransfer Solver object
    *
-   * @param[in] options The solver information parsed from the input file
+   * @param[in] input_options The solver information parsed from the input file
    * @param[in] physics_name A name for the physics module instance
    * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
    * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param[in] time The simulation time to initialize the physics module to
    */
-  HeatTransfer(const HeatTransferInputOptions& options, const std::string& physics_name, const std::string& mesh_tag,
-               int cycle = 0, double time = 0.0)
-      : HeatTransfer(options.nonlin_solver_options, options.lin_solver_options, options.timestepping_options,
-                     physics_name, mesh_tag, {}, cycle, time)
+  HeatTransfer(const HeatTransferInputOptions& input_options, const std::string& physics_name,
+               const std::string& mesh_tag, int cycle = 0, double time = 0.0)
+      : HeatTransfer(input_options.nonlin_solver_options, input_options.lin_solver_options,
+                     input_options.timestepping_options, physics_name, mesh_tag, {}, cycle, time)
   {
-    if (options.initial_temperature) {
-      auto temp = options.initial_temperature->constructScalar();
+    for (const auto& mat : input_options.materials) {
+      if (std::holds_alternative<serac::heat_transfer::LinearIsotropicConductor>(mat)) {
+        setMaterial(std::get<serac::heat_transfer::LinearIsotropicConductor>(mat));
+      } else if (std::holds_alternative<serac::heat_transfer::LinearConductor<dim>>(mat)) {
+        setMaterial(std::get<serac::heat_transfer::LinearConductor<dim>>(mat));
+      }
+    }
+
+    if (input_options.initial_temperature) {
+      auto temp = input_options.initial_temperature->constructScalar();
       temperature_.project(*temp);
     }
 
-    if (options.source_coef) {
+    if (input_options.source_coef) {
       // TODO: Not implemented yet in input files
       // NOTE: cannot use std::functions that use mfem::vector
       SLIC_ERROR("'source' is not implemented yet in input files.");
     }
 
     // Process the BCs in sorted order for correct behavior with repeated attributes
-    std::map<std::string, input::BoundaryConditionInputOptions> sorted_bcs(options.boundary_conditions.begin(),
-                                                                           options.boundary_conditions.end());
+    std::map<std::string, input::BoundaryConditionInputOptions> sorted_bcs(input_options.boundary_conditions.begin(),
+                                                                           input_options.boundary_conditions.end());
     for (const auto& [bc_name, bc] : sorted_bcs) {
       // FIXME: Better naming for boundary conditions?
       if (bc_name.find("temperature") != std::string::npos) {
