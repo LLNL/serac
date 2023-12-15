@@ -54,6 +54,7 @@ spack:
         szip: [libszip, libaec]
         tbb: [intel-tbb]
         jpeg: [libjpeg-turbo, libjpeg]
+        zlib-api: [zlib]
     py-numpy:
       variants: ~blas~lapack
 
@@ -232,12 +233,12 @@ spack:
 
     # Globally lock version of third party libraries
     camp:
-      require: "@2022.10.1"
+      require: "@2023.06.0"
     conduit:
       require: "@0.8.8~shared~test~examples~utilities"
     hdf5:
       variants: ~shared~mpi
     raja:
-      require: "@2022.10.5~shared~examples~exercises"
+      require: "@2023.06.1~shared~examples~exercises"
     umpire:
-      require: "@2022.10.0~shared~examples"
+      require: "@2023.06.0~shared~examples"

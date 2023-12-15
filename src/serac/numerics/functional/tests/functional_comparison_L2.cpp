@@ -80,7 +80,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   // Add the total domain residual term to the weak form
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [&]([[maybe_unused]] auto x, [[maybe_unused]] auto temperature) {
+      [&](double /*t*/, [[maybe_unused]] auto x, [[maybe_unused]] auto temperature) {
         // get the value and the gradient from the input tuple
         auto [u, du_dx] = temperature;
         auto source     = a * u - (100 * x[0] * x[1]);
@@ -95,7 +95,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   // residual.AddBoundaryIntegral(
   //    Dimension<dim-1>{},
   //    DependsOn<0>{},
-  //    [&]([[maybe_unused]] auto x, [[maybe_unused]] auto temperature) { return 1.0; },
+  //    [&](double /*t*/, [[maybe_unused]] auto x, [[maybe_unused]] auto temperature) { return 1.0; },
   //    mesh);
 
   // Compute the residual using standard MFEM methods
@@ -105,7 +105,8 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   r1 -= (*F);
 
   // Compute the residual using weak form
-  auto [r2, drdU] = residual(differentiate_wrt(U));
+  double t        = 0.0;
+  auto [r2, drdU] = residual(t, differentiate_wrt(U));
 
   mfem::Vector diff(r1.Size());
   subtract(r1, r2, diff);
@@ -162,7 +163,7 @@ TEST(L2, 2DMixed)
   serac::Functional<test_space(trial_space)> f(&L2fespace, {&H1fespace});
   f.AddDomainIntegral(
       serac::Dimension<dim>{}, serac::DependsOn<0>{},
-      [](auto, auto X) {
+      [](double /*t*/, auto, auto X) {
         auto dp_dX = serac::get<1>(X);
         auto I     = serac::Identity<dim>();
         return serac::tuple{serac::det(dp_dX + I), serac::zero{}};

@@ -14,6 +14,7 @@
 
 #include "mfem.hpp"
 
+#include "serac/infrastructure/initialize.hpp"
 #include "serac/physics/common.hpp"
 #include "serac/physics/heat_transfer_input.hpp"
 #include "serac/physics/base_physics.hpp"
@@ -21,6 +22,7 @@
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
+#include "serac/physics/materials/thermal_material.hpp"
 
 namespace serac {
 
@@ -131,7 +133,8 @@ public:
                int cycle = 0, double time = 0.0)
       : BasePhysics(physics_name, mesh_tag, cycle, time),
         temperature_(StateManager::newState(H1<order>{}, detail::addPrefix(physics_name, "temperature"), mesh_tag_)),
-        temperature_rate_(temperature_),
+        temperature_rate_(
+            StateManager::newState(H1<order>{}, detail::addPrefix(physics_name, "temperature_rate"), mesh_tag_)),
         adjoint_temperature_(
             StateManager::newState(H1<order>{}, detail::addPrefix(physics_name, "adjoint_temperature"), mesh_tag_)),
         implicit_sensitivity_temperature_start_of_step_(adjoint_temperature_.space(),
@@ -153,8 +156,20 @@ public:
         !nonlin_solver_,
         "EquationSolver argument is nullptr in HeatTransfer constructor. It is possible that it was previously moved.");
 
+    // Check for dynamic mode
+    if (timestepping_opts.timestepper != TimestepMethod::QuasiStatic) {
+      ode_.SetTimestepper(timestepping_opts.timestepper);
+      ode_.SetEnforcementMethod(timestepping_opts.enforcement_method);
+      is_quasistatic_ = false;
+    } else {
+      is_quasistatic_ = true;
+    }
+
     states_.push_back(&temperature_);
-    // states_.push_back(&temperature_rate_);
+    if (!is_quasistatic_) {
+      states_.push_back(&temperature_rate_);
+    }
+
     adjoints_.push_back(&adjoint_temperature_);
 
     // Create a pack of the primal field and parameter finite element spaces
@@ -184,15 +199,6 @@ public:
 
     nonlin_solver_->setOperator(residual_with_bcs_);
 
-    // Check for dynamic mode
-    if (timestepping_opts.timestepper != TimestepMethod::QuasiStatic) {
-      ode_.SetTimestepper(timestepping_opts.timestepper);
-      ode_.SetEnforcementMethod(timestepping_opts.enforcement_method);
-      is_quasistatic_ = false;
-    } else {
-      is_quasistatic_ = true;
-    }
-
     dt_          = 0.0;
     previous_dt_ = -1.0;
 
@@ -212,31 +218,39 @@ public:
   /**
    * @brief Construct a new Nonlinear HeatTransfer Solver object
    *
-   * @param[in] options The solver information parsed from the input file
+   * @param[in] input_options The solver information parsed from the input file
    * @param[in] physics_name A name for the physics module instance
    * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
    * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param[in] time The simulation time to initialize the physics module to
    */
-  HeatTransfer(const HeatTransferInputOptions& options, const std::string& physics_name, const std::string& mesh_tag,
-               int cycle = 0, double time = 0.0)
-      : HeatTransfer(options.nonlin_solver_options, options.lin_solver_options, options.timestepping_options,
-                     physics_name, mesh_tag, {}, cycle, time)
+  HeatTransfer(const HeatTransferInputOptions& input_options, const std::string& physics_name,
+               const std::string& mesh_tag, int cycle = 0, double time = 0.0)
+      : HeatTransfer(input_options.nonlin_solver_options, input_options.lin_solver_options,
+                     input_options.timestepping_options, physics_name, mesh_tag, {}, cycle, time)
   {
-    if (options.initial_temperature) {
-      auto temp = options.initial_temperature->constructScalar();
+    for (const auto& mat : input_options.materials) {
+      if (std::holds_alternative<serac::heat_transfer::LinearIsotropicConductor>(mat)) {
+        setMaterial(std::get<serac::heat_transfer::LinearIsotropicConductor>(mat));
+      } else if (std::holds_alternative<serac::heat_transfer::LinearConductor<dim>>(mat)) {
+        setMaterial(std::get<serac::heat_transfer::LinearConductor<dim>>(mat));
+      }
+    }
+
+    if (input_options.initial_temperature) {
+      auto temp = input_options.initial_temperature->constructScalar();
       temperature_.project(*temp);
     }
 
-    if (options.source_coef) {
+    if (input_options.source_coef) {
       // TODO: Not implemented yet in input files
       // NOTE: cannot use std::functions that use mfem::vector
       SLIC_ERROR("'source' is not implemented yet in input files.");
     }
 
     // Process the BCs in sorted order for correct behavior with repeated attributes
-    std::map<std::string, input::BoundaryConditionInputOptions> sorted_bcs(options.boundary_conditions.begin(),
-                                                                           options.boundary_conditions.end());
+    std::map<std::string, input::BoundaryConditionInputOptions> sorted_bcs(input_options.boundary_conditions.begin(),
+                                                                           input_options.boundary_conditions.end());
     for (const auto& [bc_name, bc] : sorted_bcs) {
       // FIXME: Better naming for boundary conditions?
       if (bc_name.find("temperature") != std::string::npos) {
@@ -279,6 +293,10 @@ public:
   {
     if (is_quasistatic_) {
       time_ += dt;
+
+      // Set the ODE time point for the time-varying loads in quasi-static problems
+      ode_time_point_ = time_;
+
       // Project the essential boundary coefficients
       for (auto& bc : bcs_.essentials()) {
         bc.setDofs(temperature_, time_);
@@ -327,7 +345,7 @@ public:
      * @brief Evaluate integrand
      */
     template <typename X, typename T, typename dT_dt, typename Shape, typename... Params>
-    auto operator()(X x, T temperature, dT_dt dtemp_dt, Shape shape, Params... params)
+    auto operator()(double /*time*/, X x, T temperature, dT_dt dtemp_dt, Shape shape, Params... params)
     {
       // Get the value and the gradient from the input tuple
       auto [u, du_dX] = temperature;
@@ -440,7 +458,7 @@ public:
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
-        [source_function, this](auto x, auto temperature, auto /* dtemp_dt */, auto shape, auto... params) {
+        [source_function](double t, auto x, auto temperature, auto /* dtemp_dt */, auto shape, auto... params) {
           // Get the value and the gradient from the input tuple
           auto [u, du_dX] = temperature;
           auto [p, dp_dX] = shape;
@@ -454,7 +472,7 @@ public:
 
           auto du_dx = dot(du_dX, inv(I_plus_dp_dX));
 
-          auto source = source_function(x + p, ode_time_point_, u, du_dx, params...);
+          auto source = source_function(x + p, t, u, du_dx, params...);
 
           // Return the source and the flux as a tuple
           return serac::tuple{-1.0 * source * det(I_plus_dp_dX), serac::zero{}};
@@ -495,7 +513,7 @@ public:
   {
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
-        [this, flux_function](auto X, auto u, auto /* dtemp_dt */, auto shape, auto... params) {
+        [flux_function](double t, auto X, auto u, auto /* dtemp_dt */, auto shape, auto... params) {
           auto temp = get<VALUE>(u);
           auto x    = X + shape;
           auto n    = cross(get<DERIVATIVE>(x));
@@ -509,7 +527,7 @@ public:
           // = q * (w_new / w_old) * w_old
           // = q * w_new
           auto area_correction = norm(n) / norm(cross(get<DERIVATIVE>(X)));
-          return flux_function(x, normalize(n), ode_time_point_, temp, params...) * area_correction;
+          return flux_function(x, normalize(n), t, temp, params...) * area_correction;
         },
         mesh_);
   }
@@ -597,7 +615,14 @@ public:
    *
    * @return The primal solution names
    */
-  virtual std::vector<std::string> stateNames() const override { return std::vector<std::string>{{"temperature"}}; }
+  virtual std::vector<std::string> stateNames() const override
+  {
+    if (is_quasistatic_) {
+      return std::vector<std::string>{{"temperature"}};
+    } else {
+      return std::vector<std::string>{{"temperature", "temperature_rate"}};
+    }
+  }
 
   /**
    * @brief Accessor for getting named finite element state adjoint solution from the physics modules
@@ -631,8 +656,8 @@ public:
           temperature_.space().TrueVSize(),
 
           [this](const mfem::Vector& u, mfem::Vector& r) {
-            const mfem::Vector res =
-                (*residual_)(u, temperature_rate_, shape_displacement_, *parameters_[parameter_indices].state...);
+            const mfem::Vector res = (*residual_)(ode_time_point_, u, temperature_rate_, shape_displacement_,
+                                                  *parameters_[parameter_indices].state...);
 
             // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
             // tracking strategy
@@ -642,7 +667,7 @@ public:
           },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] = (*residual_)(differentiate_wrt(u), temperature_rate_, shape_displacement_,
+            auto [r, drdu] = (*residual_)(ode_time_point_, differentiate_wrt(u), temperature_rate_, shape_displacement_,
                                           *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
             J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
@@ -654,8 +679,8 @@ public:
 
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
             add(1.0, u_, dt_, du_dt, u_predicted_);
-            const mfem::Vector res =
-                (*residual_)(u_predicted_, du_dt, shape_displacement_, *parameters_[parameter_indices].state...);
+            const mfem::Vector res = (*residual_)(ode_time_point_, u_predicted_, du_dt, shape_displacement_,
+                                                  *parameters_[parameter_indices].state...);
 
             // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
             // tracking strategy
@@ -668,13 +693,15 @@ public:
             add(1.0, u_, dt_, du_dt, u_predicted_);
 
             // K := dR/du
-            auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(u_predicted_), du_dt, shape_displacement_,
-                                                         *parameters_[parameter_indices].state...));
+            auto K =
+                serac::get<DERIVATIVE>((*residual_)(ode_time_point_, differentiate_wrt(u_predicted_), du_dt,
+                                                    shape_displacement_, *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/du_dot
-            auto M = serac::get<DERIVATIVE>((*residual_)(u_predicted_, differentiate_wrt(du_dt), shape_displacement_,
-                                                         *parameters_[parameter_indices].state...));
+            auto M =
+                serac::get<DERIVATIVE>((*residual_)(ode_time_point_, u_predicted_, differentiate_wrt(du_dt),
+                                                    shape_displacement_, *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             // J := M + dt K
@@ -761,8 +788,8 @@ public:
       // We store the previous timestep's temperature as the current temperature for use in the lambdas computing the
       // sensitivities.
 
-      auto [_, drdu] = (*residual_)(differentiate_wrt(temperature_), temperature_rate_, shape_displacement_,
-                                    *parameters_[parameter_indices].state...);
+      auto [_, drdu] = (*residual_)(ode_time_point_, differentiate_wrt(temperature_), temperature_rate_,
+                                    shape_displacement_, *parameters_[parameter_indices].state...);
       auto jacobian  = assemble(drdu);
       auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -785,22 +812,18 @@ public:
 
     // Load the temperature from the previous cycle from disk
     serac::FiniteElementState temperature_n_minus_1(temperature_);
-    StateManager::loadCheckpointedStates(cycle_, {temperature_});
+    StateManager::loadCheckpointedStates(cycle_, {temperature_, temperature_rate_});
     StateManager::loadCheckpointedStates(cycle_ - 1, {temperature_n_minus_1});
 
     double dt = loadCheckpointedTimestep(cycle_ - 1);
 
-    temperature_rate_ = temperature_;
-    temperature_rate_.Add(-1.0, temperature_n_minus_1);
-    temperature_rate_ /= dt;
-
     // K := dR/du
-    auto K = serac::get<DERIVATIVE>((*residual_)(differentiate_wrt(temperature_), temperature_rate_,
+    auto K = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, differentiate_wrt(temperature_), temperature_rate_,
                                                  shape_displacement_, *parameters_[parameter_indices].state...));
     std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
     // M := dR/du_dot
-    auto M = serac::get<DERIVATIVE>((*residual_)(temperature_, differentiate_wrt(temperature_rate_),
+    auto M = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, temperature_, differentiate_wrt(temperature_rate_),
                                                  shape_displacement_, *parameters_[parameter_indices].state...));
     std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
@@ -848,6 +871,10 @@ public:
       FiniteElementState previous_state = temperature_;
       StateManager::loadCheckpointedStates(cycle, {previous_state});
       return previous_state;
+    } else if (state_name == "temperature_rate") {
+      FiniteElementState previous_state = temperature_rate_;
+      StateManager::loadCheckpointedStates(cycle, {previous_state});
+      return previous_state;
     }
 
     SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requested from heat transfer module '{}', but it doesn't exist",
@@ -867,7 +894,9 @@ public:
    */
   FiniteElementDual& computeTimestepSensitivity(size_t parameter_field) override
   {
-    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field]());
+    // TODO: the time is likely not being handled correctly on the reverse pass, but we don't
+    //       have tests to confirm.
+    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](ode_time_point_));
     auto drdparam_mat = assemble(drdparam);
 
     drdparam_mat->MultTranspose(adjoint_temperature_, *parameters_[parameter_field].sensitivity);
@@ -885,8 +914,9 @@ public:
    */
   FiniteElementDual& computeTimestepShapeSensitivity() override
   {
-    auto drdshape = serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, temperature_, temperature_rate_,
-                                                        shape_displacement_, *parameters_[parameter_indices].state...));
+    auto drdshape =
+        serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, ode_time_point_, temperature_, temperature_rate_,
+                                            shape_displacement_, *parameters_[parameter_indices].state...));
 
     auto drdshape_mat = assemble(drdshape);
 
@@ -985,12 +1015,13 @@ protected:
   /// @brief Array functions computing the derivative of the residual with respect to each given parameter
   /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
   /// template parameter.
-  std::array<std::function<decltype((*residual_)(DifferentiateWRT<0>{}, temperature_, temperature_rate_,
-                                                 shape_displacement_, *parameters_[parameter_indices].state...))()>,
-             sizeof...(parameter_indices)>
-      d_residual_d_ = {[&]() {
-        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, temperature_, temperature_rate_,
-                            shape_displacement_, *parameters_[parameter_indices].state...);
+  std::array<
+      std::function<decltype((*residual_)(DifferentiateWRT<0>{}, 0.0, temperature_, temperature_rate_,
+                                          shape_displacement_, *parameters_[parameter_indices].state...))(double)>,
+      sizeof...(parameter_indices)>
+      d_residual_d_ = {[&](double TIME) {
+        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, TIME, temperature_,
+                            temperature_rate_, shape_displacement_, *parameters_[parameter_indices].state...);
       }...};
 };
 

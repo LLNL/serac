@@ -80,7 +80,7 @@ void whole_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](auto x, auto temperature) {
+      [=](double /*t*/, auto x, auto temperature) {
         auto [u, du_dx] = temperature;
         auto source     = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
         auto flux       = d10 * u + dot(d11, du_dx);
@@ -90,7 +90,7 @@ void whole_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](auto x, auto temperature) {
+      [=](double /*t*/, auto x, auto temperature) {
         auto [u, du_dx] = temperature;
         auto source     = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
         auto flux       = d10 * u + dot(d11, du_dx);
@@ -100,7 +100,7 @@ void whole_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [=](auto position, auto temperature) {
+      [=](double /*t*/, auto position, auto temperature) {
         auto [X, dX_dxi] = position;
         auto [u, du_dxi] = temperature;
         return X[0] + X[1] - cos(u);
@@ -109,22 +109,23 @@ void whole_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [=](auto position, auto temperature) {
+      [=](double /*t*/, auto position, auto temperature) {
         auto [X, dX_dxi] = position;
         auto [u, du_dxi] = temperature;
         return X[0] + X[1] - cos(u);
       },
       top_boundary);
 
-  check_gradient(residual, U);
+  double t = 0.0;
+  check_gradient(residual, t, U);
 
-  auto r0 = residual(U);
+  auto r0 = residual(t, U);
 
   //////////////
 
   residual_comparison.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](auto x, auto temperature) {
+      [=](double /*t*/, auto x, auto temperature) {
         auto [u, du_dx] = temperature;
         auto source     = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
         auto flux       = d10 * u + dot(d11, du_dx);
@@ -134,14 +135,14 @@ void whole_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual_comparison.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [=](auto position, auto temperature) {
+      [=](double /*t*/, auto position, auto temperature) {
         auto [X, dX_dxi] = position;
         auto [u, du_dxi] = temperature;
         return X[0] + X[1] - cos(u);
       },
       whole_boundary);
 
-  auto r1 = residual_comparison(U);
+  auto r1 = residual_comparison(t, U);
 
   EXPECT_LT(r0.DistanceTo(r1.GetData()), 1.0e-14);
 }
@@ -221,7 +222,7 @@ void partial_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](auto x, auto temperature) {
+      [=](double /*t*/, auto x, auto temperature) {
         auto [u, du_dx] = temperature;
         auto source     = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
         auto flux       = d10 * u + dot(d11, du_dx);
@@ -231,22 +232,23 @@ void partial_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [=](auto position, auto temperature) {
+      [=](double /*t*/, auto position, auto temperature) {
         auto [X, dX_dxi] = position;
         auto [u, du_dxi] = temperature;
         return X[0] + X[1] - cos(u);
       },
       top_boundary);
 
-  check_gradient(residual, U);
+  double t = 0.0;
+  check_gradient(residual, t, U);
 
-  auto r0 = residual(U);
+  auto r0 = residual(t, U);
 
   //////////////
 
   residual_comparison.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](auto X, auto temperature) {
+      [=](double /*t*/, auto X, auto temperature) {
         auto [u, du_dX] = temperature;
         double mask     = (X[0] < 4.0);
         auto   source   = mask * (d00 * u + dot(d01, du_dX) - 0.0 * (100 * X[0] * X[1]));
@@ -257,7 +259,7 @@ void partial_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual_comparison.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [=](auto position, auto temperature) {
+      [=](double /*t*/, auto position, auto temperature) {
         auto [X, dX_dxi] = position;
         auto [u, du_dxi] = temperature;
         double mask      = (X[1] >= 0.99);
@@ -265,7 +267,7 @@ void partial_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
       },
       *mesh);
 
-  auto r1 = residual_comparison(U);
+  auto r1 = residual_comparison(t, U);
 
   EXPECT_LT(r0.DistanceTo(r1.GetData()), 1.0e-14);
 }
@@ -316,9 +318,12 @@ TEST(qoi, partial_boundary)
   Domain top_boundary = Domain::ofBoundaryElements(*mesh, on_top);
 
   qoi.AddBoundaryIntegral(
-      Dimension<dim - 1>{}, DependsOn</*nothing*/>{}, [=](auto /*position*/) { return 1.0; }, top_boundary);
+      Dimension<dim - 1>{}, DependsOn</*nothing*/>{}, [=](double /*t*/, auto /*position*/) { return 1.0; },
+      top_boundary);
 
-  auto area = qoi(U);
+  double time = 0.0;
+
+  auto area = qoi(time, U);
 
   EXPECT_NEAR(area, 8.0, 1.0e-14);
 }
@@ -349,9 +354,10 @@ TEST(qoi, partial_domain)
   Domain left    = Domain::ofElements(*mesh, on_left);
 
   qoi.AddDomainIntegral(
-      Dimension<dim>{}, DependsOn</*nothing*/>{}, [=](auto /*position*/) { return 1.0; }, left);
+      Dimension<dim>{}, DependsOn</*nothing*/>{}, [=](double /*t*/, auto /*position*/) { return 1.0; }, left);
 
-  auto volume = qoi(U);
+  double time   = 0.0;
+  auto   volume = qoi(time, U);
 
   EXPECT_NEAR(volume, 4.0, 1.0e-14);
 }
