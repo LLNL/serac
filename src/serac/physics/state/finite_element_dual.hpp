@@ -28,6 +28,7 @@ namespace serac {
 class FiniteElementDual : public FiniteElementVector {
 public:
   using FiniteElementVector::FiniteElementVector;
+  using FiniteElementVector::operator=;
   using mfem::Vector::Print;
 
   /**
@@ -35,25 +36,22 @@ public:
    *
    * @param[in] rhs The input Dual used for construction
    */
-  FiniteElementDual(const FiniteElementDual& rhs) : FiniteElementVector(rhs) {}
+  FiniteElementDual(const FiniteElementDual& rhs) : FiniteElementVector(rhs)
+  {
+    if (rhs.linear_form_) {
+      linearForm();
+      *linear_form_ = *rhs.linear_form_;
+    }
+  }
 
   /**
    * @brief Move construct a new Finite Element Dual object
    *
    * @param[in] rhs The input vector used for construction
    */
-  FiniteElementDual(FiniteElementDual&& rhs) : FiniteElementVector(std::move(rhs)) {}
-
-  /**
-   * @brief Copy assignment
-   *
-   * @param rhs The right hand side input Dual
-   * @return The assigned FiniteElementDual
-   */
-  FiniteElementDual& operator=(const FiniteElementDual& rhs)
+  FiniteElementDual(FiniteElementDual&& rhs) : FiniteElementVector(rhs)
   {
-    FiniteElementVector::operator=(rhs);
-    return *this;
+    this->linear_form_ = std::move(rhs.linear_form_);
   }
 
   /**
@@ -64,47 +62,23 @@ public:
    */
   FiniteElementDual& operator=(FiniteElementDual&& rhs)
   {
-    std::unique_ptr<mfem::ParLinearForm> lf(std::move(rhs.linear_form_));
-
-    FiniteElementVector::operator=(rhs);
-
-    this->linear_form_ = std::move(lf);
+    this->linear_form_ = std::move(rhs.linear_form_);
     return *this;
   }
 
   /**
-   * @brief Copy assignment with HypreParVector
-   *
-   * @param rhs The right hand side input HypreParVector
-   * @return The assigned FiniteElementDual
-   */
-  FiniteElementDual& operator=(const mfem::HypreParVector& rhs)
-  {
-    FiniteElementVector::operator=(rhs);
-    return *this;
-  }
-
-  /**
-   * @brief Copy assignment with mfem::Vector
+   * @brief Copy assignment
    *
    * @param rhs The right hand side input Dual
    * @return The assigned FiniteElementDual
    */
-  FiniteElementDual& operator=(const mfem::Vector& rhs)
+  FiniteElementDual& operator=(const FiniteElementDual& rhs)
   {
     FiniteElementVector::operator=(rhs);
-    return *this;
-  }
-
-  /**
-   * @brief Copy assignment with double
-   *
-   * @param rhs The right hand side input double
-   * @return The assigned FiniteElementDual
-   */
-  FiniteElementDual& operator=(double rhs)
-  {
-    FiniteElementVector::operator=(rhs);
+    if (rhs.linear_form_) {
+      linearForm();
+      *linear_form_ = *rhs.linear_form_;
+    }
     return *this;
   }
 
