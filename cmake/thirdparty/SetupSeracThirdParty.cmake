@@ -396,11 +396,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
 
         if (STRUMPACK_DIR)
-            if(TARGET axom::sidre)
-                target_link_libraries(axom::sidre PUBLIC STRUMPACK::strumpack)
-            else()
-                target_link_libraries(sidre PUBLIC STRUMPACK::strumpack)
-            endif()
+            target_link_libraries(sidre PUBLIC STRUMPACK::strumpack)
         endif()
 
         if(NOT TARGET axom)
