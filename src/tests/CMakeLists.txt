@@ -13,12 +13,12 @@ set(language_tests
     mfem_array_std_algo.cpp)
 
 serac_add_tests( SOURCES ${language_tests}
-                 DEPENDS_ON gtest mfem mpi)
+                 DEPENDS_ON gtest mfem blt::mpi)
 
 if(ENABLE_CUDA)
     blt_add_library( NAME       cuda_smoketest_kernel
                      SOURCES    cuda_smoketest_kernel.cpp 
-                     DEPENDS_ON cuda)
+                     DEPENDS_ON blt::cuda)
 
     serac_add_tests( SOURCES    cuda_smoketest.cpp
                      DEPENDS_ON cuda_smoketest_kernel gtest)
