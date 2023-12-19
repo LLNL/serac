@@ -75,6 +75,8 @@
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/infrastructure/profiling.hpp"
 
+#include "serac/numerics/functional/shape_aware_functional.hpp"
+
 #include "serac/numerics/functional/tests/check_gradient.hpp"
 
 #include "serac/infrastructure/debug_print.hpp"
