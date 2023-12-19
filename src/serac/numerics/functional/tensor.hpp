@@ -111,6 +111,12 @@ tensor(const T (&data)[n1]) -> tensor<T, n1>;
 template <typename T, int n1, int n2>
 tensor(const T (&data)[n1][n2]) -> tensor<T, n1, n2>;
 
+using vec2 = tensor<double, 2>;  ///< statically sized vector of 2 doubles
+using vec3 = tensor<double, 3>;  ///< statically sized vector of 3 doubles
+
+using mat2 = tensor<double, 2, 2>;  ///< statically sized 2x2 matrix of doubles
+using mat3 = tensor<double, 3, 3>;  ///< statically sized 3x3 matrix of doubles
+
 /**
  * @brief A sentinel struct for eliding no-op tensor operations
  */
@@ -1219,6 +1225,48 @@ SERAC_HOST_DEVICE constexpr auto det(const tensor<T, 3, 3>& A)
 }
 
 /**
+ * @brief computes det(A + I) - 1, where precision is not lost when the entries A_{ij} << 1
+ *
+ * detApIm1(A) = det(A + I) - 1
+ * When the entries of A are small compared to unity, computing
+ * det(A + I) - 1 directly will suffer from catastrophic cancellation.
+ *
+ * @param A Input matrix
+ * @return det(A + I) - 1, where I is the identity matrix
+ */
+template <typename T>
+SERAC_HOST_DEVICE constexpr auto detApIm1(const tensor<T, 2, 2>& A)
+{
+  // From the Cayley-Hamilton theorem, we get that for any N by N matrix A,
+  // det(A - I) - 1 = I1(A) + I2(A) + ... + IN(A),
+  // where the In are the principal invariants of A.
+  // We inline the definitions of the principal invariants to increase computational speed.
+
+  // equivalent to tr(A) + det(A)
+  return A(0, 0) - A(0, 1) * A(1, 0) + A(1, 1) + A(0, 0) * A(1, 1);
+}
+
+/// @overload
+template <typename T>
+SERAC_HOST_DEVICE constexpr auto detApIm1(const tensor<T, 3, 3>& A)
+{
+  // For notes on the implementation, see the 2x2 version.
+
+  // clang-format off
+  // equivalent to tr(A) + I2(A) + det(A)
+  return A(0, 0) + A(1, 1) + A(2, 2) 
+       - A(0, 1) * A(1, 0) * (1 + A(2, 2))
+       + A(0, 0) * A(1, 1) * (1 + A(2, 2))
+       - A(0, 2) * A(2, 0) * (1 + A(1, 1))
+       - A(1, 2) * A(2, 1) * (1 + A(0, 0))
+       + A(0, 0) * A(2, 2)
+       + A(1, 1) * A(2, 2)
+       + A(0, 1) * A(1, 2) * A(2, 0)
+       + A(0, 2) * A(1, 0) * A(2, 1);
+  // clang-format on
+}
+
+/**
  * @brief compute the matrix square root of a square, real-valued, symmetric matrix
  *        i.e. given A, find B such that A = dot(B, B)
  *
@@ -1266,7 +1314,7 @@ auto matrix_sqrt(const tensor<T, dim, dim>& A)
  * @param B the right operand
  */
 template <int i1, int i2, typename S, int m, int... n, typename T, int p, int q>
-auto contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B)
+SERAC_HOST_DEVICE auto contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B)
 {
   constexpr int Adims[] = {m, n...};
   constexpr int Bdims[] = {p, q};
@@ -1324,7 +1372,7 @@ auto contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B)
 
 /// @overload
 template <int i1, int i2, typename T>
-auto contract(const zero&, const T&)
+SERAC_HOST_DEVICE auto contract(const zero&, const T&)
 {
   return zero{};
 }

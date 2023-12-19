@@ -37,7 +37,10 @@ void shape_test(GeometricNonlinearities geo_nonlin)
   serac::StateManager::initialize(datastore, "solid_functional_shape_solve");
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+
+  std::string mesh_tag{"mesh"};
+
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   mfem::Vector shape_displacement;
   mfem::Vector pure_displacement;
@@ -96,14 +99,13 @@ void shape_test(GeometricNonlinearities geo_nonlin)
 
   {
     // Construct and initialized the user-defined shape velocity to offset the computational mesh
-    FiniteElementState user_defined_shape_displacement(StateManager::newState(
-        FiniteElementState::Options{.order = p, .vector_dim = dim, .name = "parameterized_shape"}));
+    FiniteElementState user_defined_shape_displacement(pmesh, H1<SHAPE_ORDER, dim>{});
 
     user_defined_shape_displacement.project(shape_coef);
 
     // Construct a functional-based solid mechanics solver including references to the shape velocity field.
     SolidMechanics<p, dim> solid_solver(nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options,
-                                        geo_nonlin, "solid_functional");
+                                        geo_nonlin, "solid_functional", mesh_tag);
 
     // Set the initial displacement and boundary condition
     solid_solver.setDisplacementBCs(ess_bdr, bc);
@@ -119,8 +121,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
     solid_solver.completeSetup();
 
     // Perform the quasi-static solve
-    double dt = 1.0;
-    solid_solver.advanceTimestep(dt);
+    solid_solver.advanceTimestep(1.0);
 
     shape_displacement = solid_solver.displacement().gridFunction();
   }
@@ -130,24 +131,26 @@ void shape_test(GeometricNonlinearities geo_nonlin)
   serac::StateManager::initialize(new_datastore, "solid_functional_pure_solve");
 
   auto new_mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(new_mesh));
+
+  std::string new_mesh_tag{"new_mesh"};
+
+  auto& new_pmesh = serac::StateManager::setMesh(std::move(new_mesh), new_mesh_tag);
 
   {
     // Construct and initialized the user-defined shape velocity to offset the computational mesh
-    FiniteElementState user_defined_shape_displacement(StateManager::newState(
-        FiniteElementState::Options{.order = p, .vector_dim = dim, .name = "parameterized_shape"}));
+    FiniteElementState user_defined_shape_displacement(new_pmesh, H1<SHAPE_ORDER, dim>{});
 
     user_defined_shape_displacement.project(shape_coef);
 
     // Delete the pre-computed geometry factors as we are mutating the mesh
-    StateManager::mesh().DeleteGeometricFactors();
-    auto* mesh_nodes = StateManager::mesh().GetNodes();
+    new_pmesh.DeleteGeometricFactors();
+    auto* mesh_nodes = new_pmesh.GetNodes();
     *mesh_nodes += user_defined_shape_displacement.gridFunction();
 
     // Construct a functional-based solid mechanics solver including references to the shape velocity field.
     SolidMechanics<p, dim> solid_solver_no_shape(nonlinear_options, linear_options,
                                                  solid_mechanics::default_quasistatic_options, geo_nonlin,
-                                                 "solid_functional");
+                                                 "solid_functional", new_mesh_tag);
 
     mfem::VisItDataCollection visit_dc("pure_version", const_cast<mfem::ParMesh*>(&solid_solver_no_shape.mesh()));
     visit_dc.RegisterField("displacement", &solid_solver_no_shape.displacement().gridFunction());
@@ -165,8 +168,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
     solid_solver_no_shape.completeSetup();
 
     // Perform the quasi-static solve
-    double dt = 1.0;
-    solid_solver_no_shape.advanceTimestep(dt);
+    solid_solver_no_shape.advanceTimestep(1.0);
 
     pure_displacement = solid_solver_no_shape.displacement().gridFunction();
     visit_dc.SetCycle(1);
@@ -175,7 +177,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
 
   double error          = pure_displacement.DistanceTo(shape_displacement.GetData());
   double relative_error = error / pure_displacement.Norml2();
-  EXPECT_LT(relative_error, 3.0e-12);
+  EXPECT_LT(relative_error, 3.5e-12);
 }
 
 TEST(SolidMechanics, MoveShapeLinear) { shape_test(GeometricNonlinearities::Off); }

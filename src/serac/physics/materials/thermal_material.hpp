@@ -65,6 +65,63 @@ private:
   double conductivity_;
 };
 
+/// Nonlinear isotropic thermal conduction material model
+struct IsotropicConductorWithLinearConductivityVsTemperature {
+  /**
+   * @brief Construct a Isotropic Conductor with Conductivity linear with Temparture object
+   *
+   * @param density Density of the material (mass/volume)
+   * @param specific_heat_capacity Specific heat capacity of the material (energy / (mass * temp))
+   * @param reference_conductivity Reference thermal conductivity of the material at temp = 0 (power / (length * temp))
+   * @param d_conductivity_d_temperature Slope for the thermal conductivity as a function of temperature
+   */
+  IsotropicConductorWithLinearConductivityVsTemperature(double density = 1.0, double specific_heat_capacity = 1.0,
+                                                        double reference_conductivity       = 1.0,
+                                                        double d_conductivity_d_temperature = 0.0)
+      : density_(density),
+        specific_heat_capacity_(specific_heat_capacity),
+        reference_conductivity_(reference_conductivity),
+        d_conductivity_d_temperature_(d_conductivity_d_temperature)
+  {
+    SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the linear isotropic conductor material model.");
+    SLIC_ERROR_ROOT_IF(specific_heat_capacity_ < 0.0,
+                       "Specific heat capacity must be positive in the linear isotropic conductor material model.");
+  }
+
+  /**
+   * @brief Material response call for a linear isotropic material with linear conductivity vs temperature
+   *
+   * @tparam T1 Spatial position type
+   * @tparam T2 Temperature type
+   * @tparam T3 Temperature gradient type
+   * @param[in] temperature
+   * @param[in] temperature_gradient
+   * @return The calculated material response (tuple of volumetric heat capacity and thermal flux)
+   */
+  template <typename T1, typename T2, typename T3>
+  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& temperature, const T3& temperature_gradient) const
+  {
+    const auto currentConductivity = reference_conductivity_ + d_conductivity_d_temperature_ * temperature;
+    SLIC_ERROR_ROOT_IF(
+        serac::get_value(currentConductivity) < 0.0,
+        "Conductivity in the IsotropicConductorWithLinearConductivityVsTemperature model has gone negative.");
+    return serac::tuple{density_ * specific_heat_capacity_, -1.0 * currentConductivity * temperature_gradient};
+  }
+
+private:
+  /// Density
+  double density_;
+
+  /// Specific heat capacity
+  double specific_heat_capacity_;
+
+  /// Reference isotropic thermal conductivity
+  double reference_conductivity_;
+
+  /// Slope of nonlinear thermal conductivity dependence on temperature
+  double d_conductivity_d_temperature_;
+};
+
 /**
  * @brief Linear anisotropic thermal material model
  *

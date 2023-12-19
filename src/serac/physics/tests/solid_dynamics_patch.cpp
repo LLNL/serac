@@ -299,14 +299,17 @@ double solution_error(solution_type exact_solution, PatchBoundaryCondition bc)
       break;
   }
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename));
-  serac::StateManager::setMesh(std::move(mesh));
+
+  std::string mesh_tag{"mesh"};
+
+  serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // Construct a functional-based solid mechanics solver
   serac::NonlinearSolverOptions nonlin_opts{.relative_tol = 1.0e-13, .absolute_tol = 1.0e-13};
 
   SolidMechanics<p, dim> solid(nonlin_opts, serac::solid_mechanics::default_linear_options,
                                TimesteppingOptions{TimestepMethod::Newmark, DirichletEnforcementMethod::DirectControl},
-                               GeometricNonlinearities::On, "solid_dynamics");
+                               GeometricNonlinearities::On, "solid_dynamics", mesh_tag);
 
   solid_mechanics::NeoHookean mat{.density = 1.0, .K = 1.0, .G = 1.0};
   solid.setMaterial(mat);
@@ -323,12 +326,11 @@ double solution_error(solution_type exact_solution, PatchBoundaryCondition bc)
   solid.completeSetup();
 
   // Integrate in time
-  double dt = 1.0;
   for (int i = 0; i < 3; i++) {
-    solid.advanceTimestep(dt);
+    solid.advanceTimestep(1.0);
 
     // Output solution for debugging
-    // solid.outputState("paraview_output");
+    // solid.outputStateToDisk("paraview_output");
     // std::cout << "cycle " << i << std::endl;
     // std::cout << "time = " << solid.time() << std::endl;
     // std::cout << "displacement =\n";

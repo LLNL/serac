@@ -96,7 +96,7 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [&](auto position, auto temperature) {
+      [&](double /*t*/, auto position, auto temperature) {
         auto [X, dX_dxi] = position;
         auto [u, unused] = temperature;
 
@@ -111,9 +111,10 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   mfem::Vector r1(U.Size());
   J->Mult(U, r1);
   r1 += (*F);
-  mfem::Vector r2 = residual(U);
+  double       t  = 0.0;
+  mfem::Vector r2 = residual(t, U);
 
-  check_gradient(residual, U);
+  check_gradient(residual, t, U);
 
   mfem::Vector diff(r1.Size());
   subtract(r1, r2, diff);
@@ -176,7 +177,7 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
-      [&](auto position, auto temperature) {
+      [&](double /*t*/, auto position, auto temperature) {
         auto [X, dX_dxi] = position;
         auto [u, unused] = temperature;
 
@@ -190,7 +191,8 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
   mfem::Vector r1(U.Size());
   J->Mult(U, r1);
   r1 += (*F);
-  mfem::Vector r2 = residual(U);
+  double       t  = 0.0;
+  mfem::Vector r2 = residual(t, U);
 
   mfem::Vector diff(r1.Size());
   subtract(r1, r2, diff);

@@ -178,7 +178,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         #### Store Data that MFEM clears
         set(tpls_to_save AMGX AXOM CALIPER CAMP CONDUIT HDF5
                          HYPRE LUA METIS MFEM NETCDF PARMETIS PETSC RAJA 
-                         SUPERLU_DIST SUNDIALS TRIBOL UMPIRE)
+                         SUPERLU_DIST STRUMPACK SUNDIALS TRIBOL UMPIRE)
         foreach(_tpl ${tpls_to_save})
             set(${_tpl}_DIR_SAVE "${${_tpl}_DIR}")
         endforeach()
@@ -220,6 +220,15 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             # MFEM uses a slightly different naming convention
             set(SuperLUDist_DIR ${SUPERLUDIST_DIR} CACHE PATH "")
             set(MFEM_USE_SUPERLU ${ENABLE_MPI} CACHE BOOL "")
+        endif()
+        if(STRUMPACK_DIR)
+            serac_assert_is_directory(VARIABLE_NAME STRUMPACK_DIR)
+            set(MFEM_USE_STRUMPACK ON CACHE BOOL "")
+            find_package(strumpack CONFIG PATHS ${STRUMPACK_DIR}/lib/cmake/STRUMPACK)
+            set(STRUMPACK_REQUIRED_PACKAGES "MPI" "MPI_Fortran" "ParMETIS" "METIS"
+                "ScaLAPACK" CACHE STRING
+                "Additional packages required by STRUMPACK.")
+            set(STRUMPACK_TARGET_NAMES STRUMPACK::strumpack CACHE STRING "")
         endif()
         set(MFEM_USE_UMPIRE OFF CACHE BOOL "")
         set(MFEM_USE_ZLIB ON CACHE BOOL "")
@@ -264,17 +273,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
  
         set(MFEM_FOUND TRUE CACHE BOOL "" FORCE)
-
-        # Temporary hack to inject the hdf5_hl after netcdf and before hdf5
-        # This should go away when mfem fixes their FindNetCDF.cmake
-        get_target_property(_mfem_libraries mfem INTERFACE_LINK_LIBRARIES)
-        list(FIND _mfem_libraries ${NETCDF_DIR}/lib/libnetcdf.a _index)
-        math(EXPR _index "${_index} + 1")
-        list(INSERT _mfem_libraries ${_index} ${HDF5_C_LIBRARY_hdf5_hl})
-        set_property(TARGET mfem PROPERTY
-                              INTERFACE_LINK_LIBRARIES ${_mfem_libraries})
-        set_property(TARGET mfem PROPERTY
-                              LINK_LIBRARIES ${_mfem_libraries})
 
         # Patch the mfem target with the correct include directories
         get_target_property(_mfem_includes mfem INCLUDE_DIRECTORIES)
@@ -354,7 +352,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
 
     else()
-
+        set(ENABLE_FORTRAN OFF CACHE BOOL "" FORCE)
         # Otherwise we use the submodule
         message(STATUS "Using Axom submodule")
         if(NOT LUA_DIR)
@@ -381,80 +379,103 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
         set(AXOM_FOUND TRUE CACHE BOOL "" FORCE)
 
-        # Alias axom builtin thirdparty targets under axom namespace
-        if(NOT TARGET axom::fmt)
-            add_library(axom::fmt ALIAS fmt)
-        endif()
-        if(NOT TARGET axom::cli11)
-            add_library(axom::cli11 ALIAS cli11)
+        if (STRUMPACK_DIR)
+            target_link_libraries(sidre PUBLIC STRUMPACK::strumpack)
         endif()
 
-        if(NOT TARGET axom)
-            # New axom target case where all components have individual libraries
+        # Alias Axom's builtin thirdparty targets under axom namespace
+        foreach(_comp ${AXOM_COMPONENTS_ENABLED};cli11;fmt)
+            add_library(axom::${_comp} ALIAS ${_comp})
+        endforeach()
 
-            # Create convenience target that bundles all Axom targets (axom)
-            # This normally happens in axom's installed config file
-            add_library(axom INTERFACE IMPORTED)
+        # Create convenience target that bundles all Axom targets (axom)
+        # This normally happens in axom's installed config file
+        add_library(axom INTERFACE IMPORTED)
+        target_link_libraries(axom INTERFACE ${AXOM_COMPONENTS_ENABLED})
 
-            set(AXOM_COMPONENTS_ENABLED
-              core;lumberjack;slic;slam;primal;sidre;mint;spin;inlet;klee;quest;multimat)
-            target_link_libraries(axom INTERFACE ${AXOM_COMPONENTS_ENABLED})
-
-            if(ENABLE_OPENMP)
-                target_link_libraries(axom INTERFACE openmp)
-            endif()
-
-            # Mark the axom includes as "system" and filter unallowed directories
-            get_target_property(_dirs core INTERFACE_INCLUDE_DIRECTORIES)
-            set_property(TARGET core 
-                         PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-                         "${_dirs}")
-            set_property(TARGET core 
-                         APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                         "${_dirs}")
-        else()
-            # Old axom way where there is a singular combined axom library
-
-            # Mark the axom includes as "system" and filter unallowed directories
-            get_target_property(_dirs axom INTERFACE_INCLUDE_DIRECTORIES)
-            list(REMOVE_ITEM _dirs ${PROJECT_SOURCE_DIR})
-            set_property(TARGET axom 
-                         PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-                         "${_dirs}")
-            set_property(TARGET axom 
-                         APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                         "${_dirs}")
+        if(ENABLE_OPENMP)
+            target_link_libraries(core INTERFACE openmp)
         endif()
+
+        blt_convert_to_system_includes(TARGET core)
+
+        set(ENABLE_FORTRAN ON CACHE BOOL "" FORCE)
     endif()
 
     #------------------------------------------------------------------------------
     # Tribol
     #------------------------------------------------------------------------------
-    if(TRIBOL_DIR)
-        serac_assert_is_directory(VARIABLE_NAME TRIBOL_DIR)
+    if (NOT SERAC_ENABLE_CODEVELOP)
+        if(TRIBOL_DIR)
+            serac_assert_is_directory(VARIABLE_NAME TRIBOL_DIR)
 
-        find_package(tribol REQUIRED
-                            NO_DEFAULT_PATH 
-                            PATHS ${TRIBOL_DIR}/lib/cmake)
+            find_package(tribol REQUIRED
+                                NO_DEFAULT_PATH 
+                                PATHS ${TRIBOL_DIR}/lib/cmake)
 
-        if(TARGET tribol)
-            message(STATUS "Tribol CMake exported library loaded: tribol")
+            if(TARGET tribol)
+                message(STATUS "Tribol CMake exported library loaded: tribol")
+            else()
+                message(FATAL_ERROR "Could not load Tribol CMake exported library: tribol")
+            endif()
+
+            # Set include dir to system
+            set(TRIBOL_INCLUDE_DIR ${TRIBOL_DIR}/include)
+            set_property(TARGET tribol
+                        APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                        ${TRIBOL_INCLUDE_DIR})
+            set(TRIBOL_FOUND ON)
         else()
-            message(FATAL_ERROR "Could not load Tribol CMake exported library: tribol")
+            set(TRIBOL_FOUND OFF)
         endif()
-
-        # Set include dir to system
-        set(TRIBOL_INCLUDE_DIR ${TRIBOL_DIR}/include)
-        set_property(TARGET tribol
-                     APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                     ${TRIBOL_INCLUDE_DIR})
-
-        set(TRIBOL_FOUND ON)
+        
+        message(STATUS "Tribol support is " ${TRIBOL_FOUND})
     else()
-        set(TRIBOL_FOUND OFF)
+        set(ENABLE_FORTRAN OFF CACHE BOOL "" FORCE)
+        # Otherwise we use the submodule
+        message(STATUS "Using Tribol submodule")
+        set(BUILD_REDECOMP ${ENABLE_MPI} CACHE BOOL "")
+        set(TRIBOL_USE_MPI ${ENABLE_MPI} CACHE BOOL "")
+        set(TRIBOL_ENABLE_TESTS OFF CACHE BOOL "")
+        set(TRIBOL_ENABLE_EXAMPLES OFF CACHE BOOL "")
+        set(TRIBOL_ENABLE_DOCS OFF CACHE BOOL "")
+        if(${PROJECT_NAME} STREQUAL "smith")
+            include(serac/tribol/cmake/TribolMacros.cmake)
+            add_subdirectory(${PROJECT_SOURCE_DIR}/serac/tribol/src  ${CMAKE_BINARY_DIR}/tribol)
+            # NOTE: This needs to be removed when Tribol PR #45 is merged and serac is updated
+            tribol_configure_file(${PROJECT_SOURCE_DIR}/serac/tribol/src/tribol/config.hpp.in
+                                  ${PROJECT_BINARY_DIR}/serac/tribol/include/tribol/config.hpp)
+        else()
+            include(tribol/cmake/TribolMacros.cmake)
+            add_subdirectory(${PROJECT_SOURCE_DIR}/tribol/src ${CMAKE_BINARY_DIR}/tribol)
+            # NOTE: This needs to be removed when Tribol PR #45 is merged and serac is updated
+            tribol_configure_file(${PROJECT_SOURCE_DIR}/tribol/src/tribol/config.hpp.in
+                                  ${PROJECT_BINARY_DIR}/tribol/include/tribol/config.hpp)
+        endif()
+        
+        target_include_directories(redecomp PUBLIC
+            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/tribol/src>
+        )
+
+        target_include_directories(tribol PUBLIC
+            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/tribol/src>
+            $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/tribol/include>
+            $<INSTALL_INTERFACE:include>
+        ) 
+        
+        set(tribol_depends mfem)
+        blt_list_append(TO tribol_depends ELEMENTS mpi IF ENABLE_MPI)
+        install(TARGETS              ${tribol_depends}
+                EXPORT               tribol-targets
+                DESTINATION          lib
+        )
+        
+        set(tribol_exported_targets tribol)
+        blt_list_append(TO tribol_exported_targets ELEMENTS redecomp IF BUILD_REDECOMP)
+        
+        set(TRIBOL_FOUND TRUE CACHE BOOL "" FORCE)
+        set(ENABLE_FORTRAN ON CACHE BOOL "" FORCE)
     endif()
-    
-    message(STATUS "Tribol support is " ${TRIBOL_FOUND})
 
     #------------------------------------------------------------------------------
     # PETSC
@@ -512,13 +533,15 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #---------------------------------------------------------------------------
     set(_imported_targets
         axom
+        axom::mfem
         conduit
         conduit::conduit_mpi
         conduit::conduit
         conduit_relay_mpi
         conduit_relay_mpi_io
         conduit_blueprint
-        conduit_blueprint_mpi)
+        conduit_blueprint_mpi
+        tribol::mfem)
 
     foreach(_target ${_imported_targets})
         if(TARGET ${_target})

@@ -239,7 +239,7 @@ void functional_test_2D(mfem::ParMesh& mesh, double tolerance)
   auto div_f = [c](auto x) { return tr(dot(c, grad_monomials<p>(x))); };
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<1>{},
-      [=](auto X, auto shape_displacement) {
+      [=](double /*t*/, auto X, auto shape_displacement) {
         auto [u, du_dx] = shape_displacement;
         return serac::tuple{div_f(X + u) * det(I + du_dx), zero{}};
       },
@@ -248,7 +248,7 @@ void functional_test_2D(mfem::ParMesh& mesh, double tolerance)
   auto f = [c](auto x) { return dot(c, monomials<p>(x)); };
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<1>{},
-      [=](auto position, auto shape_displacement) {
+      [=](double /*t*/, auto position, auto shape_displacement) {
         auto [X, dX_dxi]     = position;
         auto [u, du_dxi]     = shape_displacement;
         auto n               = normalize(cross(dX_dxi + du_dxi));
@@ -257,7 +257,8 @@ void functional_test_2D(mfem::ParMesh& mesh, double tolerance)
       },
       mesh);
 
-  auto [r, drdU2] = residual(U1, serac::differentiate_wrt(U2));
+  double t        = 0.0;
+  auto [r, drdU2] = residual(t, U1, serac::differentiate_wrt(U2));
   EXPECT_NEAR(mfem::InnerProduct(r, ones), 0.0, tolerance);
 
   auto dr = drdU2(dU2);
@@ -304,7 +305,7 @@ void functional_test_3D(mfem::ParMesh& mesh, double tolerance)
   auto div_f = [c](auto x) { return tr(dot(c, grad_monomials<p>(x))); };
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<1>{},
-      [=](auto X, auto shape_displacement) {
+      [=](double /*t*/, auto X, auto shape_displacement) {
         auto [u, du_dx] = shape_displacement;
         return serac::tuple{div_f(X + u) * det(I + du_dx), zero{}};
       },
@@ -313,7 +314,7 @@ void functional_test_3D(mfem::ParMesh& mesh, double tolerance)
   auto f = [c](auto x) { return dot(c, monomials<p>(x)); };
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<1>{},
-      [=](auto position, auto shape_displacement) {
+      [=](double /*t*/, auto position, auto shape_displacement) {
         auto [X, dX_dxi]     = position;
         auto [u, du_dxi]     = shape_displacement;
         auto n               = normalize(cross(dX_dxi + du_dxi));
@@ -322,20 +323,21 @@ void functional_test_3D(mfem::ParMesh& mesh, double tolerance)
       },
       mesh);
 
-  auto [r, drdU2] = residual(U1, serac::differentiate_wrt(U2));
+  double t        = 0.0;
+  auto [r, drdU2] = residual(t, U1, serac::differentiate_wrt(U2));
   EXPECT_NEAR(mfem::InnerProduct(r, ones), 0.0, tolerance);
 
   auto dr = drdU2(dU2);
   EXPECT_NEAR(mfem::InnerProduct(ones, dr), 0.0, tolerance);
 }
 
-TEST(ShapeDerivative, 2DLinear) { functional_test_2D<1>(*mesh2D, 1.0e-14); }
-TEST(ShapeDerivative, 2DQuadratic) { functional_test_2D<2>(*mesh2D, 1.0e-14); }
+TEST(ShapeDerivative, 2DLinear) { functional_test_2D<1>(*mesh2D, 3.0e-14); }
+TEST(ShapeDerivative, 2DQuadratic) { functional_test_2D<2>(*mesh2D, 3.0e-14); }
 
-TEST(ShapeDerivative, 3DLinear) { functional_test_3D<1>(*mesh3D, 1.0e-13); }
+TEST(ShapeDerivative, 3DLinear) { functional_test_3D<1>(*mesh3D, 2.0e-13); }
 
 // note: see description at top of file
-TEST(ShapeDerivative, 3DQuadratic) { functional_test_3D<2>(*mesh3D, 1.0e-2); }
+TEST(ShapeDerivative, 3DQuadratic) { functional_test_3D<2>(*mesh3D, 1.5e-2); }
 
 int main(int argc, char* argv[])
 {

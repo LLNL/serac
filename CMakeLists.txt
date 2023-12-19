@@ -43,6 +43,10 @@ if(NOT DEFINED SERAC_SOURCE_DIR)
 endif()
 message(STATUS "Serac Source Dir: ${SERAC_SOURCE_DIR}")
 
+if(SERAC_ENABLE_CODEVELOP)
+    set(ENABLE_FORTRAN ON CACHE BOOL "")
+endif()
+
 #------------------------------------------------------------------------------
 # Setup BLT
 #------------------------------------------------------------------------------
@@ -186,7 +190,7 @@ if (SERAC_ENABLE_CODEVELOP)
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/axom/src>
     )
 
-    install(TARGETS              mfem ${axom_exported_targets}
+    install(TARGETS              mfem ${axom_exported_targets} ${tribol_exported_targets}
             EXPORT               serac-targets
             DESTINATION          lib
             )

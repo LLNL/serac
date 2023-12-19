@@ -81,93 +81,115 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet)
  * @param[in] solid_mechanics_options Optional container of input options for SolidMechanics physics module
  * @param[in] heat_transfer_options   Optional container of input options for HeatTransfer physics module
  * @param[in] thermomechanics_options Optional container of input options for Thermomechanics physics module
+ * @param[in] mesh_tag The mesh tag to construct the physics class on
+ * @param[in] cycle The simulation timestep cycle to start the physics module at
+ * @param[in] t The simulation time to start the physics module at
  *
  * @return Base class instance of the created physics class
  */
 std::unique_ptr<serac::BasePhysics> createPhysics(
     int dim, int order, std::optional<serac::SolidMechanicsInputOptions> solid_mechanics_options,
     std::optional<serac::HeatTransferInputOptions>    heat_transfer_options,
-    std::optional<serac::ThermomechanicsInputOptions> thermomechanics_options)
+    std::optional<serac::ThermomechanicsInputOptions> thermomechanics_options, std::string mesh_tag, int cycle,
+    double t)
 {
   std::unique_ptr<serac::BasePhysics> main_physics;
   if (thermomechanics_options) {
     if (order == 1) {
       if (dim == 2) {
-        main_physics = std::make_unique<serac::Thermomechanics<1, 2>>(*thermomechanics_options);
+        main_physics =
+            std::make_unique<serac::Thermomechanics<1, 2>>(*thermomechanics_options, "serac", mesh_tag, cycle, t);
       } else if (dim == 3) {
-        main_physics = std::make_unique<serac::Thermomechanics<1, 3>>(*thermomechanics_options);
+        main_physics =
+            std::make_unique<serac::Thermomechanics<1, 3>>(*thermomechanics_options, "serac", mesh_tag, cycle, t);
       }
     } else if (order == 2) {
       if (dim == 2) {
-        main_physics = std::make_unique<serac::Thermomechanics<2, 2>>(*thermomechanics_options);
+        main_physics =
+            std::make_unique<serac::Thermomechanics<2, 2>>(*thermomechanics_options, "serac", mesh_tag, cycle, t);
       } else if (dim == 3) {
-        main_physics = std::make_unique<serac::Thermomechanics<2, 3>>(*thermomechanics_options);
+        main_physics =
+            std::make_unique<serac::Thermomechanics<2, 3>>(*thermomechanics_options, "serac", mesh_tag, cycle, t);
       }
     } else if (order == 3) {
       if (dim == 2) {
-        main_physics = std::make_unique<serac::Thermomechanics<3, 2>>(*thermomechanics_options);
+        main_physics =
+            std::make_unique<serac::Thermomechanics<3, 2>>(*thermomechanics_options, "serac", mesh_tag, cycle, t);
       } else if (dim == 3) {
-        main_physics = std::make_unique<serac::Thermomechanics<3, 3>>(*thermomechanics_options);
+        main_physics =
+            std::make_unique<serac::Thermomechanics<3, 3>>(*thermomechanics_options, "serac", mesh_tag, cycle, t);
       }
     }
   } else if (solid_mechanics_options && heat_transfer_options) {
     if (order == 1) {
       if (dim == 2) {
-        main_physics = std::make_unique<serac::Thermomechanics<1, 2>>(*heat_transfer_options, *solid_mechanics_options);
+        main_physics = std::make_unique<serac::Thermomechanics<1, 2>>(*heat_transfer_options, *solid_mechanics_options,
+                                                                      "serac", mesh_tag, cycle, t);
       } else if (dim == 3) {
-        main_physics = std::make_unique<serac::Thermomechanics<1, 3>>(*heat_transfer_options, *solid_mechanics_options);
+        main_physics = std::make_unique<serac::Thermomechanics<1, 3>>(*heat_transfer_options, *solid_mechanics_options,
+                                                                      "serac", mesh_tag, cycle, t);
       }
     } else if (order == 2) {
       if (dim == 2) {
-        main_physics = std::make_unique<serac::Thermomechanics<2, 2>>(*heat_transfer_options, *solid_mechanics_options);
+        main_physics = std::make_unique<serac::Thermomechanics<2, 2>>(*heat_transfer_options, *solid_mechanics_options,
+                                                                      "serac", mesh_tag, cycle, t);
       } else if (dim == 3) {
-        main_physics = std::make_unique<serac::Thermomechanics<2, 3>>(*heat_transfer_options, *solid_mechanics_options);
+        main_physics = std::make_unique<serac::Thermomechanics<2, 3>>(*heat_transfer_options, *solid_mechanics_options,
+                                                                      "serac", mesh_tag, cycle, t);
       }
     } else if (order == 3) {
       if (dim == 2) {
-        main_physics = std::make_unique<serac::Thermomechanics<3, 2>>(*heat_transfer_options, *solid_mechanics_options);
+        main_physics = std::make_unique<serac::Thermomechanics<3, 2>>(*heat_transfer_options, *solid_mechanics_options,
+                                                                      "serac", mesh_tag, cycle, t);
       } else if (dim == 3) {
-        main_physics = std::make_unique<serac::Thermomechanics<3, 3>>(*heat_transfer_options, *solid_mechanics_options);
+        main_physics = std::make_unique<serac::Thermomechanics<3, 3>>(*heat_transfer_options, *solid_mechanics_options,
+                                                                      "serac", mesh_tag, cycle, t);
       }
     }
   } else if (solid_mechanics_options) {
     if (order == 1) {
       if (dim == 2) {
-        main_physics = std::make_unique<serac::SolidMechanics<1, 2>>(*solid_mechanics_options);
+        main_physics =
+            std::make_unique<serac::SolidMechanics<1, 2>>(*solid_mechanics_options, "serac", mesh_tag, cycle, t);
       } else if (dim == 3) {
-        main_physics = std::make_unique<serac::SolidMechanics<1, 3>>(*solid_mechanics_options);
+        main_physics =
+            std::make_unique<serac::SolidMechanics<1, 3>>(*solid_mechanics_options, "serac", mesh_tag, cycle, t);
       }
     } else if (order == 2) {
       if (dim == 2) {
-        main_physics = std::make_unique<serac::SolidMechanics<2, 2>>(*solid_mechanics_options);
+        main_physics =
+            std::make_unique<serac::SolidMechanics<2, 2>>(*solid_mechanics_options, "serac", mesh_tag, cycle, t);
       } else if (dim == 3) {
-        main_physics = std::make_unique<serac::SolidMechanics<2, 3>>(*solid_mechanics_options);
+        main_physics =
+            std::make_unique<serac::SolidMechanics<2, 3>>(*solid_mechanics_options, "serac", mesh_tag, cycle, t);
       }
     } else if (order == 3) {
       if (dim == 2) {
-        main_physics = std::make_unique<serac::SolidMechanics<3, 2>>(*solid_mechanics_options);
+        main_physics =
+            std::make_unique<serac::SolidMechanics<3, 2>>(*solid_mechanics_options, "serac", mesh_tag, cycle, t);
       } else if (dim == 3) {
-        main_physics = std::make_unique<serac::SolidMechanics<3, 3>>(*solid_mechanics_options);
+        main_physics =
+            std::make_unique<serac::SolidMechanics<3, 3>>(*solid_mechanics_options, "serac", mesh_tag, cycle, t);
       }
     }
   } else if (heat_transfer_options) {
     if (order == 1) {
       if (dim == 2) {
-        main_physics = std::make_unique<serac::HeatTransfer<1, 2>>(*heat_transfer_options);
+        main_physics = std::make_unique<serac::HeatTransfer<1, 2>>(*heat_transfer_options, "serac", mesh_tag, cycle, t);
       } else if (dim == 3) {
-        main_physics = std::make_unique<serac::HeatTransfer<1, 3>>(*heat_transfer_options);
+        main_physics = std::make_unique<serac::HeatTransfer<1, 3>>(*heat_transfer_options, "serac", mesh_tag, cycle, t);
       }
     } else if (order == 2) {
       if (dim == 2) {
-        main_physics = std::make_unique<serac::HeatTransfer<2, 2>>(*heat_transfer_options);
+        main_physics = std::make_unique<serac::HeatTransfer<2, 2>>(*heat_transfer_options, "serac", mesh_tag, cycle, t);
       } else if (dim == 3) {
-        main_physics = std::make_unique<serac::HeatTransfer<2, 3>>(*heat_transfer_options);
+        main_physics = std::make_unique<serac::HeatTransfer<2, 3>>(*heat_transfer_options, "serac", mesh_tag, cycle, t);
       }
     } else if (order == 3) {
       if (dim == 2) {
-        main_physics = std::make_unique<serac::HeatTransfer<3, 2>>(*heat_transfer_options);
+        main_physics = std::make_unique<serac::HeatTransfer<3, 2>>(*heat_transfer_options, "serac", mesh_tag, cycle, t);
       } else if (dim == 3) {
-        main_physics = std::make_unique<serac::HeatTransfer<3, 3>>(*heat_transfer_options);
+        main_physics = std::make_unique<serac::HeatTransfer<3, 3>>(*heat_transfer_options, "serac", mesh_tag, cycle, t);
       }
     }
   } else {
@@ -310,7 +332,9 @@ input file functionality.
   double t       = 0;
   double t_final = inlet["t_final"];
   double dt      = inlet["dt"];
-  int    cycle   = 1;
+  int    cycle   = 0;
+
+  std::string mesh_tag{"mesh}"};
 
   // Not restarting, so we need to create the mesh and register it with the StateManager
   if (!restart_cycle) {
@@ -321,10 +345,10 @@ input file functionality.
           serac::input::findMeshFilePath(file_opts->relative_mesh_file_name, input_file_path);
     }
     auto mesh = serac::mesh::buildParallelMesh(mesh_options);
-    serac::StateManager::setMesh(std::move(mesh));
+    serac::StateManager::setMesh(std::move(mesh), mesh_tag);
   } else {
     // If restart_cycle is non-empty, then this is a restart run and the data will be loaded here
-    t     = serac::StateManager::load(*restart_cycle);
+    t     = serac::StateManager::load(*restart_cycle, mesh_tag);
     cycle = *restart_cycle;
   }
 
@@ -345,21 +369,17 @@ input file functionality.
   }
 
   // Get dimension and order of problem
-  int dim = serac::StateManager::mesh().Dimension();
+  int dim = serac::StateManager::mesh(mesh_tag).Dimension();
   SLIC_ERROR_ROOT_IF(dim < 2 || dim > 3,
                      axom::fmt::format("Invalid mesh dimension '{0}' provided. Valid values are 2 or 3.", dim));
   int order = getOrder(solid_mechanics_options, heat_transfer_options, thermomechanics_options);
 
   // Create the physics object
-  auto main_physics =
-      createPhysics(dim, order, solid_mechanics_options, heat_transfer_options, thermomechanics_options);
+  auto main_physics = createPhysics(dim, order, solid_mechanics_options, heat_transfer_options, thermomechanics_options,
+                                    mesh_tag, cycle, t);
 
   // Complete the solver setup
   main_physics->completeSetup();
-
-  // Update physics time and cycle
-  main_physics->setTime(t);
-  main_physics->setCycle(cycle);
 
   main_physics->initializeSummary(datastore, t_final, dt);
 
@@ -382,7 +402,7 @@ input file functionality.
     main_physics->advanceTimestep(dt_real);
 
     // Output a visualization file
-    main_physics->outputState(paraview_output_dir);
+    main_physics->outputStateToDisk(paraview_output_dir);
 
     // Save curve data to Sidre datastore to be output later
     main_physics->saveSummary(datastore, t);

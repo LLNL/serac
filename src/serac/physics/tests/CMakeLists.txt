@@ -14,6 +14,7 @@ set(serial_solver_tests
     solid_finite_diff.cpp
     solid_statics_patch.cpp
     solid_dynamics_patch.cpp
+    dynamic_solid_adjoint.cpp
     )
 
 serac_add_tests( SOURCES ${serial_solver_tests}
@@ -31,7 +32,9 @@ set(solver_tests
     solid_robin_condition.cpp
     thermal_shape.cpp
     thermal_mechanics.cpp
+    dynamic_thermal_adjoint.cpp
     )
+blt_list_append(TO solver_tests ELEMENTS contact_patch.cpp contact_beam.cpp IF TRIBOL_FOUND)
 
 serac_add_tests( SOURCES ${solver_tests}
                  DEPENDS_ON ${test_dependencies}

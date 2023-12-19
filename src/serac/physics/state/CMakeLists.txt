@@ -17,7 +17,7 @@ set(state_sources
     state_manager.cpp
     )
 
-set(state_depends serac_infrastructure)
+set(state_depends serac_infrastructure serac_functional)
 
 blt_add_library(
     NAME        serac_state
