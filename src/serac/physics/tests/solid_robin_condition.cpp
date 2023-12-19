@@ -39,8 +39,10 @@ void functional_solid_test_robin_condition()
   // Construct the appropriate dimension mesh and give it to the data store
   std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
 
+  std::string mesh_tag{"mesh"};
+
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-  serac::StateManager::setMesh(std::move(mesh));
+  serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // _solver_params_start
   serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
@@ -49,33 +51,35 @@ void functional_solid_test_robin_condition()
                                                   .max_iterations = 5000,
                                                   .print_level    = 1};
 
-  SolidMechanics<p, dim> solid_solver(nonlinear_options, solid_mechanics::default_linear_options, solid_mechanics::default_quasistatic_options,
-                                      GeometricNonlinearities::Off, "solid_mechanics");
+  SolidMechanics<p, dim> solid_solver(nonlinear_options, solid_mechanics::default_linear_options,
+                                      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::Off,
+                                      "solid_mechanics", mesh_tag);
   // _solver_params_end
 
   solid_mechanics::LinearIsotropic mat{
-    1.0, // mass density
-    1.0, // bulk modulus
-    1.0  // shear modulus
+      1.0,  // mass density
+      1.0,  // bulk modulus
+      1.0   // shear modulus
   };
 
   solid_solver.setMaterial(mat);
 
-  // prescribe zero displacement in the y- and z-directions 
+  // prescribe zero displacement in the y- and z-directions
   // at the supported end of the beam,
-  std::set<int> support           = {1};
-  auto          zero = [](const mfem::Vector&) -> double { return 0.0; };
-  int y_direction = 1;
-  int z_direction = 2;
+  std::set<int> support     = {1};
+  auto          zero        = [](const mfem::Vector&) -> double { return 0.0; };
+  int           y_direction = 1;
+  int           z_direction = 2;
   solid_solver.setDisplacementBCs(support, zero, y_direction);
   solid_solver.setDisplacementBCs(support, zero, z_direction);
 
-  solid_solver.addCustomBoundaryIntegral(DependsOn<>{}, [](auto position,  auto displacement, auto /*acceleration*/, auto /*shape*/){
-    auto [X, dX_dxi] = position;
-    auto [u, du_dxi] = displacement;
-    auto f = u * 3.0 * (X[0] < 0.01);
-    return f; // define a displacement-proportional traction at the support
-  });
+  solid_solver.addCustomBoundaryIntegral(
+      DependsOn<>{}, [](double /* t */, auto position, auto displacement, auto /*acceleration*/, auto /*shape*/) {
+        auto [X, dX_dxi] = position;
+        auto [u, du_dxi] = displacement;
+        auto f           = u * 3.0 * (X[0] < 0.01);
+        return f;  // define a displacement-proportional traction at the support
+      });
 
   // apply an axial displacement at the the tip of the beam
   auto translated_in_x = [](const mfem::Vector&, double t, mfem::Vector& u) -> void {
@@ -91,7 +95,7 @@ void functional_solid_test_robin_condition()
   // Finalize the data structures
   solid_solver.completeSetup();
 
-  solid_solver.outputState("robin_condition");
+  solid_solver.outputStateToDisk("robin_condition");
 
   // Perform the quasi-static solve
   int    num_steps = 1;
@@ -99,9 +103,8 @@ void functional_solid_test_robin_condition()
   double dt        = tmax / num_steps;
   for (int i = 0; i < num_steps; i++) {
     solid_solver.advanceTimestep(dt);
-    solid_solver.outputState("robin_condition");
+    solid_solver.outputStateToDisk("robin_condition");
   }
-
 }
 
 TEST(SolidMechanics, robin_condition) { functional_solid_test_robin_condition(); }

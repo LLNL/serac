@@ -659,8 +659,8 @@ public:
   template <int... active_parameters, typename callable, typename StateType = Nothing>
   void addCustomBoundaryIntegral(DependsOn<active_parameters...>, callable qfunction)
   {
-    residual_->AddBoundaryIntegral(Dimension<dim-1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
-                                 qfunction, mesh_);
+    residual_->AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
+                                   qfunction, mesh_);
   }
 
   /**
