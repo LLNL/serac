@@ -328,12 +328,14 @@ void ContactData::updateDofOffsets() const
   offsets_up_to_date_ = true;
 }
 
+}  // namespace serac
+
 #else
 
 namespace serac {
 
 ContactData::ContactData([[maybe_unused]] const mfem::ParMesh& mesh)
-    : have_lagrange_multipliers_{false}, num_pressure_true_dofs_{0}
+    : have_lagrange_multipliers_{false}, num_pressure_dofs_{0}
 {
 }
 
@@ -347,8 +349,6 @@ void ContactData::addContactInteraction([[maybe_unused]] int                  in
   SLIC_WARNING_ROOT("Serac built without Tribol support. No contact interaction will be added.");
 }
 
-bool ContactData::haveContactInteractions() const { return false; }
-
 void ContactData::update([[maybe_unused]] int cycle, [[maybe_unused]] double time, [[maybe_unused]] double& dt) {}
 
 FiniteElementDual ContactData::forces() const
@@ -358,9 +358,9 @@ FiniteElementDual ContactData::forces() const
   return f;
 }
 
-mfem::Vector ContactData::mergedPressures() const { return mfem::Vector(); }
+mfem::HypreParVector ContactData::mergedPressures() const { return mfem::HypreParVector(); }
 
-mfem::Vector ContactData::mergedGaps() const { return mfem::Vector(); }
+mfem::HypreParVector ContactData::mergedGaps([[maybe_unused]] bool zero_inactive) const { return mfem::HypreParVector(); }
 
 std::unique_ptr<mfem::BlockOperator> ContactData::mergedJacobian() const
 {
@@ -369,30 +369,33 @@ std::unique_ptr<mfem::BlockOperator> ContactData::mergedJacobian() const
   return std::make_unique<mfem::BlockOperator>(jacobian_offsets_);
 }
 
-std::function<void(const mfem::Vector&, mfem::Vector&)> ContactData::residualFunction(
-    std::function<void(const mfem::Vector&, mfem::Vector&)> orig_r)
+void ContactData::residualFunction([[maybe_unused]] const mfem::Vector& u, [[maybe_unused]] mfem::Vector& r)
 {
-  return orig_r;
 }
 
-std::function<std::unique_ptr<mfem::BlockOperator>(const mfem::Vector&)> ContactData::jacobianFunction(
-    std::function<std::unique_ptr<mfem::HypreParMatrix>(const mfem::Vector&)> orig_J) const
+std::unique_ptr<mfem::BlockOperator> ContactData::jacobianFunction(const mfem::Vector&   u,
+                                                                   mfem::HypreParMatrix* orig_J) const
 {
-  return [orig_J](const mfem::Vector& u) -> std::unique_ptr<mfem::BlockOperator> {
-    auto J = orig_J(u);
+  // u_const should not change in this method; const cast is to create vector views which are used to compute the
+  // (non-contact) Jacobian
+  auto&              u_const = const_cast<mfem::Vector&>(u);
+  const mfem::Vector u_blk(u_const, 0, reference_nodes_->ParFESpace()->GetTrueVSize());
 
-    auto J_contact         = std::make_unique<mfem::BlockOperator>(jacobian_offsets_);
-    J_contact->owns_blocks = true;
-    J_contact->SetBlock(0, 0, J.release());
+  auto J_contact = mergedJacobian();
+  if (J_contact->IsZeroBlock(0, 0)) {
+    J_contact->SetBlock(0, 0, orig_J);
+  } else {
+    J_contact->SetBlock(0, 0,
+                        mfem::Add(1.0, *orig_J, 1.0, static_cast<mfem::HypreParMatrix&>(J_contact->GetBlock(0, 0))));
+  }
 
-    return J_contact;
-  };
+  return J_contact;
 }
 
 void ContactData::setPressures([[maybe_unused]] const mfem::Vector& true_pressures) const {}
 
 void ContactData::setDisplacements([[maybe_unused]] const mfem::Vector& true_displacement) {}
 
-#endif
-
 }  // namespace serac
+
+#endif

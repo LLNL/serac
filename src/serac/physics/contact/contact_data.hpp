@@ -156,6 +156,7 @@ public:
    */
   void setDisplacements(const mfem::Vector& u);
 
+#ifdef SERAC_USE_TRIBOL
   /**
    * @brief Have there been contact interactions added?
    *
@@ -163,6 +164,14 @@ public:
    * @return false if there are no contact interactions
    */
   bool haveContactInteractions() const { return !interactions_.empty(); }
+#else
+  /**
+   * @brief Have there been contact interactions added?
+   *
+   * @return false
+   */
+  bool haveContactInteractions() const { return false; }
+#endif
 
   /**
    * @brief Are any contact interactions enforced using Lagrange multipliers?
