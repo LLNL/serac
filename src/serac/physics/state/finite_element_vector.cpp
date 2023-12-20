@@ -50,6 +50,12 @@ FiniteElementVector& FiniteElementVector::operator=(const mfem::HypreParVector& 
   return *this;
 }
 
+FiniteElementVector& FiniteElementVector::operator=(const mfem::Vector& rhs)
+{
+  Vector::operator=(rhs);
+  return *this;
+}
+
 FiniteElementVector& FiniteElementVector::operator=(const FiniteElementVector& rhs)
 {
   SLIC_ERROR_IF(Size() != rhs.Size(),
