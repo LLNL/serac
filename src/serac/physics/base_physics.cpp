@@ -57,16 +57,17 @@ int BasePhysics::minCycle() const { return min_cycle_; }
 
 std::vector<double> BasePhysics::timesteps() const { return timesteps_; }
 
-void BasePhysics::initializeBaseStates(int cycle, double time) {
+void BasePhysics::initializeBaseStates(int cycle, double time)
+{
   printf("clearing base states\n");
   timesteps_.clear();
 
-  time_ = time;
-  max_time_ = time;
-  min_time_ = time;
-  cycle_ = cycle;
-  max_cycle_ = cycle;
-  min_cycle_ = cycle;
+  time_           = time;
+  max_time_       = time;
+  min_time_       = time;
+  cycle_          = cycle;
+  max_cycle_      = cycle;
+  min_cycle_      = cycle;
   ode_time_point_ = time;
 
   *shape_displacement_sensitivity_ = 0.0;

@@ -59,7 +59,7 @@ void computeStepAdjointLoad(const FiniteElementState& displacement, FiniteElemen
   d_qoi_d_displacement *= dt;
 }
 
-void applyInitialAndBoundaryConditions(SolidMechanics<p,dim>& solid_solver)
+void applyInitialAndBoundaryConditions(SolidMechanics<p, dim>& solid_solver)
 {
   FiniteElementState velo = solid_solver.velocity();
   velo                    = initialInteriorVelo;
@@ -81,7 +81,6 @@ void applyInitialAndBoundaryConditions(SolidMechanics<p,dim>& solid_solver)
 
   solid_solver.setDisplacement(disp);
 }
-
 
 std::unique_ptr<SolidMechanics<p, dim>> createNonlinearSolidMechanicsSolver(
     axom::sidre::DataStore& /*data_store*/, const NonlinearSolverOptions& nonlinear_opts,
@@ -277,8 +276,7 @@ TEST_F(SolidMechanicsSensitivityFixture, InitialVelocitySensitivities)
   fillDirection(derivative_direction);
   solid_solver->zeroEssentials(derivative_direction);
 
-  double qoi_plus =
-      computeSolidMechanicsQoiAdjustingInitialVelocity(*solid_solver, tsInfo, derivative_direction, eps);
+  double qoi_plus = computeSolidMechanicsQoiAdjustingInitialVelocity(*solid_solver, tsInfo, derivative_direction, eps);
   double directional_deriv = innerProduct(derivative_direction, init_velo_sensitivity);
   EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, 16 * eps);
 }

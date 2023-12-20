@@ -375,9 +375,9 @@ public:
   mfem::ParMesh& mesh() { return mesh_; }
 
 protected:
-
   /**
-   * @brief Protected, non-virtual method to reset physics states to zero.  This does not reset design parameters or shape.
+   * @brief Protected, non-virtual method to reset physics states to zero.  This does not reset design parameters or
+   * shape.
    *
    * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param[in] time The simulation time to initialize the physics module to

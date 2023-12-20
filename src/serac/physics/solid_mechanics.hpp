@@ -340,7 +340,6 @@ public:
   /// @brief Destroy the SolidMechanics Functional object
   virtual ~SolidMechanics() {}
 
-
   /**
    * @brief Non virtual method to reset thermal states to zero.  This does not reset design parameters or shape.
    *
@@ -352,10 +351,10 @@ public:
     c0_ = 0.0;
     c1_ = 0.0;
 
-    displacement_              = 0.0;
-    velocity_                  = 0.0;
-    acceleration_              = 0.0;
-    
+    displacement_ = 0.0;
+    velocity_     = 0.0;
+    acceleration_ = 0.0;
+
     adjoint_displacement_      = 0.0;
     displacement_adjoint_load_ = 0.0;
     velocity_adjoint_load_     = 0.0;
@@ -368,10 +367,10 @@ public:
 
     printf("resetting reactionings\n");
 
-    u_ = 0.0;
-    v_ = 0.0;
-    du_ = 0.0;
-    dr_ = 0.0;
+    u_                      = 0.0;
+    v_                      = 0.0;
+    du_                     = 0.0;
+    dr_                     = 0.0;
     predicted_displacement_ = 0.0;
   }
 

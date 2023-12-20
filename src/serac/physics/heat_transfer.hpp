@@ -207,7 +207,6 @@ public:
     initializeThermalStates();
   }
 
-
   /**
    * @brief Construct a new Nonlinear HeatTransfer Solver object
    *
@@ -290,7 +289,7 @@ public:
     BasePhysics::initializeBaseStates(cycle, time);
     initializeThermalStates();
   }
-  
+
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
    *
