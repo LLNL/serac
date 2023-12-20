@@ -12,8 +12,11 @@
 #ifdef SERAC_USE_TRIBOL
 #include "tribol/interface/tribol.hpp"
 #include "tribol/interface/mfem_tribol.hpp"
+#endif
 
 namespace serac {
+
+#ifdef SERAC_USE_TRIBOL
 
 ContactData::ContactData(const mfem::ParMesh& mesh)
     : mesh_{mesh},
@@ -328,11 +331,7 @@ void ContactData::updateDofOffsets() const
   offsets_up_to_date_ = true;
 }
 
-}  // namespace serac
-
 #else
-
-namespace serac {
 
 ContactData::ContactData([[maybe_unused]] const mfem::ParMesh& mesh)
     : have_lagrange_multipliers_{false}, num_pressure_dofs_{0}
@@ -397,6 +396,6 @@ void ContactData::setPressures([[maybe_unused]] const mfem::Vector& true_pressur
 
 void ContactData::setDisplacements([[maybe_unused]] const mfem::Vector& true_displacement) {}
 
-}  // namespace serac
-
 #endif
+
+}  // namespace serac
