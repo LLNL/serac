@@ -8,7 +8,7 @@ dt      = 1.0
 main_mesh = {
     type = "file",
     -- mesh file
-    mesh = "../../../meshes/star_with_2_bdr_attributes.mesh",
+    mesh = "../../../meshes/star.mesh",
     -- serial and parallel refinement levels
     ser_ref_levels = 1,
     par_ref_levels = 1,
@@ -19,7 +19,7 @@ temp_func = function (v)
 end
 
 -- Solver parameters
-thermal_conduction = {
+heat_transfer = {
     equation_solver = {
         linear = {
             type = "iterative",
@@ -54,8 +54,10 @@ thermal_conduction = {
             scalar_function = temp_func
         },
         ['temperature_2'] = {
-            attrs = {2},
-            scalar_function = temp_func
+            attrs = {1},
+            scalar_function = function (v)
+                return 2 * temp_func(v)
+            end
         },
     },
 }

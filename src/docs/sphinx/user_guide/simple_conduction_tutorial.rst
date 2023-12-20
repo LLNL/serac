@@ -8,18 +8,18 @@ Simple Heat Transfer Tutorial
 #############################
 
 This tutorial provides an introduction to running simulations with Serac and demonstrates
-the setup of a simple steady-state thermal conduction problem.
+the setup of a simple steady-state heat transfer problem.
 
 The full source code for this tutorial is available in ``examples/simple_conduction/without_input_file.cpp``, which demonstrates C++ configuration
 of a heat transfer physics module.
 
-The thermal conduction modeled in this section is based on the formulation discussed in :ref:`conduction-theory-label`.
+The heat transfer modeled in this section is based on the formulation discussed in :ref:`conduction-theory-label`.
 
 Setting Up Includes and Initializing
 ------------------------------------
 
 The most important parts of Serac are its physics modules, each of which corresponds to a particular discretization
-of a partial differential equation (e.g., continuous Galerkin finite element method for thermal conduction).
+of a partial differential equation (e.g., continuous Galerkin finite element method for heat transfer).
 In this example, we are building a heat transfer simulation, so we include Serac's ``HeatTransfer`` module and
 thermal material models:
 
@@ -89,7 +89,7 @@ Constructing the Physics Module
 When using the C++ API, the ``HeatTransfer`` constructor requires the polynomial order of the elements and the dimension
 of the mesh at compile time, i.e. they are template parameters. We also need to pass the options for solving the nonlinear 
 system of equations and ordinary differential equations arising from the discretization. In this example, we use the default
-static thermal conduction options.
+static heat transfer options.
 
 Configuring Material Conductivity
 ---------------------------------

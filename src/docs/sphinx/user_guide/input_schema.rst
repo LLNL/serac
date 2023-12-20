@@ -563,10 +563,10 @@ Description: Iterative solver parameters
      - |uncheck|
 
 ------------------
-thermal_conduction
+heat_transfer
 ------------------
 
-Description: Thermal conduction module
+Description: Heat transfer module
 
 .. list-table:: Fields
    :widths: 25 25 25 25 25
@@ -841,7 +841,7 @@ Description: The constant vector to use as the coefficient
 source
 ------
 
-Description: Scalar source term (RHS of the thermal conduction PDE)
+Description: Scalar source term (RHS of the heat transfer PDE)
 
 .. list-table:: Fields
    :widths: 25 25 25 25 25
@@ -914,10 +914,10 @@ Description: The constant vector to use as the coefficient
      - |uncheck|
 
 ------------------
-thermal_conduction
+heat_transfer
 ------------------
 
-Description: Thermal conduction module
+Description: Heat transfer module
 
 .. list-table:: Fields
    :widths: 25 25 25 25 25
@@ -1289,7 +1289,7 @@ Description: Parameters for mass matrix inversion
 source
 ------
 
-Description: Scalar source term (RHS of the thermal conduction PDE)
+Description: Scalar source term (RHS of the heat transfer PDE)
 
 .. list-table:: Fields
    :widths: 25 25 25 25 25

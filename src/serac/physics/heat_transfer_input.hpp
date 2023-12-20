@@ -8,7 +8,7 @@
  * @file heat_transfer_input.hpp
  *
  * @brief An object containing all input file options for the solver for
- *  a thermal conduction PDE
+ *  a heat transfer PDE
  */
 
 #pragma once
