@@ -444,25 +444,33 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             add_subdirectory(${PROJECT_SOURCE_DIR}/serac/tribol/src  ${CMAKE_BINARY_DIR}/tribol)
             # NOTE: This needs to be removed when Tribol PR #45 is merged and serac is updated
             tribol_configure_file(${PROJECT_SOURCE_DIR}/serac/tribol/src/tribol/config.hpp.in
-                                  ${PROJECT_BINARY_DIR}/serac/tribol/include/tribol/config.hpp)
+                                  ${PROJECT_BINARY_DIR}/tribol/include/tribol/config.hpp)
+
+            target_include_directories(redecomp PUBLIC
+                $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/serac/tribol/src>
+            )
+            target_include_directories(tribol PUBLIC
+                $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/serac/tribol/src>
+                $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/tribol/include>
+                $<INSTALL_INTERFACE:include>
+            )
         else()
             include(tribol/cmake/TribolMacros.cmake)
             add_subdirectory(${PROJECT_SOURCE_DIR}/tribol/src ${CMAKE_BINARY_DIR}/tribol)
             # NOTE: This needs to be removed when Tribol PR #45 is merged and serac is updated
             tribol_configure_file(${PROJECT_SOURCE_DIR}/tribol/src/tribol/config.hpp.in
                                   ${PROJECT_BINARY_DIR}/tribol/include/tribol/config.hpp)
-        endif()
-        
-        target_include_directories(redecomp PUBLIC
-            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/tribol/src>
-        )
 
-        target_include_directories(tribol PUBLIC
-            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/tribol/src>
-            $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/tribol/include>
-            $<INSTALL_INTERFACE:include>
-        ) 
-        
+            target_include_directories(redecomp PUBLIC
+                $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/tribol/src>
+            )
+            target_include_directories(tribol PUBLIC
+                $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/tribol/src>
+                $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/tribol/include>
+                $<INSTALL_INTERFACE:include>
+            ) 
+        endif()
+
         set(tribol_depends mfem)
         blt_list_append(TO tribol_depends ELEMENTS mpi IF ENABLE_MPI)
         install(TARGETS              ${tribol_depends}
