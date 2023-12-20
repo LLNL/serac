@@ -405,31 +405,85 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #------------------------------------------------------------------------------
     # Tribol
     #------------------------------------------------------------------------------
-    if(TRIBOL_DIR)
-        serac_assert_is_directory(VARIABLE_NAME TRIBOL_DIR)
+    if (NOT SERAC_ENABLE_CODEVELOP)
+        if(TRIBOL_DIR)
+            serac_assert_is_directory(VARIABLE_NAME TRIBOL_DIR)
 
-        find_package(tribol REQUIRED
-                            NO_DEFAULT_PATH 
-                            PATHS ${TRIBOL_DIR}/lib/cmake)
+            find_package(tribol REQUIRED
+                                NO_DEFAULT_PATH 
+                                PATHS ${TRIBOL_DIR}/lib/cmake)
 
-        if(TARGET tribol)
-            message(STATUS "Tribol CMake exported library loaded: tribol")
+            if(TARGET tribol)
+                message(STATUS "Tribol CMake exported library loaded: tribol")
+            else()
+                message(FATAL_ERROR "Could not load Tribol CMake exported library: tribol")
+            endif()
+
+            # Set include dir to system
+            set(TRIBOL_INCLUDE_DIR ${TRIBOL_DIR}/include)
+            set_property(TARGET tribol
+                        APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                        ${TRIBOL_INCLUDE_DIR})
+            set(TRIBOL_FOUND ON)
         else()
-            message(FATAL_ERROR "Could not load Tribol CMake exported library: tribol")
+            set(TRIBOL_FOUND OFF)
+        endif()
+        
+        message(STATUS "Tribol support is " ${TRIBOL_FOUND})
+    else()
+        set(ENABLE_FORTRAN OFF CACHE BOOL "" FORCE)
+        # Otherwise we use the submodule
+        message(STATUS "Using Tribol submodule")
+        set(BUILD_REDECOMP ${ENABLE_MPI} CACHE BOOL "")
+        set(TRIBOL_USE_MPI ${ENABLE_MPI} CACHE BOOL "")
+        set(TRIBOL_ENABLE_TESTS OFF CACHE BOOL "")
+        set(TRIBOL_ENABLE_EXAMPLES OFF CACHE BOOL "")
+        set(TRIBOL_ENABLE_DOCS OFF CACHE BOOL "")
+        if(${PROJECT_NAME} STREQUAL "smith")
+            include(serac/tribol/cmake/TribolMacros.cmake)
+            add_subdirectory(${PROJECT_SOURCE_DIR}/serac/tribol/src  ${CMAKE_BINARY_DIR}/tribol)
+            # NOTE: This needs to be removed when Tribol PR #45 is merged and serac is updated
+            tribol_configure_file(${PROJECT_SOURCE_DIR}/serac/tribol/src/tribol/config.hpp.in
+                                  ${PROJECT_BINARY_DIR}/tribol/include/tribol/config.hpp)
+
+            target_include_directories(redecomp PUBLIC
+                $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/serac/tribol/src>
+            )
+            target_include_directories(tribol PUBLIC
+                $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/serac/tribol/src>
+                $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/tribol/include>
+                $<INSTALL_INTERFACE:include>
+            )
+        else()
+            include(tribol/cmake/TribolMacros.cmake)
+            add_subdirectory(${PROJECT_SOURCE_DIR}/tribol/src ${CMAKE_BINARY_DIR}/tribol)
+            # NOTE: This needs to be removed when Tribol PR #45 is merged and serac is updated
+            tribol_configure_file(${PROJECT_SOURCE_DIR}/tribol/src/tribol/config.hpp.in
+                                  ${PROJECT_BINARY_DIR}/tribol/include/tribol/config.hpp)
+
+            target_include_directories(redecomp PUBLIC
+                $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/tribol/src>
+            )
+            target_include_directories(tribol PUBLIC
+                $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/tribol/src>
+                $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/tribol/include>
+                $<INSTALL_INTERFACE:include>
+            ) 
         endif()
 
-        # Set include dir to system
-        set(TRIBOL_INCLUDE_DIR ${TRIBOL_DIR}/include)
-        set_property(TARGET tribol
-                     APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                     ${TRIBOL_INCLUDE_DIR})
-
-        set(TRIBOL_FOUND ON)
-    else()
-        set(TRIBOL_FOUND OFF)
+        set(tribol_depends mfem)
+        blt_list_append(TO tribol_depends ELEMENTS mpi IF ENABLE_MPI)
+        install(TARGETS              ${tribol_depends}
+                EXPORT               tribol-targets
+                DESTINATION          lib
+        )
+        
+        set(tribol_exported_targets tribol)
+        blt_list_append(TO tribol_exported_targets ELEMENTS redecomp IF BUILD_REDECOMP)
+        
+        set(TRIBOL_FOUND TRUE CACHE BOOL "" FORCE)
+        set(ENABLE_FORTRAN ON CACHE BOOL "" FORCE)
     endif()
-    
-    message(STATUS "Tribol support is " ${TRIBOL_FOUND})
 
     #------------------------------------------------------------------------------
     # PETSC
