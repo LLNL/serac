@@ -24,9 +24,9 @@ Physics Module C++ Interface
 
 A fundamental data structure in Serac is `BasePhysics <../../doxygen/html/classserac_1_1BasePhysics.html>`_. Classes derived from ``BasePhysics`` are expected to encapsulate a specific partial differential equation and all of the state data and parameters associated with it. Currently, Serac contains the following physics modules:
 
-* `Solid mechanics <../../doxygen/html/classserac_1_1Solid.html>`_
+* `Solid mechanics <../../doxygen/html/classserac_1_1SolidMechanics.html>`_
 * `Heat transfer <../../doxygen/html/classserac_1_1HeatTransfer.html>`_
-* `Thermal solid mechanics <../../doxygen/html/classserac_1_1ThermalSolid.html>`_
+* `Thermal solid mechanics <../../doxygen/html/classserac_1_1Thermomechanics.html>`_
 
 If you would like to include Serac's simulation capabilities in your software project, these are the classes to include. To set up and use a physics module:
 
