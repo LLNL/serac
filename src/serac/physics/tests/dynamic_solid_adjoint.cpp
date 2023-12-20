@@ -59,6 +59,30 @@ void computeStepAdjointLoad(const FiniteElementState& displacement, FiniteElemen
   d_qoi_d_displacement *= dt;
 }
 
+void applyInitialAndBoundaryConditions(SolidMechanics<p,dim>& solid_solver)
+{
+  FiniteElementState velo = solid_solver.velocity();
+  velo                    = initialInteriorVelo;
+  solid_solver.zeroEssentials(velo);
+  solid_solver.setVelocity(velo);
+
+  FiniteElementState disp = solid_solver.displacement();
+  disp                    = initialInteriorDisp;
+  solid_solver.zeroEssentials(disp);
+
+  FiniteElementState bDisp1 = disp;
+  FiniteElementState bDisp2 = disp;
+  bDisp1                    = boundaryDisp;
+  bDisp2                    = boundaryDisp;
+  solid_solver.zeroEssentials(bDisp2);
+
+  disp += bDisp1;
+  disp -= bDisp2;
+
+  solid_solver.setDisplacement(disp);
+}
+
+
 std::unique_ptr<SolidMechanics<p, dim>> createNonlinearSolidMechanicsSolver(
     axom::sidre::DataStore& /*data_store*/, const NonlinearSolverOptions& nonlinear_opts,
     const TimesteppingOptions& dyn_opts, const SolidMaterial& mat)
@@ -77,25 +101,7 @@ std::unique_ptr<SolidMechanics<p, dim>> createNonlinearSolidMechanicsSolver(
   });
   solid->completeSetup();
 
-  FiniteElementState velo = solid->velocity();
-  velo                    = initialInteriorVelo;
-  solid->zeroEssentials(velo);
-  solid->setVelocity(velo);
-
-  FiniteElementState disp = solid->displacement();
-  disp                    = initialInteriorDisp;
-  solid->zeroEssentials(disp);
-
-  FiniteElementState bDisp1 = disp;
-  FiniteElementState bDisp2 = disp;
-  bDisp1                    = boundaryDisp;
-  bDisp2                    = boundaryDisp;
-  solid->zeroEssentials(bDisp2);
-
-  disp += bDisp1;
-  disp -= bDisp2;
-
-  solid->setDisplacement(disp);
+  applyInitialAndBoundaryConditions(*solid);
 
   return solid;
 }
@@ -106,6 +112,8 @@ double computeSolidMechanicsQoi(BasePhysics& solid_solver, const TimeSteppingInf
   solid_solver.advanceTimestep(dts(0));  // advance by 0.0 seconds to get initial acceleration
   solid_solver.outputStateToDisk();
   FiniteElementState dispForObjective = solid_solver.state("displacement");
+
+  std::cout << "initital disp norm = " << dispForObjective.Norml2() << std::endl;
 
   double qoi = computeStepQoi(dispForObjective, 0.5 * (dts(0) + dts(1)));
   for (int i = 1; i <= ts_info.numTimesteps(); ++i) {
@@ -247,6 +255,7 @@ TEST_F(SolidMechanicsSensitivityFixture, InitialDisplacementSensitivities)
   auto [qoi_base, init_disp_sensitivity, _, __] = computeSolidMechanicsQoiSensitivity(*solid_solver, tsInfo);
 
   solid_solver->initializeStates();
+  applyInitialAndBoundaryConditions(*solid_solver);
   FiniteElementState derivative_direction(solid_solver->displacement().space(), "derivative_direction");
   fillDirection(derivative_direction);
   solid_solver->zeroEssentials(derivative_direction);
@@ -263,6 +272,7 @@ TEST_F(SolidMechanicsSensitivityFixture, InitialVelocitySensitivities)
   auto [qoi_base, _, init_velo_sensitivity, __] = computeSolidMechanicsQoiSensitivity(*solid_solver, tsInfo);
 
   solid_solver->initializeStates();
+  applyInitialAndBoundaryConditions(*solid_solver);
   FiniteElementState derivative_direction(solid_solver->velocity().space(), "derivative_direction");
   fillDirection(derivative_direction);
   solid_solver->zeroEssentials(derivative_direction);
@@ -279,11 +289,12 @@ TEST_F(SolidMechanicsSensitivityFixture, ShapeSensitivities)
   auto [qoi_base, _, __, shape_sensitivity] = computeSolidMechanicsQoiSensitivity(*solid_solver, tsInfo);
 
   solid_solver->initializeStates();
+  applyInitialAndBoundaryConditions(*solid_solver);
   FiniteElementState derivative_direction(shape_sensitivity.space(), "derivative_direction");
   fillDirection(derivative_direction);
 
   auto solid_solver2 = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
-  double qoi_plus = computeSolidMechanicsQoiAdjustingShape(*solid_solver2, tsInfo, derivative_direction, eps);
+  double qoi_plus = computeSolidMechanicsQoiAdjustingShape(*solid_solver, tsInfo, derivative_direction, eps);
 
   double directional_deriv = innerProduct(derivative_direction, shape_sensitivity);
   EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, eps);
