@@ -199,21 +199,14 @@ public:
 
     nonlin_solver_->setOperator(residual_with_bcs_);
 
-    dt_          = 0.0;
-    previous_dt_ = -1.0;
-
     int true_size = temperature_.space().TrueVSize();
     u_.SetSize(true_size);
     u_predicted_.SetSize(true_size);
 
-    shape_displacement_                             = 0.0;
-    temperature_                                    = 0.0;
-    temperature_rate_                               = 0.0;
-    adjoint_temperature_                            = 0.0;
-    implicit_sensitivity_temperature_start_of_step_ = 0.0;
-    temperature_adjoint_load_                       = 0.0;
-    temperature_rate_adjoint_load_                  = 0.0;
+    shape_displacement_ = 0.0;
+    initializeThermalStates(cycle, time);
   }
+
 
   /**
    * @brief Construct a new Nonlinear HeatTransfer Solver object
@@ -266,6 +259,40 @@ public:
     }
   }
 
+  /**
+   * @brief Non virtual method to reset thermal states to zero.  This does not reset design parameters or shape.
+   *
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
+   */
+  void initializeThermalStates(int cycle, double time) override
+  {
+    dt_          = 0.0;
+    previous_dt_ = -1.0;
+
+    u_                                              = 0.0;
+    residual_                                       = 0.0;
+
+    temperature_                                    = 0.0;
+    temperature_rate_                               = 0.0;
+    adjoint_temperature_                            = 0.0;
+    implicit_sensitivity_temperature_start_of_step_ = 0.0;
+    temperature_adjoint_load_                       = 0.0;
+    temperature_rate_adjoint_load_                  = 0.0;
+  }
+
+  /**
+   * @brief Method to reset physics states to zero.  This does not reset design parameters or shape.
+   *
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
+   */
+  void initializeStates(int cycle = 0, double time = 0.0) override
+  {
+    BasePhysics::initializeBaseStates(cycle, time);
+    initializeThermalStates(cycle, time);
+  }
+  
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
    *
