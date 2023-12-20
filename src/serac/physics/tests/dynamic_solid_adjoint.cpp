@@ -112,8 +112,6 @@ double computeSolidMechanicsQoi(BasePhysics& solid_solver, const TimeSteppingInf
   solid_solver.outputStateToDisk();
   FiniteElementState dispForObjective = solid_solver.state("displacement");
 
-  std::cout << "initital disp norm = " << dispForObjective.Norml2() << std::endl;
-
   double qoi = computeStepQoi(dispForObjective, 0.5 * (dts(0) + dts(1)));
   for (int i = 1; i <= ts_info.numTimesteps(); ++i) {
     solid_solver.advanceTimestep(dts(i));
