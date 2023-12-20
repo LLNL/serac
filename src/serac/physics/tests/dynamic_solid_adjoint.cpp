@@ -293,11 +293,29 @@ TEST_F(SolidMechanicsSensitivityFixture, ShapeSensitivities)
   FiniteElementState derivative_direction(shape_sensitivity.space(), "derivative_direction");
   fillDirection(derivative_direction);
 
-  auto solid_solver2 = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
   double qoi_plus = computeSolidMechanicsQoiAdjustingShape(*solid_solver, tsInfo, derivative_direction, eps);
 
   double directional_deriv = innerProduct(derivative_direction, shape_sensitivity);
   EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, eps);
+}
+
+TEST_F(SolidMechanicsSensitivityFixture, WhenShapeSensitivitiesCalledTwice_GetSameObjectiveAndGradient)
+{
+  auto solid_solver = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
+  auto [qoi1, _, __, shape_sensitivity1] = computeSolidMechanicsQoiSensitivity(*solid_solver, tsInfo);
+
+  solid_solver->initializeStates();
+  applyInitialAndBoundaryConditions(*solid_solver);
+  FiniteElementState derivative_direction(shape_sensitivity1.space(), "derivative_direction");
+  fillDirection(derivative_direction);
+
+  auto [qoi2, ___, ____, shape_sensitivity2] = computeSolidMechanicsQoiSensitivity(*solid_solver, tsInfo);
+
+  EXPECT_EQ(qoi1, qoi2);
+
+  double directional_deriv1 = innerProduct(derivative_direction, shape_sensitivity1);
+  double directional_deriv2 = innerProduct(derivative_direction, shape_sensitivity2);
+  EXPECT_EQ(directional_deriv1, directional_deriv2);
 }
 
 }  // namespace serac
