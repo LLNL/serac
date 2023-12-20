@@ -365,8 +365,6 @@ public:
 
     reactions_ = 0.0;
 
-    printf("resetting reactionings\n");
-
     u_                      = 0.0;
     v_                      = 0.0;
     du_                     = 0.0;

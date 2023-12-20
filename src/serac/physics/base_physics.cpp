@@ -59,7 +59,6 @@ std::vector<double> BasePhysics::timesteps() const { return timesteps_; }
 
 void BasePhysics::initializeBaseStates(int cycle, double time)
 {
-  printf("clearing base states\n");
   timesteps_.clear();
 
   time_           = time;
