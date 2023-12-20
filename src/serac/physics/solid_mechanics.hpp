@@ -656,7 +656,27 @@ public:
     }
   }
 
-  template <int... active_parameters, typename callable, typename StateType = Nothing>
+  /**
+   * @brief register a custom boundary integral calculation as part of the residual
+   *
+   * @tparam active_parameters a list of indices, describing which parameters to pass to the q-function
+   * @param qfunction a callable that returns the traction on a boundary surface
+   *
+   * ~~~ {.cpp}
+   *
+   *  solid_mechanics.addCustomBoundaryIntegral(DependsOn<>{}, [](double t, auto position, auto displacement, auto
+   * acceleration, auto shape){ auto [X, dX_dxi] = position;
+   *
+   *     auto [u, du_dxi] = displacement;
+   *     auto f           = u * 3.0 (X[0] < 0.01);
+   *     return f;  // define a displacement-proportional traction at a given support
+   *  });
+   *
+   * ~~~
+   *
+   * @note This method must be called prior to completeSetup()
+   */
+  template <int... active_parameters, typename callable>
   void addCustomBoundaryIntegral(DependsOn<active_parameters...>, callable qfunction)
   {
     residual_->AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
