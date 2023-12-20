@@ -102,7 +102,6 @@ std::unique_ptr<SolidMechanics<p, dim>> createNonlinearSolidMechanicsSolver(
 
 double computeSolidMechanicsQoi(BasePhysics& solid_solver, const TimeSteppingInfo& ts_info)
 {
-  solid_solver.initializeStates();
   auto dts = ts_info.dts;
   solid_solver.advanceTimestep(dts(0));  // advance by 0.0 seconds to get initial acceleration
   solid_solver.outputStateToDisk();
@@ -264,12 +263,12 @@ TEST_F(SolidMechanicsSensitivityFixture, InitialVelocitySensitivities)
   auto [qoi_base, _, init_velo_sensitivity, __] = computeSolidMechanicsQoiSensitivity(*solid_solver, tsInfo);
 
   solid_solver->initializeStates();
-  FiniteElementState derivative_direction(solid_solver_base->velocity().space(), "derivative_direction");
+  FiniteElementState derivative_direction(solid_solver->velocity().space(), "derivative_direction");
   fillDirection(derivative_direction);
-  solid_solver_base->zeroEssentials(derivative_direction);
+  solid_solver->zeroEssentials(derivative_direction);
 
   double qoi_plus =
-      computeSolidMechanicsQoiAdjustingInitialVelocity(*solid_solver_base, tsInfo, derivative_direction, eps);
+      computeSolidMechanicsQoiAdjustingInitialVelocity(*solid_solver, tsInfo, derivative_direction, eps);
   double directional_deriv = innerProduct(derivative_direction, init_velo_sensitivity);
   EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, 16 * eps);
 }
@@ -283,7 +282,8 @@ TEST_F(SolidMechanicsSensitivityFixture, ShapeSensitivities)
   FiniteElementState derivative_direction(shape_sensitivity.space(), "derivative_direction");
   fillDirection(derivative_direction);
 
-  double qoi_plus = computeSolidMechanicsQoiAdjustingShape(*solid_solver, tsInfo, derivative_direction, eps);
+  auto solid_solver2 = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
+  double qoi_plus = computeSolidMechanicsQoiAdjustingShape(*solid_solver2, tsInfo, derivative_direction, eps);
 
   double directional_deriv = innerProduct(derivative_direction, shape_sensitivity);
   EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, eps);

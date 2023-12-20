@@ -58,6 +58,9 @@ int BasePhysics::minCycle() const { return min_cycle_; }
 std::vector<double> BasePhysics::timesteps() const { return timesteps_; }
 
 void BasePhysics::initializeBaseStates(int cycle, double time) {
+  printf("clearing base states\n");
+  timesteps_.clear();
+
   time_ = time;
   max_time_ = time;
   min_time_ = time;
@@ -66,7 +69,11 @@ void BasePhysics::initializeBaseStates(int cycle, double time) {
   min_cycle_ = cycle;
   ode_time_point_ = time;
 
-  shape_displacement_sensitivity_ = 0.0;
+  *shape_displacement_sensitivity_ = 0.0;
+
+  for (auto& p : parameters_) {
+    *p.sensitivity = 0.0;
+  }
 }
 
 void BasePhysics::setParameter(const size_t parameter_index, const FiniteElementState& parameter_state)

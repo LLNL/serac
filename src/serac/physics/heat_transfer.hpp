@@ -204,7 +204,7 @@ public:
     u_predicted_.SetSize(true_size);
 
     shape_displacement_ = 0.0;
-    initializeThermalStates(cycle, time);
+    initializeThermalStates();
   }
 
 
@@ -265,14 +265,12 @@ public:
    * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param[in] time The simulation time to initialize the physics module to
    */
-  void initializeThermalStates(int cycle, double time) override
+  void initializeThermalStates()
   {
     dt_          = 0.0;
     previous_dt_ = -1.0;
 
     u_                                              = 0.0;
-    residual_                                       = 0.0;
-
     temperature_                                    = 0.0;
     temperature_rate_                               = 0.0;
     adjoint_temperature_                            = 0.0;
@@ -290,7 +288,7 @@ public:
   void initializeStates(int cycle = 0, double time = 0.0) override
   {
     BasePhysics::initializeBaseStates(cycle, time);
-    initializeThermalStates(cycle, time);
+    initializeThermalStates();
   }
   
   /**

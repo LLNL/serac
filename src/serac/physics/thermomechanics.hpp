@@ -151,8 +151,8 @@ public:
   void initializeStates(int cycle = 0, double time = 0.0) override
   {
     BasePhysics::initializeBaseStates(cycle, time);
-    thermal_.initializeHeatTransferStates(cycle, time);
-    solid_.initializeSolidMechanicsStates(cycle, time);
+    thermal_.initializeStates(cycle, time);
+    solid_.initializeStates(cycle, time);
   }
 
   /**

@@ -244,8 +244,8 @@ public:
     dr_.SetSize(true_size);
     predicted_displacement_.SetSize(true_size);
 
-    initializeSolidMechanicsStates(cycle, time);
-
+    shape_displacement_ = 0.0;
+    initializeSolidMechanicsStates();
   }
 
   /**
@@ -347,7 +347,7 @@ public:
    * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param[in] time The simulation time to initialize the physics module to
    */
-  void initializeSolidMechanicsStates(int cycle, double time) override
+  void initializeSolidMechanicsStates()
   {
     c0_ = 0.0;
     c1_ = 0.0;
@@ -355,7 +355,7 @@ public:
     displacement_              = 0.0;
     velocity_                  = 0.0;
     acceleration_              = 0.0;
-    shape_displacement_        = 0.0;
+    
     adjoint_displacement_      = 0.0;
     displacement_adjoint_load_ = 0.0;
     velocity_adjoint_load_     = 0.0;
@@ -364,10 +364,12 @@ public:
     implicit_sensitivity_displacement_start_of_step_ = 0.0;
     implicit_sensitivity_velocity_start_of_step_     = 0.0;
 
+    reactions_ = 0.0;
+
+    printf("resetting reactionings\n");
+
     u_ = 0.0;
     v_ = 0.0;
-    residual_ = 0.0;
-
     du_ = 0.0;
     dr_ = 0.0;
     predicted_displacement_ = 0.0;
@@ -382,7 +384,7 @@ public:
   void initializeStates(int cycle = 0, double time = 0.0) override
   {
     BasePhysics::initializeBaseStates(cycle, time);
-    initializeSolidMechanicsStates(cycle, time);
+    initializeSolidMechanicsStates();
   }
 
   /**
