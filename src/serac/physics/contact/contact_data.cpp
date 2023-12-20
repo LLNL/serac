@@ -360,7 +360,10 @@ FiniteElementDual ContactData::forces() const
 
 mfem::HypreParVector ContactData::mergedPressures() const { return mfem::HypreParVector(); }
 
-mfem::HypreParVector ContactData::mergedGaps([[maybe_unused]] bool zero_inactive) const { return mfem::HypreParVector(); }
+mfem::HypreParVector ContactData::mergedGaps([[maybe_unused]] bool zero_inactive) const
+{
+  return mfem::HypreParVector();
+}
 
 std::unique_ptr<mfem::BlockOperator> ContactData::mergedJacobian() const
 {
@@ -369,9 +372,7 @@ std::unique_ptr<mfem::BlockOperator> ContactData::mergedJacobian() const
   return std::make_unique<mfem::BlockOperator>(jacobian_offsets_);
 }
 
-void ContactData::residualFunction([[maybe_unused]] const mfem::Vector& u, [[maybe_unused]] mfem::Vector& r)
-{
-}
+void ContactData::residualFunction([[maybe_unused]] const mfem::Vector& u, [[maybe_unused]] mfem::Vector& r) {}
 
 std::unique_ptr<mfem::BlockOperator> ContactData::jacobianFunction(const mfem::Vector&   u,
                                                                    mfem::HypreParMatrix* orig_J) const
