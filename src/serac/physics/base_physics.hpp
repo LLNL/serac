@@ -162,6 +162,9 @@ public:
    *
    * @param parameter_name The name of the Finite Element State parameter to retrieve
    * @return The named parameter Finite Element State
+   *
+   * @note The input parameter name should not contain the base physics name. It should be identical to what
+   * is in the physics module constructor argument list.
    */
   const FiniteElementState& parameter(const std::string& parameter_name) const
   {
