@@ -29,6 +29,7 @@ set(solver_tests
     solid.cpp
     solid_periodic.cpp
     solid_shape.cpp
+    solid_robin_condition.cpp
     thermal_shape.cpp
     thermal_mechanics.cpp
     dynamic_thermal_adjoint.cpp
