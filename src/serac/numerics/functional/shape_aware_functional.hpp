@@ -15,55 +15,76 @@
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/numerics/functional/detail/metaprogramming.hpp"
 
+#include <type_traits>
+
 namespace serac {
 
+namespace detail {
+
+template <int dim, typename shape_type, typename S, typename T>
+SERAC_HOST_DEVICE auto modify_trial_argument(Dimension<dim>, shape_type shape, S space, T u)
+{
+  [[maybe_unused]] constexpr int VALUE      = 0;
+  [[maybe_unused]] constexpr int DERIVATIVE = 1;
+
+  auto dp_dX = get<DERIVATIVE>(shape);
+
+  using return_type = serac::tuple<std::remove_reference_t<decltype(get<VALUE>(u))>, std::remove_reference_t<decltype(dot(get<DERIVATIVE>(u), get<DERIVATIVE>(shape)))>>;
+  return_type modified_trial;
+  get<VALUE>(modified_trial) = get<VALUE>(u);
+  get<DERIVATIVE>(modified_trial) = get<DERIVATIVE>(u);
+
+  // For H1 and L2 fields, we must correct the gradient value to reflect
+  // the shape-perturbed coordinates
+  if constexpr (space.family == Family::H1 || space.family == Family::L2) {
+    auto du_dx = get<DERIVATIVE>(u);
+
+    // x' = x + p
+    // J  = dx'/dx
+    //    = I + dp_dx
+    auto J = Identity<dim>() + dp_dX;
+
+    // Our updated spatial coordinate is x' = x + p. We want to calculate
+    // du/dx' = du/dx * dx/dx'
+    //        = du/dx * (dx'/dx)^-1
+    //        = du_dx * (J)^-1
+    get<DERIVATIVE>(modified_trial) = dot(du_dx, inv(J));
+  }
+
+  return modified_trial;
+}
+
+template <int dim, typename lambda, typename coord_type, typename shape_type, typename S, typename T, int... i>
+SERAC_HOST_DEVICE auto apply_qf_helper(Dimension<dim> d, lambda&& qf, double t, coord_type coords, shape_type shape,
+                                       const S& space_tuple, const T& arg_tuple, std::integer_sequence<int, i...>)
+{
+  constexpr int VALUE = 0;
+
+  auto x_prime = coords + get<VALUE>(shape);
+
+  return qf(t, x_prime, modify_trial_argument(d, shape, serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
+}
+
+template <int dim, typename lambda, typename coord_type, typename shape_type, typename... S, typename... T>
+SERAC_HOST_DEVICE auto apply_qf(Dimension<dim> d, lambda&& qf, double t, coord_type coords, const shape_type shape,
+                                const serac::tuple<S...>& space_tuple, const serac::tuple<T...>& arg_tuple)
+{
+  static_assert(sizeof...(S) == sizeof...(T),
+                "Size of trial space types and q function arguments not equal in ShapeAwareFunctional.");
+
+  return serac::detail::apply_qf_helper(d, qf, t, coords, shape, space_tuple, arg_tuple,
+                                        std::make_integer_sequence<int, sizeof...(T)>{});
+}
+
+}  // namespace detail
+
 /// @cond
-template <typename T, ExecutionSpace exec = serac::default_execution_space>
+template <typename T1, typename T2, ExecutionSpace exec = serac::default_execution_space>
 class ShapeAwareFunctional;
 /// @endcond
 
-/**
- * @brief Intended to be like @p std::function for finite element kernels
- *
- * That is: you tell it the inputs (trial spaces) for a kernel, and the outputs (test space) like @p std::function.
- *
- * For example, this code represents a function that takes an integer argument and returns a double:
- * @code{.cpp}
- * std::function< double(int) > my_func;
- * @endcode
- * And this represents a function that takes values from an Hcurl field and returns a
- * residual vector associated with an H1 field:
- * @code{.cpp}
- * Functional< H1(Hcurl) > my_residual;
- * @endcode
- *
- * @tparam test The space of test functions to use
- * @tparam trial The space of trial functions to use
- * @tparam exec whether to carry out calculations on CPU or GPU
- *
- * To use this class, you use the methods @p Functional::Add****Integral(integrand,domain_of_integration)
- * where @p integrand is a q-function lambda or functor and @p domain_of_integration is an @p mfem::mesh
- *
- * @see https://libceed.readthedocs.io/en/latest/libCEEDapi/#theoretical-framework for additional
- * information on the idea behind a quadrature function and its inputs/outputs
- *
- * @code{.cpp}
- * // for domains made up of quadrilaterals embedded in R^2
- * my_residual.AddAreaIntegral(integrand, domain_of_integration);
- * // alternatively...
- * my_residual.AddDomainIntegral(Dimension<2>{}, integrand, domain_of_integration);
- *
- * // for domains made up of quadrilaterals embedded in R^3
- * my_residual.AddSurfaceIntegral(integrand, domain_of_integration);
- *
- * // for domains made up of hexahedra embedded in R^3
- * my_residual.AddVolumeIntegral(integrand, domain_of_integration);
- * // alternatively...
- * my_residual.AddDomainIntegral(Dimension<3>{}, integrand, domain_of_integration);
- * @endcode
- */
-template <typename test, typename shape_trial, typename... trials, ExecutionSpace exec>
-class ShapeAwareFunctional<test(shape_trial, trials...), exec> {
+template <typename test, typename shape_space, typename... trials, ExecutionSpace exec>
+class ShapeAwareFunctional<shape_space, test(trials...), exec> {
   static constexpr tuple<trials...> trial_spaces{};
   static constexpr uint32_t         num_trial_spaces = sizeof...(trials);
 
@@ -73,51 +94,75 @@ public:
    * @param[in] test_fes The (non-qoi) test space
    * @param[in] trial_fes The trial space
    */
-  ShapeAwareFunctional(const mfem::ParFiniteElementSpace*  test_fes,
-                       const mfem::ParFiniteElementSpace* shape_fes,
-             std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces + 1> trial_fes)
-      : functional_(test_fes, prepend(shape_fes, trial_fes))
+  ShapeAwareFunctional(const mfem::ParFiniteElementSpace*                                   test_fes,
+                       std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces + 1> trial_fes)
+      : functional_(test_fes, trial_fes)
   {
+    test test_space{};
+
+    SLIC_ERROR_ROOT_IF(test_space.family == Family::HDIV,
+                       "Shape-aware functional not implemented for HDiv test functions");
+    SLIC_ERROR_ROOT_IF(test_space.family == Family::HCURL,
+                       "Shape-aware functional not implemented for HCurl test functions");
+
+    SLIC_ERROR_ROOT_IF(get<0>(trial_spaces).family != Family::H1, "Only H1 spaces allowed for shape displacements");
+
+    for_constexpr<num_trial_spaces>([](auto i) {
+      auto space = get<i>(trial_spaces);
+
+      SLIC_ERROR_ROOT_IF(space.family == Family::HDIV,
+                         "Shape-aware functional not implemented for HDiv trial functions");
+      SLIC_ERROR_ROOT_IF(space.family == Family::HCURL,
+                         "Shape-aware functional not implemented for HCurl trial functions");
+      SLIC_ERROR_ROOT_IF(space.family == Family::QOI, "Shape-aware functional not implemented for QOI trial functions");
+    });
   }
 
   template <int dim, int... args, typename lambda, typename qpt_data_type = Nothing>
-  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain,
-                         std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
+  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
   {
-    functional_.AddDomainIntegral(Dimension<dim>{}, DependsOn<1, (1 + args)...>{},
-     [integrand, spaces = trial_spaces] (double time, auto x, auto& state, auto shape, auto... qfunc_args)
-     {
-      auto adjusted_position = x + shape;
-      auto qfunc_tuple = make_tuple(qfunc_args...);
+    functional_.AddDomainIntegral(
+        Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
+        [integrand](double time, auto x, auto shape, auto... qfunc_args) {
+          auto qfunc_tuple = make_tuple(qfunc_args...);
 
-      // adjust the 1-forms of the input states to account for the shape modifications
-      for (size_t i = 0; i < spaces.size(); ++i) {
-        
-        auto fe_space       = get<i>(spaces);
-        using fe_space_type = decltype(fe_space);
+          return detail::apply_qf(Dimension<dim>{}, integrand, time, x, shape, trial_spaces, qfunc_tuple);
 
-        [[maybe_unused]] constexpr int VALUE      = 0;
-        [[maybe_unused]] constexpr int DERIVATIVE = 1;
-
-        auto dp_dX   = get<DERIVATIVE>(shape);
-        auto p       = get<VALUE>(shape);
-
-        auto u = get<i>(qfunc_tuple);
-
-        if constexpr (fe_space_type::family == Family::H1) {
-          
-          auto du_dX = get<DERIVATIVE>(get<i>(qfunc_tuple));
-
-
-
-        }
-      }
-
-      return integrand(time, adjusted_position, state, qfunc_args...);
-     },
-     domain, qdata);
+          // return detail::modify_qf_return(test{}, unmodified_qf_return);
+        },
+        domain);
   }
 
+  template <int dim, int... args, typename lambda>
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
+  {
+    functional_.AddBoundaryIntegral(
+        Dimension<dim>{}, DependsOn<0, (1 + args)...>{},
+        [integrand, spaces = trial_spaces](double time, auto x, auto shape, auto... qfunc_args) {
+          auto qfunc_tuple = make_tuple(qfunc_args...);
+
+          [[maybe_unused]] constexpr int VALUE      = 0;
+          [[maybe_unused]] constexpr int DERIVATIVE = 1;
+
+          auto dp_dX = get<DERIVATIVE>(shape);
+          auto p     = get<VALUE>(shape);
+
+          return detail::apply_qf(integrand, time, x, shape, trial_spaces, qfunc_tuple);
+
+          // serac::Functional's boundary integrals multiply the q-function output by
+          // norm(cross(dX_dxi)) at that quadrature point, but if we impose a shape displacement
+          // then that weight needs to be corrected. The new weight should be
+          // norm(cross(dX_dxi + dp_dxi)), so we multiply by the ratio w_new / w_old
+          // to get
+          //   q * area_correction * w_old
+          // = q * (w_new / w_old) * w_old
+          // = q * w_new
+          // auto area_correction = cross(get<DERIVATIVE>(x_prime)) / norm(cross(get<DERIVATIVE>(x)));
+
+          // return qf_return * area_correction;
+        },
+        domain);
+  }
 
   template <uint32_t wrt, typename... T>
   auto operator()(DifferentiateWRT<wrt>, double t, const T&... args)
@@ -132,8 +177,7 @@ public:
   }
 
 private:
-  Functional<test(shape_trial, trials...), exec> functional_;
+  Functional<test(shape_space, trials...), exec> functional_;
 };
 
 }  // namespace serac
-
