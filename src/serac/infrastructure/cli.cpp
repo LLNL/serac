@@ -36,6 +36,9 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   app.add_option("-o, --output-directory", output_directory, "Directory to put outputted files");
   bool enable_paraview{false};
   app.add_flag("-p, --paraview", enable_paraview, "Enable ParaView output");
+  bool print_unused_entries_input_file{false};
+  app.add_flag("-u, --print-unused-entries-input-file", print_unused_entries_input_file,
+               "Prints unused entries in input file, then exits");
   bool version{false};
   app.add_flag("-v, --version", version, "Print version and provenance information, then exits");
 
@@ -71,6 +74,9 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
     }
     if (create_input_file_docs) {
       cli_opts.insert({"create-input-file-docs", {}});
+    }
+    if (print_unused_entries_input_file) {
+      cli_opts.insert({"print-unused-entries-input-file", {}});
     }
     if (output_directory == "") {
       // if given by user use that otherwise use input file's basename minus extension
