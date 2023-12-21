@@ -330,12 +330,10 @@ input file functionality.
     const std::vector<std::string> all_unexpected_names = inlet.unexpectedNames();
     if (all_unexpected_names.size() != 0) {
       SLIC_INFO("Printing unused entries in input file:");
-      for (auto &x : all_unexpected_names) {
+      for (auto& x : all_unexpected_names) {
         SLIC_INFO("  " << x);
       }
-    }
-    else
-    {
+    } else {
       SLIC_INFO("No unused entries in input file.");
     }
     serac::exitGracefully();
