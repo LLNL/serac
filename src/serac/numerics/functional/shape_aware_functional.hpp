@@ -21,23 +21,50 @@ namespace serac {
 
 namespace detail {
 
+template <int dim, typename test_space, typename shape_type, typename T>
+SERAC_HOST_DEVICE auto modify_qf_return(Dimension<dim>, test_space test, shape_type shape, T v)
+{
+  [[maybe_unused]] constexpr int SOURCE     = 0;
+  [[maybe_unused]] constexpr int FLUX       = 1;
+  [[maybe_unused]] constexpr int DERIVATIVE = 1;
+
+  auto dp_dX = get<DERIVATIVE>(shape);
+
+  // x' = x + p
+  // J  = dx'/dx
+  //    = I + dp_dx
+  auto J = Identity<dim>() + dp_dX;
+
+  auto dv = det(J);
+
+  serac::tuple modified_test_return{get<SOURCE>(v) + 0.0 * get<SOURCE>(v) * dv,
+                                    get<FLUX>(v) + 0.0 * inv(J) * get<FLUX>(v)};
+
+  if constexpr (test.family == Family::H1) {
+    get<FLUX>(modified_test_return) = dot(inv(J), get<FLUX>(v));
+  }
+
+  if constexpr (test.family == Family::H1 || test.family == Family::L2) {
+    get<SOURCE>(modified_test_return) = get<SOURCE>(v) * dv;
+  }
+
+  return modified_test_return;
+}
+
 template <int dim, typename shape_type, typename S, typename T>
 SERAC_HOST_DEVICE auto modify_trial_argument(Dimension<dim>, shape_type shape, S space, T u)
 {
   [[maybe_unused]] constexpr int VALUE      = 0;
   [[maybe_unused]] constexpr int DERIVATIVE = 1;
 
-  auto dp_dX = get<DERIVATIVE>(shape);
-
-  using return_type = serac::tuple<std::remove_reference_t<decltype(get<VALUE>(u))>, std::remove_reference_t<decltype(dot(get<DERIVATIVE>(u), get<DERIVATIVE>(shape)))>>;
-  return_type modified_trial;
-  get<VALUE>(modified_trial) = get<VALUE>(u);
-  get<DERIVATIVE>(modified_trial) = get<DERIVATIVE>(u);
+  serac::tuple modified_trial{get<VALUE>(u),
+                              get<DERIVATIVE>(u) + 0.0 * dot(get<DERIVATIVE>(u), get<DERIVATIVE>(shape))};
 
   // For H1 and L2 fields, we must correct the gradient value to reflect
   // the shape-perturbed coordinates
   if constexpr (space.family == Family::H1 || space.family == Family::L2) {
     auto du_dx = get<DERIVATIVE>(u);
+    auto dp_dX = get<DERIVATIVE>(shape);
 
     // x' = x + p
     // J  = dx'/dx
@@ -118,7 +145,7 @@ public:
     });
   }
 
-  template <int dim, int... args, typename lambda, typename qpt_data_type = Nothing>
+  template <int dim, int... args, typename lambda>
   void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
   {
     functional_.AddDomainIntegral(
@@ -126,9 +153,10 @@ public:
         [integrand](double time, auto x, auto shape, auto... qfunc_args) {
           auto qfunc_tuple = make_tuple(qfunc_args...);
 
-          return detail::apply_qf(Dimension<dim>{}, integrand, time, x, shape, trial_spaces, qfunc_tuple);
+          auto unmodified_qf_return =
+              detail::apply_qf(Dimension<dim>{}, integrand, time, x, shape, trial_spaces, qfunc_tuple);
 
-          // return detail::modify_qf_return(test{}, unmodified_qf_return);
+          return detail::modify_qf_return(Dimension<dim>{}, test{}, shape, unmodified_qf_return);
         },
         domain);
   }
