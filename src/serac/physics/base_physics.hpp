@@ -165,8 +165,10 @@ public:
    */
   const FiniteElementState& parameter(const std::string& parameter_name) const
   {
+    std::string appended_name = detail::addPrefix(name_, parameter_name);
+
     for (auto& parameter : parameters_) {
-      if (parameter_name == parameter.state->name()) {
+      if (appended_name == parameter.state->name()) {
         return *parameter.state;
       }
     }
