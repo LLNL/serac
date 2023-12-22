@@ -35,6 +35,14 @@ namespace detail {
  * @param[in] target The string to prepend to
  */
 std::string addPrefix(const std::string& prefix, const std::string& target);
+
+/**
+ * @brief Removes a prefix and the underscore delimiter from a target string
+ * @param[in] prefix The prefix string to remove
+ * @param[in] target The larger string to remove the prefix from
+ */
+std::string removePrefix(const std::string& prefix, const std::string& target);
+
 }  // namespace detail
 
 /**
@@ -162,11 +170,16 @@ public:
    *
    * @param parameter_name The name of the Finite Element State parameter to retrieve
    * @return The named parameter Finite Element State
+   *
+   * @note The input parameter name should not contain the base physics name. It should be identical to what
+   * is in the physics module constructor argument list.
    */
   const FiniteElementState& parameter(const std::string& parameter_name) const
   {
+    std::string appended_name = detail::addPrefix(name_, parameter_name);
+
     for (auto& parameter : parameters_) {
-      if (parameter_name == parameter.state->name()) {
+      if (appended_name == parameter.state->name()) {
         return *parameter.state;
       }
     }
@@ -203,7 +216,7 @@ public:
     std::vector<std::string> parameter_names;
 
     for (auto& parameter : parameters_) {
-      parameter_names.emplace_back(parameter.state->name());
+      parameter_names.emplace_back(detail::removePrefix(name_, parameter.state->name()));
     }
 
     return parameter_names;
