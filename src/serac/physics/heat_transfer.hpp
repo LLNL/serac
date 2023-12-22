@@ -618,9 +618,9 @@ public:
   virtual std::vector<std::string> stateNames() const override
   {
     if (is_quasistatic_) {
-      return std::vector<std::string>{{"temperature"}};
+      return std::vector<std::string>{"temperature"};
     } else {
-      return std::vector<std::string>{{"temperature", "temperature_rate"}};
+      return std::vector<std::string>{"temperature", "temperature_rate"};
     }
   }
 

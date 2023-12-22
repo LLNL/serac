@@ -198,7 +198,7 @@ public:
    */
   virtual std::vector<std::string> stateNames() const override
   {
-    return std::vector<std::string>{{"displacement"}, {"velocity"}, {"temperature"}};
+    return std::vector<std::string>{"displacement", "velocity", "temperature"};
   }
 
   /**

@@ -650,9 +650,9 @@ public:
   std::vector<std::string> stateNames() const override
   {
     if (is_quasistatic_) {
-      return std::vector<std::string>{{"displacement"}};
+      return std::vector<std::string>{"displacement"};
     } else {
-      return std::vector<std::string>{{"displacement"}, {"velocity"}, {"acceleration"}};
+      return std::vector<std::string>{"displacement", "velocity", "acceleration"};
     }
   }
 
