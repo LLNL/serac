@@ -35,6 +35,14 @@ namespace detail {
  * @param[in] target The string to prepend to
  */
 std::string addPrefix(const std::string& prefix, const std::string& target);
+
+/**
+ * @brief Removes a prefix and the underscore delimiter from a target string
+ * @param[in] prefix The prefix string to remove
+ * @param[in] target The larger string to remove the prefix from
+ */
+std::string removePrefix(const std::string& prefix, const std::string& target);
+
 }  // namespace detail
 
 /**
@@ -208,7 +216,7 @@ public:
     std::vector<std::string> parameter_names;
 
     for (auto& parameter : parameters_) {
-      parameter_names.emplace_back(parameter.state->name());
+      parameter_names.emplace_back(detail::removePrefix(name_, parameter.state->name()));
     }
 
     return parameter_names;
