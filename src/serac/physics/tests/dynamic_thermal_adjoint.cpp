@@ -265,7 +265,7 @@ TEST_F(HeatTransferSensitivityFixture, InitialTemperatureSensitivities)
   auto [qoi_base, temperature_sensitivity, _] =
       computeThermalQoiAndInitialTemperatureAndShapeSensitivity(*thermal_solver, tsInfo);
 
-  thermal_solver->initializeStates();
+  thermal_solver->resetStates();
   FiniteElementState derivative_direction(temperature_sensitivity.space(), "derivative_direction");
   fillDirection(derivative_direction);
 
@@ -283,7 +283,7 @@ TEST_F(HeatTransferSensitivityFixture, ShapeSensitivities)
   auto [qoi_base, _, shape_sensitivity] =
       computeThermalQoiAndInitialTemperatureAndShapeSensitivity(*thermal_solver, tsInfo);
 
-  thermal_solver->initializeStates();
+  thermal_solver->resetStates();
   FiniteElementState derivative_direction(shape_sensitivity.space(), "derivative_direction");
   fillDirection(derivative_direction);
 
@@ -298,7 +298,7 @@ TEST_F(HeatTransferSensitivityFixture, ConductivityParameterSensitivities)
   auto thermal_solver = createParameterizedHeatTransfer(data_store, nonlinear_opts, dyn_opts, parameterizedMat);
   auto [qoi_base, conductivity_sensitivity] = computeThermalConductivitySensitivity(*thermal_solver, tsInfo);
 
-  thermal_solver->initializeStates();
+  thermal_solver->resetStates();
   FiniteElementState derivative_direction(conductivity_sensitivity.space(), "derivative_direction");
   fillDirection(derivative_direction);
 
@@ -314,7 +314,7 @@ TEST_F(HeatTransferSensitivityFixture, NonlinearConductivityParameterSensitiviti
       createParameterizedNonlinearHeatTransfer(data_store, nonlinear_opts, dyn_opts, parameterizedNonlinearMat);
   auto [qoi_base, conductivity_sensitivity] = computeThermalConductivitySensitivity(*thermal_solver, tsInfo);
 
-  thermal_solver->initializeStates();
+  thermal_solver->resetStates();
   FiniteElementState derivative_direction(conductivity_sensitivity.space(), "derivative_direction");
   fillDirection(derivative_direction);
 

@@ -148,11 +148,11 @@ public:
    * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param[in] time The simulation time to initialize the physics module to
    */
-  void initializeStates(int cycle = 0, double time = 0.0) override
+  void resetStates(int cycle = 0, double time = 0.0) override
   {
-    BasePhysics::initializeBaseStates(cycle, time);
-    thermal_.initializeStates(cycle, time);
-    solid_.initializeStates(cycle, time);
+    BasePhysics::initializeBasePhysicsStates(cycle, time);
+    thermal_.resetStates(cycle, time);
+    solid_.resetStates(cycle, time);
   }
 
   /**

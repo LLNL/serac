@@ -251,7 +251,7 @@ TEST_F(SolidMechanicsSensitivityFixture, InitialDisplacementSensitivities)
   auto solid_solver = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
   auto [qoi_base, init_disp_sensitivity, _, __] = computeSolidMechanicsQoiSensitivity(*solid_solver, tsInfo);
 
-  solid_solver->initializeStates();
+  solid_solver->resetStates();
   applyInitialAndBoundaryConditions(*solid_solver);
   FiniteElementState derivative_direction(solid_solver->displacement().space(), "derivative_direction");
   fillDirection(derivative_direction);
@@ -268,7 +268,7 @@ TEST_F(SolidMechanicsSensitivityFixture, InitialVelocitySensitivities)
   auto solid_solver = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
   auto [qoi_base, _, init_velo_sensitivity, __] = computeSolidMechanicsQoiSensitivity(*solid_solver, tsInfo);
 
-  solid_solver->initializeStates();
+  solid_solver->resetStates();
   applyInitialAndBoundaryConditions(*solid_solver);
   FiniteElementState derivative_direction(solid_solver->velocity().space(), "derivative_direction");
   fillDirection(derivative_direction);
@@ -284,7 +284,7 @@ TEST_F(SolidMechanicsSensitivityFixture, ShapeSensitivities)
   auto solid_solver = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
   auto [qoi_base, _, __, shape_sensitivity] = computeSolidMechanicsQoiSensitivity(*solid_solver, tsInfo);
 
-  solid_solver->initializeStates();
+  solid_solver->resetStates();
   applyInitialAndBoundaryConditions(*solid_solver);
   FiniteElementState derivative_direction(shape_sensitivity.space(), "derivative_direction");
   fillDirection(derivative_direction);
@@ -300,7 +300,7 @@ TEST_F(SolidMechanicsSensitivityFixture, WhenShapeSensitivitiesCalledTwice_GetSa
   auto solid_solver = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
   auto [qoi1, _, __, shape_sensitivity1] = computeSolidMechanicsQoiSensitivity(*solid_solver, tsInfo);
 
-  solid_solver->initializeStates();
+  solid_solver->resetStates();
   applyInitialAndBoundaryConditions(*solid_solver);
   FiniteElementState derivative_direction(shape_sensitivity1.space(), "derivative_direction");
   fillDirection(derivative_direction);

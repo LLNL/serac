@@ -121,7 +121,7 @@ public:
    * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param[in] time The simulation time to initialize the physics module to
    */
-  virtual void initializeStates(int cycle = 0, double time = 0.0) = 0;
+  virtual void resetStates(int cycle = 0, double time = 0.0) = 0;
 
   /**
    * @brief Complete the setup and allocate the necessary data structures
@@ -382,7 +382,7 @@ protected:
    * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param[in] time The simulation time to initialize the physics module to
    */
-  void initializeBaseStates(int cycle, double time);
+  void initializeBasePhysicsStates(int cycle, double time);
 
   /// @brief Name of the physics module
   std::string name_ = {};

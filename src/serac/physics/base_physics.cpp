@@ -40,7 +40,7 @@ BasePhysics::BasePhysics(std::string physics_name, std::string mesh_tag, int cyc
   }
   StateManager::storeDual(*shape_displacement_sensitivity_);
 
-  initializeBaseStates(cycle, time);
+  initializeBasePhysicsStates(cycle, time);
 }
 
 double BasePhysics::time() const { return time_; }
@@ -57,7 +57,7 @@ int BasePhysics::minCycle() const { return min_cycle_; }
 
 std::vector<double> BasePhysics::timesteps() const { return timesteps_; }
 
-void BasePhysics::initializeBaseStates(int cycle, double time)
+void BasePhysics::initializeBasePhysicsStates(int cycle, double time)
 {
   timesteps_.clear();
 
