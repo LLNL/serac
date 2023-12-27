@@ -115,9 +115,10 @@ double computeThermalQoi(BasePhysics& physics_solver, const TimeSteppingInfo& ts
   physics_solver.outputStateToDisk();
   for (int i = 0; i < ts_info.numTimesteps(); ++i) {
     double dt = ts_info.dts[i];
+    qoi += 0.5 * computeStepQoi(physics_solver.state("temperature"), dt);
     physics_solver.advanceTimestep(dt);
     physics_solver.outputStateToDisk();
-    qoi += computeStepQoi(physics_solver.state("temperature"), dt);
+    qoi += 0.5 * computeStepQoi(physics_solver.state("temperature"), dt);
   }
   return qoi;
 }
@@ -178,12 +179,15 @@ std::tuple<double, FiniteElementDual, FiniteElementDual> computeThermalQoiAndIni
 
   FiniteElementDual adjoint_load(solver.state("temperature").space(), "adjoint_load");
 
+  double dtPlus = 0.0;
   for (int i = solver.cycle(); i > 0; --i) {
-    double             dt                      = solver.loadCheckpointedTimestep(i - 1);
+    double dt = solver.loadCheckpointedTimestep(i - 1);
+
     FiniteElementState temperature_end_of_step = solver.loadCheckpointedState("temperature", solver.cycle());
-    computeStepAdjointLoad(temperature_end_of_step, adjoint_load, dt);
+    computeStepAdjointLoad(temperature_end_of_step, adjoint_load, 0.5 * (dt + dtPlus) );
     solver.setAdjointLoad({{"temperature", adjoint_load}});
     solver.reverseAdjointTimestep();
+    dtPlus = dt;
     shape_sensitivity += solver.computeTimestepShapeSensitivity();
   }
 
@@ -206,13 +210,16 @@ std::tuple<double, FiniteElementDual> computeThermalConductivitySensitivity(Base
   conductivity_sensitivity = 0.0;
 
   FiniteElementDual adjoint_load(solver.state("temperature").space(), "adjoint_load");
-
+  
+  double dtPlus = 0.0;
   for (int i = solver.cycle(); i > 0; --i) {
-    double             dt                      = solver.loadCheckpointedTimestep(i - 1);
+    double dt = solver.loadCheckpointedTimestep(i - 1);
+
     FiniteElementState temperature_end_of_step = solver.loadCheckpointedState("temperature", solver.cycle());
-    computeStepAdjointLoad(temperature_end_of_step, adjoint_load, dt);
+    computeStepAdjointLoad(temperature_end_of_step, adjoint_load, 0.5 * (dt+dtPlus));
     solver.setAdjointLoad({{"temperature", adjoint_load}});
     solver.reverseAdjointTimestep();
+    dtPlus = dt;
     conductivity_sensitivity += solver.computeTimestepSensitivity(0);
   }
 
