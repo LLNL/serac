@@ -199,20 +199,12 @@ public:
 
     nonlin_solver_->setOperator(residual_with_bcs_);
 
-    dt_          = 0.0;
-    previous_dt_ = -1.0;
-
     int true_size = temperature_.space().TrueVSize();
     u_.SetSize(true_size);
     u_predicted_.SetSize(true_size);
 
-    shape_displacement_                             = 0.0;
-    temperature_                                    = 0.0;
-    temperature_rate_                               = 0.0;
-    adjoint_temperature_                            = 0.0;
-    implicit_sensitivity_temperature_start_of_step_ = 0.0;
-    temperature_adjoint_load_                       = 0.0;
-    temperature_rate_adjoint_load_                  = 0.0;
+    shape_displacement_ = 0.0;
+    initializeThermalStates();
   }
 
   /**
@@ -264,6 +256,38 @@ public:
         SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << physics_name);
       }
     }
+  }
+
+  /**
+   * @brief Non virtual method to reset thermal states to zero.  This does not reset design parameters or shape.
+   *
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
+   */
+  void initializeThermalStates()
+  {
+    dt_          = 0.0;
+    previous_dt_ = -1.0;
+
+    u_                                              = 0.0;
+    temperature_                                    = 0.0;
+    temperature_rate_                               = 0.0;
+    adjoint_temperature_                            = 0.0;
+    implicit_sensitivity_temperature_start_of_step_ = 0.0;
+    temperature_adjoint_load_                       = 0.0;
+    temperature_rate_adjoint_load_                  = 0.0;
+  }
+
+  /**
+   * @brief Method to reset physics states to zero.  This does not reset design parameters or shape.
+   *
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
+   */
+  void resetStates(int cycle = 0, double time = 0.0) override
+  {
+    BasePhysics::initializeBasePhysicsStates(cycle, time);
+    initializeThermalStates();
   }
 
   /**

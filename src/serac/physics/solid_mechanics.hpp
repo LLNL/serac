@@ -169,8 +169,6 @@ public:
         ode2_(displacement_.space().TrueVSize(),
               {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = v_, .d2u_dt2 = acceleration_},
               *nonlin_solver_, bcs_),
-        c0_(0.0),
-        c1_(0.0),
         geom_nonlin_(geom_nonlin)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
@@ -225,18 +223,6 @@ public:
     residual_ =
         std::make_unique<Functional<test(trial, trial, shape_trial, parameter_space...)>>(test_space, trial_spaces);
 
-    displacement_              = 0.0;
-    velocity_                  = 0.0;
-    acceleration_              = 0.0;
-    shape_displacement_        = 0.0;
-    adjoint_displacement_      = 0.0;
-    displacement_adjoint_load_ = 0.0;
-    velocity_adjoint_load_     = 0.0;
-    acceleration_adjoint_load_ = 0.0;
-
-    implicit_sensitivity_displacement_start_of_step_ = 0.0;
-    implicit_sensitivity_velocity_start_of_step_     = 0.0;
-
     // If the user wants the AMG preconditioner with a linear solver, set the pfes
     // to be the displacement
     auto* amg_prec = dynamic_cast<mfem::HypreBoomerAMG*>(nonlin_solver_->preconditioner());
@@ -255,13 +241,11 @@ public:
     v_.SetSize(true_size);
 
     du_.SetSize(true_size);
-    du_ = 0.0;
-
     dr_.SetSize(true_size);
-    dr_ = 0.0;
-
     predicted_displacement_.SetSize(true_size);
-    predicted_displacement_ = 0.0;
+
+    shape_displacement_ = 0.0;
+    initializeSolidMechanicsStates();
   }
 
   /**
@@ -355,6 +339,50 @@ public:
 
   /// @brief Destroy the SolidMechanics Functional object
   virtual ~SolidMechanics() {}
+
+  /**
+   * @brief Non virtual method to reset thermal states to zero.  This does not reset design parameters or shape.
+   *
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
+   */
+  void initializeSolidMechanicsStates()
+  {
+    c0_ = 0.0;
+    c1_ = 0.0;
+
+    displacement_ = 0.0;
+    velocity_     = 0.0;
+    acceleration_ = 0.0;
+
+    adjoint_displacement_      = 0.0;
+    displacement_adjoint_load_ = 0.0;
+    velocity_adjoint_load_     = 0.0;
+    acceleration_adjoint_load_ = 0.0;
+
+    implicit_sensitivity_displacement_start_of_step_ = 0.0;
+    implicit_sensitivity_velocity_start_of_step_     = 0.0;
+
+    reactions_ = 0.0;
+
+    u_                      = 0.0;
+    v_                      = 0.0;
+    du_                     = 0.0;
+    dr_                     = 0.0;
+    predicted_displacement_ = 0.0;
+  }
+
+  /**
+   * @brief Method to reset physics states to zero.  This does not reset design parameters or shape.
+   *
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
+   */
+  void resetStates(int cycle = 0, double time = 0.0) override
+  {
+    BasePhysics::initializeBasePhysicsStates(cycle, time);
+    initializeSolidMechanicsStates();
+  }
 
   /**
    * @brief Create a shared ptr to a quadrature data buffer for the given material type

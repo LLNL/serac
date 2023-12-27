@@ -59,6 +59,29 @@ void computeStepAdjointLoad(const FiniteElementState& displacement, FiniteElemen
   d_qoi_d_displacement *= dt;
 }
 
+void applyInitialAndBoundaryConditions(SolidMechanics<p, dim>& solid_solver)
+{
+  FiniteElementState velo = solid_solver.velocity();
+  velo                    = initialInteriorVelo;
+  solid_solver.zeroEssentials(velo);
+  solid_solver.setVelocity(velo);
+
+  FiniteElementState disp = solid_solver.displacement();
+  disp                    = initialInteriorDisp;
+  solid_solver.zeroEssentials(disp);
+
+  FiniteElementState bDisp1 = disp;
+  FiniteElementState bDisp2 = disp;
+  bDisp1                    = boundaryDisp;
+  bDisp2                    = boundaryDisp;
+  solid_solver.zeroEssentials(bDisp2);
+
+  disp += bDisp1;
+  disp -= bDisp2;
+
+  solid_solver.setDisplacement(disp);
+}
+
 std::unique_ptr<SolidMechanics<p, dim>> createNonlinearSolidMechanicsSolver(
     axom::sidre::DataStore& /*data_store*/, const NonlinearSolverOptions& nonlinear_opts,
     const TimesteppingOptions& dyn_opts, const SolidMaterial& mat)
@@ -77,25 +100,7 @@ std::unique_ptr<SolidMechanics<p, dim>> createNonlinearSolidMechanicsSolver(
   });
   solid->completeSetup();
 
-  FiniteElementState velo = solid->velocity();
-  velo                    = initialInteriorVelo;
-  solid->zeroEssentials(velo);
-  solid->setVelocity(velo);
-
-  FiniteElementState disp = solid->displacement();
-  disp                    = initialInteriorDisp;
-  solid->zeroEssentials(disp);
-
-  FiniteElementState bDisp1 = disp;
-  FiniteElementState bDisp2 = disp;
-  bDisp1                    = boundaryDisp;
-  bDisp2                    = boundaryDisp;
-  solid->zeroEssentials(bDisp2);
-
-  disp += bDisp1;
-  disp -= bDisp2;
-
-  solid->setDisplacement(disp);
+  applyInitialAndBoundaryConditions(*solid);
 
   return solid;
 }
@@ -243,52 +248,70 @@ struct SolidMechanicsSensitivityFixture : public ::testing::Test {
 
 TEST_F(SolidMechanicsSensitivityFixture, InitialDisplacementSensitivities)
 {
-  auto solid_solver_base = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
-  auto [qoi_base, init_disp_sensitivity, _, __] = computeSolidMechanicsQoiSensitivity(*solid_solver_base, tsInfo);
+  auto solid_solver = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
+  auto [qoi_base, init_disp_sensitivity, _, __] = computeSolidMechanicsQoiSensitivity(*solid_solver, tsInfo);
 
-  auto solid_solver_pert = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
-
-  FiniteElementState derivative_direction(solid_solver_pert->displacement().space(), "derivative_direction");
+  solid_solver->resetStates();
+  applyInitialAndBoundaryConditions(*solid_solver);
+  FiniteElementState derivative_direction(solid_solver->displacement().space(), "derivative_direction");
   fillDirection(derivative_direction);
-  solid_solver_pert->zeroEssentials(derivative_direction);
+  solid_solver->zeroEssentials(derivative_direction);
 
   double qoi_plus =
-      computeSolidMechanicsQoiAdjustingInitialDisplacement(*solid_solver_pert, tsInfo, derivative_direction, eps);
+      computeSolidMechanicsQoiAdjustingInitialDisplacement(*solid_solver, tsInfo, derivative_direction, eps);
   double directional_deriv = innerProduct(derivative_direction, init_disp_sensitivity);
   EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, 16 * eps);
 }
 
 TEST_F(SolidMechanicsSensitivityFixture, InitialVelocitySensitivities)
 {
-  auto solid_solver_base = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
-  auto [qoi_base, _, init_velo_sensitivity, __] = computeSolidMechanicsQoiSensitivity(*solid_solver_base, tsInfo);
+  auto solid_solver = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
+  auto [qoi_base, _, init_velo_sensitivity, __] = computeSolidMechanicsQoiSensitivity(*solid_solver, tsInfo);
 
-  auto solid_solver_pert = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
-
-  FiniteElementState derivative_direction(solid_solver_pert->velocity().space(), "derivative_direction");
+  solid_solver->resetStates();
+  applyInitialAndBoundaryConditions(*solid_solver);
+  FiniteElementState derivative_direction(solid_solver->velocity().space(), "derivative_direction");
   fillDirection(derivative_direction);
-  solid_solver_pert->zeroEssentials(derivative_direction);
+  solid_solver->zeroEssentials(derivative_direction);
 
-  double qoi_plus =
-      computeSolidMechanicsQoiAdjustingInitialVelocity(*solid_solver_pert, tsInfo, derivative_direction, eps);
+  double qoi_plus = computeSolidMechanicsQoiAdjustingInitialVelocity(*solid_solver, tsInfo, derivative_direction, eps);
   double directional_deriv = innerProduct(derivative_direction, init_velo_sensitivity);
   EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, 16 * eps);
 }
 
 TEST_F(SolidMechanicsSensitivityFixture, ShapeSensitivities)
 {
-  auto solid_solver_base = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
-  auto [qoi_base, _, __, shape_sensitivity] = computeSolidMechanicsQoiSensitivity(*solid_solver_base, tsInfo);
+  auto solid_solver = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
+  auto [qoi_base, _, __, shape_sensitivity] = computeSolidMechanicsQoiSensitivity(*solid_solver, tsInfo);
 
-  auto solid_solver_pert = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
-
+  solid_solver->resetStates();
+  applyInitialAndBoundaryConditions(*solid_solver);
   FiniteElementState derivative_direction(shape_sensitivity.space(), "derivative_direction");
   fillDirection(derivative_direction);
 
-  double qoi_plus = computeSolidMechanicsQoiAdjustingShape(*solid_solver_pert, tsInfo, derivative_direction, eps);
+  double qoi_plus = computeSolidMechanicsQoiAdjustingShape(*solid_solver, tsInfo, derivative_direction, eps);
 
   double directional_deriv = innerProduct(derivative_direction, shape_sensitivity);
   EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, eps);
+}
+
+TEST_F(SolidMechanicsSensitivityFixture, WhenShapeSensitivitiesCalledTwice_GetSameObjectiveAndGradient)
+{
+  auto solid_solver = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, dyn_opts, mat);
+  auto [qoi1, _, __, shape_sensitivity1] = computeSolidMechanicsQoiSensitivity(*solid_solver, tsInfo);
+
+  solid_solver->resetStates();
+  applyInitialAndBoundaryConditions(*solid_solver);
+  FiniteElementState derivative_direction(shape_sensitivity1.space(), "derivative_direction");
+  fillDirection(derivative_direction);
+
+  auto [qoi2, ___, ____, shape_sensitivity2] = computeSolidMechanicsQoiSensitivity(*solid_solver, tsInfo);
+
+  EXPECT_EQ(qoi1, qoi2);
+
+  double directional_deriv1 = innerProduct(derivative_direction, shape_sensitivity1);
+  double directional_deriv2 = innerProduct(derivative_direction, shape_sensitivity2);
+  EXPECT_EQ(directional_deriv1, directional_deriv2);
 }
 
 }  // namespace serac
