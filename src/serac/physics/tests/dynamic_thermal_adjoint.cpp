@@ -184,7 +184,7 @@ std::tuple<double, FiniteElementDual, FiniteElementDual> computeThermalQoiAndIni
     double dt = solver.loadCheckpointedTimestep(i - 1);
 
     FiniteElementState temperature_end_of_step = solver.loadCheckpointedState("temperature", solver.cycle());
-    computeStepAdjointLoad(temperature_end_of_step, adjoint_load, 0.5 * (dt + dtPlus) );
+    computeStepAdjointLoad(temperature_end_of_step, adjoint_load, 0.5 * (dt + dtPlus));
     solver.setAdjointLoad({{"temperature", adjoint_load}});
     solver.reverseAdjointTimestep();
     dtPlus = dt;
@@ -210,13 +210,13 @@ std::tuple<double, FiniteElementDual> computeThermalConductivitySensitivity(Base
   conductivity_sensitivity = 0.0;
 
   FiniteElementDual adjoint_load(solver.state("temperature").space(), "adjoint_load");
-  
+
   double dtPlus = 0.0;
   for (int i = solver.cycle(); i > 0; --i) {
     double dt = solver.loadCheckpointedTimestep(i - 1);
 
     FiniteElementState temperature_end_of_step = solver.loadCheckpointedState("temperature", solver.cycle());
-    computeStepAdjointLoad(temperature_end_of_step, adjoint_load, 0.5 * (dt+dtPlus));
+    computeStepAdjointLoad(temperature_end_of_step, adjoint_load, 0.5 * (dt + dtPlus));
     solver.setAdjointLoad({{"temperature", adjoint_load}});
     solver.reverseAdjointTimestep();
     dtPlus = dt;
