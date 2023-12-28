@@ -24,13 +24,6 @@ BasePhysics::BasePhysics(std::string physics_name, std::string mesh_tag, int cyc
       mesh_(StateManager::mesh(mesh_tag_)),
       comm_(mesh_.GetComm()),
       shape_displacement_(StateManager::shapeDisplacement(mesh_tag_)),
-      time_(time),
-      max_time_(time),
-      min_time_(time),
-      cycle_(cycle),
-      max_cycle_(cycle),
-      min_cycle_(cycle),
-      ode_time_point_(time),
       bcs_(mesh_)
 {
   std::tie(mpi_size_, mpi_rank_) = getMPIInfo(comm_);
@@ -46,6 +39,8 @@ BasePhysics::BasePhysics(std::string physics_name, std::string mesh_tag, int cyc
                                       mesh_.Dimension()));
   }
   StateManager::storeDual(*shape_displacement_sensitivity_);
+
+  initializeBasePhysicsStates(cycle, time);
 }
 
 double BasePhysics::time() const { return time_; }
@@ -61,6 +56,25 @@ double BasePhysics::minTime() const { return min_time_; }
 int BasePhysics::minCycle() const { return min_cycle_; }
 
 std::vector<double> BasePhysics::timesteps() const { return timesteps_; }
+
+void BasePhysics::initializeBasePhysicsStates(int cycle, double time)
+{
+  timesteps_.clear();
+
+  time_           = time;
+  max_time_       = time;
+  min_time_       = time;
+  cycle_          = cycle;
+  max_cycle_      = cycle;
+  min_cycle_      = cycle;
+  ode_time_point_ = time;
+
+  *shape_displacement_sensitivity_ = 0.0;
+
+  for (auto& p : parameters_) {
+    *p.sensitivity = 0.0;
+  }
+}
 
 void BasePhysics::setParameter(const size_t parameter_index, const FiniteElementState& parameter_state)
 {
@@ -310,6 +324,22 @@ std::string addPrefix(const std::string& prefix, const std::string& target)
   }
   return prefix + "_" + target;
 }
+
+std::string removePrefix(const std::string& prefix, const std::string& target)
+{
+  std::string modified_target{target};
+  // Ensure the prefix isn't an empty string
+  if (!prefix.empty()) {
+    // Ensure the prefix is at the beginning of the string
+    auto index = modified_target.find(prefix + "_");
+    if (index == 0) {
+      // Remove the prefix
+      modified_target.erase(0, prefix.size() + 1);
+    }
+  }
+  return modified_target;
+}
+
 }  // namespace detail
 
 }  // namespace serac
