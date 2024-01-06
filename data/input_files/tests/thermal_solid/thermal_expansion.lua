@@ -36,8 +36,7 @@ thermal_solid = {
         order = 1,
 
         -- neo-Hookean material parameters
-        mu = 0.25,
-        K  = 5.0,
+        materials = { { model = "NeoHookean", mu = 0.25, K = 5.0, density = 1.0 }, },
 
         initial_displacement = {
             vector_constant = {
@@ -99,12 +98,10 @@ thermal_solid = {
         },
 
         -- polynomial interpolation order
-        order = 2,
+        order = 1,
 
         -- material parameters
-        kappa = 0.5,
-        rho = 0.5,
-        cp = 0.5,
+        materials = { { model = "LinearIsotropicConductor", kappa = 0.5, cp = 0.5, density = 0.5 }, },
 
         -- initial conditions
         initial_temperature = {
