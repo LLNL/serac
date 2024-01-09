@@ -41,7 +41,7 @@ thermal_conduction = {
     order = 2,
 
     -- material parameters
-    kappa = 0.5,
+    materials = { { model = "LinearIsotropicConductor", kappa = 0.5, cp = 1.0, density = 1.0 }, },
 
     -- boundary condition parameters
     boundary_conds = {

@@ -169,8 +169,6 @@ public:
         ode2_(displacement_.space().TrueVSize(),
               {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = v_, .d2u_dt2 = acceleration_},
               *nonlin_solver_, bcs_),
-        c0_(0.0),
-        c1_(0.0),
         geom_nonlin_(geom_nonlin)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
@@ -225,18 +223,6 @@ public:
     residual_ =
         std::make_unique<Functional<test(trial, trial, shape_trial, parameter_space...)>>(test_space, trial_spaces);
 
-    displacement_              = 0.0;
-    velocity_                  = 0.0;
-    acceleration_              = 0.0;
-    shape_displacement_        = 0.0;
-    adjoint_displacement_      = 0.0;
-    displacement_adjoint_load_ = 0.0;
-    velocity_adjoint_load_     = 0.0;
-    acceleration_adjoint_load_ = 0.0;
-
-    implicit_sensitivity_displacement_start_of_step_ = 0.0;
-    implicit_sensitivity_velocity_start_of_step_     = 0.0;
-
     // If the user wants the AMG preconditioner with a linear solver, set the pfes
     // to be the displacement
     auto* amg_prec = dynamic_cast<mfem::HypreBoomerAMG*>(nonlin_solver_->preconditioner());
@@ -255,13 +241,11 @@ public:
     v_.SetSize(true_size);
 
     du_.SetSize(true_size);
-    du_ = 0.0;
-
     dr_.SetSize(true_size);
-    dr_ = 0.0;
-
     predicted_displacement_.SetSize(true_size);
-    predicted_displacement_ = 0.0;
+
+    shape_displacement_ = 0.0;
+    initializeSolidMechanicsStates();
   }
 
   /**
@@ -279,15 +263,39 @@ public:
                        input_options.timestepping_options, input_options.geom_nonlin, physics_name, mesh_tag, {}, cycle,
                        time)
   {
-    // This is the only other options stored in the input file that we can use
-    // in the initialization stage
-    // TODO: move these material parameters out of the SolidMechanicsInputOptions
-    if (input_options.material_nonlin) {
-      solid_mechanics::NeoHookean mat{input_options.initial_mass_density, input_options.K, input_options.mu};
-      setMaterial(mat);
-    } else {
-      solid_mechanics::LinearIsotropic mat{input_options.initial_mass_density, input_options.K, input_options.mu};
-      setMaterial(mat);
+    for (auto& mat : input_options.materials) {
+      if (std::holds_alternative<serac::solid_mechanics::NeoHookean>(mat)) {
+        setMaterial(std::get<serac::solid_mechanics::NeoHookean>(mat));
+      } else if (std::holds_alternative<serac::solid_mechanics::LinearIsotropic>(mat)) {
+        setMaterial(std::get<serac::solid_mechanics::LinearIsotropic>(mat));
+      } else if (std::holds_alternative<serac::solid_mechanics::J2>(mat)) {
+        if constexpr (dim == 3) {
+          solid_mechanics::J2::State initial_state{};
+          setMaterial(std::get<serac::solid_mechanics::J2>(mat), createQuadratureDataBuffer(initial_state));
+        } else {
+          SLIC_ERROR_ROOT("J2 materials only work for 3D simulations");
+        }
+      } else if (std::holds_alternative<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>>(
+                     mat)) {
+        if constexpr (dim == 3) {
+          serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>::State initial_state{};
+          setMaterial(std::get<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>>(mat),
+                      createQuadratureDataBuffer(initial_state));
+        } else {
+          SLIC_ERROR_ROOT("J2Nonlinear materials only work for 3D simulations");
+        }
+      } else if (std::holds_alternative<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::VoceHardening>>(
+                     mat)) {
+        if constexpr (dim == 3) {
+          serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::VoceHardening>::State initial_state{};
+          setMaterial(std::get<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::VoceHardening>>(mat),
+                      createQuadratureDataBuffer(initial_state));
+        } else {
+          SLIC_ERROR_ROOT("J2Nonlinear materials only work for 3D simulations");
+        }
+      } else {
+        SLIC_ERROR("Invalid material type.");
+      }
     }
 
     if (input_options.initial_displacement) {
@@ -331,6 +339,50 @@ public:
 
   /// @brief Destroy the SolidMechanics Functional object
   virtual ~SolidMechanics() {}
+
+  /**
+   * @brief Non virtual method to reset thermal states to zero.  This does not reset design parameters or shape.
+   *
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
+   */
+  void initializeSolidMechanicsStates()
+  {
+    c0_ = 0.0;
+    c1_ = 0.0;
+
+    displacement_ = 0.0;
+    velocity_     = 0.0;
+    acceleration_ = 0.0;
+
+    adjoint_displacement_      = 0.0;
+    displacement_adjoint_load_ = 0.0;
+    velocity_adjoint_load_     = 0.0;
+    acceleration_adjoint_load_ = 0.0;
+
+    implicit_sensitivity_displacement_start_of_step_ = 0.0;
+    implicit_sensitivity_velocity_start_of_step_     = 0.0;
+
+    reactions_ = 0.0;
+
+    u_                      = 0.0;
+    v_                      = 0.0;
+    du_                     = 0.0;
+    dr_                     = 0.0;
+    predicted_displacement_ = 0.0;
+  }
+
+  /**
+   * @brief Method to reset physics states to zero.  This does not reset design parameters or shape.
+   *
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
+   */
+  void resetStates(int cycle = 0, double time = 0.0) override
+  {
+    BasePhysics::initializeBasePhysicsStates(cycle, time);
+    initializeSolidMechanicsStates();
+  }
 
   /**
    * @brief Create a shared ptr to a quadrature data buffer for the given material type
@@ -626,10 +678,37 @@ public:
   std::vector<std::string> stateNames() const override
   {
     if (is_quasistatic_) {
-      return std::vector<std::string>{{"displacement"}};
+      return std::vector<std::string>{"displacement"};
     } else {
-      return std::vector<std::string>{{"displacement"}, {"velocity"}, {"acceleration"}};
+      return std::vector<std::string>{"displacement", "velocity", "acceleration"};
     }
+  }
+
+  /**
+   * @brief register a custom boundary integral calculation as part of the residual
+   *
+   * @tparam active_parameters a list of indices, describing which parameters to pass to the q-function
+   * @param qfunction a callable that returns the traction on a boundary surface
+   *
+   * ~~~ {.cpp}
+   *
+   *  solid_mechanics.addCustomBoundaryIntegral(DependsOn<>{}, [](double t, auto position, auto displacement, auto
+   * acceleration, auto shape){ auto [X, dX_dxi] = position;
+   *
+   *     auto [u, du_dxi] = displacement;
+   *     auto f           = u * 3.0 (X[0] < 0.01);
+   *     return f;  // define a displacement-proportional traction at a given support
+   *  });
+   *
+   * ~~~
+   *
+   * @note This method must be called prior to completeSetup()
+   */
+  template <int... active_parameters, typename callable>
+  void addCustomBoundaryIntegral(DependsOn<active_parameters...>, callable qfunction)
+  {
+    residual_->AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
+                                   qfunction, mesh_);
   }
 
   /**
@@ -1116,12 +1195,8 @@ public:
       // the material state buffers to be updated
       residual_->update_qdata = true;
 
-      // this seems like the wrong way to be doing this assignment, but
-      // reactions_ = residual(displacement, ...);
-      // isn't currently supported
-
-      reactions_.Vector::operator=((*residual_)(ode_time_point_, displacement_, acceleration_, shape_displacement_,
-                                                *parameters_[parameter_indices].state...));
+      reactions_ = (*residual_)(ode_time_point_, displacement_, acceleration_, shape_displacement_,
+                                *parameters_[parameter_indices].state...);
 
       residual_->update_qdata = false;
     }
