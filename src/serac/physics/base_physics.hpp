@@ -113,7 +113,7 @@ public:
    *
    * @return true if quasi-static, false if transient
    */
-  int isQuasiStatic() const { return is_quasistatic_; }
+  bool isQuasiStatic() const { return is_quasistatic_; }
 
   /**
    * @brief Get a vector of the timestep sizes (i.e. \f$\Delta t\f$s) taken by the forward solver
