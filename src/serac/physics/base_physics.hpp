@@ -109,11 +109,26 @@ public:
   virtual int minCycle() const;
 
   /**
+   * @brief Check if the physics is setup as quasistatic
+   *
+   * @return true if quasistatic, false if transient
+   */
+  bool isQuasistatic() const { return is_quasistatic_; }
+
+  /**
    * @brief Get a vector of the timestep sizes (i.e. \f$\Delta t\f$s) taken by the forward solver
    *
    * @return The vector of timestep sizes taken by the foward solver
    */
   virtual std::vector<double> timesteps() const;
+
+  /**
+   * @brief Base method to reset physics states to zero.  This does not reset design parameters or shape.
+   *
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
+   */
+  virtual void resetStates(int cycle = 0, double time = 0.0) = 0;
 
   /**
    * @brief Complete the setup and allocate the necessary data structures
@@ -367,6 +382,15 @@ public:
   mfem::ParMesh& mesh() { return mesh_; }
 
 protected:
+  /**
+   * @brief Protected, non-virtual method to reset physics states to zero.  This does not reset design parameters or
+   * shape.
+   *
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
+   */
+  void initializeBasePhysicsStates(int cycle, double time);
+
   /// @brief Name of the physics module
   std::string name_ = {};
 
