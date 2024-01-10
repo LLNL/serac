@@ -19,15 +19,17 @@
 
 namespace serac {
 
+constexpr int SOURCE     = 0;
+constexpr int FLUX       = 1;
+constexpr int VALUE      = 0;
+constexpr int DERIVATIVE = 1;
+
 namespace detail {
 
-template <int dim, typename test_space, typename shape_type, typename T>
-SERAC_HOST_DEVICE auto modify_qf_return(Dimension<dim>, test_space test, shape_type shape, T v)
+template <int dim, typename test_space, typename shape_type, typename T,
+          typename = std::enable_if_t<test_space{}.family == Family::H1 || test_space{}.family == Family::L2>>
+SERAC_HOST_DEVICE auto modify_shape_aware_qf_return(Dimension<dim>, test_space /*test*/, shape_type shape, T v)
 {
-  [[maybe_unused]] constexpr int SOURCE     = 0;
-  [[maybe_unused]] constexpr int FLUX       = 1;
-  [[maybe_unused]] constexpr int DERIVATIVE = 1;
-
   auto dp_dX = get<DERIVATIVE>(shape);
 
   // x' = x + p
@@ -37,70 +39,52 @@ SERAC_HOST_DEVICE auto modify_qf_return(Dimension<dim>, test_space test, shape_t
 
   auto dv = det(J);
 
-  serac::tuple modified_test_return{get<SOURCE>(v) + 0.0 * get<SOURCE>(v) * dv,
-                                    get<FLUX>(v) + 0.0 * inv(J) * get<FLUX>(v)};
+  auto modified_flux   = dot(inv(J), get<FLUX>(v)) * dv;
+  auto modified_source = get<SOURCE>(v) * dv;
 
-  if constexpr (test.family == Family::H1) {
-    get<FLUX>(modified_test_return) = dot(inv(J), get<FLUX>(v));
-  }
-
-  if constexpr (test.family == Family::H1 || test.family == Family::L2) {
-    get<SOURCE>(modified_test_return) = get<SOURCE>(v) * dv;
-  }
-
-  return modified_test_return;
+  return serac::tuple{modified_source, modified_flux};
 }
 
-template <int dim, typename shape_type, typename S, typename T>
-SERAC_HOST_DEVICE auto modify_trial_argument(Dimension<dim>, shape_type shape, S space, T u)
+template <int dim, typename shape_type, typename T, typename space_type,
+          typename = std::enable_if_t<space_type{}.family == Family::H1 || space_type{}.family == Family::L2>>
+SERAC_HOST_DEVICE auto modify_trial_argument(Dimension<dim>, shape_type shape, space_type /* space */, T u)
 {
-  [[maybe_unused]] constexpr int VALUE      = 0;
-  [[maybe_unused]] constexpr int DERIVATIVE = 1;
+  auto du_dx = get<DERIVATIVE>(u);
+  auto dp_dX = get<DERIVATIVE>(shape);
 
-  serac::tuple modified_trial{get<VALUE>(u),
-                              get<DERIVATIVE>(u) + 0.0 * dot(get<DERIVATIVE>(u), get<DERIVATIVE>(shape))};
+  // x' = x + p
+  // J  = dx'/dx
+  //    = I + dp_dx
+  auto J = Identity<dim>() + dp_dX;
 
-  // For H1 and L2 fields, we must correct the gradient value to reflect
-  // the shape-perturbed coordinates
-  if constexpr (space.family == Family::H1 || space.family == Family::L2) {
-    auto du_dx = get<DERIVATIVE>(u);
-    auto dp_dX = get<DERIVATIVE>(shape);
+  // Our updated spatial coordinate is x' = x + p. We want to calculate
+  // du/dx' = du/dx * dx/dx'
+  //        = du/dx * (dx'/dx)^-1
+  //        = du_dx * (J)^-1
+  auto trial_derivative = dot(du_dx, inv(J));
 
-    // x' = x + p
-    // J  = dx'/dx
-    //    = I + dp_dx
-    auto J = Identity<dim>() + dp_dX;
-
-    // Our updated spatial coordinate is x' = x + p. We want to calculate
-    // du/dx' = du/dx * dx/dx'
-    //        = du/dx * (dx'/dx)^-1
-    //        = du_dx * (J)^-1
-    get<DERIVATIVE>(modified_trial) = dot(du_dx, inv(J));
-  }
-
-  return modified_trial;
+  return serac::tuple{get<VALUE>(u), trial_derivative};
 }
 
 template <int dim, typename lambda, typename coord_type, typename shape_type, typename S, typename T, int... i>
-SERAC_HOST_DEVICE auto apply_qf_helper(Dimension<dim> d, lambda&& qf, double t, coord_type coords, shape_type shape,
-                                       const S& space_tuple, const T& arg_tuple, std::integer_sequence<int, i...>)
+SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper(Dimension<dim> d, lambda&& qf, double t, coord_type x,
+                                                   shape_type shape, const S& space_tuple, const T& arg_tuple,
+                                                   std::integer_sequence<int, i...>)
 {
-  constexpr int VALUE = 0;
-
-  auto x_prime = coords + get<VALUE>(shape);
-
-  return qf(t, x_prime, modify_trial_argument(d, shape, serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
+  return qf(t, x + get<VALUE>(shape),
+            modify_trial_argument(d, shape, serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
 }
 
 template <int dim, typename lambda, typename coord_type, typename shape_type, typename... S, typename... T>
-SERAC_HOST_DEVICE auto apply_qf(Dimension<dim> d, lambda&& qf, double t, coord_type coords, const shape_type shape,
-                                const serac::tuple<S...>& space_tuple, const serac::tuple<T...>& arg_tuple)
+SERAC_HOST_DEVICE auto apply_shape_aware_qf(Dimension<dim> d, lambda&& qf, double t, coord_type x,
+                                            const shape_type shape, const serac::tuple<S...>& space_tuple,
+                                            const serac::tuple<T...>& arg_tuple)
 {
   static_assert(sizeof...(S) == sizeof...(T),
                 "Size of trial space types and q function arguments not equal in ShapeAwareFunctional.");
 
-  return serac::detail::apply_qf_helper(d, qf, t, coords, shape, space_tuple, arg_tuple,
-                                        std::make_integer_sequence<int, sizeof...(T)>{});
+  return serac::detail::apply_shape_aware_qf_helper(d, qf, t, x, shape, space_tuple, arg_tuple,
+                                                    std::make_integer_sequence<int, sizeof...(T)>{});
 }
 
 }  // namespace detail
@@ -154,9 +138,9 @@ public:
           auto qfunc_tuple = make_tuple(qfunc_args...);
 
           auto unmodified_qf_return =
-              detail::apply_qf(Dimension<dim>{}, integrand, time, x, shape, trial_spaces, qfunc_tuple);
+              detail::apply_shape_aware_qf(Dimension<dim>{}, integrand, time, x, shape, trial_spaces, qfunc_tuple);
 
-          return detail::modify_qf_return(Dimension<dim>{}, test{}, shape, unmodified_qf_return);
+          return detail::modify_shape_aware_qf_return(Dimension<dim>{}, test{}, shape, unmodified_qf_return);
         },
         domain);
   }
@@ -165,17 +149,13 @@ public:
   void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
   {
     functional_.AddBoundaryIntegral(
-        Dimension<dim>{}, DependsOn<0, (1 + args)...>{},
-        [integrand, spaces = trial_spaces](double time, auto x, auto shape, auto... qfunc_args) {
-          auto qfunc_tuple = make_tuple(qfunc_args...);
+        Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
+        [integrand](double time, auto x, auto shape, auto... qfunc_args) {
+          auto x_prime = x + shape;
 
-          [[maybe_unused]] constexpr int VALUE      = 0;
-          [[maybe_unused]] constexpr int DERIVATIVE = 1;
+          auto unmodified_qf_return = integrand(time, x_prime, qfunc_args...);
 
-          auto dp_dX = get<DERIVATIVE>(shape);
-          auto p     = get<VALUE>(shape);
-
-          return detail::apply_qf(integrand, time, x, shape, trial_spaces, qfunc_tuple);
+          auto n = cross(get<DERIVATIVE>(x_prime));
 
           // serac::Functional's boundary integrals multiply the q-function output by
           // norm(cross(dX_dxi)) at that quadrature point, but if we impose a shape displacement
@@ -185,9 +165,10 @@ public:
           //   q * area_correction * w_old
           // = q * (w_new / w_old) * w_old
           // = q * w_new
-          // auto area_correction = cross(get<DERIVATIVE>(x_prime)) / norm(cross(get<DERIVATIVE>(x)));
 
-          // return qf_return * area_correction;
+          auto area_correction = norm(n) / norm(cross(get<DERIVATIVE>(x)));
+
+          return unmodified_qf_return * area_correction;
         },
         domain);
   }

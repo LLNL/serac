@@ -52,6 +52,10 @@ void shape_aware_functional_test(mfem::ParMesh& mesh, double /* tolerance */)
         return serac::tuple{get<0>(u) * 0.0, get<1>(u) * 0.0};
       },
       mesh);
+
+  residual.AddBoundaryIntegral(
+      Dimension<dim - 1>{}, DependsOn<0>{}, [](double /* time */, auto /* x */, auto u) { return get<0>(u) * 0.0; },
+      mesh);
 }
 
 TEST(ShapeAware, 2DLinear) { shape_aware_functional_test<1, 2>(*mesh2D, 3.0e-14); }
