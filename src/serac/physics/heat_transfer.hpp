@@ -370,7 +370,7 @@ public:
      * @brief Evaluate integrand
      */
     template <typename X, typename T, typename dT_dt, typename... Params>
-    auto operator()(double /*time*/, X x, T temperature, dT_dt dtemp_dt, Params... params)
+    auto operator()(double /*time*/, X x, T temperature, dT_dt dtemp_dt, Params... params) const 
     {
       // Get the value and the gradient from the input tuple
       auto [u, du_dX] = temperature;
