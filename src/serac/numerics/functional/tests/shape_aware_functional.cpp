@@ -17,6 +17,7 @@
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
+#include "serac/numerics/functional/detail/metaprogramming.hpp"
 #include "serac/infrastructure/profiling.hpp"
 
 #include "serac/numerics/functional/shape_aware_functional.hpp"
@@ -44,7 +45,7 @@ void shape_aware_functional_test(mfem::ParMesh& mesh, double /* tolerance */)
   mfem::ParFiniteElementSpace fespace2(&mesh, &fec2, dim);
 
   ShapeAwareFunctional<H1<p, dim>, H1<p>(H1<p>)> residual(
-      &fespace1, std::array<const mfem::ParFiniteElementSpace*, 2>{&fespace2, &fespace1});
+      &fespace1, &fespace2, std::array<const mfem::ParFiniteElementSpace*, 1>{&fespace1});
 
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},

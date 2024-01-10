@@ -13,7 +13,6 @@
 #pragma once
 
 #include "serac/numerics/functional/functional.hpp"
-#include "serac/numerics/functional/detail/metaprogramming.hpp"
 
 #include <type_traits>
 
@@ -106,9 +105,19 @@ public:
    * @param[in] trial_fes The trial space
    */
   ShapeAwareFunctional(const mfem::ParFiniteElementSpace*                                   test_fes,
-                       std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces + 1> trial_fes)
-      : functional_(test_fes, trial_fes)
+                       const mfem::ParFiniteElementSpace*                                   shape_fes,
+                       std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
   {
+    std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces + 1> prepended_spaces;
+
+    prepended_spaces[0] = shape_fes;
+
+    for (uint32_t i=0; i < num_trial_spaces; ++i) {
+      prepended_spaces[1 + i] = trial_fes[i];
+    }
+
+    functional_ = std::make_unique<Functional<test(shape_space, trials...), exec>>(test_fes, prepended_spaces);
+
     test test_space{};
 
     SLIC_ERROR_ROOT_IF(test_space.family == Family::HDIV,
@@ -132,7 +141,7 @@ public:
   template <int dim, int... args, typename lambda>
   void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
   {
-    functional_.AddDomainIntegral(
+    functional_->AddDomainIntegral(
         Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
         [integrand](double time, auto x, auto shape, auto... qfunc_args) {
           auto qfunc_tuple = make_tuple(qfunc_args...);
@@ -148,7 +157,7 @@ public:
   template <int dim, int... args, typename lambda>
   void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
   {
-    functional_.AddBoundaryIntegral(
+    functional_->AddBoundaryIntegral(
         Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
         [integrand](double time, auto x, auto shape, auto... qfunc_args) {
           auto x_prime = x + shape;
@@ -176,17 +185,17 @@ public:
   template <uint32_t wrt, typename... T>
   auto operator()(DifferentiateWRT<wrt>, double t, const T&... args)
   {
-    return functional_(DifferentiateWRT<wrt>{}, t, args...);
+    return (*functional_)(DifferentiateWRT<wrt>{}, t, args...);
   }
 
   template <typename... T>
   auto operator()(double t, const T&... args)
   {
-    return functional_(t, args...);
+    return (*functional_)(t, args...);
   }
 
 private:
-  Functional<test(shape_space, trials...), exec> functional_;
+  std::unique_ptr<Functional<test(shape_space, trials...), exec>> functional_;
 };
 
 }  // namespace serac

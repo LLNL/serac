@@ -61,18 +61,6 @@ SERAC_HOST_DEVICE constexpr void for_constexpr(lambda&& f, std::integer_sequence
   (detail::for_constexpr(f, args..., integral_constant<n>{}), ...);
 }
 
-template <typename T, int N, int... I>
-constexpr std::array<T, N + 1> append_helper(std::array<T, N> a, T t, std::index_sequence<I...>)
-{
-  return std::array<T, N + 1>{a[I]..., t};
-}
-
-template <typename T, int N, int... I>
-constexpr std::array<T, N + 1> prepend_helper(T&& t, std::array<T, N>&& a, std::index_sequence<I...>)
-{
-  return std::array<T, N + 1>{t, a[I]...};
-}
-
 }  // namespace detail
 /// @endcond
 
@@ -109,16 +97,4 @@ template <int... n, typename lambda>
 SERAC_HOST_DEVICE constexpr void for_constexpr(lambda&& f)
 {
   detail::for_constexpr(f, std::make_integer_sequence<int, n>{}...);
-}
-
-template <typename T, int N>
-constexpr std::array<T, N + 1> append(std::array<T, N> a, T t)
-{
-  return detail::append_helper(a, t, std::make_index_sequence<N>());
-}
-
-template <typename T, int N>
-constexpr std::array<T, N + 1> prepend(T&& t, std::array<T, N>&& a)
-{
-  return detail::prepend_helper(t, a, std::make_index_sequence<N>());
 }
