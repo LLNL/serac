@@ -412,22 +412,25 @@ public:
   void setMaterial(DependsOn<active_parameters...>, MaterialType material)
   {
     ThermalMaterialIntegrand<MaterialType> integrand(material);
-    //   residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, NUM_STATE_VARS + active_parameters...>{},
-    //   integrand,
-    //                                mesh_);
 
-    residual_->AddDomainIntegral(
-        Dimension<dim>{}, DependsOn<0, 1, NUM_STATE_VARS + active_parameters...>{},
-        [material](double /* time */, auto x, auto temperature, auto dtemp_dt, auto... params) {
-          // Get the value and the gradient from the input tuple
-          auto [u, du_dX] = temperature;
-          auto du_dt      = get<VALUE>(dtemp_dt);
+    // This does not compile
+    residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, NUM_STATE_VARS + active_parameters...>{}, integrand,
+                                 mesh_);
 
-          auto [heat_capacity, heat_flux] = material(x, u, du_dX, params...);
+    // This does compile
+    // residual_->AddDomainIntegral(
+    //     Dimension<dim>{}, DependsOn<0, 1, NUM_STATE_VARS + active_parameters...>{},
+    //     [material](double /* time */, auto x, auto temperature, auto dtemp_dt, auto... params)
+    // {
+    //   // Get the value and the gradient from the input tuple
+    //   auto [u, du_dX] = temperature;
+    //   auto du_dt      = get<VALUE>(dtemp_dt);
 
-          return serac::tuple{heat_capacity * du_dt, -1.0 * heat_flux};
-        },
-        mesh_);
+    //   auto [heat_capacity, heat_flux] = material(x, u, du_dX, params...);
+
+    //   return serac::tuple{heat_capacity * du_dt, -1.0 * heat_flux};
+    // },
+    //     mesh_);
   }
 
   /// @overload
