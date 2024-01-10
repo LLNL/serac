@@ -66,9 +66,9 @@ SERAC_HOST_DEVICE auto modify_trial_argument(Dimension<dim>, shape_type shape, s
 }
 
 template <int dim, typename lambda, typename coord_type, typename shape_type, typename S, typename T, int... i>
-SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper(Dimension<dim> d, lambda&& qf, double t, coord_type x,
-                                                   shape_type shape, const S& space_tuple, const T& arg_tuple,
-                                                   std::integer_sequence<int, i...>)
+SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper([[maybe_unused]] Dimension<dim> d, lambda&& qf, double t,
+                                                   coord_type x, shape_type shape, const S& space_tuple,
+                                                   const T& arg_tuple, std::integer_sequence<int, i...>)
 {
   return qf(t, x + get<VALUE>(shape),
             modify_trial_argument(d, shape, serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
@@ -104,15 +104,14 @@ public:
    * @param[in] test_fes The (non-qoi) test space
    * @param[in] trial_fes The trial space
    */
-  ShapeAwareFunctional(const mfem::ParFiniteElementSpace*                                   test_fes,
-                       const mfem::ParFiniteElementSpace*                                   shape_fes,
+  ShapeAwareFunctional(const mfem::ParFiniteElementSpace* shape_fes, const mfem::ParFiniteElementSpace* test_fes,
                        std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
   {
     std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces + 1> prepended_spaces;
 
     prepended_spaces[0] = shape_fes;
 
-    for (uint32_t i=0; i < num_trial_spaces; ++i) {
+    for (uint32_t i = 0; i < num_trial_spaces; ++i) {
       prepended_spaces[1 + i] = trial_fes[i];
     }
 
@@ -146,8 +145,10 @@ public:
         [integrand](double time, auto x, auto shape, auto... qfunc_args) {
           auto qfunc_tuple = make_tuple(qfunc_args...);
 
+          auto space_tuple = make_tuple(get<args>(trial_spaces)...);
+
           auto unmodified_qf_return =
-              detail::apply_shape_aware_qf(Dimension<dim>{}, integrand, time, x, shape, trial_spaces, qfunc_tuple);
+              detail::apply_shape_aware_qf(Dimension<dim>{}, integrand, time, x, shape, space_tuple, qfunc_tuple);
 
           return detail::modify_shape_aware_qf_return(Dimension<dim>{}, test{}, shape, unmodified_qf_return);
         },
