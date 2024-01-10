@@ -109,6 +109,13 @@ public:
   virtual int minCycle() const;
 
   /**
+   * @brief Check if the physics is setup as quasistatic
+   *
+   * @return true if quasistatic, false if transient
+   */
+  bool isQuasistatic() const { return is_quasistatic_; }
+
+  /**
    * @brief Get a vector of the timestep sizes (i.e. \f$\Delta t\f$s) taken by the forward solver
    *
    * @return The vector of timestep sizes taken by the foward solver
