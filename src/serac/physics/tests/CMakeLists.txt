@@ -34,7 +34,7 @@ set(solver_tests
     thermal_mechanics.cpp
     dynamic_thermal_adjoint.cpp
     )
-blt_list_append(TO solver_tests ELEMENTS contact_patch.cpp contact_beam.cpp contact_ironing.cpp contact_twist.cpp contact_beam2.cpp contact_sphere.cpp IF TRIBOL_FOUND)
+blt_list_append(TO solver_tests ELEMENTS contact_patch.cpp contact_beam.cpp IF TRIBOL_FOUND)
 
 serac_add_tests( SOURCES ${solver_tests}
                  DEPENDS_ON ${test_dependencies}

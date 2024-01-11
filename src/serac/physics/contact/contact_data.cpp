@@ -322,10 +322,17 @@ void ContactData::updateDofOffsets() const
   }
   if (HYPRE_AssumedPartitionCheck()) {
     auto total_dofs = global_pressure_dof_offsets_[global_pressure_dof_offsets_.Size() - 1];
-    global_pressure_dof_offsets_.SetSize(3);
+    if (mesh_.GetNRanks() < 3)
+    {
+      global_pressure_dof_offsets_.SetSize(3);
+    }
     global_pressure_dof_offsets_[0] = global_pressure_dof_offsets_[mesh_.GetMyRank()];
     global_pressure_dof_offsets_[1] = global_pressure_dof_offsets_[mesh_.GetMyRank() + 1];
     global_pressure_dof_offsets_[2] = total_dofs;
+    if (mesh_.GetNRanks() > 3)
+    {
+      global_pressure_dof_offsets_.SetSize(3);
+    }
   }
   offsets_up_to_date_ = true;
 }
