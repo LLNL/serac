@@ -215,7 +215,7 @@ std::unique_ptr<mfem::BlockOperator> ContactData::mergedJacobian() const
     inactive_diag.SetDataOwner(false);
     auto& block_1_0 = static_cast<mfem::HypreParMatrix&>(block_J->GetBlock(1, 0));
     auto  block_1_1 = new mfem::HypreParMatrix(block_1_0.GetComm(), block_1_0.GetGlobalNumRows(),
-                                              block_1_0.GetRowStarts(), &inactive_diag);
+                                               block_1_0.GetRowStarts(), &inactive_diag);
     block_1_1->SetOwnerFlags(3, 3, 1);
     block_J->SetBlock(1, 1, block_1_1);
     // end building I_(inactive)
@@ -322,15 +322,13 @@ void ContactData::updateDofOffsets() const
   }
   if (HYPRE_AssumedPartitionCheck()) {
     auto total_dofs = global_pressure_dof_offsets_[global_pressure_dof_offsets_.Size() - 1];
-    if (mesh_.GetNRanks() < 3)
-    {
+    if (mesh_.GetNRanks() < 3) {
       global_pressure_dof_offsets_.SetSize(3);
     }
     global_pressure_dof_offsets_[0] = global_pressure_dof_offsets_[mesh_.GetMyRank()];
     global_pressure_dof_offsets_[1] = global_pressure_dof_offsets_[mesh_.GetMyRank() + 1];
     global_pressure_dof_offsets_[2] = total_dofs;
-    if (mesh_.GetNRanks() > 3)
-    {
+    if (mesh_.GetNRanks() > 3) {
       global_pressure_dof_offsets_.SetSize(3);
     }
   }

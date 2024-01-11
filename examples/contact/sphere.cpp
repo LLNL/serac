@@ -23,9 +23,9 @@
 int main(int argc, char* argv[])
 {
   serac::initialize(argc, argv);
-  
+
   // NOTE: p must be equal to 1
-  constexpr int p   = 1;
+  constexpr int p = 1;
   // NOTE: dim must be equal to 3
   constexpr int dim = 3;
 
@@ -47,29 +47,29 @@ int main(int argc, char* argv[])
 #endif
 
   serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = serac::NonlinearSolver::Newton,
-                                           .relative_tol   = 1.0e-8,
-                                           .absolute_tol   = 1.0e-5,
-                                           .max_iterations = 200,
-                                           .print_level    = 1};
+                                                  .relative_tol   = 1.0e-8,
+                                                  .absolute_tol   = 1.0e-5,
+                                                  .max_iterations = 200,
+                                                  .print_level    = 1};
 
   serac::ContactOptions contact_options{.method      = serac::ContactMethod::SingleMortar,
-                                 .enforcement = serac::ContactEnforcement::Penalty,
-                                 .type        = serac::ContactType::Frictionless,
-                                 .penalty     = 1.0e5};
+                                        .enforcement = serac::ContactEnforcement::Penalty,
+                                        .type        = serac::ContactType::Frictionless,
+                                        .penalty     = 1.0e5};
 
   serac::SolidMechanicsContact<p, dim, serac::Parameters<serac::L2<0>, serac::L2<0>>> solid_solver(
-      nonlinear_options, linear_options, serac::solid_mechanics::default_quasistatic_options, serac::GeometricNonlinearities::On,
-      name, "sphere_mesh", {"bulk_mod", "shear_mod"});
+      nonlinear_options, linear_options, serac::solid_mechanics::default_quasistatic_options,
+      serac::GeometricNonlinearities::On, name, "sphere_mesh", {"bulk_mod", "shear_mod"});
 
-  serac::FiniteElementState       K_field(serac::StateManager::newState(serac::L2<0>{}, "bulk_mod", "sphere_mesh"));
-  mfem::Vector             K_values({10.0, 100.0});
-  mfem::PWConstCoefficient K_coeff(K_values);
+  serac::FiniteElementState K_field(serac::StateManager::newState(serac::L2<0>{}, "bulk_mod", "sphere_mesh"));
+  mfem::Vector              K_values({10.0, 100.0});
+  mfem::PWConstCoefficient  K_coeff(K_values);
   K_field.project(K_coeff);
   solid_solver.setParameter(0, K_field);
 
-  serac::FiniteElementState       G_field(serac::StateManager::newState(serac::L2<0>{}, "shear_mod", "sphere_mesh"));
-  mfem::Vector             G_values({0.25, 2.5});
-  mfem::PWConstCoefficient G_coeff(G_values);
+  serac::FiniteElementState G_field(serac::StateManager::newState(serac::L2<0>{}, "shear_mod", "sphere_mesh"));
+  mfem::Vector              G_values({0.25, 2.5});
+  mfem::PWConstCoefficient  G_coeff(G_values);
   G_field.project(G_coeff);
   solid_solver.setParameter(1, G_field);
 

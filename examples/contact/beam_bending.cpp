@@ -21,9 +21,9 @@
 int main(int argc, char* argv[])
 {
   serac::initialize(argc, argv);
-  
+
   // NOTE: p must be equal to 1
-  constexpr int p   = 1;
+  constexpr int p = 1;
   // NOTE: dim must be equal to 3
   constexpr int dim = 3;
 
@@ -55,19 +55,19 @@ int main(int argc, char* argv[])
                                         .type        = serac::ContactType::Frictionless,
                                         .penalty     = 1.0e3};
 
-  serac::SolidMechanicsContact<p, dim, serac::Parameters<serac::L2<0>, serac::L2<0>>> solid_solver(nonlinear_options, linear_options,
-                                                                       serac::solid_mechanics::default_quasistatic_options,
-                                                                       serac::GeometricNonlinearities::On, name, "beam_mesh", {"bulk_mod", "shear_mod"});
+  serac::SolidMechanicsContact<p, dim, serac::Parameters<serac::L2<0>, serac::L2<0>>> solid_solver(
+      nonlinear_options, linear_options, serac::solid_mechanics::default_quasistatic_options,
+      serac::GeometricNonlinearities::On, name, "beam_mesh", {"bulk_mod", "shear_mod"});
 
-  serac::FiniteElementState       K_field(serac::StateManager::newState(serac::L2<0>{}, "bulk_mod", "beam_mesh"));
-  mfem::Vector             K_values({10.0, 10.0, 100.0});
-  mfem::PWConstCoefficient K_coeff(K_values);
+  serac::FiniteElementState K_field(serac::StateManager::newState(serac::L2<0>{}, "bulk_mod", "beam_mesh"));
+  mfem::Vector              K_values({10.0, 10.0, 100.0});
+  mfem::PWConstCoefficient  K_coeff(K_values);
   K_field.project(K_coeff);
   solid_solver.setParameter(0, K_field);
 
-  serac::FiniteElementState       G_field(serac::StateManager::newState(serac::L2<0>{}, "shear_mod", "beam_mesh"));
-  mfem::Vector             G_values({0.25, 0.25, 2.5});
-  mfem::PWConstCoefficient G_coeff(G_values);
+  serac::FiniteElementState G_field(serac::StateManager::newState(serac::L2<0>{}, "shear_mod", "beam_mesh"));
+  mfem::Vector              G_values({0.25, 0.25, 2.5});
+  mfem::PWConstCoefficient  G_coeff(G_values);
   G_field.project(G_coeff);
   solid_solver.setParameter(1, G_field);
 
