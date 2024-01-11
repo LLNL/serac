@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
   serac::LinearSolverOptions linear_options{.linear_solver = serac::LinearSolver::Strumpack, .print_level = 1};
 #ifndef MFEM_USE_STRUMPACK
   SLIC_INFO_ROOT("Contact requires MFEM built with strumpack.");
-  return;
+  return 1;
 #endif
 
   serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = serac::NonlinearSolver::Newton,
@@ -111,4 +111,6 @@ int main(int argc, char* argv[])
     // Output the sidre-based plot files
     solid_solver.outputStateToDisk(paraview_name);
   }
+
+  return 0;
 }
