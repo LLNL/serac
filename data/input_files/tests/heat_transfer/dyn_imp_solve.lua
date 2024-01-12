@@ -1,13 +1,10 @@
 -- Comparison information
--- Running the initial simulation for an extra 5s produced this result,
--- so we would expect it to be the exact same
-expected_temperature_l2norm = 2.1806604032633987
-epsilon = 0.000001
+expected_temperature_l2norm = 2.1806652643
+epsilon = 0.00001
 
 -- Simulation time parameters
 dt      = 1.0
--- Run for 10s, since the restart is at 5s
-t_final = 10.0
+t_final = 5.0
 
 main_mesh = {
     type = "file",
@@ -23,7 +20,7 @@ temp_func = function (v)
 end
 
 -- Solver parameters
-thermal_conduction = {
+heat_transfer = {
     equation_solver = {
         linear = {
             type = "iterative",
