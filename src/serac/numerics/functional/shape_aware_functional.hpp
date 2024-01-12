@@ -26,7 +26,7 @@ constexpr int DERIVATIVE = 1;
 namespace detail {
 
 template <int dim, typename shape_type>
-SERAC_HOST_DEVICE auto compute_jacobian(Dimension<dim>, shape_type shape)
+SERAC_HOST_DEVICE auto compute_jacobian(Dimension<dim>, const shape_type& shape)
 {
   auto dp_dX = get<DERIVATIVE>(shape);
 
@@ -37,7 +37,7 @@ SERAC_HOST_DEVICE auto compute_jacobian(Dimension<dim>, shape_type shape)
 }
 
 template <typename position_type, typename shape_type>
-SERAC_HOST_DEVICE auto compute_boundary_area_correction(position_type X, shape_type shape)
+SERAC_HOST_DEVICE auto compute_boundary_area_correction(const position_type& X, const shape_type& shape)
 {
   auto x_prime = X + shape;
 
@@ -60,7 +60,8 @@ SERAC_HOST_DEVICE auto compute_boundary_area_correction(position_type X, shape_t
 template <int dim, typename test_space, typename shape_type, typename T,
           typename = std::enable_if_t<test_space{}.family == Family::H1 || test_space{}.family == Family::L2 ||
                                       std::is_same_v<double, test_space>>>
-SERAC_HOST_DEVICE auto modify_shape_aware_qf_return(Dimension<dim> d, test_space /*test*/, shape_type shape, T v)
+SERAC_HOST_DEVICE auto modify_shape_aware_qf_return(Dimension<dim> d, test_space /*test*/, const shape_type& shape,
+                                                    const T& v)
 {
   auto J = compute_jacobian(d, shape);
 
@@ -74,7 +75,8 @@ SERAC_HOST_DEVICE auto modify_shape_aware_qf_return(Dimension<dim> d, test_space
 
 template <int dim, typename shape_type, typename T, typename space_type,
           typename = std::enable_if_t<space_type{}.family == Family::H1 || space_type{}.family == Family::L2>>
-SERAC_HOST_DEVICE auto modify_trial_argument(Dimension<dim> d, shape_type shape, space_type /* space */, T u)
+SERAC_HOST_DEVICE auto modify_trial_argument(Dimension<dim> d, const shape_type& shape, space_type /* space */,
+                                             const T& u)
 {
   auto du_dx = get<DERIVATIVE>(u);
 
@@ -91,7 +93,7 @@ SERAC_HOST_DEVICE auto modify_trial_argument(Dimension<dim> d, shape_type shape,
 
 template <int dim, typename lambda, typename coord_type, typename shape_type, typename S, typename T, int... i>
 SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper([[maybe_unused]] Dimension<dim> d, lambda&& qf, double t,
-                                                   coord_type x, shape_type shape, const S& space_tuple,
+                                                   const coord_type& x, const shape_type& shape, const S& space_tuple,
                                                    const T& arg_tuple, std::integer_sequence<int, i...>)
 {
   return qf(t, x + get<VALUE>(shape),
@@ -99,8 +101,8 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper([[maybe_unused]] Dimension<di
 }
 
 template <int dim, typename lambda, typename coord_type, typename shape_type, typename... S, typename... T>
-SERAC_HOST_DEVICE auto apply_shape_aware_qf(Dimension<dim> d, lambda&& qf, double t, coord_type x,
-                                            const shape_type shape, const serac::tuple<S...>& space_tuple,
+SERAC_HOST_DEVICE auto apply_shape_aware_qf(Dimension<dim> d, lambda&& qf, double t, const coord_type& x,
+                                            const shape_type& shape, const serac::tuple<S...>& space_tuple,
                                             const serac::tuple<T...>& arg_tuple)
 {
   static_assert(sizeof...(S) == sizeof...(T),
@@ -113,9 +115,9 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf(Dimension<dim> d, lambda&& qf, doubl
 template <int dim, typename lambda, typename coord_type, typename state_type, typename shape_type, typename S,
           typename T, int... i>
 SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper_with_state([[maybe_unused]] Dimension<dim> d, lambda&& qf, double t,
-                                                              coord_type x, state_type state, shape_type shape,
-                                                              const S& space_tuple, const T& arg_tuple,
-                                                              std::integer_sequence<int, i...>)
+                                                              const coord_type& x, state_type& state,
+                                                              const shape_type& shape, const S& space_tuple,
+                                                              const T& arg_tuple, std::integer_sequence<int, i...>)
 {
   return qf(t, x + get<VALUE>(shape), state,
             modify_trial_argument(d, shape, serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
@@ -123,8 +125,8 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper_with_state([[maybe_unused]] D
 
 template <int dim, typename lambda, typename coord_type, typename state_type, typename shape_type, typename... S,
           typename... T>
-SERAC_HOST_DEVICE auto apply_shape_aware_qf_with_state(Dimension<dim> d, lambda&& qf, double t, coord_type x,
-                                                       state_type state, const shape_type shape,
+SERAC_HOST_DEVICE auto apply_shape_aware_qf_with_state(Dimension<dim> d, lambda&& qf, double t, const coord_type& x,
+                                                       state_type& state, const shape_type& shape,
                                                        const serac::tuple<S...>& space_tuple,
                                                        const serac::tuple<T...>& arg_tuple)
 {
