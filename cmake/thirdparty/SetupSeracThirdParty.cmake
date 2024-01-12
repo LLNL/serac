@@ -167,6 +167,20 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
 
     #------------------------------------------------------------------------------
+    # Sundials
+    #------------------------------------------------------------------------------
+    if (SUNDIALS_DIR)
+        # Sundials is already built from MFEM
+        serac_assert_is_directory(VARIABLE_NAME SUNDIALS_DIR)
+        set(SERAC_USE_SUNDIALS ON CACHE BOOL "")
+        set(SUNDIALS_FOUND TRUE)
+    else()
+        set(SERAC_USE_SUNDIALS OFF CACHE BOOL "")
+        set(SUNDIALS_FOUND FALSE)
+    endif()
+    message(STATUS "Sundials support is ${SERAC_USE_SUNDIALS}")
+
+    #------------------------------------------------------------------------------
     # MFEM
     #------------------------------------------------------------------------------
     if(NOT SERAC_ENABLE_CODEVELOP)
@@ -209,12 +223,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(MFEM_USE_OPENMP ${ENABLE_OPENMP} CACHE BOOL "")
         set(MFEM_USE_PETSC ${PETSC_FOUND} CACHE BOOL "")
         set(MFEM_USE_RAJA OFF CACHE BOOL "")
-        if(SUNDIALS_DIR)
-            serac_assert_is_directory(VARIABLE_NAME SUNDIALS_DIR)
-            set(MFEM_USE_SUNDIALS ON CACHE BOOL "")
-        else()
-            set(MFEM_USE_SUNDIALS OFF CACHE BOOL "")
-        endif()
+        set(MFEM_USE_SUNDIALS ${SERAC_USE_SUNDIALS} CACHE BOOL "")
         if(SUPERLUDIST_DIR)
             serac_assert_is_directory(VARIABLE_NAME SUPERLUDIST_DIR)
             # MFEM uses a slightly different naming convention
