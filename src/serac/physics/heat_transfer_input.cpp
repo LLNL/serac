@@ -16,7 +16,7 @@ void HeatTransferInputOptions::defineInputFileSchema(axom::inlet::Container& con
   auto& material_container = container.addStructArray("materials", "Container for array of materials");
   ThermalMaterialInputOptions::defineInputFileSchema(material_container);
 
-  auto& source = container.addStruct("source", "Scalar source term (RHS of the thermal conduction PDE)");
+  auto& source = container.addStruct("source", "Scalar source term (RHS of the heat transfer PDE)");
   input::CoefficientInputOptions::defineInputFileSchema(source);
 
   auto& equation_solver_container =

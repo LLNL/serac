@@ -40,7 +40,7 @@ void functional_test_static()
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  // Construct a functional-based thermal conduction solver
+  // Construct a functional-based heat transfer solver
   HeatTransfer<p, dim> thermal_solver(HeatTransfer<p, dim>::defaultQuasistaticOptions(), "thermal_functional");
 
   tensor<double, dim, dim> cond;
@@ -107,7 +107,7 @@ void functional_test_dynamic()
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  // Construct a functional-based thermal conduction solver
+  // Construct a functional-based heat transfer solver
   HeatTransfer<p, dim> thermal_solver(HeatTransfer<p, dim>::defaultDynamicOptions(), "thermal_functional");
 
   // Define an isotropic conductor material model
