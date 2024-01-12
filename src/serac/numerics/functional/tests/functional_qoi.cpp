@@ -14,6 +14,7 @@
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils_base.hpp"
 #include "serac/numerics/functional/functional.hpp"
+#include "serac/numerics/functional/shape_aware_functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/infrastructure/profiling.hpp"
 
@@ -414,24 +415,21 @@ TEST(QoI, ShapeAndParameter)
   using shape_space     = H1<2, dim>;
   using parameter_space = H1<1>;
 
-  using qoi_type = serac::Functional<double(shape_space, parameter_space)>;
+  using qoi_type = serac::ShapeAwareFunctional<shape_space, double(parameter_space)>;
 
   mfem::ParMesh& mesh = *mesh3D;
 
   auto [shape_fe_space, shape_fe_coll]         = generateParFiniteElementSpace<shape_space>(&mesh);
   auto [parameter_fe_space, parameter_fe_coll] = generateParFiniteElementSpace<parameter_space>(&mesh);
 
-  std::array<const mfem::ParFiniteElementSpace*, 2> trial_fes = {shape_fe_space.get(), parameter_fe_space.get()};
+  std::array<const mfem::ParFiniteElementSpace*, 1> trial_fes = {parameter_fe_space.get()};
+  const mfem::ParFiniteElementSpace*                shape_fes = shape_fe_space.get();
 
-  auto serac_qoi = std::make_unique<qoi_type>(trial_fes);
+  auto serac_qoi = std::make_unique<qoi_type>(shape_fes, trial_fes);
+
   serac_qoi->AddDomainIntegral(
-      serac::Dimension<dim>{}, serac::DependsOn<0, 1>{},
-      [](double /*t*/, auto /*X*/, auto shape, auto param) {
-        auto dp_dx = serac::get<1>(shape);
-        auto I     = serac::Identity<dim>();
-        return serac::get<0>(param) * serac::det(dp_dx + I);
-      },
-      mesh);
+      serac::Dimension<dim>{}, serac::DependsOn<0>{},
+      [](double /*t*/, auto /*X*/, auto param) { return serac::get<0>(param); }, mesh);
 
   std::unique_ptr<mfem::HypreParVector> shape(shape_fe_space->NewTrueDofVector());
   *shape = 1.0;

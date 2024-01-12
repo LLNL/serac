@@ -26,7 +26,8 @@ constexpr int DERIVATIVE = 1;
 namespace detail {
 
 template <int dim, typename test_space, typename shape_type, typename T,
-          typename = std::enable_if_t<test_space{}.family == Family::H1 || test_space{}.family == Family::L2>>
+          typename = std::enable_if_t<test_space{}.family == Family::H1 || test_space{}.family == Family::L2 ||
+                                      std::is_same_v<double, test_space>>>
 SERAC_HOST_DEVICE auto modify_shape_aware_qf_return(Dimension<dim>, test_space /*test*/, shape_type shape, T v)
 {
   auto dp_dX = get<DERIVATIVE>(shape);
@@ -124,7 +125,7 @@ public:
     SLIC_ERROR_ROOT_IF(test_space.family == Family::HCURL,
                        "Shape-aware functional not implemented for HCurl test functions");
 
-    SLIC_ERROR_ROOT_IF(get<0>(trial_spaces).family != Family::H1, "Only H1 spaces allowed for shape displacements");
+    SLIC_ERROR_ROOT_IF(shape_space{}.family != Family::H1, "Only H1 spaces allowed for shape displacements");
 
     for_constexpr<num_trial_spaces>([](auto i) {
       auto space = get<i>(trial_spaces);
@@ -197,6 +198,117 @@ public:
 
 private:
   std::unique_ptr<Functional<test(shape_space, trials...), exec>> functional_;
+};
+
+/**
+ * @brief a partial template specialization of ShapeAwareFunctional with test == double, implying "quantity of interest"
+ */
+template <typename shape_space, typename... trials, ExecutionSpace exec>
+class ShapeAwareFunctional<shape_space, double(trials...), exec> {
+  using test = QOI;
+  static constexpr tuple<trials...> trial_spaces{};
+  static constexpr uint32_t         num_trial_spaces = sizeof...(trials);
+
+public:
+  /**
+   * @brief Constructs using @p mfem::ParFiniteElementSpace objects corresponding to the test/trial spaces
+   * @param[in] trial_fes The trial space
+   */
+  ShapeAwareFunctional(const mfem::ParFiniteElementSpace*                               shape_fes,
+                       std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
+  {
+    std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces + 1> prepended_spaces;
+
+    prepended_spaces[0] = shape_fes;
+
+    for (uint32_t i = 0; i < num_trial_spaces; ++i) {
+      prepended_spaces[1 + i] = trial_fes[i];
+    }
+
+    functional_ = std::make_unique<Functional<double(shape_space, trials...), exec>>(prepended_spaces);
+
+    SLIC_ERROR_ROOT_IF(shape_space{}.family != Family::H1, "Only H1 spaces allowed for shape displacements");
+
+    for_constexpr<num_trial_spaces>([](auto i) {
+      auto space = get<i>(trial_spaces);
+
+      SLIC_ERROR_ROOT_IF(space.family == Family::HDIV,
+                         "Shape-aware functional not implemented for HDiv trial functions");
+      SLIC_ERROR_ROOT_IF(space.family == Family::HCURL,
+                         "Shape-aware functional not implemented for HCurl trial functions");
+      SLIC_ERROR_ROOT_IF(space.family == Family::QOI, "Shape-aware functional not implemented for QOI trial functions");
+    });
+  }
+
+  template <int dim, int... args, typename lambda>
+  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
+  {
+    functional_->AddDomainIntegral(
+        Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
+        [integrand](double time, auto x, auto shape, auto... qfunc_args) {
+          auto qfunc_tuple = make_tuple(qfunc_args...);
+
+          auto space_tuple = make_tuple(get<args>(trial_spaces)...);
+
+          auto unmodified_qf_return =
+              detail::apply_shape_aware_qf(Dimension<dim>{}, integrand, time, x, shape, space_tuple, qfunc_tuple);
+
+          auto dp_dX = get<DERIVATIVE>(shape);
+
+          // x' = x + p
+          // J  = dx'/dx
+          //    = I + dp_dx
+          auto J = Identity<dim>() + dp_dX;
+
+          auto dv = det(J);
+
+          return unmodified_qf_return * dv;
+        },
+        domain);
+  }
+
+  template <int dim, int... args, typename lambda>
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
+  {
+    functional_->AddBoundaryIntegral(
+        Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
+        [integrand](double time, auto x, auto shape, auto... qfunc_args) {
+          auto x_prime = x + shape;
+
+          auto unmodified_qf_return = integrand(time, x_prime, qfunc_args...);
+
+          auto n = cross(get<DERIVATIVE>(x_prime));
+
+          // serac::Functional's boundary integrals multiply the q-function output by
+          // norm(cross(dX_dxi)) at that quadrature point, but if we impose a shape displacement
+          // then that weight needs to be corrected. The new weight should be
+          // norm(cross(dX_dxi + dp_dxi)), so we multiply by the ratio w_new / w_old
+          // to get
+          //   q * area_correction * w_old
+          // = q * (w_new / w_old) * w_old
+          // = q * w_new
+
+          auto area_correction = norm(n) / norm(cross(get<DERIVATIVE>(x)));
+
+          return unmodified_qf_return * area_correction;
+        },
+        domain);
+  }
+
+  template <uint32_t wrt, typename... T>
+  auto operator()(DifferentiateWRT<wrt>, double t, const T&... args)
+  {
+    return (*functional_)(DifferentiateWRT<wrt>{}, t, args...);
+  }
+
+  template <typename... T>
+  auto operator()(double t, const T&... args)
+  {
+    return (*functional_)(t, args...);
+  }
+
+private:
+  std::unique_ptr<Functional<double(shape_space, trials...), exec>> functional_;
 };
 
 }  // namespace serac
