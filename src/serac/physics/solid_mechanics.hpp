@@ -1193,12 +1193,12 @@ public:
       // after finding displacements that satisfy equilibrium,
       // compute the residual one more time, this time enabling
       // the material state buffers to be updated
-      residual_->update_qdata = true;
+      residual_->updateQdata(true);
 
       reactions_ = (*residual_)(ode_time_point_, displacement_, acceleration_, shape_displacement_,
                                 *parameters_[parameter_indices].state...);
 
-      residual_->update_qdata = false;
+      residual_->updateQdata(false);
     }
 
     cycle_ += 1;

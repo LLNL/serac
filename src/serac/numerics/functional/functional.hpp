@@ -217,7 +217,7 @@ public:
    */
   Functional(const mfem::ParFiniteElementSpace*                               test_fes,
              std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
-      : update_qdata(false), test_space_(test_fes), trial_space_(trial_fes)
+      : update_qdata_(false), test_space_(test_fes), trial_space_(trial_fes)
   {
     auto mem_type = mfem::Device::GetMemoryType();
 
@@ -466,7 +466,7 @@ public:
         }
       }
 
-      integral.Mult(t, input_E_[type], output_E_[type], wrt, update_qdata);
+      integral.Mult(t, input_E_[type], output_E_[type], wrt, update_qdata_);
 
       // scatter-add to compute residuals on the local processor
       G_test_[type].ScatterAdd(output_E_[type], output_L_);
@@ -509,11 +509,12 @@ public:
     return (*this)(DifferentiateWRT<i>{}, t, args...);
   }
 
-  // TODO: expose this feature a better way
-  /// @brief flag for denoting when a residual evaluation should update the material state buffers
-  bool update_qdata;
+  void updateQdata(bool update_flag) { update_qdata_ = update_flag; }
 
 private:
+  /// @brief flag for denoting when a residual evaluation should update the material state buffers
+  bool update_qdata_;
+
   /**
    * @brief mfem::Operator representing the gradient matrix that
    * can compute the action of the gradient (with operator()),

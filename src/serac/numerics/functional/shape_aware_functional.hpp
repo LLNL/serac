@@ -25,17 +25,44 @@ constexpr int DERIVATIVE = 1;
 
 namespace detail {
 
-template <int dim, typename test_space, typename shape_type, typename T,
-          typename = std::enable_if_t<test_space{}.family == Family::H1 || test_space{}.family == Family::L2 ||
-                                      std::is_same_v<double, test_space>>>
-SERAC_HOST_DEVICE auto modify_shape_aware_qf_return(Dimension<dim>, test_space /*test*/, shape_type shape, T v)
+template <int dim, typename shape_type>
+SERAC_HOST_DEVICE auto compute_jacobian(Dimension<dim>, shape_type shape)
 {
   auto dp_dX = get<DERIVATIVE>(shape);
 
   // x' = x + p
   // J  = dx'/dx
   //    = I + dp_dx
-  auto J = Identity<dim>() + dp_dX;
+  return Identity<dim>() + dp_dX;
+}
+
+template <typename position_type, typename shape_type>
+SERAC_HOST_DEVICE auto compute_boundary_area_correction(position_type X, shape_type shape)
+{
+  auto x_prime = X + shape;
+
+  auto n = cross(get<DERIVATIVE>(x_prime));
+
+  // serac::Functional's boundary integrals multiply the q-function output by
+  // norm(cross(dX_dxi)) at that quadrature point, but if we impose a shape displacement
+  // then that weight needs to be corrected. The new weight should be
+  // norm(cross(dX_dxi + dp_dxi)), so we multiply by the ratio w_new / w_old
+  // to get
+  //   q * area_correction * w_old
+  // = q * (w_new / w_old) * w_old
+  // = q * w_new
+
+  auto area_correction = norm(n) / norm(cross(get<DERIVATIVE>(X)));
+
+  return area_correction;
+}
+
+template <int dim, typename test_space, typename shape_type, typename T,
+          typename = std::enable_if_t<test_space{}.family == Family::H1 || test_space{}.family == Family::L2 ||
+                                      std::is_same_v<double, test_space>>>
+SERAC_HOST_DEVICE auto modify_shape_aware_qf_return(Dimension<dim> d, test_space /*test*/, shape_type shape, T v)
+{
+  auto J = compute_jacobian(d, shape);
 
   auto dv = det(J);
 
@@ -47,15 +74,11 @@ SERAC_HOST_DEVICE auto modify_shape_aware_qf_return(Dimension<dim>, test_space /
 
 template <int dim, typename shape_type, typename T, typename space_type,
           typename = std::enable_if_t<space_type{}.family == Family::H1 || space_type{}.family == Family::L2>>
-SERAC_HOST_DEVICE auto modify_trial_argument(Dimension<dim>, shape_type shape, space_type /* space */, T u)
+SERAC_HOST_DEVICE auto modify_trial_argument(Dimension<dim> d, shape_type shape, space_type /* space */, T u)
 {
   auto du_dx = get<DERIVATIVE>(u);
-  auto dp_dX = get<DERIVATIVE>(shape);
 
-  // x' = x + p
-  // J  = dx'/dx
-  //    = I + dp_dx
-  auto J = Identity<dim>() + dp_dX;
+  auto J = compute_jacobian(d, shape);
 
   // Our updated spatial coordinate is x' = x + p. We want to calculate
   // du/dx' = du/dx * dx/dx'
@@ -138,22 +161,22 @@ public:
     });
   }
 
-  template <int dim, int... args, typename lambda>
-  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
+  template <int dim, int... args, typename lambda, typename qpt_data_type = Nothing>
+  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain,
+                         std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
   {
     functional_->AddDomainIntegral(
         Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
         [integrand](double time, auto x, auto shape, auto... qfunc_args) {
-          auto qfunc_tuple = make_tuple(qfunc_args...);
-
           auto space_tuple = make_tuple(get<args>(trial_spaces)...);
+          auto qfunc_tuple = make_tuple(qfunc_args...);
 
           auto unmodified_qf_return =
               detail::apply_shape_aware_qf(Dimension<dim>{}, integrand, time, x, shape, space_tuple, qfunc_tuple);
 
           return detail::modify_shape_aware_qf_return(Dimension<dim>{}, test{}, shape, unmodified_qf_return);
         },
-        domain);
+        domain, qdata);
   }
 
   template <int dim, int... args, typename lambda>
@@ -162,24 +185,9 @@ public:
     functional_->AddBoundaryIntegral(
         Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
         [integrand](double time, auto x, auto shape, auto... qfunc_args) {
-          auto x_prime = x + shape;
+          auto unmodified_qf_return = integrand(time, x + shape, qfunc_args...);
 
-          auto unmodified_qf_return = integrand(time, x_prime, qfunc_args...);
-
-          auto n = cross(get<DERIVATIVE>(x_prime));
-
-          // serac::Functional's boundary integrals multiply the q-function output by
-          // norm(cross(dX_dxi)) at that quadrature point, but if we impose a shape displacement
-          // then that weight needs to be corrected. The new weight should be
-          // norm(cross(dX_dxi + dp_dxi)), so we multiply by the ratio w_new / w_old
-          // to get
-          //   q * area_correction * w_old
-          // = q * (w_new / w_old) * w_old
-          // = q * w_new
-
-          auto area_correction = norm(n) / norm(cross(get<DERIVATIVE>(x)));
-
-          return unmodified_qf_return * area_correction;
+          return unmodified_qf_return * detail::compute_boundary_area_correction(x, shape);
         },
         domain);
   }
@@ -195,6 +203,8 @@ public:
   {
     return (*functional_)(t, args...);
   }
+
+  void updateQdata(bool update_flag) { functional_->updateQdata(update_flag); }
 
 private:
   std::unique_ptr<Functional<test(shape_space, trials...), exec>> functional_;
@@ -253,12 +263,7 @@ public:
           auto unmodified_qf_return =
               detail::apply_shape_aware_qf(Dimension<dim>{}, integrand, time, x, shape, space_tuple, qfunc_tuple);
 
-          auto dp_dX = get<DERIVATIVE>(shape);
-
-          // x' = x + p
-          // J  = dx'/dx
-          //    = I + dp_dx
-          auto J = Identity<dim>() + dp_dX;
+          auto J = detail::compute_jacobian(Dimension<dim>{}, shape);
 
           auto dv = det(J);
 
@@ -273,24 +278,9 @@ public:
     functional_->AddBoundaryIntegral(
         Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
         [integrand](double time, auto x, auto shape, auto... qfunc_args) {
-          auto x_prime = x + shape;
+          auto unmodified_qf_return = integrand(time, x + shape, qfunc_args...);
 
-          auto unmodified_qf_return = integrand(time, x_prime, qfunc_args...);
-
-          auto n = cross(get<DERIVATIVE>(x_prime));
-
-          // serac::Functional's boundary integrals multiply the q-function output by
-          // norm(cross(dX_dxi)) at that quadrature point, but if we impose a shape displacement
-          // then that weight needs to be corrected. The new weight should be
-          // norm(cross(dX_dxi + dp_dxi)), so we multiply by the ratio w_new / w_old
-          // to get
-          //   q * area_correction * w_old
-          // = q * (w_new / w_old) * w_old
-          // = q * w_new
-
-          auto area_correction = norm(n) / norm(cross(get<DERIVATIVE>(x)));
-
-          return unmodified_qf_return * area_correction;
+          return unmodified_qf_return * detail::compute_boundary_area_correction(x, shape);
         },
         domain);
   }
