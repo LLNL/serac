@@ -66,7 +66,7 @@ SERAC_HOST_DEVICE auto modify_shape_aware_qf_return(Dimension<dim> d, test_space
 
   auto dv = det(J);
 
-  auto modified_flux   = dot(inv(J), get<FLUX>(v)) * dv;
+  auto modified_flux   = dot(get<FLUX>(v), transpose(inv(J))) * dv;
   auto modified_source = get<SOURCE>(v) * dv;
 
   return serac::tuple{modified_source, modified_flux};
@@ -131,7 +131,7 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf_with_state(Dimension<dim> d, lambda&
   static_assert(sizeof...(S) == sizeof...(T),
                 "Size of trial space types and q function arguments not equal in ShapeAwareFunctional.");
 
-  return serac::detail::apply_shape_aware_qf_helper_with_state(d, qf, t, x, shape, space_tuple, arg_tuple,
+  return serac::detail::apply_shape_aware_qf_helper_with_state(d, qf, t, x, state, shape, space_tuple, arg_tuple,
                                                                std::make_integer_sequence<int, sizeof...(T)>{});
 }
 
