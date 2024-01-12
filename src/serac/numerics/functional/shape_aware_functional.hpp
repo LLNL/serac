@@ -110,6 +110,31 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf(Dimension<dim> d, lambda&& qf, doubl
                                                     std::make_integer_sequence<int, sizeof...(T)>{});
 }
 
+template <int dim, typename lambda, typename coord_type, typename state_type, typename shape_type, typename S,
+          typename T, int... i>
+SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper_with_state([[maybe_unused]] Dimension<dim> d, lambda&& qf, double t,
+                                                              coord_type x, state_type state, shape_type shape,
+                                                              const S& space_tuple, const T& arg_tuple,
+                                                              std::integer_sequence<int, i...>)
+{
+  return qf(t, x + get<VALUE>(shape), state,
+            modify_trial_argument(d, shape, serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
+}
+
+template <int dim, typename lambda, typename coord_type, typename state_type, typename shape_type, typename... S,
+          typename... T>
+SERAC_HOST_DEVICE auto apply_shape_aware_qf_with_state(Dimension<dim> d, lambda&& qf, double t, coord_type x,
+                                                       state_type state, const shape_type shape,
+                                                       const serac::tuple<S...>& space_tuple,
+                                                       const serac::tuple<T...>& arg_tuple)
+{
+  static_assert(sizeof...(S) == sizeof...(T),
+                "Size of trial space types and q function arguments not equal in ShapeAwareFunctional.");
+
+  return serac::detail::apply_shape_aware_qf_helper_with_state(d, qf, t, x, shape, space_tuple, arg_tuple,
+                                                               std::make_integer_sequence<int, sizeof...(T)>{});
+}
+
 }  // namespace detail
 
 /// @cond
@@ -165,18 +190,31 @@ public:
   void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain,
                          std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
   {
-    functional_->AddDomainIntegral(
-        Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
-        [integrand](double time, auto x, auto shape, auto... qfunc_args) {
-          auto space_tuple = make_tuple(get<args>(trial_spaces)...);
-          auto qfunc_tuple = make_tuple(qfunc_args...);
+    if constexpr (std::is_same_v<qpt_data_type, Nothing>) {
+      functional_->AddDomainIntegral(
+          Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
+          [integrand](double time, auto x, auto shape, auto... qfunc_args) {
+            auto space_tuple = make_tuple(get<args>(trial_spaces)...);
+            auto qfunc_tuple = make_tuple(qfunc_args...);
 
-          auto unmodified_qf_return =
-              detail::apply_shape_aware_qf(Dimension<dim>{}, integrand, time, x, shape, space_tuple, qfunc_tuple);
+            auto unmodified_qf_return =
+                detail::apply_shape_aware_qf(Dimension<dim>{}, integrand, time, x, shape, space_tuple, qfunc_tuple);
+            return detail::modify_shape_aware_qf_return(Dimension<dim>{}, test{}, shape, unmodified_qf_return);
+          },
+          domain, qdata);
+    } else {
+      functional_->AddDomainIntegral(
+          Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
+          [integrand](double time, auto x, auto& state, auto shape, auto... qfunc_args) {
+            auto space_tuple = make_tuple(get<args>(trial_spaces)...);
+            auto qfunc_tuple = make_tuple(qfunc_args...);
 
-          return detail::modify_shape_aware_qf_return(Dimension<dim>{}, test{}, shape, unmodified_qf_return);
-        },
-        domain, qdata);
+            auto unmodified_qf_return = detail::apply_shape_aware_qf_with_state(Dimension<dim>{}, integrand, time, x,
+                                                                                state, shape, space_tuple, qfunc_tuple);
+            return detail::modify_shape_aware_qf_return(Dimension<dim>{}, test{}, shape, unmodified_qf_return);
+          },
+          domain, qdata);
+    }
   }
 
   template <int dim, int... args, typename lambda>
