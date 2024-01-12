@@ -61,7 +61,7 @@ TEST(LiquidCrystalElastomer, Bertoldi)
   // Construct a functional-based solid mechanics solver
   LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
 
-#ifdef MFEM_USE_SUNDIALS
+#ifdef SERAC_USE_SUNDIALS
   NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::KINBacktrackingLineSearch,
                                               .relative_tol   = 1.0e-8,
                                               .absolute_tol   = 1.0e-14,
