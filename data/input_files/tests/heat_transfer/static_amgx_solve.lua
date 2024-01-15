@@ -1,25 +1,21 @@
 -- Comparison information
-expected_temperature_l2norm = 2.56980679
+expected_temperature_l2norm = 2.02263
 epsilon = 0.00001
 
 -- Simulation time parameters
 dt      = 1.0
 
 main_mesh = {
-    type = "file",
-    -- mesh file
-    mesh = "../../../meshes/star.mesh",
+    type = "ball",
+    -- number of elements in the mesh
+    approx_elements = 10000,
     -- serial and parallel refinement levels
-    ser_ref_levels = 1,
-    par_ref_levels = 1,
+    ser_ref_levels = 0,
+    par_ref_levels = 0,
 }
 
-temp_func = function (v)
-    return v:norm()
-end
-
 -- Solver parameters
-thermal_conduction = {
+heat_transfer = {
     equation_solver = {
         linear = {
             type = "iterative",
@@ -28,8 +24,8 @@ thermal_conduction = {
                 abs_tol     = 1.0e-12,
                 max_iter    = 200,
                 print_level = 0,
-                solver_type = "cg",
-                prec_type   = "JacobiSmoother",
+                solver_type = "gmres",
+                prec_type   = "AMGX",
             },
         },
 
@@ -49,15 +45,9 @@ thermal_conduction = {
 
     -- boundary condition parameters
     boundary_conds = {
-        ['temperature_1'] = {
+        ['temperature'] = {
             attrs = {1},
-            scalar_function = temp_func
-        },
-        ['temperature_2'] = {
-            attrs = {1},
-            scalar_function = function (v)
-                return 2 * temp_func(v)
-            end
+            constant = 1.0
         },
     },
 }

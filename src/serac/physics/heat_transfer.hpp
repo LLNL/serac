@@ -7,7 +7,7 @@
 /**
  * @file heat_transfer.hpp
  *
- * @brief An object containing the solver for a thermal conduction PDE
+ * @brief An object containing the solver for a heat transfer PDE
  */
 
 #pragma once
@@ -54,20 +54,20 @@ const NonlinearSolverOptions default_nonlinear_options = {.nonlin_solver  = Nonl
                                                           .print_level    = 1};
 
 /**
- * @brief Reasonable defaults for dynamic thermal conduction simulations
+ * @brief Reasonable defaults for dynamic heat transfer simulations
  */
 const TimesteppingOptions default_timestepping_options = {TimestepMethod::BackwardEuler,
                                                           DirichletEnforcementMethod::RateControl};
 
 /**
- * @brief Reasonable defaults for static thermal conduction simulations
+ * @brief Reasonable defaults for static heat transfer simulations
  */
 const TimesteppingOptions default_static_options = {TimestepMethod::QuasiStatic};
 
 }  // namespace heat_transfer
 
 /**
- * @brief An object containing the solver for a thermal conduction PDE
+ * @brief An object containing the solver for a heat transfer PDE
  *
  * This is a generic linear thermal diffusion operator of the form
  *
@@ -965,13 +965,13 @@ public:
   virtual ~HeatTransfer() = default;
 
 protected:
-  /// The compile-time finite element trial space for thermal conduction (H1 of order p)
+  /// The compile-time finite element trial space for heat transfer (H1 of order p)
   using scalar_trial = H1<order>;
 
   /// The compile-time finite element trial space for shape displacement (vector H1 of order 1)
   using shape_trial = H1<SHAPE_ORDER, dim>;
 
-  /// The compile-time finite element test space for thermal conduction (H1 of order p)
+  /// The compile-time finite element test space for heat transfer (H1 of order p)
   using test = H1<order>;
 
   /// The temperature finite element state
