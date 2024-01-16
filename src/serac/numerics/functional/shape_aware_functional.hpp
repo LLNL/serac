@@ -242,7 +242,7 @@ public:
    * @param[in] test_fes The (non-qoi) test space
    * @param[in] trial_fes The trial space
    */
-  // template <typename test_space = test, std::enable_if_t<!std::is_same_v<double, test_space>>>
+  template <typename test_type = test, typename = std::enable_if_t<!std::is_same_v<double, test_type>>>
   ShapeAwareFunctional(const mfem::ParFiniteElementSpace* shape_fes, const mfem::ParFiniteElementSpace* test_fes,
                        std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
   {
@@ -276,7 +276,7 @@ public:
    * @brief Constructs using @p mfem::ParFiniteElementSpace objects corresponding to the test/trial spaces
    * @param[in] trial_fes The trial space
    */
-  // template <typename test_space = test, std::enable_if_t<std::is_same_v<double, test_space>>>
+  template <typename test_type = test, typename = std::enable_if_t<std::is_same_v<double, test_type>>>
   ShapeAwareFunctional(const mfem::ParFiniteElementSpace*                               shape_fes,
                        std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
   {
