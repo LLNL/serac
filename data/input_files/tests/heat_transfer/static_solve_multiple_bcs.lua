@@ -1,26 +1,25 @@
 -- Comparison information
-expected_temperature_l2norm = 2.6493029
+expected_temperature_l2norm = 2.56980679
 epsilon = 0.00001
 
 -- Simulation time parameters
-dt      = 0.0001
-t_final = 0.001
+dt      = 1.0
 
 main_mesh = {
     type = "file",
     -- mesh file
-    mesh = "../../../meshes/star.mesh",
+    mesh = "../../../meshes/star_with_2_bdr_attributes.mesh",
     -- serial and parallel refinement levels
     ser_ref_levels = 1,
     par_ref_levels = 1,
 }
 
 temp_func = function (v)
-    if v:norm() < 0.5 then return 2.0 else return 1.0 end
+    return v:norm()
 end
 
 -- Solver parameters
-thermal_conduction = {
+heat_transfer = {
     equation_solver = {
         linear = {
             type = "iterative",
@@ -42,26 +41,20 @@ thermal_conduction = {
         },
     },
 
-    dynamics = {
-        timestepper = "ForwardEuler",
-        enforcement_method = "RateControl",
-    },
-
     -- polynomial interpolation order
     order = 2,
 
     -- material parameters
-    materials = { { model = "LinearIsotropicConductor", kappa = 0.5, cp = 0.5, density = 0.5 }, },
-
-    -- initial conditions
-    initial_temperature = {
-        scalar_function = temp_func
-    },
+    materials = { { model = "LinearIsotropicConductor", kappa = 0.5, cp = 1.0, density = 1.0 }, },
 
     -- boundary condition parameters
     boundary_conds = {
-        ['temperature'] = {
+        ['temperature_1'] = {
             attrs = {1},
+            scalar_function = temp_func
+        },
+        ['temperature_2'] = {
+            attrs = {2},
             scalar_function = temp_func
         },
     },

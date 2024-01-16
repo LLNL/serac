@@ -80,7 +80,7 @@ private:
   double conductivity_offset_;
 };
 
-/// Nonlinear isotropic thermal conduction material model
+/// Nonlinear isotropic heat transfer material model
 struct ParameterizedIsotropicConductorWithLinearConductivityVsTemperature {
   /**
    * @brief Construct a Parameterized Isotropic Conductor with Conductivity linear with Temparture object

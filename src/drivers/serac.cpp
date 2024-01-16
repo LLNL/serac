@@ -56,9 +56,8 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet)
   auto& solid_solver_table = inlet.addStruct("solid", "Finite deformation solid mechanics module");
   SolidMechanicsInputOptions::defineInputFileSchema(solid_solver_table);
 
-  // The thermal conduction options
-  // TODO: rename to 'heat_transfer'?
-  auto& thermal_solver_table = inlet.addStruct("thermal_conduction", "Thermal conduction module");
+  // The heat transfer options
+  auto& thermal_solver_table = inlet.addStruct("heat_transfer", "Heat transfer module");
   HeatTransferInputOptions::defineInputFileSchema(thermal_solver_table);
 
   // The thermal solid options
@@ -193,7 +192,7 @@ std::unique_ptr<serac::BasePhysics> createPhysics(
       }
     }
   } else {
-    SLIC_ERROR_ROOT("Neither solid, thermal_conduction, nor thermal_solid blocks specified in the input file.");
+    SLIC_ERROR_ROOT("Neither solid, heat_transfer, nor thermal_solid blocks specified in the input file.");
   }
   return main_physics;
 }
@@ -229,7 +228,7 @@ int getOrder(std::optional<serac::SolidMechanicsInputOptions>  solid_mechanics_o
   } else if (heat_transfer_options) {
     order = heat_transfer_options->order;
   } else {
-    SLIC_ERROR_ROOT("Neither solid, thermal_conduction, nor thermal_solid blocks specified in the input file.");
+    SLIC_ERROR_ROOT("Neither solid, heat_transfer, nor thermal_solid blocks specified in the input file.");
   }
   SLIC_ERROR_ROOT_IF(order < 1 || order > 3,
                      axom::fmt::format("Invalid solver order '{0}' given. Valid values are 1, 2, or 3.", order));
@@ -376,8 +375,8 @@ input file functionality.
   if (inlet.isUserProvided("solid")) {
     solid_mechanics_options = inlet["solid"].get<serac::SolidMechanicsInputOptions>();
   }
-  if (inlet.isUserProvided("thermal_conduction")) {
-    heat_transfer_options = inlet["thermal_conduction"].get<serac::HeatTransferInputOptions>();
+  if (inlet.isUserProvided("heat_transfer")) {
+    heat_transfer_options = inlet["heat_transfer"].get<serac::HeatTransferInputOptions>();
   }
   if (inlet.isUserProvided("thermal_solid")) {
     thermomechanics_options = inlet["thermal_solid"].get<serac::ThermomechanicsInputOptions>();
