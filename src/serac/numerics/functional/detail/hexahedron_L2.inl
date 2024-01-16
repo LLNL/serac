@@ -257,7 +257,7 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
         for (int qz = 0; qz < q; qz++) {
           for (int qy = 0; qy < q; qy++) {
             for (int qx = 0; qx < q; qx++) {
-              int Q              = (qz * q + qy) * q + qx;
+              int Q = (qz * q + qy) * q + qx;
               if constexpr (!is_zero<source_type>{}) {
                 source(qz, qy, qx) = reinterpret_cast<const double*>(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
               }

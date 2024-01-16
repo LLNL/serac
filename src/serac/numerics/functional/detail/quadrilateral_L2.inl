@@ -274,8 +274,7 @@ struct finite_element<mfem::Geometry::SQUARE, L2<p, c> > {
             }
             if constexpr (!is_zero<flux_type>{}) {
               for (int k = 0; k < dim; k++) {
-                flux(k, qy, qx) =
-                    reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
+                flux(k, qy, qx) = reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
               }
             }
           }
