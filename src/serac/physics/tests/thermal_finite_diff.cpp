@@ -49,7 +49,7 @@ TEST(Thermal, FiniteDifference)
   // As we only have one parameter in this example, the index is zero.
   constexpr int conductivity_parameter_index = 0;
 
-  // Construct a functional-based thermal conduction solver
+  // Construct a functional-based heat transfer solver
   //
   // Note that we now include an extra template parameter indicating the finite element space for the parameterized
   // field, in this case the thermal conductivity. We also pass an array of finite element states for each of the

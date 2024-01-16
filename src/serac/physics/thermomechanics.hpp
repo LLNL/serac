@@ -530,7 +530,7 @@ protected:
   using displacement_field = H1<order, dim>;  ///< the function space for the displacement field
   using temperature_field  = H1<order>;       ///< the function space for the temperature field
 
-  /// Submodule to compute the thermal conduction physics
+  /// Submodule to compute the heat transfer physics
   HeatTransfer<order, dim, Parameters<displacement_field, parameter_space...>> thermal_;
 
   /// Submodule to compute the mechanics
