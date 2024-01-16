@@ -258,10 +258,14 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
           for (int qy = 0; qy < q; qy++) {
             for (int qx = 0; qx < q; qx++) {
               int Q              = (qz * q + qy) * q + qx;
-              source(qz, qy, qx) = reinterpret_cast<const double*>(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
-              for (int k = 0; k < dim; k++) {
-                flux(k, qz, qy, qx) =
-                    reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
+              if constexpr (!is_zero<source_type>{}) {
+                source(qz, qy, qx) = reinterpret_cast<const double*>(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
+              }
+              if constexpr (!is_zero<flux_type>{}) {
+                for (int k = 0; k < dim; k++) {
+                  flux(k, qz, qy, qx) =
+                      reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
+                }
               }
             }
           }
