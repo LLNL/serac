@@ -325,8 +325,7 @@ input file functionality.
   }
 
   // Optionally, print unused entries in input file and quit
-  bool print_unused_entries_input_file = cli_opts.find("print-unused-entries-input-file") != cli_opts.end();
-  if (print_unused_entries_input_file) {
+  if (cli_opts.find("print-unused") != cli_opts.end()) {
     const std::vector<std::string> all_unexpected_names = inlet.unexpectedNames();
     if (all_unexpected_names.size() != 0) {
       SLIC_INFO("Printing unused entries in input file:");
