@@ -291,13 +291,19 @@ spack:
         prefix: /usr/tce/packages/python/python-3.9.12
 
     # Globally lock version of third party libraries
+    axom:
+      require: "@0.8.1.6"
+    blt:
+      require: "@0.5.3.1"
     camp:
-      require: "@2023.06.0"
+      require: "@2023.06.0.1"
     conduit:
       require: "@0.8.8~shared~test~examples~utilities"
     hdf5:
       variants: ~shared~mpi
     raja:
-      require: "@2023.06.1~shared~examples~exercises"
+      require: "@2023.06.1.2~shared~examples~exercises"
+    tribol:
+      require: "@0.1.0.13"
     umpire:
-      require: "@2023.06.0~shared~examples"
+      require: "@2023.06.0.3~shared~examples"
