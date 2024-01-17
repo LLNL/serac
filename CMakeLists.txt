@@ -116,7 +116,7 @@ include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
 # TODO: Remove this after LiDO updates to the new BLT
 set(_blt_targets cuda cuda_runtime mpi openmp)
 foreach(_target ${_blt_targets})
-    if(NOT TARGET blt::${_target})
+    if(NOT TARGET blt::${_target} AND TARGET ${_target})
         add_library(blt::${_target} ALIAS ${_target})
     endif()
 endforeach()
