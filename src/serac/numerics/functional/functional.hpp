@@ -509,6 +509,14 @@ public:
     return (*this)(DifferentiateWRT<i>{}, t, args...);
   }
 
+  /**
+   * @brief A flag to update the quadrature data for this operator following the computation
+   *
+   * Typically this is set to false during nonlinear solution iterations and is set to true for the
+   * final pass once equilibrium is found.
+   *
+   * @param update_flag A flag to update the related quadrature data
+   */
   void updateQdata(bool update_flag) { update_qdata_ = update_flag; }
 
 private:
