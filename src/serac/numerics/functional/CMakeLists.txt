@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 
 set(functional_depends serac_mesh)
-blt_list_append( TO functional_depends ELEMENTS cuda    IF ENABLE_CUDA )
+blt_list_append(TO functional_depends ELEMENTS blt::cuda IF ENABLE_CUDA)
 
 # Add the library first
 set(functional_headers
