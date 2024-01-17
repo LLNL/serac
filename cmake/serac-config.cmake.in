@@ -33,7 +33,6 @@ if(NOT SERAC_FOUND)
   set(SERAC_USE_AXOM           @SERAC_USE_AXOM@)
   set(SERAC_USE_CAMP           @SERAC_USE_CAMP@)
   set(SERAC_USE_CALIPER        @SERAC_USE_CALIPER@)
-  set(SERAC_USE_CHAI           @SERAC_USE_CHAI@)
   set(SERAC_USE_CONDUIT        @SERAC_USE_CONDUIT@)
   set(SERAC_USE_HDF5           @SERAC_USE_HDF5@)
   set(SERAC_USE_MFEM           @SERAC_USE_MFEM@)
@@ -49,7 +48,6 @@ if(NOT SERAC_FOUND)
   set(SERAC_AXOM_DIR           "@AXOM_DIR@")
   set(SERAC_CAMP_DIR           "@CAMP_DIR@")
   set(SERAC_CALIPER_DIR        "@CALIPER_DIR@")
-  set(SERAC_CHAI_DIR           "@CHAI_DIR@")
   set(SERAC_CONDUIT_DIR        "@CONDUIT_DIR@")
   set(SERAC_HDF5_DIR           "@HDF5_DIR@")
   set(SERAC_MFEM_DIR           "@MFEM_DIR@")
@@ -67,7 +65,7 @@ if(NOT SERAC_FOUND)
   endif()
 
   # Set to real variable unless user overrode it
-  foreach(dep ADIAK AXOM CAMP CALIPER CHAI CONDUIT HDF5 MFEM PETSC RAJA STRUMPACK SUNDIALS TRIBOL UMPIRE)
+  foreach(dep ADIAK AXOM CAMP CALIPER CONDUIT HDF5 MFEM PETSC RAJA STRUMPACK SUNDIALS TRIBOL UMPIRE)
     if (NOT ${dep}_DIR)
       set(${dep}_DIR "${SERAC_${dep}_DIR}")
     endif()
@@ -77,6 +75,17 @@ if(NOT SERAC_FOUND)
   # Bring in required dependencies for this Serac configuration
   #----------------------------------------------------------------------------
   include(CMakeFindDependencyMacro)
+
+  # Umpire (finds CAMP)
+  if(SERAC_USE_UMPIRE)
+    set(umpire_DIR "${UMPIRE_DIR}")
+    find_dependency(umpire REQUIRED)
+  endif()
+
+  # RAJA
+  if(SERAC_USE_RAJA)
+    find_dependency(raja REQUIRED NO_DEFAULT_PATH PATHS "${RAJA_DIR}")
+  endif()
 
   # MFEM
   if(SERAC_USE_MFEM AND NOT TARGET mfem)
@@ -92,22 +101,18 @@ if(NOT SERAC_FOUND)
     endif()
   endif()
 
+  # Conduit
+  if(SERAC_USE_CONDUIT)
+    set(Conduit_DIR "${CONDUIT_DIR}")
+    find_dependency(Conduit REQUIRED)
+  endif()
+
   # Axom
   # also covers fmt/cli11
   if(SERAC_USE_AXOM)
     find_dependency(Axom REQUIRED NO_DEFAULT_PATH PATHS "${AXOM_DIR}/lib/cmake")
   endif()
   
-  # Camp
-  if(SERAC_USE_CAMP)
-    find_dependency(camp REQUIRED NO_DEFAULT_PATH PATHS "${CAMP_DIR}/lib/cmake/camp")
-  endif()
-
-  # Conduit
-  if(SERAC_USE_CONDUIT)
-    find_dependency(Conduit REQUIRED NO_DEFAULT_PATH PATHS "${CONDUIT_DIR}/lib/cmake/conduit")
-  endif()
-
   # HDF5
   if(SERAC_USE_HDF5)
     set(SERAC_HDF5_DIR     "@HDF5_DIR@")
@@ -152,20 +157,16 @@ if(NOT SERAC_FOUND)
     find_dependency(raja REQUIRED NO_DEFAULT_PATH PATHS "${RAJA_DIR}")
   endif()
 
-  # CHAI
-  if(SERAC_USE_CHAI)
-    find_dependency(CHAI REQUIRED NO_DEFAULT_PATH PATHS "${CHAI_DIR}")
-  endif()
-
   # SUNDIALS
   if(SERAC_USE_SUNDIALS)
     find_dependency(SUNDIALS REQUIRED NO_DEFAULT_PATH PATHS "${SUNDIALS_DIR}")
   endif()
 
   #----------------------------------------------------------------------------
-  # Include targets exported by CMake
+  # Load BLT and Serac targets
   #----------------------------------------------------------------------------
   get_filename_component(SERAC_CMAKE_CONFIG_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+  include(${SERAC_CMAKE_CONFIG_DIR}/BLTSetupTargets.cmake)
   include(${SERAC_CMAKE_CONFIG_DIR}/serac-targets.cmake)
 
   #----------------------------------------------------------------------------

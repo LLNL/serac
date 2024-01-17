@@ -42,17 +42,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         message(FATAL_ERROR "Given CAMP_DIR is not a directory: ${CAMP_DIR}")
     endif()
 
-    find_package(camp REQUIRED PATHS ${CAMP_DIR})
-
-    message(STATUS "Checking for expected Camp target 'camp'")
-    if (NOT TARGET camp)
-        message(FATAL_ERROR "Camp failed to load: ${CAMP_DIR}")
-    else()
-        message(STATUS "Camp loaded: ${CAMP_DIR}")
-    endif()
-
-    # Note: camp sets a compile feature that is not available on XL
-    set_target_properties(camp PROPERTIES INTERFACE_COMPILE_FEATURES "")
+    # Let Umpire find Camp
+    set(camp_DIR ${CAMP_DIR})
 
     #------------------------------------------------------------------------------
     # Umpire
@@ -66,6 +57,13 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     else()
         message(STATUS "Umpire support is OFF")
         set(UMPIRE_FOUND FALSE)
+    endif()
+
+    message(STATUS "Checking for expected Camp target 'camp'")
+    if (NOT TARGET camp)
+        message(FATAL_ERROR "Camp failed to load: ${CAMP_DIR}")
+    else()
+        message(STATUS "Camp loaded: ${CAMP_DIR}")
     endif()
 
     #------------------------------------------------------------------------------
