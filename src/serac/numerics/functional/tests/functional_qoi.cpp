@@ -502,8 +502,8 @@ TEST(QoI, ShapeAndParameterBoundary)
   // Define the shape-aware QOI objects
   qoi_type serac_qoi(shape_fes, trial_fes);
 
-  auto   everything = [](std::vector<tensor<double, dim>> /*X*/, int /* attr */) { return true; };
-  Domain whole_boundary  = Domain::ofBoundaryElements(mesh, everything);
+  auto   everything     = [](std::vector<tensor<double, dim>> /*X*/, int /* attr */) { return true; };
+  Domain whole_boundary = Domain::ofBoundaryElements(mesh, everything);
 
   // Note that the integral does not have a shape parameter field. The transformations are handled under the hood
   // so the user only sees the modified x = X + p input arguments
@@ -519,7 +519,7 @@ TEST(QoI, ShapeAndParameterBoundary)
   qoi_type serac_area(shape_fes, trial_fes);
 
   serac_area.AddBoundaryIntegral(
-      serac::Dimension<dim-1>{}, serac::DependsOn<>{}, [](double /*t*/, auto /*x*/) { return 1.0; }, whole_boundary);
+      serac::Dimension<dim - 1>{}, serac::DependsOn<>{}, [](double /*t*/, auto /*x*/) { return 1.0; }, whole_boundary);
 
   std::unique_ptr<mfem::HypreParVector> shape_displacement(shape_fe_space->NewTrueDofVector());
   *shape_displacement = 1.0;
