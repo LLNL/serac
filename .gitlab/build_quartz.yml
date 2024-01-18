@@ -2,7 +2,7 @@
 # This is the shared configuration of jobs for quartz
 .on_quartz:
   variables:
-    ALLOC_OPTIONS: "--res=ci --exclusive=user"
+    ALLOC_OPTIONS: "--res=ci --exclusive=user -A ${ALLOC_BANK}"
     ALLOC_COMMAND: "salloc ${ALLOC_OPTIONS} -N ${ALLOC_NODES} -t ${ALLOC_TIME}"
   tags:
     - shell
