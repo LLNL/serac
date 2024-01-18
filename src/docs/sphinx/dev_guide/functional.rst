@@ -406,7 +406,6 @@ Finally, when the user calls ``Functional::operator()``, it loops over the
 domain and surface integrals, calling ``Integral::Mult()`` on each one
 to compute the weighted residual contribution from each term.
 
-----------------------
 Shape-Aware Functional
 ----------------------
 
