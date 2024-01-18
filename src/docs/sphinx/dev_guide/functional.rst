@@ -406,9 +406,14 @@ Finally, when the user calls ``Functional::operator()``, it loops over the
 domain and surface integrals, calling ``Integral::Mult()`` on each one
 to compute the weighted residual contribution from each term.
 
-======================
+----------------------
 Shape-Aware Functional
-======================
+----------------------
+
+.. note::
+   This is only available for scalar and vector-valued :math:`H^1` and :math:`L_2` trial function spaces,
+   scalar and vector-valued :math:`H^1`, :math:`L_2`, and ``double`` (quantity of interest) test function spaces, and 
+   vector-valued :math:`H^1` shape displacement spaces.
 
 For shape optimization problems, it is often useful to compute derivatives with respect to a shape displacement field
 the modifies the nodal positions of the underlying computational mesh (for example, see `Swartz et al. <https://link.springer.com/article/10.1007/s00158-023-03684-9>`_).
@@ -439,8 +444,13 @@ For a boundary finite element integral with :math:`H^1` trial function :math:`u`
 
 While simple, these transformations can become repetitive and error-prone when writing Q-functions for parameter-free shape optimization problems. To 
 address this issue, we automated these transformations in ``ShapeAwareFunctional``. This object has the same interface and integral definition routines as 
-``Functional``, but it takes the shape displacement field :math:`p` as a required trial parameter. As a simple example, consider the implementation of 
-two quantities of interest:
+``Functional``, but it takes the shape displacement field :math:`p` as a required trial parameter. 
+
+The integrands caputured in the ``Functional::Add****Integral`` methods do not need any further modifications to become "shape-aware" and produce the shape derivatives
+needed for automated shape optimization. The integrands will have their arguments adjusted appropriately to reflect `x = X + p` and their output flux will
+be automatically modified per the formulas above.
+
+As a simple example, consider the implementation of two quantities of interest:
 
 1. Average of a trial function :math:`u` in a domain with an underlying shape displacement field :math:`p`:
 

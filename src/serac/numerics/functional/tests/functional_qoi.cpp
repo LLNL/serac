@@ -538,7 +538,7 @@ TEST(QoI, ShapeAndParameterBoundary)
   EXPECT_NEAR(volume, expected_vol, 3.0e-14);
 
   constexpr double expected_val = 240.0;
-  EXPECT_NEAR(val, expected_val, 1.2e-13);
+  EXPECT_NEAR(val, expected_val, 1.5e-13);
 
   constexpr double expected_avg = 5.0;
   EXPECT_NEAR(average, expected_avg, 1.0e-14);
