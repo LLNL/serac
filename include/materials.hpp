@@ -92,7 +92,7 @@ struct J2Nonlinear {
 
   /** @brief calculate the Cauchy stress, given the displacement gradient and previous material state */
   template <typename T>
-  auto operator()(State& state, const T du_dX) const
+  auto operator()(State& state, const tensor<T, 3, 3> du_dX) const
   {
     using std::sqrt;
     constexpr auto I = DenseIdentity<dim>();
