@@ -68,31 +68,36 @@ struct J2Nonlinear {
   double        density;    ///< mass density
 
   /// @brief variables required to characterize the hysteresis response
-  using State = tensor<double, 10>;
-  using UnpackedState = tuple<tensor<double, 3, 3>, double>;
+  template <typename T>
+  using State = tensor<T, 10>;
 
-  State pack(tensor<double, 3, 3> plastic_strain, double accumulated_plastic_strain) const
+  template <typename T>
+  using UnpackedState = tuple<tensor<T, 3, 3>, T>;
+
+  template <typename T>
+  State<T> pack(tensor<T, 3, 3> plastic_strain, T accumulated_plastic_strain) const
   {
-    State internal_state{};
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++) {
-        internal_state[3*i + j] = plastic_strain[i][j];
+    State<T> internal_state{};
+    for (int i = 0, ij = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++, ij++) {
+        internal_state[ij] = plastic_strain[i][j];
       }
     }
     internal_state[9] = accumulated_plastic_strain;
     return internal_state;
   }
 
-  UnpackedState unpack(State internal_state) const
+  template <typename T>
+  UnpackedState<T> unpack(State<T> internal_state) const
   {
-    auto plastic_strain = make_tensor<3, 3>([=](int i, int j) { return internal_state[3*i + j];});
-    double accumulated_plastic_strain = internal_state[9];
+    tensor<T, 3, 3> plastic_strain = make_tensor<3, 3>([=](int i, int j) { return internal_state[3*i + j];});
+    T accumulated_plastic_strain = internal_state[9];
     return tuple{plastic_strain, accumulated_plastic_strain};
   }
 
   /** @brief calculate the Cauchy stress, given the displacement gradient and previous material state */
-  template <typename T>
-  auto operator()(State& state, const tensor<T, 3, 3> du_dX) const
+  template <typename T1, typename T2>
+  auto operator()(State<T1>& state, tensor<T2, 3, 3> du_dX) const
   {
     using std::sqrt;
     constexpr auto I = DenseIdentity<dim>();
@@ -127,6 +132,8 @@ struct J2Nonlinear {
       s = s - 2.0 * G * delta_eqps * Np;
       accumulated_plastic_strain += get_value(delta_eqps);
       plastic_strain += get_value(delta_eqps) * get_value(Np);
+      // accumulated_plastic_strain += delta_eqps;
+      // plastic_strain += delta_eqps * get_value(Np);
       state = pack(plastic_strain, accumulated_plastic_strain);
     }
 
