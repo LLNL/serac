@@ -111,9 +111,9 @@ public:
    */
   HeatTransfer(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
                const serac::TimesteppingOptions timestepping_opts, const std::string& physics_name,
-               std::string mesh_tag, std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0)
+               std::string mesh_tag, std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0, bool save_to_disk = false)
       : HeatTransfer(std::make_unique<EquationSolver>(nonlinear_opts, lin_opts, StateManager::mesh(mesh_tag).GetComm()),
-                     timestepping_opts, physics_name, mesh_tag, parameter_names, cycle, time)
+                     timestepping_opts, physics_name, mesh_tag, parameter_names, cycle, time, save_to_disk)
   {
   }
 
@@ -130,7 +130,7 @@ public:
    */
   HeatTransfer(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
                const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {},
-               int cycle = 0, double time = 0.0)
+               int cycle = 0, double time = 0.0, bool save_to_disk = false)
       : BasePhysics(physics_name, mesh_tag, cycle, time),
         temperature_(StateManager::newState(H1<order>{}, detail::addPrefix(physics_name, "temperature"), mesh_tag_)),
         temperature_rate_(
@@ -146,7 +146,8 @@ public:
         nonlin_solver_(std::move(solver)),
         ode_(temperature_.space().TrueVSize(),
              {.time = ode_time_point_, .u = u_, .dt = dt_, .du_dt = temperature_rate_, .previous_dt = previous_dt_},
-             *nonlin_solver_, bcs_)
+             *nonlin_solver_, bcs_),
+        save_to_disk_(save_to_disk)
   {
     SLIC_ERROR_ROOT_IF(
         mesh_.Dimension() != dim,
@@ -276,6 +277,9 @@ public:
     implicit_sensitivity_temperature_start_of_step_ = 0.0;
     temperature_adjoint_load_                       = 0.0;
     temperature_rate_adjoint_load_                  = 0.0;
+
+    temperatures_.clear();
+    temperature_rates_.clear();
   }
 
   /**
@@ -330,6 +334,12 @@ public:
       // Step the time integrator
       // Note that the ODE solver handles the essential boundary condition application itself
       ode_.Step(temperature_, time_, dt);
+
+      if (!save_to_disk_) {
+        temperatures_.push_back(temperature_);
+        temperature_rates_.push_back(temperature_rate_);
+      }
+
     }
 
     cycle_ += 1;
@@ -735,6 +745,14 @@ public:
             return *J_;
           });
     }
+
+    if (!save_to_disk_) {
+      temperatures_.clear();
+      temperature_rates_.clear();
+      temperatures_.push_back(temperature_);
+      temperature_rates_.push_back(temperature_rate_);
+    }
+
   }
 
   /**
@@ -893,11 +911,19 @@ public:
   {
     if (state_name == "temperature") {
       FiniteElementState previous_state = temperature_;
-      StateManager::loadCheckpointedStates(cycle, {previous_state});
+      if (save_to_disk_) {
+        StateManager::loadCheckpointedStates(cycle, {previous_state});
+      } else {
+        previous_state = temperatures_[cycle];
+      }
       return previous_state;
     } else if (state_name == "temperature_rate") {
       FiniteElementState previous_state = temperature_rate_;
-      StateManager::loadCheckpointedStates(cycle, {previous_state});
+      if (save_to_disk_) {
+        StateManager::loadCheckpointedStates(cycle, {previous_state});
+      } else {
+        previous_state = temperature_rates_[cycle];
+      }
       return previous_state;
     }
 
@@ -977,6 +1003,9 @@ protected:
   /// The temperature finite element state
   serac::FiniteElementState temperature_;
 
+  std::vector<serac::FiniteElementState> temperatures_;
+  std::vector<serac::FiniteElementState> temperature_rates_;
+
   /// Rate of change in temperature at the current adjoint timestep
   FiniteElementState temperature_rate_;
 
@@ -1035,6 +1064,8 @@ protected:
 
   /// Predicted temperature true dofs
   mfem::Vector u_predicted_;
+
+  bool save_to_disk_;
 
   /// @brief Array functions computing the derivative of the residual with respect to each given parameter
   /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
