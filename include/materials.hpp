@@ -68,10 +68,27 @@ struct J2Nonlinear {
   double        density;    ///< mass density
 
   /// @brief variables required to characterize the hysteresis response
-  struct State {
-    tensor<double, dim, dim> plastic_strain;              ///< plastic strain
-    double                   accumulated_plastic_strain;  ///< uniaxial equivalent plastic strain
-  };
+  using State = tensor<double, 10>;
+  using UnpackedState = tuple<tensor<double, 3, 3>, double>;
+
+  State pack(tensor<double, 3, 3> plastic_strain, double accumulated_plastic_strain) const
+  {
+    State internal_state{};
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        internal_state[3*i + j] = plastic_strain[i][j];
+      }
+    }
+    internal_state[9] = accumulated_plastic_strain;
+    return internal_state;
+  }
+
+  UnpackedState unpack(State internal_state) const
+  {
+    auto plastic_strain = make_tensor<3, 3>([=](int i, int j) { return internal_state[3*i + j];});
+    double accumulated_plastic_strain = internal_state[9];
+    return tuple{plastic_strain, accumulated_plastic_strain};
+  }
 
   /** @brief calculate the Cauchy stress, given the displacement gradient and previous material state */
   template <typename T>
@@ -83,13 +100,14 @@ struct J2Nonlinear {
     const double   G = 0.5 * E / (1.0 + nu);
 
     // (i) elastic predictor
-    auto el_strain = sym(du_dX) - state.plastic_strain;
+    auto [plastic_strain, accumulated_plastic_strain] = unpack(state);
+    auto el_strain = sym(du_dX) - plastic_strain;
     auto p         = K * tr(el_strain);
     auto s         = 2.0 * G * dev(el_strain);
     auto q         = sqrt(1.5) * norm(s);
 
     // (ii) admissibility
-    const double eqps_old = state.accumulated_plastic_strain;
+    const double eqps_old = accumulated_plastic_strain;
     auto         residual = [eqps_old, G, *this](auto delta_eqps, auto trial_mises) {
       return trial_mises - 3.0 * G * delta_eqps - this->hardening(eqps_old + delta_eqps);
     };
@@ -107,8 +125,9 @@ struct J2Nonlinear {
       auto Np = 1.5 * s / q;
 
       s = s - 2.0 * G * delta_eqps * Np;
-      state.accumulated_plastic_strain += get_value(delta_eqps);
-      state.plastic_strain += get_value(delta_eqps) * get_value(Np);
+      accumulated_plastic_strain += get_value(delta_eqps);
+      plastic_strain += get_value(delta_eqps) * get_value(Np);
+      state = pack(plastic_strain, accumulated_plastic_strain);
     }
 
     return s + p * I;
