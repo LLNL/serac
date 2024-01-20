@@ -112,11 +112,11 @@ struct J2Nonlinear {
     auto q         = sqrt(1.5) * norm(s);
 
     // (ii) admissibility
-    const double eqps_old = accumulated_plastic_strain;
-    auto         residual = [eqps_old, G, *this](auto delta_eqps, auto trial_mises) {
-      return trial_mises - 3.0 * G * delta_eqps - this->hardening(eqps_old + delta_eqps);
+    const auto eqps_old = accumulated_plastic_strain;
+    auto         residual = [G, *this](auto delta_eqps, auto trial_mises, auto eq_old) {
+      return trial_mises - 3.0 * G * delta_eqps - this->hardening(eq_old + delta_eqps);
     };
-    if (residual(0.0, get_value(q)) > tol * hardening.sigma_y) {
+    if (residual(0.0, get_value(q), get_value(eqps_old)) > tol * hardening.sigma_y) {
       // (iii) return mapping
 
       // Note the tolerance for convergence is the same as the tolerance for entering the return map.
@@ -124,16 +124,20 @@ struct J2Nonlinear {
       // variables, the return map won't be repeated.
       ScalarSolverOptions opts{.xtol = 0, .rtol = tol * hardening.sigma_y, .max_iter = 25};
       double              lower_bound = 0.0;
-      double              upper_bound = (get_value(q) - hardening(eqps_old)) / (3.0 * G);
-      auto [delta_eqps, status]       = solve_scalar_equation(residual, 0.0, lower_bound, upper_bound, opts, q);
+      double              upper_bound = get_value( (q - hardening(eqps_old)) / (3.0 * G) );
+      auto [delta_eqps, status]       = solve_scalar_equation(residual, 0.0, lower_bound, upper_bound, opts, q, eqps_old);
 
       auto Np = 1.5 * s / q;
 
       s = s - 2.0 * G * delta_eqps * Np;
-      accumulated_plastic_strain += get_value(delta_eqps);
-      plastic_strain += get_value(delta_eqps) * get_value(Np);
-      // accumulated_plastic_strain += delta_eqps;
-      // plastic_strain += delta_eqps * get_value(Np);
+      constexpr bool internal_state_is_dual = is_tensor_of_dual_number<T1>::value;
+      if constexpr (internal_state_is_dual) {
+        accumulated_plastic_strain += delta_eqps;
+        plastic_strain += delta_eqps * Np;
+      } else {
+        accumulated_plastic_strain += get_value(delta_eqps);
+        plastic_strain += get_value(delta_eqps) * get_value(Np);
+      }
       state = pack(plastic_strain, accumulated_plastic_strain);
     }
 

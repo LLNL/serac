@@ -73,6 +73,32 @@ TEST(PackedMaterial, Dual) {
     std::cout << "tangent " << serac::get_gradient(sigma) << std::endl;
 }
 
+TEST(PackedMaterial, InternalStateIsDual) {
+    double E = 1.0;
+    double nu = 0.3;
+    double rho = 1.0;
+    double sigma_y = 1.0;
+    double n = 1.0;
+    double H0 = E/20.0;
+    double eps0 = sigma_y/(n*H0);
+    serac::PowerLawHardening hardening{.sigma_y = sigma_y, .n = n, .eps0 = eps0};
+    serac::J2Nonlinear<serac::PowerLawHardening> mat{.E = E, .nu = nu, .hardening = hardening, .density = rho};
+
+    double e00 = 1.5;
+    double ep = (E*e00 - sigma_y)/(E + H0);
+    double eps11 = -(0.5 - nu)*ep - nu*e00;
+    serac::tensor<double, 3, 3> H = {{{e00, 0.0, 0.0},
+                                      {0.0, eps11, 0.0},
+                                      {0.0, 0.0, eps11}}};
+    serac::tensor<double, 3, 3> plastic_strain{};
+    double accumulated_plastic_strain = 0.0;
+    auto Q = mat.pack(plastic_strain, accumulated_plastic_strain);
+    auto dual_args = serac::make_dual(serac::tuple{Q, H});
+    auto sigma = mat(serac::get<0>(dual_args) , serac::get<1>(dual_args));
+    std::cout << "stress " << serac::get_value(sigma) << std::endl;;
+    std::cout << "tangent " << serac::get_gradient(sigma) << std::endl;
+}
+
 namespace serac
 {
 template <typename T>
@@ -92,7 +118,7 @@ tensor<T, 9> flatten(tensor<T, 3, 3> A)
 template<typename T>
 using FlatTensor = serac::tensor<T, 9>;
 
-TEST(PackedMaterial, CopyDuals) {
+TEST(PackedMaterial, Flatten) {
     serac::tensor<double, 3, 3> A{{{0.08811183127305, 0.39309930391406, 0.4883504766262},
                                    {0.63572859141876, 0.70760631671599, 0.0638470704629},
                                    {0.66157764230736, 0.27521984698671, 0.28507832693025}}};
@@ -100,8 +126,6 @@ TEST(PackedMaterial, CopyDuals) {
     std::cout << "B = " << B << std::endl;
     auto b = serac::flatten(B);
     std::cout << "b flat = " << b << std::endl;
-    // auto C = serac::dot(serac::transpose(B), B);
-    // std::cout << "C = " << C << std::endl;
 
     FlatTensor<double> c = serac::flatten(A);
 }
