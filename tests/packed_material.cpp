@@ -4,7 +4,7 @@
 
 #include "tuple.hpp"
 #include "tensor.hpp"
-#include "materials.hpp"
+#include "packed_material.hpp"
 
 double const tolerance = 1e-9;
 
@@ -17,12 +17,12 @@ TEST(PackedMaterial, Elastic) {
     double H0 = E/20.0;
     double eps0 = sigma_y/(n*H0);
     serac::PowerLawHardening hardening{.sigma_y = sigma_y, .n = n, .eps0 = eps0};
-    serac::J2Nonlinear<serac::PowerLawHardening> mat{.E = E, .nu = nu, .hardening = hardening, .density = rho};
+    serac::J2Packed<serac::PowerLawHardening> mat{.E = E, .nu = nu, .hardening = hardening, .density = rho};
 
     serac::tensor<double, 3, 3> H = {{{0.5, 0.0, 0.0},
                                       {0.0,-0.15, 0.0},
                                       {0.0, 0.0, -0.15}}};
-    serac::J2Nonlinear<serac::PowerLawHardening>::State<double> Q{};
+    serac::J2Packed<serac::PowerLawHardening>::State<double> Q{};
     auto sigma = mat(Q, H);
     EXPECT_NEAR(sigma[0][0], E*H[0][0], tolerance);
 }
@@ -36,7 +36,7 @@ TEST(PackedMaterial, Plastic) {
     double H0 = E/20.0;
     double eps0 = sigma_y/(n*H0);
     serac::PowerLawHardening hardening{.sigma_y = sigma_y, .n = n, .eps0 = eps0};
-    serac::J2Nonlinear<serac::PowerLawHardening> mat{.E = E, .nu = nu, .hardening = hardening, .density = rho};
+    serac::J2Packed<serac::PowerLawHardening> mat{.E = E, .nu = nu, .hardening = hardening, .density = rho};
 
     double e00 = 1.5;
     double ep = (E*e00 - sigma_y)/(E + H0);
@@ -44,7 +44,7 @@ TEST(PackedMaterial, Plastic) {
     serac::tensor<double, 3, 3> H = {{{e00, 0.0, 0.0},
                                       {0.0, eps11, 0.0},
                                       {0.0, 0.0, eps11}}};
-    serac::J2Nonlinear<serac::PowerLawHardening>::State<double> Q{};
+    serac::J2Packed<serac::PowerLawHardening>::State<double> Q{};
     auto sigma = mat(Q, H);
     double exact = E/(E + H0)*(H0*e00 + sigma_y);
     EXPECT_NEAR(sigma[0][0], exact, tolerance);
@@ -59,7 +59,7 @@ TEST(PackedMaterial, Dual) {
     double H0 = E/20.0;
     double eps0 = sigma_y/(n*H0);
     serac::PowerLawHardening hardening{.sigma_y = sigma_y, .n = n, .eps0 = eps0};
-    serac::J2Nonlinear<serac::PowerLawHardening> mat{.E = E, .nu = nu, .hardening = hardening, .density = rho};
+    serac::J2Packed<serac::PowerLawHardening> mat{.E = E, .nu = nu, .hardening = hardening, .density = rho};
 
     double e00 = 1.5;
     double ep = (E*e00 - sigma_y)/(E + H0);
@@ -67,7 +67,7 @@ TEST(PackedMaterial, Dual) {
     serac::tensor<double, 3, 3> H = {{{e00, 0.0, 0.0},
                                       {0.0, eps11, 0.0},
                                       {0.0, 0.0, eps11}}};
-    serac::J2Nonlinear<serac::PowerLawHardening>::State<double> Q{};
+    serac::J2Packed<serac::PowerLawHardening>::State<double> Q{};
     auto sigma = mat(Q, serac::make_dual(H));
     std::cout << "stress " << serac::get_value(sigma) << std::endl;;
     std::cout << "tangent " << serac::get_gradient(sigma) << std::endl;
@@ -82,7 +82,7 @@ TEST(PackedMaterial, InternalStateIsDual) {
     double H0 = E/20.0;
     double eps0 = sigma_y/(n*H0);
     serac::PowerLawHardening hardening{.sigma_y = sigma_y, .n = n, .eps0 = eps0};
-    serac::J2Nonlinear<serac::PowerLawHardening> mat{.E = E, .nu = nu, .hardening = hardening, .density = rho};
+    serac::J2Packed<serac::PowerLawHardening> mat{.E = E, .nu = nu, .hardening = hardening, .density = rho};
 
     double e00 = 1.5;
     double ep = (E*e00 - sigma_y)/(E + H0);
