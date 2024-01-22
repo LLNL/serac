@@ -854,8 +854,10 @@ public:
 
     // Load the temperature from the previous cycle from disk
     serac::FiniteElementState temperature_n_minus_1(temperature_);
-    StateManager::loadCheckpointedStates(cycle_, {temperature_, temperature_rate_});
-    StateManager::loadCheckpointedStates(cycle_ - 1, {temperature_n_minus_1});
+
+    temperature_ = loadCheckpointedState("temperature", cycle_);
+    temperature_rate_ = loadCheckpointedState("temperature_rate", cycle_);
+    temperature_n_minus_1 = loadCheckpointedState("temperature", cycle_ - 1);
 
     double dt = loadCheckpointedTimestep(cycle_ - 1);
 

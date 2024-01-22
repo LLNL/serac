@@ -112,11 +112,11 @@ std::unique_ptr<ParametrizedHeatTransferT> createParameterizedNonlinearHeatTrans
 double computeThermalQoi(BasePhysics& physics_solver, const TimeSteppingInfo& ts_info)
 {
   double qoi = 0.0;
-  physics_solver.outputStateToDisk();
+  //physics_solver.outputStateToDisk();
   for (int i = 0; i < ts_info.numTimesteps(); ++i) {
     double dt = ts_info.dts[i];
     physics_solver.advanceTimestep(dt);
-    physics_solver.outputStateToDisk();
+    //physics_solver.outputStateToDisk();
     qoi += computeStepQoi(physics_solver.state("temperature"), dt);
   }
   return qoi;
