@@ -111,7 +111,8 @@ public:
    */
   HeatTransfer(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
                const serac::TimesteppingOptions timestepping_opts, const std::string& physics_name,
-               std::string mesh_tag, std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0, bool save_to_disk = false)
+               std::string mesh_tag, std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0,
+               bool save_to_disk = false)
       : HeatTransfer(std::make_unique<EquationSolver>(nonlinear_opts, lin_opts, StateManager::mesh(mesh_tag).GetComm()),
                      timestepping_opts, physics_name, mesh_tag, parameter_names, cycle, time, save_to_disk)
   {
@@ -280,6 +281,9 @@ public:
 
     temperatures_.clear();
     temperature_rates_.clear();
+
+    temperatures_.push_back(temperature_);
+    temperature_rates_.push_back(temperature_rate_);
   }
 
   /**
@@ -339,7 +343,6 @@ public:
         temperatures_.push_back(temperature_);
         temperature_rates_.push_back(temperature_rate_);
       }
-
     }
 
     cycle_ += 1;
@@ -635,7 +638,8 @@ public:
   void setState(const std::string& state_name, const FiniteElementState& state) override
   {
     if (state_name == "temperature") {
-      temperature_ = state;
+      temperature_          = state;
+      temperatures_[cycle_] = temperature_;
       return;
     }
 
@@ -752,7 +756,6 @@ public:
       temperatures_.push_back(temperature_);
       temperature_rates_.push_back(temperature_rate_);
     }
-
   }
 
   /**
@@ -855,8 +858,8 @@ public:
     // Load the temperature from the previous cycle from disk
     serac::FiniteElementState temperature_n_minus_1(temperature_);
 
-    temperature_ = loadCheckpointedState("temperature", cycle_);
-    temperature_rate_ = loadCheckpointedState("temperature_rate", cycle_);
+    temperature_          = loadCheckpointedState("temperature", cycle_);
+    temperature_rate_     = loadCheckpointedState("temperature_rate", cycle_);
     temperature_n_minus_1 = loadCheckpointedState("temperature", cycle_ - 1);
 
     double dt = loadCheckpointedTimestep(cycle_ - 1);
