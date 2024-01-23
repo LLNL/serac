@@ -32,6 +32,21 @@ double solve_scalar_enzyme(double x0, double param)
     return x;
 }
 
+template <auto f>
+double solve_scalar_enzyme_fwddiff(double x0, double dx0, double p, double dp)
+{
+    double x = solve_scalar_enzyme<f>(x0, p);
+    double dfdx = __enzyme_fwddiff<double>((void*)f, enzyme_dup, x, 1.0, enzyme_const, p);
+    double dfdp = __enzyme_fwddiff<double>((void*)f, enzyme_const, x, enzyme_dup, p, dp);
+    std::cout << "Custom diff is being called" << std::endl;
+    return -dfdp/dfdx;
+}
+
+// how to instantiate one of these in a way that enzyme sees it?
+template <auto f>
+void* __enzyme_register_derivative_solve_scalar_enzyme[] = { (void*) solve_scalar_enzyme<sqrt_res>, (void*) solve_scalar_enzyme_fwddiff<sqrt_res> };
+
+
 } // namespace serac
 
 TEST(EnzymeNewton, Solves)
@@ -41,4 +56,19 @@ TEST(EnzymeNewton, Solves)
     // std::cout << y << std::endl;
     double sqrt4 = serac::solve_scalar_enzyme<sqrt_res>(1.0, 4.0);
     EXPECT_NEAR(sqrt4, 2.0, 1e-9);
+}
+
+TEST(EnzymeNewton, DerivativeFunctionCorrectness)
+{
+    double y = serac::solve_scalar_enzyme_fwddiff<sqrt_res>(1.0, 0.0, 4.0, 1.0);
+    double exact = 0.25;
+    EXPECT_NEAR(y, exact, 1e-9);
+}
+
+TEST(EnzymeNewton, RegisteredDerivative)
+{
+    double x0 = 1.0;
+    double y = __enzyme_fwddiff<double>((void*) serac::solve_scalar_enzyme<sqrt_res>, enzyme_const, x0, enzyme_dup, 4.0, 1.0);
+    double exact = 0.25;
+    EXPECT_NEAR(y, exact, 1e-9);
 }
