@@ -27,25 +27,117 @@ constexpr int DERIVATIVE = 1;
 namespace detail {
 
 /**
- * @brief Compute the Jacobian (dx'/dx, x' = x + p) for shape-displaced integrals
+ * @brief A helper struct that contains the appropriate parent-to-physical and physical-to-parent
+ * transformations for an applied shape field
  *
- * @tparam dim Dimension of the integral
- * @tparam shape_type The variable type for the shape displacement
- * @param shape The shape displacement
- * @return The computed Jacobian of the shape-displacement transformation (dx'/dx)
- *
- * @note This is currently only implemented for H1 shape displacement fields
+ * @tparam dim The dimension of the input position
+ * @tparam shape_type The type of the shape field (may be dual)
  */
 template <int dim, typename shape_type>
-SERAC_HOST_DEVICE auto compute_jacobian(Dimension<dim>, const shape_type& shape)
-{
-  auto dp_dX = get<DERIVATIVE>(shape);
+struct ShapeCorrection {
+public:
+  /**
+   * @brief Construct a new Shape Correction object with the appropriate transformations for a shape field
+   *
+   * @param p The current shape displacement field at the underlying quadrature point
+   */
+  ShapeCorrection(Dimension<dim>, shape_type p)
+      : J_(Identity<dim>() + get<DERIVATIVE>(p)), detJ_(det(J_)), inv_J_(inv(J_)), inv_JT_(transpose(inv_J_))
+  {
+  }
 
-  // x' = x + p
-  // J  = dx'/dx
-  //    = I + dp_dx
-  return Identity<dim>() + dp_dX;
-}
+  /**
+   * @brief Modify the trial argument using the correct physical to reference to shape-adjusted transformation for the
+   * underlying trial function space
+   *
+   * @tparam trial_type The trial function type (may be dual)
+   * @tparam space_type The trial function finite element space (e.g. H1, L2, Hcurl
+   *
+   * @param u The input trial function at a quadrature point
+   *
+   * @return The modified trial function adjusted for the underlying shape displacement field)
+   */
+  template <typename trial_type, typename space_type>
+  SERAC_HOST_DEVICE auto modify_trial_argument(space_type /* space */, const trial_type& u) const
+  {
+    if constexpr (space_type{}.family == Family::H1 || space_type{}.family == Family::L2) {
+      // Our updated spatial coordinate is x' = x + p. We want to calculate
+      // du/dx' = du/dx * dx/dx'
+      //        = du/dx * (dx'/dx)^-1
+      //        = du_dx * (J)^-1
+      auto trial_derivative = dot(get<DERIVATIVE>(u), inv_J_);
+
+      return serac::tuple{get<VALUE>(u), trial_derivative};
+    }
+
+    if constexpr (space_type{}.family == Family::HCURL) {
+      auto modified_val = dot(get<VALUE>(u), inv_J_);
+      if constexpr (dim == 2) {
+        auto modified_derivative = get<DERIVATIVE>(u) / detJ_;
+        return serac::tuple{modified_val, modified_derivative};
+      }
+      if constexpr (dim == 3) {
+        auto modified_derivative = dot(get<DERIVATIVE>(u), transpose(J_));
+        return serac::tuple{modified_val, modified_derivative};
+      }
+    }
+  }
+
+  /**
+   * @brief Modify the quadrature function return value using the correct shape-adjusted to reference transformation for
+   * the underlying test function space
+   *
+   * @tparam test_space The test function finite element space (e.g. H1, L2, double)
+   * @tparam q_func_type The type of the unmodified qfunction return
+   *
+   * @param v The unmodified q function return in shape-adjusted coordinates
+   *
+   * @return The modified return after applying the appropriate shape-adjusted to reference transformation
+   */
+  template <typename test_space, typename q_func_type>
+  SERAC_HOST_DEVICE auto modify_shape_aware_qf_return(test_space /*test*/, const q_func_type& v)
+  {
+    if constexpr (std::is_same_v<test_space, double>) {
+      return detJ_ * v;
+    } else {
+      if constexpr (test_space{}.family == Family::H1 || test_space{}.family == Family::L2) {
+        auto modified_flux   = dot(get<FLUX>(v), inv_JT_) * detJ_;
+        auto modified_source = get<SOURCE>(v) * detJ_;
+
+        return serac::tuple{modified_source, modified_flux};
+      }
+      if constexpr (test_space{}.family == Family::HCURL) {
+        auto modified_source = dot(get<SOURCE>(v), inv_JT_) * detJ_;
+        if constexpr (dim == 3) {
+          auto modified_flux = dot(get<FLUX>(v), J_);
+          return serac::tuple{modified_source, modified_flux};
+        } else {
+          return serac::tuple{modified_source, get<FLUX>(v)};
+        }
+      }
+    }
+  }
+
+private:
+  /// @cond
+  using jacobian_type = std::remove_reference_t<decltype(get<DERIVATIVE>(std::declval<shape_type>()))>;
+  using detJ_type     = decltype(det(std::declval<jacobian_type>()));
+  using inv_J_type    = decltype(inv(std::declval<jacobian_type>()));
+  using inv_JT_type   = decltype(inv(transpose(std::declval<jacobian_type>())));
+  /// @endcond
+
+  /// @brief The Jacobian of the shape-adjusted transformation (x = X + p, J = dx/dX)
+  jacobian_type J_;
+
+  /// @brief The determinant of the Jacobian
+  detJ_type detJ_;
+
+  /// @brief Inverse of the Jacobian
+  inv_J_type inv_J_;
+
+  /// @brief Inverse transpose of the Jacobian
+  inv_JT_type inv_JT_;
+};
 
 /**
  * @brief Compute the boundary area correction term for boundary integrals with a shape displacement field
@@ -79,142 +171,52 @@ SERAC_HOST_DEVICE auto compute_boundary_area_correction(const position_type& X, 
 }
 
 /**
- * @brief Modify the value and flux of a q-function integrand according to the correct pullback mappings
- *
- * @tparam dim The dimension of the integral
- * @tparam test_space The finite element space for the test function
- * @tparam shape_type The type of the shape displacement argument
- * @tparam q_func_type The type of the unmodified q function return value (value and flux)
- *
- * @param d The dimension of the integral
- * @param shape The input shape displacement (value and gradient)
- * @param v The unmodified q function return value (value and flux)
- *
- * @return The corrected q function return accounting for shape displacements
- *
- * @note This is currently only implemented for H1 and L2 test function spaces
- */
-template <int dim, typename test_space, typename shape_type, typename q_func_type,
-          typename = std::enable_if_t<test_space{}.family == Family::H1 || test_space{}.family == Family::L2>>
-SERAC_HOST_DEVICE auto modify_shape_aware_qf_return(Dimension<dim> d, test_space /*test*/, const shape_type& shape,
-                                                    const q_func_type& v)
-{
-  auto J = compute_jacobian(d, shape);
-
-  auto dv = det(J);
-
-  auto modified_flux   = dot(get<FLUX>(v), transpose(inv(J))) * dv;
-  auto modified_source = get<SOURCE>(v) * dv;
-
-  return serac::tuple{modified_source, modified_flux};
-}
-
-/**
- * @brief Modify the value and flux of a q-function integrand according to the pullback map for QOI integrals
- *
- * @tparam dim The dimension of the integral
- * @tparam shape_type The type of the shape displacement argument
- * @tparam q_func_type The type of the unmodified q function return value (value only)
- *
- * @param d The dimension of the integral
- * @param shape The input shape displacement (value and gradient)
- * @param v The unmodified q function return value (value only)
- *
- * @return The corrected q function return accounting for shape displacements
- *
- * @note This is a specialization for QOI test function spaces
- */
-template <int dim, typename shape_type, typename q_func_type>
-SERAC_HOST_DEVICE auto modify_shape_aware_qf_return(Dimension<dim> d, double, const shape_type& shape,
-                                                    const q_func_type& v)
-{
-  auto J = compute_jacobian(d, shape);
-
-  auto dv = det(J);
-
-  return dv * v;
-}
-
-/**
- * @brief Modify the gradient of a trial function according to the shape displacement Jacobian
- *
- * @tparam jacobian_type The type of the Jacobian argument
- * @tparam space_type The finite element space for the trial function
- * @tparam trial_type The type of the unmodified trial function (value and gradient)
- *
- * @param J The Jacobian (dx'/dx) for the shape displaced coordinate map
- * @param u The unmodified trial function argument (value and gradient)
- *
- * @return The modified trial q function argument value adjusted for the current shape displacement field
- *
- * @note This is currently only implemented for H1 and L2 trial function spaces
- */
-template <typename jacobian_type, typename trial_type, typename space_type,
-          typename = std::enable_if_t<space_type{}.family == Family::H1 || space_type{}.family == Family::L2>>
-SERAC_HOST_DEVICE auto modify_trial_argument(const jacobian_type& J, space_type /* space */, const trial_type& u)
-{
-  auto du_dx = get<DERIVATIVE>(u);
-
-  // Our updated spatial coordinate is x' = x + p. We want to calculate
-  // du/dx' = du/dx * dx/dx'
-  //        = du/dx * (dx'/dx)^-1
-  //        = du_dx * (J)^-1
-  auto trial_derivative = dot(du_dx, inv(J));
-
-  return serac::tuple{get<VALUE>(u), trial_derivative};
-}
-
-/**
  * @brief A helper function to modify all of the trial function input derivatives according to the given shape
  * displacement for integrands without state variables
  *
- * @tparam dim The dimension of the integral
  * @tparam lambda The q-function type
  * @tparam coord_type The input position type
  * @tparam shape_type The type of the shape displacement argument
  * @tparam space_types The type of the input finite element space tuple for the trial functions
  * @tparam trial_types The type of the input finite element argument tuple (values and derivatives)
+ * @tparam correction_type The type of the shape correction struct
  * @tparam i Indices for accessing the individual arguments for the underlying q-function
  *
- * @param d The dimension of the integral
  * @param qf The q-function integrand with expects shape-adjusted arguments
  * @param t The time at which to evaluate the integrand
  * @param x The spatial coordinate at which to evaluate the integrand
  * @param shape The space displacement at which to evaluate the integrand
  * @param space_tuple The tuple of finite element spaces used by the input trial functions
  * @param arg_tuple The tuple of input arguments for the trial functions (value and gradient)
+ * @param correction The shape correction struct containing the data and methods used to calculate the appropriate
+ * pullback mappings
  *
  * @return The q-function value using the shape-modified input arguments. Note that the returned value and flux have not
  * been modified to reflect the shape displacement.
- *
- * @note This is currently only implemented for H1 and L2 trial function spaces.
  */
-template <int dim, typename lambda, typename coord_type, typename shape_type, typename space_types,
-          typename trial_types, int... i>
-SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper(Dimension<dim> d, lambda&& qf, double t, const coord_type& x,
-                                                   const shape_type& shape, const space_types& space_tuple,
-                                                   const trial_types& arg_tuple, std::integer_sequence<int, i...>)
+template <typename lambda, typename coord_type, typename shape_type, typename space_types, typename trial_types,
+          typename correction_type, int... i>
+SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper(lambda&& qf, double t, const coord_type& x, const shape_type& shape,
+                                                   const space_types& space_tuple, const trial_types& arg_tuple,
+                                                   const correction_type& correction, std::integer_sequence<int, i...>)
 {
-  [[maybe_unused]] auto J = compute_jacobian(d, shape);
-
   return qf(t, x + get<VALUE>(shape),
-            modify_trial_argument(J, serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
+            correction.modify_trial_argument(serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
 }
 
 /**
  * @brief A helper function to modify all of the trial function input derivatives according to the given shape
  * displacement for integrands without state variables
  *
- * @tparam dim The dimension of the integral
  * @tparam lambda The q-function type
  * @tparam coord_type The input position type
  * @tparam state_type The quadrature data container type
  * @tparam shape_type The type of the shape displacement argument
  * @tparam space_types The type of the input finite element space tuple for the trial functions
  * @tparam trial_types The type of the input finite element argument tuple (values and derivatives)
+ * @tparam correction_type The type of the shape correction struct
  * @tparam i Indices for accessing the individual arguments for the underlying q-function
  *
- * @param d The dimension of the integral
  * @param qf The q-function integrand with expects shape-adjusted arguments
  * @param t The time at which to evaluate the integrand
  * @param x The spatial coordinate at which to evaluate the integrand
@@ -222,24 +224,23 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper(Dimension<dim> d, lambda&& qf
  * @param shape The space displacement at which to evaluate the integrand
  * @param space_tuple The tuple of finite element spaces used by the input trial functions
  * @param arg_tuple The tuple of input arguments for the trial functions (value and gradient)
+ * @param correction The shape correction struct containing the data and methods used to calculate the appropriate
+ * pullback mappings
  *
  * @return The q-function value using the shape-modified input arguments. Note that the returned value and flux have not
  * been modified to reflect the shape displacement.
- *
- * @note This is currently only implemented for H1 and L2 trial function spaces.
  */
-template <int dim, typename lambda, typename coord_type, typename state_type, typename shape_type, typename space_types,
-          typename trial_types, int... i>
-SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper_with_state(Dimension<dim> d, lambda&& qf, double t,
-                                                              const coord_type& x, state_type& state,
-                                                              const shape_type& shape, const space_types& space_tuple,
-                                                              const trial_types& arg_tuple,
+template <typename lambda, typename coord_type, typename state_type, typename shape_type, typename space_types,
+          typename trial_types, typename correction_type, int... i>
+SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper_with_state(lambda&& qf, double t, const coord_type& x,
+                                                              state_type& state, const shape_type& shape,
+                                                              const space_types&     space_tuple,
+                                                              const trial_types&     arg_tuple,
+                                                              const correction_type& correction,
                                                               std::integer_sequence<int, i...>)
 {
-  [[maybe_unused]] auto J = compute_jacobian(d, shape);
-
   return qf(t, x + get<VALUE>(shape), state,
-            modify_trial_argument(J, serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
+            correction.modify_trial_argument(serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
 }
 
 }  // namespace detail
@@ -295,19 +296,7 @@ public:
   ShapeAwareFunctional(const mfem::ParFiniteElementSpace* shape_fes, const mfem::ParFiniteElementSpace* test_fes,
                        std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
   {
-    static_assert(test_space.family != Family::HDIV, "Shape-aware functional not implemented for HDiv test functions");
-    static_assert(test_space.family != Family::HCURL,
-                  "Shape-aware functional not implemented for HCurl test functions");
     static_assert(shape_space.family == Family::H1, "Only H1 spaces allowed for shape displacements");
-
-    for_constexpr<num_trial_spaces>([](auto i) {
-      static_assert(get<i>(trial_spaces).family != Family::HDIV,
-                    "Shape-aware functional not implemented for HDiv trial functions");
-      static_assert(get<i>(trial_spaces).family != Family::HCURL,
-                    "Shape-aware functional not implemented for HCurl trial functions");
-      static_assert(get<i>(trial_spaces).family != Family::QOI,
-                    "Shape-aware functional not implemented for QOI trial functions");
-    });
 
     std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces + 1> prepended_spaces;
 
@@ -334,15 +323,6 @@ public:
                        std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
   {
     static_assert(shape_space.family == Family::H1, "Only H1 spaces allowed for shape displacements");
-
-    for_constexpr<num_trial_spaces>([](auto i) {
-      static_assert(get<i>(trial_spaces).family != Family::HDIV,
-                    "Shape-aware functional not implemented for HDiv trial functions");
-      static_assert(get<i>(trial_spaces).family != Family::HCURL,
-                    "Shape-aware functional not implemented for HCurl trial functions");
-      static_assert(get<i>(trial_spaces).family != Family::QOI,
-                    "Shape-aware functional not implemented for QOI trial functions");
-    });
 
     std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces + 1> prepended_spaces;
 
@@ -381,10 +361,12 @@ public:
           [integrand](double time, auto x, auto shape_val, auto... qfunc_args) {
             auto qfunc_tuple = make_tuple(qfunc_args...);
 
+            detail::ShapeCorrection shape_correction(Dimension<dim>{}, shape_val);
+
             auto unmodified_qf_return = detail::apply_shape_aware_qf_helper(
-                Dimension<dim>{}, integrand, time, x, shape_val, trial_spaces, qfunc_tuple,
+                integrand, time, x, shape_val, trial_spaces, qfunc_tuple, shape_correction,
                 std::make_integer_sequence<int, sizeof...(qfunc_args)>{});
-            return detail::modify_shape_aware_qf_return(Dimension<dim>{}, test_space, shape_val, unmodified_qf_return);
+            return shape_correction.modify_shape_aware_qf_return(test_space, unmodified_qf_return);
           },
           domain, qdata);
     } else {
@@ -393,10 +375,12 @@ public:
           [integrand](double time, auto x, auto& state, auto shape_val, auto... qfunc_args) {
             auto qfunc_tuple = make_tuple(qfunc_args...);
 
+            detail::ShapeCorrection shape_correction(Dimension<dim>{}, shape_val);
+
             auto unmodified_qf_return = detail::apply_shape_aware_qf_helper_with_state(
-                Dimension<dim>{}, integrand, time, x, state, shape_val, trial_spaces, qfunc_tuple,
+                integrand, time, x, state, shape_val, trial_spaces, qfunc_tuple, shape_correction,
                 std::make_integer_sequence<int, sizeof...(qfunc_args)>{});
-            return detail::modify_shape_aware_qf_return(Dimension<dim>{}, test_space, shape_val, unmodified_qf_return);
+            return shape_correction.modify_shape_aware_qf_return(test_space, unmodified_qf_return);
           },
           domain, qdata);
     }
