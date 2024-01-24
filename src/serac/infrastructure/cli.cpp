@@ -37,8 +37,7 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   bool enable_paraview{false};
   app.add_flag("-p, --paraview", enable_paraview, "Enable ParaView output");
   bool print_unused{false};
-  app.add_flag("-u, --print-unused", print_unused,
-               "Prints unused entries in input file, then exits");
+  app.add_flag("-u, --print-unused", print_unused, "Prints unused entries in input file, then exits");
   bool version{false};
   app.add_flag("-v, --version", version, "Print version and provenance information, then exits");
 
