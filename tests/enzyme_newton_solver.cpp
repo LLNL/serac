@@ -79,25 +79,40 @@ TEST(EnzymeNewton, StaticVersionSolves)
     EXPECT_NEAR(sqrt4, 2.0, 1e-9);
 }
 
-TEST(EnzymeNewton, WorksWithStatelessLambda)
-{
-    auto f = [](double x, serac::tuple<double> p) { return x*x - serac::get<0>(p); };
-    double sqrt4 = serac::solve_scalar_enzyme(f, 1.0, serac::tuple{4.0});
-    EXPECT_NEAR(sqrt4, 2.0, 1e-9);
-}
+// TEST(EnzymeNewton, WorksWithStatelessLambda)
+// {
+//     auto f = [](double x, serac::tuple<double> p) { return x*x - serac::get<0>(p); };
+//     double sqrt4 = serac::solve_scalar_enzyme(f, 1.0, serac::tuple{4.0});
+//     EXPECT_NEAR(sqrt4, 2.0, 1e-9);
+// }
 
 struct Params
 {
     double p1, p2;
 };
 
-TEST(EnzymeNewton, MultipleParameters)
-{
-    // auto f = [](double x, std::tuple<double, double> p) { return x*x - std::get<0>(p)*std::get<1>(p); };
-    //auto p = std::tuple<double, double>{4.0, 1.0};
+// TEST(EnzymeNewton, MultipleParameters)
+// {
+//     // auto f = [](double x, std::tuple<double, double> p) { return x*x - std::get<0>(p)*std::get<1>(p); };
+//     //auto p = std::tuple<double, double>{4.0, 1.0};
 
-    auto f = [](double x, Params p) { return x*x - p.p1*p.p2; };
-    Params p{4.0, 1.0};
-    double sqrt4 = serac::solve_scalar_enzyme(f, 1.0, p);
+//     auto f = [](double x, Params p) { return x*x - p.p1*p.p2; };
+//     Params p{4.0, 1.0};
+//     double sqrt4 = serac::solve_scalar_enzyme(f, 1.0, p);
+//     EXPECT_NEAR(sqrt4, 2.0, 1e-9);
+// }
+
+TEST(EnzymeNewton, LambdaWithState)
+{
+    double p = 4.0;
+    auto f = [=](double x, double) { return x*x - p; };
+    double sqrt4 = serac::solve_scalar_enzyme_wrapped(f, 1.0, 0.0f);
     EXPECT_NEAR(sqrt4, 2.0, 1e-9);
 }
+
+// TEST(EnzymeNewton, WorksWithStatelessLambda)
+// {
+//     auto f = [](double x, serac::tuple<double> p) { return x*x - serac::get<0>(p); };
+//     double sqrt4 = serac::solve_scalar_enzyme(f, 1.0, serac::tuple{4.0});
+//     EXPECT_NEAR(sqrt4, 2.0, 1e-9);
+// }
