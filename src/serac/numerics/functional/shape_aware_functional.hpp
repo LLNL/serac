@@ -55,7 +55,7 @@ public:
    *
    * @param u The input trial function at a quadrature point
    *
-   * @return The modified trial function adjusted for the underlying shape displacement field)
+   * @return The modified trial function adjusted for the underlying shape displacement field
    */
   template <typename trial_type, typename space_type>
   SERAC_HOST_DEVICE auto modify_trial_argument(space_type /* space */, const trial_type& u) const
@@ -144,8 +144,10 @@ private:
  *
  * @tparam position_type The position input argument type
  * @tparam shape_type The shape displacement input argument type
+ *
  * @param X The input position (value and gradient)
  * @param shape The input shape displacement (value and gradient)
+ *
  * @return The area correction factor transforming the boundary integral from the reference domain area into the
  * shape-displaced area
  */
@@ -427,6 +429,7 @@ public:
    * @tparam T The types of the arguments passed in
    * @tparam wrt The index of the argument to take the gradient with respect to. Index 0 is always the shape
    * displacement
+   *
    * @param t The time
    * @param args The trial space dofs used to carry out the calculation. The first argument is always the shape
    * displacement.
@@ -445,6 +448,7 @@ public:
    * @note The first argument after time in the argument list is always the shape displacement field.
    *
    * @tparam T The types of the arguments passed in
+   *
    * @param t The time
    * @param args The trial space dofs used to carry out the calculation. The first argument is always the shape
    * displacement. To compute a derivative, at most one argument can be of type `differentiate_wrt_this(mfem::Vector)`.

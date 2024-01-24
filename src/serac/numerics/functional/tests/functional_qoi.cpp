@@ -421,7 +421,7 @@ TEST(QoI, ShapeAndParameter)
   // Shape-aware functional only supports H1 and L2 trial functions
   using parameter_space = H1<1>;
 
-  // Define the QOI type. Note that the shape aware functional has an extra template argument
+  // Define the QOI type. Note that the shape-aware functional has an extra template argument
   // for the shape displacement finite element space
   using qoi_type = serac::ShapeAwareFunctional<shape_space, double(parameter_space)>;
 
@@ -486,7 +486,7 @@ TEST(QoI, ShapeAndParameterBoundary)
   // Shape-aware functional only supports H1 and L2 trial functions
   using parameter_space = H1<1, dim>;
 
-  // Define the QOI type. Note that the shape aware functional has an extra template argument
+  // Define the QOI type. Note that the shape-aware functional has an extra template argument
   // for the shape displacement finite element space
   using qoi_type = serac::ShapeAwareFunctional<shape_space, double(parameter_space)>;
 
