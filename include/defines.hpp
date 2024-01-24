@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility>
+
 #define SERAC_HOST_DEVICE
 #define SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 

@@ -62,4 +62,6 @@ ExternalProject_Add(TPL_llvm
                -DLLVM_ENABLE_ASSERTIONS=ON
                -DLLVM_ENABLE_RUNTIMES:STRING=libcxx|libcxxabi
                -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_SOURCE_DIR}/build
+               -DDEFAULT_SYSROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk # mac only
+
 )

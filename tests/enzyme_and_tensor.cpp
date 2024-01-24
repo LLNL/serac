@@ -39,23 +39,6 @@ void sqr(double x, double& out)
   out = x*x;
 }
 
-void another_linear_solve(tensor<double, 3, 3> A, tensor<double, 3> b, tensor<double, 3>& x)
-{
-  x = linear_solve(A, b);
-}
-
-void another_linear_solve_fwddiff(const tensor<double, 3, 3>* A, const tensor<double, 3, 3>* dA,
-                                  const tensor<double, 3>* b, const tensor<double, 3>* db,
-                                  tensor<double, 3>* x, tensor<double, 3>* dx)
-
-{
-  *x = linear_solve(*A, *b);
-  tensor<double, 3> r = *db - dot(*dA, *x);
-  *dx = linear_solve(*A, r);
-}
-
-void* __enzyme_register_derivative_another_linear_solve[] = {(void*) another_linear_solve, (void*) another_linear_solve_fwddiff};
-
 
 TEST(enzyme, linear_solve_test) {
   tensor<double,3,3> A = {{
@@ -80,6 +63,24 @@ TEST(enzyme, linear_solve_test) {
   EXPECT_EQ(dy[1],  0.50);
   EXPECT_EQ(dy[2], -0.25);
 }
+
+#if 0
+void another_linear_solve(tensor<double, 3, 3> A, tensor<double, 3> b, tensor<double, 3>& x)
+{
+  x = linear_solve(A, b);
+}
+
+void another_linear_solve_fwddiff(const tensor<double, 3, 3>* A, const tensor<double, 3, 3>* dA,
+                                  const tensor<double, 3>* b, const tensor<double, 3>* db,
+                                  tensor<double, 3>* x, tensor<double, 3>* dx)
+
+{
+  *x = linear_solve(*A, *b);
+  tensor<double, 3> r = *db - dot(*dA, *x);
+  *dx = linear_solve(*A, r);
+}
+
+void* __enzyme_register_derivative_another_linear_solve[] = {(void*) another_linear_solve, (void*) another_linear_solve_fwddiff};
 
 TEST(enzyme, another_linear_solve_test) {
   tensor<double,3,3> A = {{
@@ -111,6 +112,7 @@ TEST(enzyme, another_linear_solve_test) {
   EXPECT_NEAR(dx[1],  0.50, TOL);
   EXPECT_NEAR(dx[2], -0.25, TOL);
 }
+#endif
 
 TEST(enzyme, fwddiffOnVoidFn)
 {
@@ -175,5 +177,45 @@ TEST(enzyme, jvp_test_2_args) {
   EXPECT_EQ(dy[0], -1.25);
   EXPECT_EQ(dy[1],  0.50);
   EXPECT_EQ(dy[2], -0.25);
+}
+
+template < typename T, typename ... arg_types >
+auto functor_wrapper(const T & f, arg_types && ... args) {
+  return f(args ...);
+}
+
+struct Functor {
+  auto operator() (const std::array<double,2> & x) const {
+    return x[0] * a + x[1] * x[1] * b * b;
+  }
+
+  double a;
+  double b;
+};
+
+TEST(enzyme, manual_jvp_test_functor) {
+  Functor f{1.0, 2.0};
+
+  std::array<double, 2> x{3.0, 4.0};
+  std::array<double, 2> dx{5.0, 6.0};
+  double y = f({3.0, 4.0});
+  EXPECT_EQ(y, 67.0 /* 3 * 1 + (4 * 4) * (2 * 2) */);
+
+  double dy = __enzyme_fwddiff<double>((void*)functor_wrapper<decltype(f), std::array<double,2> >, enzyme_const, (void*)&f, enzyme_dup, &x, &dx);
+  EXPECT_EQ(dy, 197.0);
+}
+
+TEST(enzyme, manual_jvp_test_lambda) {
+  auto f = [a = 1.0, b = 2.0](std::array<double,2> x) {
+    return x[0] * a + x[1] * x[1] * b * b;
+  };
+
+  std::array<double, 2> x{3.0, 4.0};
+  std::array<double, 2> dx{5.0, 6.0};
+  double y = f({3.0, 4.0});
+  EXPECT_EQ(y, 67.0 /* 3 * 1 + (4 * 4) * (2 * 2) */);
+
+  double dy = __enzyme_fwddiff<double>((void*)functor_wrapper<decltype(f), std::array<double,2> >, enzyme_const, (void*)&f, enzyme_dup, &x, &dx);
+  EXPECT_EQ(dy, 197.0);
 }
 

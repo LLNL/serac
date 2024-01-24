@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cmath>
+#include <iostream>
+#include <tuple>
 
 #include "defines.hpp"
 
@@ -2012,5 +2014,27 @@ inline mat < 3, 3 > R3_basis(const vec3 & n) {
   };
 }
 #endif
+
+namespace serac {
+  template < std::size_t i, typename T, int n >
+  auto & get(serac::tensor< T, n > & x) { return x[i]; }
+
+  template < std::size_t i, typename T, int n >
+  const auto & get(const serac::tensor< T, n > & x) { return x[i]; }
+}
+
+namespace std {
+
+  template < typename T, int n >
+  struct tuple_size< serac::tensor< T, n > >{
+    static constexpr std::size_t value = n;
+  };
+
+  template < std::size_t i, typename T, int n >
+  struct tuple_element< i, serac::tensor< T, n > >{
+    using type = T;
+  };
+
+}
 
 #include "tuple_tensor_dual_functions.hpp"

@@ -1,15 +1,6 @@
 #pragma once
 
-int enzyme_dup;
-int enzyme_dupnoneed;
-int enzyme_out;
-int enzyme_const;
-
-template < typename return_type, typename ... T >
-extern return_type __enzyme_fwddiff(void*, T ... );
-
-template < typename return_type, typename ... T >
-extern return_type __enzyme_autodiff(void*, T ... );
+#include "enzyme.hpp"
 
 template < auto function, typename T > 
 auto jvp(T arg) {

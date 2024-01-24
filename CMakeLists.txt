@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 
 set(TPL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/TPL) 
+set(Clang_ROOT ${TPL_PATH}/build/lib/cmake) 
+set(Enzyme_ROOT ${TPL_PATH}/build/lib/cmake) 
 set(LLVM_DIR ${TPL_PATH}/build/lib/cmake/llvm)
-set(Enzyme_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/TPL/build/lib/cmake) 
 
 #set(CMAKE_FIND_DEBUG_MODE 1)
 find_package(Enzyme REQUIRED CONFIG)
@@ -22,31 +23,28 @@ include(FetchContent)
 include(ExternalProject)
 include(cmake/gtest.cmake)
 
-add_library(serac INTERFACE)
-target_include_directories(serac INTERFACE include)
+add_library(serac src/enzyme.cpp)
+target_include_directories(serac PUBLIC include)
 
 if (ENABLE_JIT) 
   message("Enabling JIT support")
 
-  set(Clang_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/TPL/build/lib/cmake) 
   find_package(Clang REQUIRED clangTooling libClang clangASTMatchers)
 
   add_library(jit SHARED include/JIT.hpp src/JIT.cpp)
-  target_include_directories(jit PUBLIC include)
+  target_include_directories(jit PUBLIC include ${TPL_PATH}/build/include)
   target_precompile_headers(jit PRIVATE include/pch.hpp)
-  target_link_libraries(jit PUBLIC
-    clangAST
-    clangBasic
-    clangInterpreter
-    clangFrontend
-    clangSema
-  )
+  target_link_libraries(jit PRIVATE clangInterpreter)
 
   target_compile_definitions(jit PUBLIC -DTPL_PATH="${TPL_PATH}")
 
-  target_link_libraries(serac INTERFACE jit)
+  #target_link_libraries(serac PUBLIC jit)
 
-  set(ENZYME_PLUGIN_FLAG "-fpass-plugin=${TPL_PATH}/build/lib/ClangEnzyme-16.so")
+  if (APPLE) 
+    set(ENZYME_PLUGIN_FLAG "-fpass-plugin=${TPL_PATH}/build/lib/ClangEnzyme-16.dylib")
+  else()
+    set(ENZYME_PLUGIN_FLAG "-fpass-plugin=${TPL_PATH}/build/lib/ClangEnzyme-16.so")
+  endif()
   target_compile_definitions(serac INTERFACE -DENZYME_PLUGIN_FLAG="${ENZYME_PLUGIN_FLAG}")
 
 endif()
@@ -66,11 +64,10 @@ foreach(filename ${cpp_tests})
 
   add_executable(${testname} ${filename})
   target_link_libraries(${testname} PUBLIC GTest::gtest_main serac ClangEnzymeFlags)
+  #target_link_libraries(${testname} PUBLIC GTest::gtest_main serac LLDEnzymeFlags)
 
   add_test(${testname} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${testname})		
 
 endforeach(filename ${cpp_tests})
-
-find_package(Clang REQUIRED clangTooling libClang clangASTMatchers)
 
  
