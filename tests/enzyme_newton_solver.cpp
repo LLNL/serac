@@ -47,6 +47,32 @@ template <auto f>
 void* __enzyme_register_derivative_solve_scalar_enzyme[] = { (void*) solve_scalar_enzyme<sqrt_res>, (void*) solve_scalar_enzyme_fwddiff<sqrt_res> };
 
 
+template <typename Function>
+double static_solve_scalar_enzyme(Function f, double x0, double param)
+{
+    auto fprime = [=](double x, double p) {
+        double dx = 1.0;
+        return __enzyme_fwddiff<double>((void*)f, enzyme_dup, x, dx, enzyme_const, p);
+    };
+
+    const int KMAX_ITERS = 25;
+    double tolerance = 1e-10;
+
+    double x = x0;
+    [[maybe_unused]] bool converged = false;
+    for (int i = 0; i < KMAX_ITERS; i++) {
+        double r = f(x, param);
+        if (std::abs(r) < tolerance) {
+            converged = true;
+            break;
+        }
+        double J = fprime(x, param);
+        x -= r/J;
+    }
+    return x;
+}
+
+
 } // namespace serac
 
 TEST(EnzymeNewton, Solves)
@@ -71,4 +97,12 @@ TEST(EnzymeNewton, RegisteredDerivative)
     double y = __enzyme_fwddiff<double>((void*) serac::solve_scalar_enzyme<sqrt_res>, enzyme_const, x0, enzyme_dup, 4.0, 1.0);
     double exact = 0.25;
     EXPECT_NEAR(y, exact, 1e-9);
+}
+
+static double g(double x, double p) { return x*x - p; }
+
+TEST(EnzymeNewton, StaticVersionSolves)
+{
+    double sqrt4 = serac::static_solve_scalar_enzyme(g, 1.0, 4.0);
+    EXPECT_NEAR(sqrt4, 2.0, 1e-9);
 }
