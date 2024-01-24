@@ -445,7 +445,7 @@ While simple, these transformations can become repetitive and error-prone when w
 address this issue, we automated these transformations in ``ShapeAwareFunctional``. This object has the same interface and integral definition routines as 
 ``Functional``, but it takes the shape displacement field :math:`p` as a required trial parameter. 
 
-The integrands caputured in the ``Functional::Add****Integral`` methods do not need any further modifications to become "shape-aware" and produce the shape derivatives
+The integrands captured in the ``Functional::Add****Integral`` methods do not need any further modifications to become "shape-aware" and produce the shape derivatives
 needed for automated shape optimization. The integrands will have their arguments adjusted appropriately to reflect `x = X + p` and their output flux will
 be automatically modified per the formulas above.
 
