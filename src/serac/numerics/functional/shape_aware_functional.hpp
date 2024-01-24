@@ -200,6 +200,8 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper(lambda&& qf, double t, const 
                                                    const space_types& space_tuple, const trial_types& arg_tuple,
                                                    const correction_type& correction, std::integer_sequence<int, i...>)
 {
+  static_assert(tuple_size<trial_types>::value == tuple_size<space_types>::value,
+                "Argument and finite element space tuples are not the same size.");
   return qf(t, x + get<VALUE>(shape),
             correction.modify_trial_argument(serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
 }
@@ -239,6 +241,8 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper_with_state(lambda&& qf, doubl
                                                               const correction_type& correction,
                                                               std::integer_sequence<int, i...>)
 {
+  static_assert(tuple_size<trial_types>::value == tuple_size<space_types>::value,
+                "Argument and finite element space tuples are not the same size.");
   return qf(t, x + get<VALUE>(shape), state,
             correction.modify_trial_argument(serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
 }
@@ -359,12 +363,13 @@ public:
       functional_->AddDomainIntegral(
           Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
           [integrand](double time, auto x, auto shape_val, auto... qfunc_args) {
-            auto qfunc_tuple = make_tuple(qfunc_args...);
+            auto qfunc_tuple               = make_tuple(qfunc_args...);
+            auto reduced_trial_space_tuple = make_tuple(get<args>(trial_spaces)...);
 
             detail::ShapeCorrection shape_correction(Dimension<dim>{}, shape_val);
 
             auto unmodified_qf_return = detail::apply_shape_aware_qf_helper(
-                integrand, time, x, shape_val, trial_spaces, qfunc_tuple, shape_correction,
+                integrand, time, x, shape_val, reduced_trial_space_tuple, qfunc_tuple, shape_correction,
                 std::make_integer_sequence<int, sizeof...(qfunc_args)>{});
             return shape_correction.modify_shape_aware_qf_return(test_space, unmodified_qf_return);
           },
@@ -373,12 +378,13 @@ public:
       functional_->AddDomainIntegral(
           Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
           [integrand](double time, auto x, auto& state, auto shape_val, auto... qfunc_args) {
-            auto qfunc_tuple = make_tuple(qfunc_args...);
+            auto qfunc_tuple               = make_tuple(qfunc_args...);
+            auto reduced_trial_space_tuple = make_tuple(get<args>(trial_spaces)...);
 
             detail::ShapeCorrection shape_correction(Dimension<dim>{}, shape_val);
 
             auto unmodified_qf_return = detail::apply_shape_aware_qf_helper_with_state(
-                integrand, time, x, state, shape_val, trial_spaces, qfunc_tuple, shape_correction,
+                integrand, time, x, state, shape_val, reduced_trial_space_tuple, qfunc_tuple, shape_correction,
                 std::make_integer_sequence<int, sizeof...(qfunc_args)>{});
             return shape_correction.modify_shape_aware_qf_return(test_space, unmodified_qf_return);
           },
