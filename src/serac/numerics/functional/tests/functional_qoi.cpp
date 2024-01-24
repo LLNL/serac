@@ -608,7 +608,8 @@ TEST(Variadic, 3DQuadratic) { qoi_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}
 
 //   serac_qoi.AddDomainIntegral(
 //       serac::Dimension<dim>{}, serac::DependsOn<1>{},
-//       [](double /*t*/, auto /*x*/, auto vector_hcurl_param) { return norm(serac::get<0>(vector_hcurl_param)); }, mesh);
+//       [](double /*t*/, auto /*x*/, auto vector_hcurl_param) { return norm(serac::get<0>(vector_hcurl_param)); },
+//       mesh);
 
 //   std::unique_ptr<mfem::HypreParVector> shape_displacement(shape_fe_space->NewTrueDofVector());
 //   *shape_displacement = 1.0;
