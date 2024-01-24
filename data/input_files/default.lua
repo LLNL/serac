@@ -85,7 +85,7 @@ temp_func = function (v)
 end
 
 -- Solver parameters
-thermal_conduction = {
+heat_transfer = {
     equation_solver = {
         linear = {
             type = "iterative",

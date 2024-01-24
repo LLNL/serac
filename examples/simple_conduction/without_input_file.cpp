@@ -7,7 +7,7 @@
 /**
  * @file without_input_file.cpp
  *
- * @brief A simple example of steady-state thermal conduction that uses
+ * @brief A simple example of steady-state heat transfer that uses
  * the C++ API to configure the simulation
  */
 
