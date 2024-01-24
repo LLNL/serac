@@ -571,6 +571,57 @@ TEST(Variadic, 3DLinear   ) { qoi_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}
 TEST(Variadic, 3DQuadratic) { qoi_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
 // clang-format on
 
+// TODO Functional currently doesn't support HCurl. When it does, this test should work without other changes as
+// shape-aware functional already contains the appropriate Hcurl transformations
+
+// TEST(QoI, MixedShapeAware)
+// {
+//   // _boundary_start
+//   static constexpr int dim{3};
+
+//   using shape_space = H1<2, dim>;
+
+//   using parameter_1_space = H1<1>;
+//   using parameter_2_space = Hcurl<1>;
+
+//   // Define the QOI type. Note that the shape aware functional has an extra template argument
+//   // for the shape displacement finite element space
+//   using qoi_type = serac::ShapeAwareFunctional<shape_space, double(parameter_1_space, parameter_2_space)>;
+
+//   // Define the mesh and runtime finite element spaces for the calculation
+//   mfem::ParMesh& mesh = *mesh3D;
+
+//   auto [shape_fe_space, shape_fe_coll]             = generateParFiniteElementSpace<shape_space>(&mesh);
+//   auto [parameter_1_fe_space, parameter_1_fe_coll] = generateParFiniteElementSpace<parameter_1_space>(&mesh);
+//   auto [parameter_2_fe_space, parameter_2_fe_coll] = generateParFiniteElementSpace<parameter_2_space>(&mesh);
+
+//   std::array<const mfem::ParFiniteElementSpace*, 2> trial_fes = {parameter_1_fe_space.get(),
+//                                                                  parameter_2_fe_space.get()};
+//   const mfem::ParFiniteElementSpace*                shape_fes = shape_fe_space.get();
+
+//   // Define the shape-aware QOI objects
+//   qoi_type serac_qoi(shape_fes, trial_fes);
+
+//   serac_qoi.AddDomainIntegral(
+//       serac::Dimension<dim>{}, serac::DependsOn<0>{},
+//       [](double /*t*/, auto /*x*/, auto scalar_param) { return serac::get<0>(scalar_param); }, mesh);
+
+//   serac_qoi.AddDomainIntegral(
+//       serac::Dimension<dim>{}, serac::DependsOn<1>{},
+//       [](double /*t*/, auto /*x*/, auto vector_hcurl_param) { return norm(serac::get<0>(vector_hcurl_param)); }, mesh);
+
+//   std::unique_ptr<mfem::HypreParVector> shape_displacement(shape_fe_space->NewTrueDofVector());
+//   *shape_displacement = 1.0;
+
+//   std::unique_ptr<mfem::HypreParVector> parameter_1(parameter_1_fe_space->NewTrueDofVector());
+//   *parameter_1 = 0.1;
+
+//   std::unique_ptr<mfem::HypreParVector> parameter_2(parameter_2_fe_space->NewTrueDofVector());
+//   *parameter_2 = 0.5;
+
+//   double val = serac_qoi(t, *shape_displacement, *parameter_1, *parameter_2);
+// }
+
 int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);
