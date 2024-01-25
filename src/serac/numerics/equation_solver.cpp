@@ -8,6 +8,7 @@
 
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
+#include "serac/serac_config.hpp"
 
 namespace serac {
 
