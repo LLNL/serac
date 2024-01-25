@@ -20,7 +20,7 @@
 #include "serac/physics/base_physics.hpp"
 #include "serac/numerics/odes.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
-#include "serac/numerics/functional/functional.hpp"
+#include "serac/numerics/functional/shape_aware_functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/materials/thermal_material.hpp"
 
@@ -89,13 +89,13 @@ class HeatTransfer<order, dim, Parameters<parameter_space...>, std::integer_sequ
 public:
   //! @cond Doxygen_Suppress
   static constexpr int  VALUE = 0, DERIVATIVE = 1;
-  static constexpr int  SHAPE = 2;
+  static constexpr int  SHAPE = 0;
   static constexpr auto I     = Identity<dim>();
   //! @endcond
 
-  /// @brief The total number of non-parameter state variables (temperature, dtemp_dt, shape) passed to the FEM
+  /// @brief The total number of non-parameter state variables (temperature, dtemp_dt) passed to the FEM
   /// integrators
-  static constexpr auto NUM_STATE_VARS = 3;
+  static constexpr auto NUM_STATE_VARS = 2;
 
   /**
    * @brief Construct a new heat transfer object
@@ -173,12 +173,12 @@ public:
     adjoints_.push_back(&adjoint_temperature_);
 
     // Create a pack of the primal field and parameter finite element spaces
-    mfem::ParFiniteElementSpace* test_space = &temperature_.space();
+    mfem::ParFiniteElementSpace* test_space  = &temperature_.space();
+    mfem::ParFiniteElementSpace* shape_space = &shape_displacement_.space();
 
     std::array<const mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + NUM_STATE_VARS> trial_spaces;
     trial_spaces[0] = &temperature_.space();
     trial_spaces[1] = &temperature_.space();
-    trial_spaces[2] = &shape_displacement_.space();
 
     SLIC_ERROR_ROOT_IF(
         sizeof...(parameter_space) != parameter_names.size(),
@@ -194,8 +194,9 @@ public:
       });
     }
 
-    residual_ = std::make_unique<Functional<test(scalar_trial, scalar_trial, shape_trial, parameter_space...)>>(
-        test_space, trial_spaces);
+    residual_ =
+        std::make_unique<ShapeAwareFunctional<shape_trial, test(scalar_trial, scalar_trial, parameter_space...)>>(
+            shape_space, test_space, trial_spaces);
 
     nonlin_solver_->setOperator(residual_with_bcs_);
 
@@ -368,31 +369,16 @@ public:
     /**
      * @brief Evaluate integrand
      */
-    template <typename X, typename T, typename dT_dt, typename Shape, typename... Params>
-    auto operator()(double /*time*/, X x, T temperature, dT_dt dtemp_dt, Shape shape, Params... params)
+    template <typename X, typename T, typename dT_dt, typename... Params>
+    auto operator()(double /*time*/, X x, T temperature, dT_dt dtemp_dt, Params... params) const
     {
       // Get the value and the gradient from the input tuple
       auto [u, du_dX] = temperature;
-      auto [p, dp_dX] = shape;
       auto du_dt      = get<VALUE>(dtemp_dt);
 
-      auto I_plus_dp_dX     = I + dp_dX;
-      auto inv_I_plus_dp_dX = inv(I_plus_dp_dX);
-      auto det_I_plus_dp_dX = det(I_plus_dp_dX);
+      auto [heat_capacity, heat_flux] = material_(x, u, du_dX, params...);
 
-      // Note that the current configuration x = X + p, where X is the original reference
-      // configuration and p is the shape displacement. We need the gradient with
-      // respect to the perturbed reference configuration x = X + p for the material model. Therefore, we calculate
-      // du/dx = du/dX * dX/dx = du/dX * (dx/dX)^-1 = du/dX * (I + dp/dX)^-1
-
-      auto du_dx = dot(du_dX, inv_I_plus_dp_dX);
-
-      auto [heat_capacity, heat_flux] = material_(x + p, u, du_dx, params...);
-
-      // Note that the return is integrated in the perturbed reference
-      // configuration, hence the det(I + dp_dx) = det(dx/dX)
-      return serac::tuple{heat_capacity * du_dt * det_I_plus_dp_dX,
-                          -1.0 * dot(inv_I_plus_dp_dX, heat_flux) * det_I_plus_dp_dX};
+      return serac::tuple{heat_capacity * du_dt, -1.0 * heat_flux};
     }
 
   private:
@@ -426,8 +412,9 @@ public:
   void setMaterial(DependsOn<active_parameters...>, MaterialType material)
   {
     ThermalMaterialIntegrand<MaterialType> integrand(material);
-    residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
-                                 integrand, mesh_);
+
+    residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, NUM_STATE_VARS + active_parameters...>{}, integrand,
+                                 mesh_);
   }
 
   /// @overload
@@ -481,25 +468,15 @@ public:
   void setSource(DependsOn<active_parameters...>, SourceType source_function)
   {
     residual_->AddDomainIntegral(
-        Dimension<dim>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
-        [source_function](double t, auto x, auto temperature, auto /* dtemp_dt */, auto shape, auto... params) {
+        Dimension<dim>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
+        [source_function](double t, auto x, auto temperature, auto /* dtemp_dt */, auto... params) {
           // Get the value and the gradient from the input tuple
           auto [u, du_dX] = temperature;
-          auto [p, dp_dX] = shape;
 
-          auto I_plus_dp_dX = I + dp_dX;
-
-          // Note that the current configuration x = X + p, where X is the original reference
-          // configuration and p is the shape displacement. We need the gradient with
-          // respect to the perturbed reference configuration x = X + p for the material model. Therefore, we calculate
-          // du/dx = du/dX * dX/dx = du/dX * (dx/dX)^-1 = du/dX * (I + dp/dX)^-1
-
-          auto du_dx = dot(du_dX, inv(I_plus_dp_dX));
-
-          auto source = source_function(x + p, t, u, du_dx, params...);
+          auto source = source_function(x, t, u, du_dX, params...);
 
           // Return the source and the flux as a tuple
-          return serac::tuple{-1.0 * source * det(I_plus_dp_dX), serac::zero{}};
+          return serac::tuple{-1.0 * source, serac::zero{}};
         },
         mesh_);
   }
@@ -536,22 +513,12 @@ public:
   void setFluxBCs(DependsOn<active_parameters...>, FluxType flux_function)
   {
     residual_->AddBoundaryIntegral(
-        Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
-        [flux_function](double t, auto X, auto u, auto /* dtemp_dt */, auto shape, auto... params) {
+        Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
+        [flux_function](double t, auto X, auto u, auto /* dtemp_dt */, auto... params) {
           auto temp = get<VALUE>(u);
-          auto x    = X + shape;
-          auto n    = cross(get<DERIVATIVE>(x));
+          auto n    = cross(get<DERIVATIVE>(X));
 
-          // serac::Functional's boundary integrals multiply the q-function output by
-          // norm(cross(dX_dxi)) at that quadrature point, but if we impose a shape displacement
-          // then that weight needs to be corrected. The new weight should be
-          // norm(cross(dX_dxi + dp_dxi)), so we multiply by the ratio w_new / w_old
-          // to get
-          //   q * area_correction * w_old
-          // = q * (w_new / w_old) * w_old
-          // = q * w_new
-          auto area_correction = norm(n) / norm(cross(get<DERIVATIVE>(X)));
-          return flux_function(x, normalize(n), t, temp, params...) * area_correction;
+          return flux_function(X, normalize(n), t, temp, params...);
         },
         mesh_);
   }
@@ -680,7 +647,7 @@ public:
           temperature_.space().TrueVSize(),
 
           [this](const mfem::Vector& u, mfem::Vector& r) {
-            const mfem::Vector res = (*residual_)(ode_time_point_, u, temperature_rate_, shape_displacement_,
+            const mfem::Vector res = (*residual_)(ode_time_point_, shape_displacement_, u, temperature_rate_,
                                                   *parameters_[parameter_indices].state...);
 
             // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
@@ -691,7 +658,7 @@ public:
           },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] = (*residual_)(ode_time_point_, differentiate_wrt(u), temperature_rate_, shape_displacement_,
+            auto [r, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(u), temperature_rate_,
                                           *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
             J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
@@ -703,7 +670,7 @@ public:
 
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
             add(1.0, u_, dt_, du_dt, u_predicted_);
-            const mfem::Vector res = (*residual_)(ode_time_point_, u_predicted_, du_dt, shape_displacement_,
+            const mfem::Vector res = (*residual_)(ode_time_point_, shape_displacement_, u_predicted_, du_dt,
                                                   *parameters_[parameter_indices].state...);
 
             // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
@@ -717,15 +684,15 @@ public:
             add(1.0, u_, dt_, du_dt, u_predicted_);
 
             // K := dR/du
-            auto K =
-                serac::get<DERIVATIVE>((*residual_)(ode_time_point_, differentiate_wrt(u_predicted_), du_dt,
-                                                    shape_displacement_, *parameters_[parameter_indices].state...));
+            auto K = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_,
+                                                         differentiate_wrt(u_predicted_), du_dt,
+                                                         *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/du_dot
-            auto M =
-                serac::get<DERIVATIVE>((*residual_)(ode_time_point_, u_predicted_, differentiate_wrt(du_dt),
-                                                    shape_displacement_, *parameters_[parameter_indices].state...));
+            auto M = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_, u_predicted_,
+                                                         differentiate_wrt(du_dt),
+                                                         *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             // J := M + dt K
@@ -812,8 +779,8 @@ public:
       // We store the previous timestep's temperature as the current temperature for use in the lambdas computing the
       // sensitivities.
 
-      auto [_, drdu] = (*residual_)(ode_time_point_, differentiate_wrt(temperature_), temperature_rate_,
-                                    shape_displacement_, *parameters_[parameter_indices].state...);
+      auto [_, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(temperature_),
+                                    temperature_rate_, *parameters_[parameter_indices].state...);
       auto jacobian  = assemble(drdu);
       auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -842,13 +809,14 @@ public:
     double dt = loadCheckpointedTimestep(cycle_ - 1);
 
     // K := dR/du
-    auto K = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, differentiate_wrt(temperature_), temperature_rate_,
-                                                 shape_displacement_, *parameters_[parameter_indices].state...));
+    auto K = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(temperature_),
+                                                 temperature_rate_, *parameters_[parameter_indices].state...));
     std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
     // M := dR/du_dot
-    auto M = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, temperature_, differentiate_wrt(temperature_rate_),
-                                                 shape_displacement_, *parameters_[parameter_indices].state...));
+    auto M = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_, temperature_,
+                                                 differentiate_wrt(temperature_rate_),
+                                                 *parameters_[parameter_indices].state...));
     std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
     J_.reset(mfem::Add(1.0, *m_mat, dt, *k_mat));
@@ -939,8 +907,8 @@ public:
   FiniteElementDual& computeTimestepShapeSensitivity() override
   {
     auto drdshape =
-        serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, ode_time_point_, temperature_, temperature_rate_,
-                                            shape_displacement_, *parameters_[parameter_indices].state...));
+        serac::get<DERIVATIVE>((*residual_)(ode_time_point_, differentiate_wrt(shape_displacement_), temperature_,
+                                            temperature_rate_, *parameters_[parameter_indices].state...));
 
     auto drdshape_mat = assemble(drdshape);
 
@@ -993,7 +961,7 @@ protected:
   serac::FiniteElementDual temperature_rate_adjoint_load_;
 
   /// serac::Functional that is used to calculate the residual and its derivatives
-  std::unique_ptr<Functional<test(scalar_trial, scalar_trial, shape_trial, parameter_space...)>> residual_;
+  std::unique_ptr<ShapeAwareFunctional<shape_trial, test(scalar_trial, scalar_trial, parameter_space...)>> residual_;
 
   /// Assembled mass matrix
   std::unique_ptr<mfem::HypreParMatrix> M_;
@@ -1039,13 +1007,12 @@ protected:
   /// @brief Array functions computing the derivative of the residual with respect to each given parameter
   /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
   /// template parameter.
-  std::array<
-      std::function<decltype((*residual_)(DifferentiateWRT<0>{}, 0.0, temperature_, temperature_rate_,
-                                          shape_displacement_, *parameters_[parameter_indices].state...))(double)>,
-      sizeof...(parameter_indices)>
+  std::array<std::function<decltype((*residual_)(DifferentiateWRT<1>{}, 0.0, shape_displacement_, temperature_,
+                                                 temperature_rate_, *parameters_[parameter_indices].state...))(double)>,
+             sizeof...(parameter_indices)>
       d_residual_d_ = {[&](double TIME) {
-        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, TIME, temperature_,
-                            temperature_rate_, shape_displacement_, *parameters_[parameter_indices].state...);
+        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + 1 + parameter_indices>{}, TIME, shape_displacement_,
+                            temperature_, temperature_rate_, *parameters_[parameter_indices].state...);
       }...};
 };
 
