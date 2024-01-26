@@ -11,12 +11,11 @@
 #include "mfem.hpp"
 
 #include "serac/physics/solid_mechanics_contact.hpp"
+#include "serac/infrastructure/terminator.hpp"
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/materials/parameterized_solid_material.hpp"
 #include "serac/serac_config.hpp"
-
-#include "tribol/interface/mfem_tribol.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -106,6 +105,8 @@ int main(int argc, char* argv[])
     // Output the sidre-based plot files
     solid_solver.outputStateToDisk(paraview_name);
   }
+
+  serac::exitGracefully();
 
   return 0;
 }

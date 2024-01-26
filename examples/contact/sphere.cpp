@@ -6,7 +6,6 @@
 
 #include <cmath>
 
-#include <mfem/fem/fe_coll.hpp>
 #include <string>
 #include <vector>
 
@@ -15,12 +14,11 @@
 #include "mfem.hpp"
 
 #include "serac/physics/solid_mechanics_contact.hpp"
+#include "serac/infrastructure/terminator.hpp"
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/materials/parameterized_solid_material.hpp"
 #include "serac/serac_config.hpp"
-
-#include "tribol/interface/mfem_tribol.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -37,23 +35,21 @@ int main(int argc, char* argv[])
   serac::StateManager::initialize(datastore, name + "_data");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  int num_refinements { 3 };
+  int num_refinements{3};
 
-  mfem::Mesh ball_mesh { SERAC_REPO_DIR "/data/meshes/ball-nurbs2.mesh" };
-  for (int i{0}; i < num_refinements; ++i)
-  {
+  mfem::Mesh ball_mesh{SERAC_REPO_DIR "/data/meshes/ball-nurbs2.mesh"};
+  for (int i{0}; i < num_refinements; ++i) {
     ball_mesh.UniformRefinement();
   }
   ball_mesh.SetCurvature(p);
 
-  mfem::Mesh cube_mesh { SERAC_REPO_DIR "/data/meshes/onehex.mesh" };
-  for (int i{0}; i < num_refinements; ++i)
-  {
+  mfem::Mesh cube_mesh{SERAC_REPO_DIR "/data/meshes/onehex.mesh"};
+  for (int i{0}; i < num_refinements; ++i) {
     cube_mesh.UniformRefinement();
   }
   cube_mesh.SetCurvature(p);
 
-  std::vector<mfem::Mesh*> mesh_ptrs { &ball_mesh, &cube_mesh };
+  std::vector<mfem::Mesh*> mesh_ptrs{&ball_mesh, &cube_mesh};
   auto mesh = serac::mesh::refineAndDistribute(mfem::Mesh(mesh_ptrs.data(), static_cast<int>(mesh_ptrs.size())), 0, 0);
   serac::StateManager::setMesh(std::move(mesh), "sphere_mesh");
 
@@ -72,7 +68,7 @@ int main(int argc, char* argv[])
   serac::ContactOptions contact_options{.method      = serac::ContactMethod::SingleMortar,
                                         .enforcement = serac::ContactEnforcement::Penalty,
                                         .type        = serac::ContactType::Frictionless,
-                                        .penalty     = 1.0e5};
+                                        .penalty     = 1.0e4};
 
   serac::SolidMechanicsContact<p, dim, serac::Parameters<serac::L2<0>, serac::L2<0>>> solid_solver(
       nonlinear_options, linear_options, serac::solid_mechanics::default_quasistatic_options,
@@ -133,6 +129,8 @@ int main(int argc, char* argv[])
     // Output the sidre-based plot files
     solid_solver.outputStateToDisk(paraview_name);
   }
+
+  serac::exitGracefully();
 
   return 0;
 }
