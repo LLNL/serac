@@ -170,8 +170,13 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     # Sundials
     #------------------------------------------------------------------------------
     if (SUNDIALS_DIR)
-        # Sundials is already built from MFEM
+        # Note: Sundials is currently only used via MFEM and MFEM's target contains it's information
         serac_assert_is_directory(VARIABLE_NAME SUNDIALS_DIR)
+
+        if (SERAC_ENABLE_CODEVELOP)
+            set(SUNDIALS_INCLUDE_DIRS ${SUNDIALS_DIR}/include)
+        endif()
+
         set(SERAC_USE_SUNDIALS ON CACHE BOOL "")
         set(SUNDIALS_FOUND TRUE)
     else()
@@ -288,6 +293,10 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         target_include_directories(mfem SYSTEM INTERFACE ${_mfem_includes})
         target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${SERAC_SOURCE_DIR}>)
         target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/mfem>)
+        message("\n\n\n\n\nINCLUDE_DIRECTORIES: ${INCLUDE_DIRECTORIES}")
+        message("\n\n\n\n\nSERAC_SOURCE_DIR: ${SERAC_SOURCE_DIR}")
+        message("\n\n\n\n_mfem_includes: ${_mfem_includes}")
+        blt_print_target_properties(TARGET mfem)
 
         #### Restore previously stored data
         foreach(_tpl ${tpls_to_save})
