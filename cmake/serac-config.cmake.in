@@ -159,7 +159,7 @@ if(NOT SERAC_FOUND)
 
   # SUNDIALS
   if(SERAC_USE_SUNDIALS)
-    find_dependency(SUNDIALS REQUIRED NO_DEFAULT_PATH PATHS "${SUNDIALS_DIR}/lib64/cmake/sundials")
+    find_dependency(SUNDIALS REQUIRED NO_DEFAULT_PATH PATHS "${SUNDIALS_DIR}")
   endif()
 
   #----------------------------------------------------------------------------
