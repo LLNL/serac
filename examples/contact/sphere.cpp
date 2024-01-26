@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
   // Construct the appropriate dimension mesh and give it to the data store
   int num_refinements{3};
 
-  mfem::Mesh ball_mesh{SERAC_REPO_DIR "/data/meshes/ball-nurbs2.mesh"};
+  mfem::Mesh ball_mesh{SERAC_REPO_DIR "/data/meshes/ball-nurbs.mesh"};
   for (int i{0}; i < num_refinements; ++i) {
     ball_mesh.UniformRefinement();
   }
