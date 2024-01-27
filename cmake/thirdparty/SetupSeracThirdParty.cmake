@@ -173,8 +173,14 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         # Note: Sundials is currently only used via MFEM and MFEM's target contains it's information
         serac_assert_is_directory(VARIABLE_NAME SUNDIALS_DIR)
         set(SERAC_USE_SUNDIALS ON CACHE BOOL "")
+        
+        # Note: MFEM sets SUNDIALS_FOUND itself
+        if (NOT SERAC_ENABLE_CODEVELOP)
+            set(SUNDIALS_FOUND TRUE)
+        endif()
     else()
         set(SERAC_USE_SUNDIALS OFF CACHE BOOL "")
+        set(SUNDIALS_FOUND FALSE)
     endif()
     message(STATUS "Sundials support is ${SERAC_USE_SUNDIALS}")
 
