@@ -79,7 +79,7 @@ TEST(LiquidCrystalElastomer, Brighenti)
       .print_level    = 0,
   };
 
-#ifdef MFEM_USE_SUNDIALS
+#ifdef SERAC_USE_SUNDIALS
   NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::KINBacktrackingLineSearch,
                                               .relative_tol   = 1.0e-4,
                                               .absolute_tol   = 1.0e-7,

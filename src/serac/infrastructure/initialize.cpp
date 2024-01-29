@@ -58,7 +58,7 @@ std::pair<int, int> initialize(int argc, char* argv[], MPI_Comm comm)
 
   mfem::Hypre::Init();
 
-#ifdef MFEM_USE_SUNDIALS
+#ifdef SERAC_USE_SUNDIALS
   mfem::Sundials::Init();
 #endif
 

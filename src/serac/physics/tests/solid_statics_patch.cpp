@@ -316,7 +316,7 @@ double solution_error(PatchBoundaryCondition bc)
   auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // Construct a solid mechanics solver
-  #ifdef MFEM_USE_SUNDIALS
+  #ifdef SERAC_USE_SUNDIALS
   serac::NonlinearSolverOptions nonlin_solver_options{.nonlin_solver = NonlinearSolver::KINBacktrackingLineSearch, .relative_tol = 0.0, .absolute_tol = 1.0e-14, .max_iterations = 30};
   #else
   serac::NonlinearSolverOptions nonlin_solver_options{.nonlin_solver = NonlinearSolver::Newton, .relative_tol = 0.0, .absolute_tol = 1.0e-14, .max_iterations = 30};
@@ -391,7 +391,7 @@ double pressure_error()
   auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // Construct a solid mechanics solver
-  #ifdef MFEM_USE_SUNDIALS
+  #ifdef SERAC_USE_SUNDIALS
   serac::NonlinearSolverOptions nonlin_solver_options{.nonlin_solver = NonlinearSolver::KINBacktrackingLineSearch, .relative_tol = 0.0, .absolute_tol = 1.0e-14, .max_iterations = 30};
   #else
   serac::NonlinearSolverOptions nonlin_solver_options{.nonlin_solver = NonlinearSolver::Newton, .relative_tol = 0.0, .absolute_tol = 1.0e-14, .max_iterations = 30};
