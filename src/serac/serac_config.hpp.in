@@ -28,7 +28,9 @@
 #cmakedefine SERAC_USE_CUDA
 
 // Compiler defines for TPLs
+#cmakedefine SERAC_USE_ADIAK
 #cmakedefine SERAC_USE_AXOM
+#cmakedefine SERAC_USE_CALIPER
 #cmakedefine SERAC_USE_CAMP
 #cmakedefine SERAC_USE_CONDUIT
 #cmakedefine SERAC_USE_FMT
@@ -36,8 +38,7 @@
 #cmakedefine SERAC_USE_LUA
 #cmakedefine SERAC_USE_MFEM
 #cmakedefine SERAC_USE_MPI
-#cmakedefine SERAC_USE_TRIBOL
-#cmakedefine SERAC_USE_ADIAK
-#cmakedefine SERAC_USE_CALIPER
 #cmakedefine SERAC_USE_RAJA
+#cmakedefine SERAC_USE_SUNDIALS
+#cmakedefine SERAC_USE_TRIBOL
 #cmakedefine SERAC_USE_UMPIRE

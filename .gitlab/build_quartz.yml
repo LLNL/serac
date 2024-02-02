@@ -2,7 +2,7 @@
 # This is the shared configuration of jobs for quartz
 .on_quartz:
   variables:
-    ALLOC_OPTIONS: "-p pdebug --exclusive=user"
+    ALLOC_OPTIONS: "--res=ci --exclusive=user -A ${ALLOC_BANK}"
     ALLOC_COMMAND: "salloc ${ALLOC_OPTIONS} -N ${ALLOC_NODES} -t ${ALLOC_TIME}"
   tags:
     - shell
@@ -50,7 +50,7 @@ quartz-gcc_10_3_1-src:
     COMPILER: "gcc@10.3.1"
     HOST_CONFIG: "quartz-toss_4_x86_64_ib-${COMPILER}.cmake"
     ALLOC_NODES: "1"
-    ALLOC_TIME: "20"
+    ALLOC_TIME: "30"
   extends: .src_build_on_quartz
 
 quartz-gcc_10_3_1-src-no-tribol:
@@ -58,6 +58,15 @@ quartz-gcc_10_3_1-src-no-tribol:
     COMPILER: "gcc@10.3.1"
     HOST_CONFIG: "quartz-toss_4_x86_64_ib-${COMPILER}.cmake"
     EXTRA_BUILD_OPTIONS: "--extra-cmake-options='-DTRIBOL_DIR=' "
+    ALLOC_NODES: "1"
+    ALLOC_TIME: "30"
+  extends: .src_build_on_quartz
+
+quartz-gcc_10_3_1-src-no-sundials:
+  variables:
+    COMPILER: "gcc@10.3.1"
+    HOST_CONFIG: "quartz-toss_4_x86_64_ib-${COMPILER}.cmake"
+    EXTRA_BUILD_OPTIONS: "--extra-cmake-options='-DSUNDIALS_DIR=' "
     ALLOC_NODES: "1"
     ALLOC_TIME: "20"
   extends: .src_build_on_quartz
