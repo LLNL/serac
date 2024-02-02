@@ -4,6 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#include <set>
 #include <string>
 
 #include "axom/slic/core/SimpleLogger.hpp"
@@ -59,12 +60,18 @@ int main(int argc, char* argv[])
       serac::GeometricNonlinearities::On, name, "ironing_mesh", {"bulk_mod", "shear_mod"});
 
   serac::FiniteElementState K_field(serac::StateManager::newState(serac::L2<0>{}, "bulk_mod", "ironing_mesh"));
+  // each vector value corresponds to a different element attribute:
+  // [0] (element attribute 1) : the substrate
+  // [1] (element attribute 2) : indenter block
   mfem::Vector              K_values({10.0, 100.0});
   mfem::PWConstCoefficient  K_coeff(K_values);
   K_field.project(K_coeff);
   solid_solver.setParameter(0, K_field);
 
   serac::FiniteElementState G_field(serac::StateManager::newState(serac::L2<0>{}, "shear_mod", "ironing_mesh"));
+  // each vector value corresponds to a different element attribute:
+  // [0] (element attribute 1) : the substrate
+  // [1] (element attribute 2) : indenter block
   mfem::Vector              G_values({0.25, 2.5});
   mfem::PWConstCoefficient  G_coeff(G_values);
   G_field.project(G_coeff);
@@ -78,20 +85,23 @@ int main(int argc, char* argv[])
     u.SetSize(dim);
     u = 0.0;
   });
-  double time = 0.0;
-  solid_solver.setDisplacementBCs({12}, [&time](const mfem::Vector&, mfem::Vector& u) {
+  solid_solver.setDisplacementBCs({12}, [](const mfem::Vector&, double t, mfem::Vector& u) {
     u.SetSize(dim);
     u = 0.0;
-    if (time <= 2.0 + 1.0e-12) {
-      u[2] = -time * 0.15;
+    if (t <= 2.0 + 1.0e-12) {
+      u[2] = -t * 0.15;
     } else {
-      u[0] = -(time - 2.0) * 0.25;
+      u[0] = -(t - 2.0) * 0.25;
       u[2] = -0.3;
     }
   });
 
   // Add the contact interaction
-  solid_solver.addContactInteraction(0, {6}, {11}, contact_options);
+  auto contact_interaction_id = 0;
+  std::set<int> surface_1_boundary_attributes({6});
+  std::set<int> surface_2_boundary_attributes({11});
+  solid_solver.addContactInteraction(contact_interaction_id, surface_1_boundary_attributes, 
+                                     surface_2_boundary_attributes, contact_options);
 
   // Finalize the data structures
   solid_solver.completeSetup();
@@ -103,8 +113,6 @@ int main(int argc, char* argv[])
   double dt = 1.0;
 
   for (int i{0}; i < 26; ++i) {
-    time += dt;
-
     solid_solver.advanceTimestep(dt);
 
     // Output the sidre-based plot files

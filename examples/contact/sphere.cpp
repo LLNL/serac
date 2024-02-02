@@ -6,6 +6,7 @@
 
 #include <cmath>
 
+#include <set>
 #include <string>
 #include <vector>
 
@@ -70,47 +71,38 @@ int main(int argc, char* argv[])
                                         .type        = serac::ContactType::Frictionless,
                                         .penalty     = 1.0e4};
 
-  serac::SolidMechanicsContact<p, dim, serac::Parameters<serac::L2<0>, serac::L2<0>>> solid_solver(
-      nonlinear_options, linear_options, serac::solid_mechanics::default_quasistatic_options,
-      serac::GeometricNonlinearities::On, name, "sphere_mesh", {"bulk_mod", "shear_mod"});
+  serac::SolidMechanicsContact<p, dim> solid_solver(nonlinear_options, linear_options,
+                                                    serac::solid_mechanics::default_quasistatic_options,
+                                                    serac::GeometricNonlinearities::On, name, "sphere_mesh");
 
-  serac::FiniteElementState K_field(serac::StateManager::newState(serac::L2<0>{}, "bulk_mod", "sphere_mesh"));
-  mfem::Vector              K_values({10.0, 10.0});
-  mfem::PWConstCoefficient  K_coeff(K_values);
-  K_field.project(K_coeff);
-  solid_solver.setParameter(0, K_field);
-
-  serac::FiniteElementState G_field(serac::StateManager::newState(serac::L2<0>{}, "shear_mod", "sphere_mesh"));
-  mfem::Vector              G_values({0.25, 0.25});
-  mfem::PWConstCoefficient  G_coeff(G_values);
-  G_field.project(G_coeff);
-  solid_solver.setParameter(1, G_field);
-
-  serac::solid_mechanics::ParameterizedNeoHookeanSolid<dim> mat{1.0, 0.0, 0.0};
-  solid_solver.setMaterial(serac::DependsOn<0, 1>{}, mat);
+  serac::solid_mechanics::NeoHookean mat{1.0, 10.0, 0.25};
+  solid_solver.setMaterial(mat);
 
   // Pass the BC information to the solver object
   solid_solver.setDisplacementBCs({3}, [](const mfem::Vector&, mfem::Vector& u) {
     u.SetSize(dim);
     u = 0.0;
   });
-  double time = 0.0;
-  solid_solver.setDisplacementBCs({12}, [&time](const mfem::Vector& x, mfem::Vector& u) {
+  solid_solver.setDisplacementBCs({12}, [](const mfem::Vector& x, double t, mfem::Vector& u) {
     u.SetSize(dim);
     u = 0.0;
-    if (time <= 3.0 + 1.0e-12) {
-      u[2] = -time * 0.02;
+    if (t <= 3.0 + 1.0e-12) {
+      u[2] = -t * 0.02;
     } else {
-      u[0] = (std::cos(M_PI / 40.0 * (time - 3.0)) - 1.0) * (x[0] - 0.5) -
-             std::sin(M_PI / 40.0 * (time - 3.0)) * (x[1] - 0.5);
-      u[1] = std::sin(M_PI / 40.0 * (time - 3.0)) * (x[0] - 0.5) +
-             (std::cos(M_PI / 40.0 * (time - 3.0)) - 1.0) * (x[1] - 0.5);
+      u[0] = (std::cos(M_PI / 40.0 * (t - 3.0)) - 1.0) * (x[0] - 0.5) -
+             std::sin(M_PI / 40.0 * (t - 3.0)) * (x[1] - 0.5);
+      u[1] = std::sin(M_PI / 40.0 * (t - 3.0)) * (x[0] - 0.5) +
+             (std::cos(M_PI / 40.0 * (t - 3.0)) - 1.0) * (x[1] - 0.5);
       u[2] = -0.06;
     }
   });
 
   // Add the contact interaction
-  solid_solver.addContactInteraction(0, {5}, {7}, contact_options);
+  auto contact_interaction_id = 0;
+  std::set<int> surface_1_boundary_attributes({5});
+  std::set<int> surface_2_boundary_attributes({7});
+  solid_solver.addContactInteraction(contact_interaction_id, surface_1_boundary_attributes, 
+                                     surface_2_boundary_attributes, contact_options);
 
   // Finalize the data structures
   solid_solver.completeSetup();
@@ -120,10 +112,8 @@ int main(int argc, char* argv[])
 
   // Perform the quasi-static solve
   double dt = 1.0;
-
+  
   for (int i{0}; i < 23; ++i) {
-    time += dt;
-
     solid_solver.advanceTimestep(dt);
 
     // Output the sidre-based plot files

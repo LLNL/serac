@@ -6,6 +6,7 @@
 
 #include <cmath>
 
+#include <set>
 #include <string>
 
 #include "axom/slic/core/SimpleLogger.hpp"
@@ -68,23 +69,26 @@ int main(int argc, char* argv[])
     u.SetSize(dim);
     u = 0.0;
   });
-  double time = 0.0;
-  solid_solver.setDisplacementBCs({6}, [&time](const mfem::Vector& x, mfem::Vector& u) {
+  solid_solver.setDisplacementBCs({6}, [](const mfem::Vector& x, double t, mfem::Vector& u) {
     u.SetSize(dim);
     u = 0.0;
-    if (time <= 3.0 + 1.0e-12) {
-      u[2] = -time * 0.02;
+    if (t <= 3.0 + 1.0e-12) {
+      u[2] = -t * 0.02;
     } else {
-      u[0] = (std::cos(M_PI / 40.0 * (time - 3.0)) - 1.0) * (x[0] - 0.5) -
-             std::sin(M_PI / 40.0 * (time - 3.0)) * (x[1] - 0.5);
-      u[1] = std::sin(M_PI / 40.0 * (time - 3.0)) * (x[0] - 0.5) +
-             (std::cos(M_PI / 40.0 * (time - 3.0)) - 1.0) * (x[1] - 0.5);
+      u[0] = (std::cos(M_PI / 40.0 * (t - 3.0)) - 1.0) * (x[0] - 0.5) -
+             std::sin(M_PI / 40.0 * (t - 3.0)) * (x[1] - 0.5);
+      u[1] = std::sin(M_PI / 40.0 * (t - 3.0)) * (x[0] - 0.5) +
+             (std::cos(M_PI / 40.0 * (t - 3.0)) - 1.0) * (x[1] - 0.5);
       u[2] = -0.06;
     }
   });
 
   // Add the contact interaction
-  solid_solver.addContactInteraction(0, {4}, {5}, contact_options);
+  auto contact_interaction_id = 0;
+  std::set<int> surface_1_boundary_attributes({4});
+  std::set<int> surface_2_boundary_attributes({5});
+  solid_solver.addContactInteraction(contact_interaction_id, surface_1_boundary_attributes, 
+                                     surface_2_boundary_attributes, contact_options);
 
   // Finalize the data structures
   solid_solver.completeSetup();
@@ -94,10 +98,8 @@ int main(int argc, char* argv[])
 
   // Perform the quasi-static solve
   double dt = 1.0;
-
+  
   for (int i{0}; i < 23; ++i) {
-    time += dt;
-
     solid_solver.advanceTimestep(dt);
 
     // Output the sidre-based plot files
