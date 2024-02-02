@@ -16,14 +16,9 @@ Create New Docker File
 .. note:: If a Dockerfile for the desired compiler already exists, you can skip this section and go to `update-docker-image-label`_ .
 
 #. Start by cloning the ``serac`` repository and creating a branch off ``develop``.  
-#. Ensure that an Axom image exists on Dockerhub for the desired compiler.
-   If no corresponding Axom compiler image exists, it should be 
-   created before proceeding. Here is the `Axom Docker repository <https://github.com/LLNL/axom-docker>`_.
-
-   .. note:: `A new docker repository <https://github.com/rse-ops/docker-images>`_ has been created and
-      is being actively maintained for RADIUSS unlike the Axom Docker repo. We should migrate to it but it may
-      be missing system packages.
-
+#. Ensure that an image exists on Dockerhub for the desired compiler.
+   If no corresponding compiler image exists, it should be 
+   created before proceeding. Here is the `RADIUSS Docker repository images <https://github.com/LLNL/radiuss-docker/pkgs/container/radiuss>`_.
 #. Go to the ``scripts/docker`` directory and run ``build_new_dockerfile.sh``, passing the compiler
    name and version, e.g. for Clang 10, run ``./build_new_dockerfile.sh clang 10``.  Minor versions can also be specified,
    for example, GCC 9.3 can be specified with ``./build_new_dockerfile.sh gcc 9.3``.  This will create a Dockerfile whose

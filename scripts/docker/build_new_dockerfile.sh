@@ -7,7 +7,7 @@
 ##############################################################################
 
 if [ "$#" -ne 2 ]; then
-    echo "Must pass compiler name and major version number"
+    echo "Usage: ./build_new_dockerfile.sh <compiler_name> <compiler_full_version>"
     exit 1
 fi
 
@@ -17,16 +17,15 @@ maj_ver="${ver%%\.*}"
 
 # If no minor version specified, use zero
 if [[ "$ver" != *"."* ]]; then
-    ver="$ver.0"
+    ver="$ver.0.0"
 fi
 
 tag_name="${name}-${maj_ver}"
 
 dockerfile_name="dockerfile_$tag_name"
 
-distro_name="ubuntu20"
+image="ghcr.io/llnl/radiuss:llvm-${maj_ver}-ubuntu-22.04"
 
 sed -e "s/<VER>/$ver/g" \
     -e "s/<NAME>/$name/g" \
-    -e "s/<MAJ_VER>/$maj_ver/g" \
-    -e "s/<DISTRO>/$distro_name/g" dockerfile.in > "$dockerfile_name"
+    -e "s@<IMAGE>@$image@g" dockerfile.in > "$dockerfile_name"
