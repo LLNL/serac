@@ -63,8 +63,8 @@ int main(int argc, char* argv[])
   // each vector value corresponds to a different element attribute:
   // [0] (element attribute 1) : the beam
   // [1] (element attribute 2) : indenter block
-  mfem::Vector              K_values({10.0, 100.0});
-  mfem::PWConstCoefficient  K_coeff(K_values);
+  mfem::Vector             K_values({10.0, 100.0});
+  mfem::PWConstCoefficient K_coeff(K_values);
   K_field.project(K_coeff);
   solid_solver.setParameter(0, K_field);
 
@@ -72,8 +72,8 @@ int main(int argc, char* argv[])
   // each vector value corresponds to a different element attribute:
   // [0] (element attribute 1) : the beam
   // [1] (element attribute 2) : indenter block
-  mfem::Vector              G_values({0.25, 2.5});
-  mfem::PWConstCoefficient  G_coeff(G_values);
+  mfem::Vector             G_values({0.25, 2.5});
+  mfem::PWConstCoefficient G_coeff(G_values);
   G_field.project(G_coeff);
   solid_solver.setParameter(1, G_field);
 
@@ -92,10 +92,10 @@ int main(int argc, char* argv[])
   });
 
   // Add the contact interaction
-  auto contact_interaction_id = 0;
+  auto          contact_interaction_id = 0;
   std::set<int> surface_1_boundary_attributes({7});
   std::set<int> surface_2_boundary_attributes({5});
-  solid_solver.addContactInteraction(contact_interaction_id, surface_1_boundary_attributes, 
+  solid_solver.addContactInteraction(contact_interaction_id, surface_1_boundary_attributes,
                                      surface_2_boundary_attributes, contact_options);
 
   // Finalize the data structures
