@@ -766,10 +766,11 @@ public:
    */
   template <int... active_parameters, typename callable, typename StateType = Nothing>
   void addCustomDomainIntegral(DependsOn<active_parameters...>, callable qfunction,
+                               Domain domain,
                                qdata_type<StateType> qdata = NoQData)
   {
     residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{}, qfunction,
-                                 mesh_, qdata);
+                                 domain, qdata);
   }
 
   /**
@@ -867,6 +868,8 @@ public:
    * @brief Set the body forcefunction
    *
    * @tparam BodyForceType The type of the body force load
+   * @param body_force A function describing the body force applied
+   * @param domain The domain over which the body force is applied
    * @pre body_force must be a object that can be called with the following arguments:
    *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
    *    2. `double t` the time (note: time will be handled differently in the future)
@@ -880,21 +883,21 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename BodyForceType>
-  void addBodyForce(DependsOn<active_parameters...>, BodyForceType body_force)
+  void addBodyForce(DependsOn<active_parameters...>, BodyForceType body_force, Domain domain)
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
         [body_force](double t, auto x, auto /* displacement */, auto /* acceleration */, auto... params) {
           return serac::tuple{-1.0 * body_force(x, t, params...), zero{}};
         },
-        mesh_);
+        domain);
   }
 
   /// @overload
   template <typename BodyForceType>
-  void addBodyForce(BodyForceType body_force)
+  void addBodyForce(BodyForceType body_force, Domain domain)
   {
-    addBodyForce(DependsOn<>{}, body_force);
+    addBodyForce(DependsOn<>{}, body_force, domain);
   }
 
   /**
@@ -902,7 +905,7 @@ public:
    *
    * @tparam TractionType The type of the traction load
    * @param traction_function A function describing the traction applied to a boundary
-   *
+   * @param domain The domain over which the traction is applied
    * @pre TractionType must be a object that can be called with the following arguments:
    *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
    *    2. `tensor<T,dim> n` the outward-facing unit normal for the quadrature point
@@ -920,7 +923,7 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename TractionType>
-  void setTraction(DependsOn<active_parameters...>, TractionType traction_function)
+  void setTraction(DependsOn<active_parameters...>, TractionType traction_function, Domain domain)
   {
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
@@ -929,14 +932,14 @@ public:
 
           return -1.0 * traction_function(get<VALUE>(X), normalize(n), t, params...);
         },
-        mesh_);
+        domain);
   }
 
   /// @overload
   template <typename TractionType>
-  void setTraction(TractionType traction_function)
+  void setTraction(TractionType traction_function, Domain domain)
   {
-    setTraction(DependsOn<>{}, traction_function);
+    setTraction(DependsOn<>{}, traction_function, domain);
   }
 
   /**
@@ -944,7 +947,7 @@ public:
    *
    * @tparam PressureType The type of the pressure load
    * @param pressure_function A function describing the pressure applied to a boundary
-   *
+   * @param domain The domain over which the pressure is applied
    * @pre PressureType must be a object that can be called with the following arguments:
    *    1. `tensor<T,dim> x` the reference configuration spatial coordinates for the quadrature point
    *    2. `double t` the time (note: time will be handled differently in the future)
@@ -961,7 +964,7 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename PressureType>
-  void setPressure(DependsOn<active_parameters...>, PressureType pressure_function)
+  void setPressure(DependsOn<active_parameters...>, PressureType pressure_function, Domain domain)
   {
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
@@ -990,14 +993,14 @@ public:
           // We always query the pressure function in the undeformed configuration
           return pressure_function(get<VALUE>(X), t, params...) * (n / norm(cross(get<DERIVATIVE>(X))));
         },
-        mesh_);
+        domain);
   }
 
   /// @overload
   template <typename PressureType>
-  void setPressure(PressureType pressure_function)
+  void setPressure(PressureType pressure_function, Domain domain)
   {
-    setPressure(DependsOn<>{}, pressure_function);
+    setPressure(DependsOn<>{}, pressure_function, domain);
   }
 
   /// @brief Build the quasi-static operator corresponding to the total Lagrangian formulation

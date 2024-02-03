@@ -164,7 +164,7 @@ public:
       auto T = dot(P, n0);
       return T;
     };
-    solid.setTraction(traction);
+    solid.setTraction(traction, EntireBoundary(solid.mesh()));
   }
 
 private:
@@ -236,7 +236,7 @@ public:
 
     // body force
     auto a = make_tensor<dim>([*this](int i) { return this->acceleration(i); });
-    solid.addBodyForce([&material, a](auto /* X */, auto /* t */) { return material.density * a; });
+    solid.addBodyForce([&material, a](auto /* X */, auto /* t */) { return material.density * a; }, EntireDomain(solid.mesh()));
   }
 
 private:

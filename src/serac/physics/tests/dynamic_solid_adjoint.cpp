@@ -97,7 +97,7 @@ std::unique_ptr<SolidMechanics<p, dim>> createNonlinearSolidMechanicsSolver(
     Y[0]   = 0.1 + 0.1 * X[0] + 0.3 * X[1];
     Y[1]   = -0.05 - 0.08 * X[0] + 0.15 * X[1];
     return 0.1 * X + Y;
-  });
+  }, EntireDomain(StateManager::mesh(mesh_tag)));
   solid->completeSetup();
 
   applyInitialAndBoundaryConditions(*solid);

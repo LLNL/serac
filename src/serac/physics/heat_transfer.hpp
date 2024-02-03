@@ -448,6 +448,7 @@ public:
    *
    * @tparam SourceType The type of the source function
    * @param source_function A source function for a prescribed thermal load
+   * @param domain The domain over which the source is applied
    *
    * @pre source_function must be a object that can be called with the following arguments:
    *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
@@ -465,7 +466,7 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename SourceType>
-  void setSource(DependsOn<active_parameters...>, SourceType source_function)
+  void setSource(DependsOn<active_parameters...>, SourceType source_function, Domain domain)
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
@@ -478,14 +479,14 @@ public:
           // Return the source and the flux as a tuple
           return serac::tuple{-1.0 * source, serac::zero{}};
         },
-        mesh_);
+        domain);
   }
 
   /// @overload
   template <typename SourceType>
-  void setSource(SourceType source_function)
+  void setSource(SourceType source_function, Domain domain)
   {
-    setSource(DependsOn<>{}, source_function);
+    setSource(DependsOn<>{}, source_function, domain);
   }
 
   /**
@@ -493,6 +494,7 @@ public:
    *
    * @tparam FluxType The type of the thermal flux object
    * @param flux_function A function describing the flux applied to a boundary
+   * @param domain The domain over which the flux is applied
    *
    * @pre FluxType must be a object that can be called with the following arguments:
    *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
@@ -510,7 +512,7 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename FluxType>
-  void setFluxBCs(DependsOn<active_parameters...>, FluxType flux_function)
+  void setFluxBCs(DependsOn<active_parameters...>, FluxType flux_function, Domain domain)
   {
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
@@ -520,14 +522,14 @@ public:
 
           return flux_function(X, normalize(n), t, temp, params...);
         },
-        mesh_);
+        domain);
   }
 
   /// @overload
   template <typename FluxType>
-  void setFluxBCs(FluxType flux_function)
+  void setFluxBCs(FluxType flux_function, Domain domain)
   {
-    setFluxBCs(DependsOn<>{}, flux_function);
+    setFluxBCs(DependsOn<>{}, flux_function, domain);
   }
 
   /**

@@ -59,7 +59,7 @@ std::unique_ptr<HeatTransfer<p, dim>> createNonlinearHeatTransfer(
   thermal->setMaterial(mat);
   thermal->setTemperature([](const mfem::Vector&, double) { return 0.0; });
   thermal->setTemperatureBCs({1}, [](const mfem::Vector&, double) { return 0.0; });
-  thermal->setSource([](auto /* X */, auto /* time */, auto /* u */, auto /* du_dx */) { return 1.0; });
+  thermal->setSource([](auto /* X */, auto /* time */, auto /* u */, auto /* du_dx */) { return 1.0; }, EntireDomain(StateManager::mesh(mesh_tag)));
   thermal->completeSetup();
   return thermal;
 }
@@ -82,7 +82,7 @@ std::unique_ptr<ParametrizedHeatTransferT> createParameterizedHeatTransfer(
   thermal->setMaterial(DependsOn<0>{}, mat);
   thermal->setTemperature([](const mfem::Vector&, double) { return 0.0; });
   thermal->setTemperatureBCs({1}, [](const mfem::Vector&, double) { return 0.0; });
-  thermal->setSource([](auto /* X */, auto /* time */, auto /* u */, auto /* du_dx */) { return 1.0; });
+  thermal->setSource([](auto /* X */, auto /* time */, auto /* u */, auto /* du_dx */) { return 1.0; }, EntireDomain(StateManager::mesh(mesh_tag)));
   thermal->completeSetup();
   return thermal;
 }
@@ -104,7 +104,7 @@ std::unique_ptr<ParametrizedHeatTransferT> createParameterizedNonlinearHeatTrans
   thermal->setMaterial(DependsOn<0>{}, mat);
   thermal->setTemperature([](const mfem::Vector&, double) { return 0.0; });
   thermal->setTemperatureBCs({1}, [](const mfem::Vector&, double) { return 0.0; });
-  thermal->setSource([](auto /* X */, auto /* time */, auto /* u */, auto /* du_dx */) { return 1.0; });
+  thermal->setSource([](auto /* X */, auto /* time */, auto /* u */, auto /* du_dx */) { return 1.0; }, EntireDomain(StateManager::mesh(mesh_tag)));
   thermal->completeSetup();
   return thermal;
 }

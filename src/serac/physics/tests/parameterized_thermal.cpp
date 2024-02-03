@@ -84,11 +84,11 @@ TEST(Thermal, ParameterizedMaterial)
 
   // Define a constant source term
   heat_transfer::ConstantSource source{-1.0};
-  thermal_solver.setSource(source);
+  thermal_solver.setSource(source, EntireDomain(pmesh));
 
   // Set the flux term to zero for testing code paths
   heat_transfer::ConstantFlux flux_bc{0.0};
-  thermal_solver.setFluxBCs(flux_bc);
+  thermal_solver.setFluxBCs(flux_bc, EntireBoundary(pmesh));
 
   // Finalize the data structures
   thermal_solver.completeSetup();
