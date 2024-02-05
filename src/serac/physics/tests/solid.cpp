@@ -362,9 +362,12 @@ void functional_parameterized_solid_test(double expected_disp_norm)
 
   // add some nonexistent body forces / tractions to check that
   // these parameterized versions compile and run without error
-  solid_solver.addBodyForce(DependsOn<0>{}, [](const auto& x, double /*t*/, auto /* bulk */) { return x * 0.0; }, EntireDomain(pmesh));
-  solid_solver.addBodyForce(DependsOn<1>{}, ParameterizedBodyForce{[](const auto& x) { return 0.0 * x; }}, EntireDomain(pmesh));
-  solid_solver.setTraction(DependsOn<1>{}, [](const auto& x, auto...) { return 0 * x; }, EntireBoundary(pmesh));
+  solid_solver.addBodyForce(
+      DependsOn<0>{}, [](const auto& x, double /*t*/, auto /* bulk */) { return x * 0.0; }, EntireDomain(pmesh));
+  solid_solver.addBodyForce(DependsOn<1>{}, ParameterizedBodyForce{[](const auto& x) { return 0.0 * x; }},
+                            EntireDomain(pmesh));
+  solid_solver.setTraction(
+      DependsOn<1>{}, [](const auto& x, auto...) { return 0 * x; }, EntireBoundary(pmesh));
 
   // Finalize the data structures
   solid_solver.completeSetup();

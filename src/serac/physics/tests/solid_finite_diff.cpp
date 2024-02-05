@@ -249,21 +249,25 @@ void finite_difference_shape_test(LoadingType load)
     solid_mechanics::ConstantBodyForce<dim> force{constant_force};
     solid_solver.addBodyForce(force, EntireDomain(pmesh));
   } else if (load == LoadingType::Pressure) {
-    solid_solver.setPressure([](auto& X, double) {
-      if (X[1] > 0.99) {
-        return 0.1;
-      }
-      return 0.0;
-    }, EntireBoundary(pmesh));
+    solid_solver.setPressure(
+        [](auto& X, double) {
+          if (X[1] > 0.99) {
+            return 0.1;
+          }
+          return 0.0;
+        },
+        EntireBoundary(pmesh));
   } else if (load == LoadingType::Traction) {
-    solid_solver.setTraction([](auto& X, auto, double) {
-      auto traction = 0.0 * X;
-      if (X[1] > 0.99) {
-        traction[0] = 1.0e-2;
-        traction[1] = 1.0e-2;
-      }
-      return traction;
-    }, EntireBoundary(pmesh));
+    solid_solver.setTraction(
+        [](auto& X, auto, double) {
+          auto traction = 0.0 * X;
+          if (X[1] > 0.99) {
+            traction[0] = 1.0e-2;
+            traction[1] = 1.0e-2;
+          }
+          return traction;
+        },
+        EntireBoundary(pmesh));
   }
 
   // Finalize the data structures
