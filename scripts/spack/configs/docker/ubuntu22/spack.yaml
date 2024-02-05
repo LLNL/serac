@@ -72,9 +72,9 @@ spack:
     # Spack may grab for mpi & we don't want to use them
     mpi:
       buildable: false
-    mpicc:
+    mpich:
       externals:
-      - spec: mpicc@11.4.0
+      - spec: mpich@4.0
         prefix: /usr
 
     # System level packages to not build
