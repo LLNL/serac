@@ -92,14 +92,12 @@ std::unique_ptr<SolidMechanics<p, dim>> createNonlinearSolidMechanicsSolver(
                                                geoNonlinear, physics_prefix + std::to_string(iter++), mesh_tag);
   solid->setMaterial(mat);
   solid->setDisplacementBCs({1}, [](const mfem::Vector&, mfem::Vector& disp) { disp = boundaryDisp; });
-  solid->addBodyForce(
-      [](auto X, auto /* t */) {
-        auto Y = X;
-        Y[0]   = 0.1 + 0.1 * X[0] + 0.3 * X[1];
-        Y[1]   = -0.05 - 0.08 * X[0] + 0.15 * X[1];
-        return 0.1 * X + Y;
-      },
-      EntireDomain(StateManager::mesh(mesh_tag)));
+  solid->addBodyForce([](auto X, auto /* t */) {
+    auto Y = X;
+    Y[0]   = 0.1 + 0.1 * X[0] + 0.3 * X[1];
+    Y[1]   = -0.05 - 0.08 * X[0] + 0.15 * X[1];
+    return 0.1 * X + Y;
+  });
   solid->completeSetup();
 
   applyInitialAndBoundaryConditions(*solid);

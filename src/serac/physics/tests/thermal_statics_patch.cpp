@@ -80,7 +80,7 @@ public:
     auto flux = serac::get<1>(material(dummy_x, 1.0, temp_grad));
 
     auto surface_flux = [flux](auto, auto n0, auto, auto) { return dot(flux, n0); };
-    physics.setFluxBCs(surface_flux, EntireBoundary(physics.mesh()));
+    physics.setFluxBCs(surface_flux);
   }
 
  private:

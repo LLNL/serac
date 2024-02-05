@@ -88,7 +88,7 @@ TEST(Thermal, ParameterizedMaterial)
 
   // Set the flux term to zero for testing code paths
   heat_transfer::ConstantFlux flux_bc{0.0};
-  thermal_solver.setFluxBCs(flux_bc, EntireBoundary(pmesh));
+  thermal_solver.setFluxBCs(flux_bc);
 
   // Finalize the data structures
   thermal_solver.completeSetup();

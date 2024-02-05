@@ -882,8 +882,11 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename BodyForceType>
-  void addBodyForce(DependsOn<active_parameters...>, BodyForceType body_force, Domain domain)
+  void addBodyForce(DependsOn<active_parameters...>, BodyForceType body_force,
+                    const std::optional<Domain>& optional_domain = std::nullopt)
   {
+    Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireDomain(mesh_);
+
     residual_->AddDomainIntegral(
         Dimension<dim>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
         [body_force](double t, auto x, auto /* displacement */, auto /* acceleration */, auto... params) {
@@ -894,9 +897,9 @@ public:
 
   /// @overload
   template <typename BodyForceType>
-  void addBodyForce(BodyForceType body_force, Domain domain)
+  void addBodyForce(BodyForceType body_force, const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    addBodyForce(DependsOn<>{}, body_force, domain);
+    addBodyForce(DependsOn<>{}, body_force, optional_domain);
   }
 
   /**
@@ -922,8 +925,11 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename TractionType>
-  void setTraction(DependsOn<active_parameters...>, TractionType traction_function, Domain domain)
+  void setTraction(DependsOn<active_parameters...>, TractionType traction_function,
+                   const std::optional<Domain>& optional_domain = std::nullopt)
   {
+    Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireBoundary(mesh_);
+
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
         [traction_function](double t, auto X, auto /* displacement */, auto /* acceleration */, auto... params) {
@@ -936,9 +942,9 @@ public:
 
   /// @overload
   template <typename TractionType>
-  void setTraction(TractionType traction_function, Domain domain)
+  void setTraction(TractionType traction_function, const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    setTraction(DependsOn<>{}, traction_function, domain);
+    setTraction(DependsOn<>{}, traction_function, optional_domain);
   }
 
   /**
@@ -963,8 +969,11 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename PressureType>
-  void setPressure(DependsOn<active_parameters...>, PressureType pressure_function, Domain domain)
+  void setPressure(DependsOn<active_parameters...>, PressureType pressure_function,
+                   const std::optional<Domain>& optional_domain = std::nullopt)
   {
+    Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireBoundary(mesh_);
+
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
         [pressure_function, geom_nonlin = geom_nonlin_](double t, auto X, auto displacement, auto /* acceleration */,
@@ -997,9 +1006,9 @@ public:
 
   /// @overload
   template <typename PressureType>
-  void setPressure(PressureType pressure_function, Domain domain)
+  void setPressure(PressureType pressure_function, const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    setPressure(DependsOn<>{}, pressure_function, domain);
+    setPressure(DependsOn<>{}, pressure_function, optional_domain);
   }
 
   /// @brief Build the quasi-static operator corresponding to the total Lagrangian formulation

@@ -466,8 +466,11 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename SourceType>
-  void setSource(DependsOn<active_parameters...>, SourceType source_function, Domain domain)
+  void setSource(DependsOn<active_parameters...>, SourceType source_function,
+                 const std::optional<Domain>& optional_domain = std::nullopt)
   {
+    Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireDomain(mesh_);
+
     residual_->AddDomainIntegral(
         Dimension<dim>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
         [source_function](double t, auto x, auto temperature, auto /* dtemp_dt */, auto... params) {
@@ -484,9 +487,9 @@ public:
 
   /// @overload
   template <typename SourceType>
-  void setSource(SourceType source_function, Domain domain)
+  void setSource(SourceType source_function, const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    setSource(DependsOn<>{}, source_function, domain);
+    setSource(DependsOn<>{}, source_function, optional_domain);
   }
 
   /**
@@ -512,8 +515,11 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename FluxType>
-  void setFluxBCs(DependsOn<active_parameters...>, FluxType flux_function, Domain domain)
+  void setFluxBCs(DependsOn<active_parameters...>, FluxType flux_function,
+                  const std::optional<Domain>& optional_domain = std::nullopt)
   {
+    Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireBoundary(mesh_);
+
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
         [flux_function](double t, auto X, auto u, auto /* dtemp_dt */, auto... params) {
@@ -527,9 +533,9 @@ public:
 
   /// @overload
   template <typename FluxType>
-  void setFluxBCs(FluxType flux_function, Domain domain)
+  void setFluxBCs(FluxType flux_function, const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    setFluxBCs(DependsOn<>{}, flux_function, domain);
+    setFluxBCs(DependsOn<>{}, flux_function, optional_domain);
   }
 
   /**

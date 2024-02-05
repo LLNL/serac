@@ -91,7 +91,7 @@ public:
     tensor<double, dim, dim> sigma = material(state, H);
     auto P = solid_mechanics::CauchyToPiola(sigma, H);
     auto traction = [P](auto, auto n0, auto) { return dot(P, n0); };
-    sf.setTraction(traction, EntireBoundary(sf.mesh()));
+    sf.setTraction(traction);
   }
 
  private:
@@ -419,7 +419,7 @@ double pressure_error()
   // Set the pressure corresponding to 10% uniaxial strain
   solid.setPressure([pressure](auto&, double) {
     return pressure;
-  }, EntireBoundary(pmesh));
+  });
 
   // Define the essential boundary conditions corresponding to 10% uniaxial strain everywhere
   // except the pressure loaded surface
