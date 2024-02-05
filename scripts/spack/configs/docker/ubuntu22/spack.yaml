@@ -22,8 +22,8 @@ spack:
       paths:
         cc: /usr/bin/clang
         cxx: /usr/bin/clang++
-        f77: /usr/bin/gfortran
-        fc: /usr/bin/gfortran
+        f77: /usr/bin/gfortran-11
+        fc: /usr/bin/gfortran-11
       spec: clang@15.0.7
       target: x86_64
   - compiler:
@@ -37,8 +37,8 @@ spack:
       paths:
         cc: /usr/bin/gcc-13
         cxx: /usr/bin/g++-13
-        f77: /usr/bin/gfortran
-        fc: /usr/bin/gfortran
+        f77: /usr/bin/gfortran-13
+        fc: /usr/bin/gfortran-13
       spec: gcc@13.1.0
       target: x86_64
 
