@@ -448,6 +448,8 @@ public:
    *
    * @tparam SourceType The type of the source function
    * @param source_function A source function for a prescribed thermal load
+   * @param optional_domain The domain over which the source is applied. If nothing is supplied the entire domain is
+   * used.
    *
    * @pre source_function must be a object that can be called with the following arguments:
    *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
@@ -465,8 +467,11 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename SourceType>
-  void setSource(DependsOn<active_parameters...>, SourceType source_function)
+  void setSource(DependsOn<active_parameters...>, SourceType source_function,
+                 const std::optional<Domain>& optional_domain = std::nullopt)
   {
+    Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireDomain(mesh_);
+
     residual_->AddDomainIntegral(
         Dimension<dim>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
         [source_function](double t, auto x, auto temperature, auto /* dtemp_dt */, auto... params) {
@@ -478,14 +483,14 @@ public:
           // Return the source and the flux as a tuple
           return serac::tuple{-1.0 * source, serac::zero{}};
         },
-        mesh_);
+        domain);
   }
 
   /// @overload
   template <typename SourceType>
-  void setSource(SourceType source_function)
+  void setSource(SourceType source_function, const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    setSource(DependsOn<>{}, source_function);
+    setSource(DependsOn<>{}, source_function, optional_domain);
   }
 
   /**
@@ -493,6 +498,8 @@ public:
    *
    * @tparam FluxType The type of the thermal flux object
    * @param flux_function A function describing the flux applied to a boundary
+   * @param optional_domain The domain over which the flux is applied. If nothing is supplied the entire boundary is
+   * used.
    *
    * @pre FluxType must be a object that can be called with the following arguments:
    *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
@@ -510,8 +517,11 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename FluxType>
-  void setFluxBCs(DependsOn<active_parameters...>, FluxType flux_function)
+  void setFluxBCs(DependsOn<active_parameters...>, FluxType flux_function,
+                  const std::optional<Domain>& optional_domain = std::nullopt)
   {
+    Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireBoundary(mesh_);
+
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
         [flux_function](double t, auto X, auto u, auto /* dtemp_dt */, auto... params) {
@@ -520,14 +530,14 @@ public:
 
           return flux_function(X, normalize(n), t, temp, params...);
         },
-        mesh_);
+        domain);
   }
 
   /// @overload
   template <typename FluxType>
-  void setFluxBCs(FluxType flux_function)
+  void setFluxBCs(FluxType flux_function, const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    setFluxBCs(DependsOn<>{}, flux_function);
+    setFluxBCs(DependsOn<>{}, flux_function, optional_domain);
   }
 
   /**
