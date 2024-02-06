@@ -868,7 +868,7 @@ public:
    *
    * @tparam BodyForceType The type of the body force load
    * @param body_force A function describing the body force applied
-   * @param domain The domain over which the body force is applied. If nothing is supplied the entire domain is used.
+   * @param optional_domain The domain over which the body force is applied. If nothing is supplied the entire domain is used.
    * @pre body_force must be a object that can be called with the following arguments:
    *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
    *    2. `double t` the time (note: time will be handled differently in the future)
@@ -907,7 +907,7 @@ public:
    *
    * @tparam TractionType The type of the traction load
    * @param traction_function A function describing the traction applied to a boundary
-   * @param domain The domain over which the traction is applied. If nothing is supplied the entire boundary is used.
+   * @param optional_domain The domain over which the traction is applied. If nothing is supplied the entire boundary is used.
    * @pre TractionType must be a object that can be called with the following arguments:
    *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
    *    2. `tensor<T,dim> n` the outward-facing unit normal for the quadrature point
@@ -952,7 +952,7 @@ public:
    *
    * @tparam PressureType The type of the pressure load
    * @param pressure_function A function describing the pressure applied to a boundary
-   * @param domain The domain over which the pressure is applied. If nothing is supplied the entire boundary is used.
+   * @param optional_domain The domain over which the pressure is applied. If nothing is supplied the entire boundary is used.
    * @pre PressureType must be a object that can be called with the following arguments:
    *    1. `tensor<T,dim> x` the reference configuration spatial coordinates for the quadrature point
    *    2. `double t` the time (note: time will be handled differently in the future)
