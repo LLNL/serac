@@ -448,7 +448,8 @@ public:
    *
    * @tparam SourceType The type of the source function
    * @param source_function A source function for a prescribed thermal load
-   * @param optional_domain The domain over which the source is applied. If nothing is supplied the entire domain is used.
+   * @param optional_domain The domain over which the source is applied. If nothing is supplied the entire domain is
+   * used.
    *
    * @pre source_function must be a object that can be called with the following arguments:
    *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
@@ -497,7 +498,8 @@ public:
    *
    * @tparam FluxType The type of the thermal flux object
    * @param flux_function A function describing the flux applied to a boundary
-   * @param optional_domain The domain over which the flux is applied. If nothing is supplied the entire boundary is used.
+   * @param optional_domain The domain over which the flux is applied. If nothing is supplied the entire boundary is
+   * used.
    *
    * @pre FluxType must be a object that can be called with the following arguments:
    *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
