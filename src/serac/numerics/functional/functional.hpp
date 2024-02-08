@@ -33,7 +33,6 @@
 #include <mfem/fem/geom.hpp>
 #include <vector>
 
-
 namespace serac {
 
 template <int... i>
@@ -519,6 +518,12 @@ public:
           trial_space_(f.trial_space_[which]),
           df_(f.test_space_->GetTrueVSize())
     {
+      // #ifdef USE_CUDA
+      // df_.UseDevice(true);
+      // input_L_.UseDevice(true);
+      // output_L_.UseDevice(true);
+      // output_T_.UseDevice(true);
+      // #endif
     }
 
     /**
@@ -575,7 +580,10 @@ public:
 
         integral.ComputeElementGradients(K_elem, which_argument);
       }
-
+#ifdef USE_CUDA
+      std::cout << "Printing USAGE before assemble\n";
+      printCUDAMemUsage();
+#endif
       for (auto type : Integral::Types) {
         auto K_elem             = element_gradients[type];
         auto test_restrictions  = form_.G_test_[type].restrictions;
@@ -628,6 +636,10 @@ public:
           }
         }
       }
+#ifdef USE_CUDA
+      std::cout << "Printing USAGE AFTER assemble\n";
+      printCUDAMemUsage();
+#endif
 
       // Copy the column indices to an auxilliary array as MFEM can mutate these during HypreParMatrix construction
       col_ind_copy_ = lookup_tables.col_ind;

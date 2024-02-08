@@ -1,5 +1,6 @@
 #pragma once
 
+#include <RAJA/pattern/launch/launch_core.hpp>
 #include "serac/numerics/functional/tuple.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/dual.hpp"
@@ -220,17 +221,37 @@ SERAC_HOST_DEVICE auto promote_to_dual_when(const T& x)
  * @param x the values to be promoted
  */
 template <bool dualify, typename T, int n>
-SERAC_HOST_DEVICE auto promote_each_to_dual_when(const tensor<T, n>& x)
+SERAC_HOST_DEVICE auto promote_each_to_dual_when(const tensor<T, n>& x, void* output_ptr = nullptr,
+                                                 RAJA::LaunchContext ctx = RAJA::LaunchContext{})
 {
   if constexpr (dualify) {
+#ifdef USE_CUDA
+    using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+#else
+    using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
+#endif
+
+    RAJA::RangeSegment x_range(0, n);
     using return_type = decltype(make_dual(T{}));
     tensor<return_type, n> output;
-    for (int i = 0; i < n; i++) {
+    auto                   casted_output_ptr = static_cast<tensor<return_type, n>*>(output_ptr);
+    RAJA::loop<threads_x>(ctx, x_range, [&](int i) {
+#ifndef USE_CUDA
       output[i] = make_dual(x[i]);
-    }
+#else
+        (*casted_output_ptr)[i] = make_dual(x[i]);
+#endif
+    });
     return output;
   }
   if constexpr (!dualify) {
+#ifdef USE_CUDA
+    using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+
+    RAJA::RangeSegment x_range(0, n);
+    auto               casted_output_ptr = static_cast<tensor<T, n>*>(output_ptr);
+    RAJA::loop<threads_x>(ctx, x_range, [&](int i) { (*casted_output_ptr)[i] = x[i]; });
+#endif
     return x;
   }
 }
@@ -503,7 +524,7 @@ SERAC_HOST_DEVICE auto get_value(const tensor<dual<T>, n...>& arg)
  * @param[in] arg The tensor of dual numbers
  */
 template <int... n>
-SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<dual<double>, n...>& arg)
+SERAC_HOST_DEVICE /*constexpr*/ auto get_gradient(const tensor<dual<double>, n...>& arg)
 {
   tensor<double, n...> g{};
   for_constexpr<n...>([&](auto... i) { g(i...) = arg(i...).gradient; });
@@ -512,7 +533,7 @@ SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<dual<double>, n...>& 
 
 /// @overload
 template <int... n, int... m>
-SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<dual<tensor<double, m...>>, n...>& arg)
+SERAC_HOST_DEVICE /*constexpr*/ auto get_gradient(const tensor<dual<tensor<double, m...>>, n...>& arg)
 {
   tensor<double, n..., m...> g{};
   for_constexpr<n...>([&](auto... i) { g(i...) = arg(i...).gradient; });

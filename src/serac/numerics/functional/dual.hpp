@@ -108,6 +108,8 @@ SERAC_HOST_DEVICE constexpr auto operator-(dual<gradient_type_a> a, dual<gradien
 template <typename gradient_type>
 SERAC_HOST_DEVICE constexpr auto operator*(const dual<gradient_type>& a, double b)
 {
+  // printf("dual operator* 3\n");
+  // return a;
   return dual{a.value * b, a.gradient * b};
 }
 
@@ -115,6 +117,7 @@ SERAC_HOST_DEVICE constexpr auto operator*(const dual<gradient_type>& a, double 
 template <typename gradient_type>
 SERAC_HOST_DEVICE constexpr auto operator*(double a, const dual<gradient_type>& b)
 {
+  // printf("dual operator* 2\n");
   return dual{a * b.value, a * b.gradient};
 }
 
@@ -122,6 +125,7 @@ SERAC_HOST_DEVICE constexpr auto operator*(double a, const dual<gradient_type>& 
 template <typename gradient_type_a, typename gradient_type_b>
 SERAC_HOST_DEVICE constexpr auto operator*(dual<gradient_type_a> a, dual<gradient_type_b> b)
 {
+  // printf("dual operator* 1\n");
   return dual{a.value * b.value, b.value * a.gradient + a.value * b.gradient};
 }
 
@@ -427,7 +431,7 @@ SERAC_HOST_DEVICE constexpr auto get_value(dual<T> arg)
 
 /** @brief return the "gradient" part from a dual number type */
 template <typename gradient_type>
-SERAC_HOST_DEVICE constexpr auto get_gradient(dual<gradient_type> arg)
+SERAC_HOST_DEVICE /*constexpr*/ auto get_gradient(dual<gradient_type> arg)
 {
   return arg.gradient;
 }

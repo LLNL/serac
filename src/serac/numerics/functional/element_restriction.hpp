@@ -77,7 +77,7 @@ struct DoF {
   uint64_t orientation() const { return ((bits & orientation_mask) >> orientation_shift); }
 
   /// get the index field of this `DoF`
-  
+
   uint64_t index() const { return (bits & index_mask); }
 };
 
@@ -175,11 +175,11 @@ struct ElementRestriction {
    * @param i the index of the element
    * @param dofs (output) the DoFs associated with element `i`
    */
-  
+
   void GetElementVDofs(int i, DoF* vdofs) const;
 
   /// get the dof information for a given node / component
-  
+
   DoF GetVDof(DoF node, uint64_t component) const;
 
   /// "L->E" in mfem parlance, each element gathers the values that belong to it, and stores them in the "E-vector"

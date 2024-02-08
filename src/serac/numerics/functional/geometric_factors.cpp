@@ -45,13 +45,13 @@ void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobian
   auto J_q = reinterpret_cast<jacobian_type*>(jacobians_q.ReadWrite());
   auto X   = reinterpret_cast<const typename element_type::dof_type*>(positions_e.Read());
 #if defined(USE_CUDA)
-  using policy = RAJA::cuda_exec<512>;
+  using policy = RAJA::cuda_exec<32>;
 #else
   using policy = RAJA::simd_exec;
 #endif
   // for each element in the domain
-  //RAJA::forall<policy>(RAJA::TypedRangeSegment<uint32_t>(0, num_elements), [=] SERAC_HOST_DEVICE(uint32_t e) {
-    for (uint32_t e = 0; e < num_elements; ++e) {
+  // RAJA::forall<policy>(RAJA::TypedRangeSegment<uint32_t>(0, num_elements), [=] SERAC_HOST_DEVICE(uint32_t e) {
+  for (uint32_t e = 0; e < num_elements; ++e) {
     // load the positions for the nodes in this element
     auto X_e = X[e];
 
@@ -73,7 +73,7 @@ void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobian
         }
       }
     }
-    }
+  }
   //});
 }
 

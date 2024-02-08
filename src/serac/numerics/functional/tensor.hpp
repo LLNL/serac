@@ -12,11 +12,39 @@
 
 #pragma once
 
+#define BLOCK_SZ 128
+#define BLOCK_X 8
+#define BLOCK_Y 8
+#define BLOCK_Z 4
+
 #include "serac/infrastructure/accelerator.hpp"
 
 #include "detail/metaprogramming.hpp"
+#include <RAJA/RAJA.hpp>
+#include <umpire/ResourceManager.hpp>
 
 #include <cmath>
+
+namespace {
+template <typename DataType>
+DataType* copy_data(DataType* source_data, std::size_t size, const std::string& destination)
+{
+  auto& rm             = umpire::ResourceManager::getInstance();
+  auto  dest_allocator = rm.getAllocator(destination);
+
+  DataType* dest_data = static_cast<DataType*>(dest_allocator.allocate(size));
+
+  umpire::register_external_allocation(
+      source_data, umpire::util::AllocationRecord(source_data, size, rm.getAllocator("HOST").getAllocationStrategy(),
+                                                  std::string("external array")));
+
+  // _sphinx_tag_tut_copy_start
+  rm.copy(dest_data, source_data);
+  // _sphinx_tag_tut_copy_end
+
+  return dest_data;
+}
+}  // namespace
 
 namespace serac {
 
@@ -702,6 +730,7 @@ template <typename S, typename T, int m, int n, int p>
 SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n, p>& B)
 {
   tensor<decltype(S{} * T{}), m, p> AB{};
+
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < p; j++) {
       for (int k = 0; k < n; k++) {
@@ -1248,7 +1277,7 @@ SERAC_HOST_DEVICE constexpr auto detApIm1(const tensor<T, 3, 3>& A)
 
   // clang-format off
   // equivalent to tr(A) + I2(A) + det(A)
-  return A(0, 0) + A(1, 1) + A(2, 2) 
+  return A(0, 0) + A(1, 1) + A(2, 2)
        - A(0, 1) * A(1, 0) * (1 + A(2, 2))
        + A(0, 0) * A(1, 1) * (1 + A(2, 2))
        - A(0, 2) * A(2, 0) * (1 + A(1, 1))
@@ -1324,12 +1353,8 @@ SERAC_HOST_DEVICE auto contract(const tensor<S, m, n...>& A, const tensor<T, p, 
   // the type of the output tensor is easier to figure out
   using U = decltype(S{} * T{});
 
-  auto C = []() {
-    if constexpr (d3 == 0) return tensor<U, d1, d2>{};
-    if constexpr (d3 != 0) return tensor<U, d1, d2, d3>{};
-  }();
-
   if constexpr (d3 == 0) {
+    auto C = tensor<U, d1, d2>{};
     for (int i = 0; i < d1; i++) {
       for (int j = 0; j < d2; j++) {
         U sum{};
@@ -1342,7 +1367,10 @@ SERAC_HOST_DEVICE auto contract(const tensor<S, m, n...>& A, const tensor<T, p, 
         C(i, j) = sum;
       }
     }
+
+    return C;
   } else {
+    auto C = tensor<U, d1, d2, d3>{};
     for (int i = 0; i < d1; i++) {
       for (int j = 0; j < d2; j++) {
         for (int k = 0; k < d3; k++) {
@@ -1359,10 +1387,87 @@ SERAC_HOST_DEVICE auto contract(const tensor<S, m, n...>& A, const tensor<T, p, 
         }
       }
     }
-  }
 
-  return C;
+    return C;
+  }
 }
+
+template <int i1, int i2, typename S, int m, typename T, int p, int q, int... n>
+SERAC_DEVICE constexpr auto deduce_contract_return_type(const tensor<S, m, n...>& A, const tensor<T, p, q>& B)
+{
+  constexpr int Adims[] = {m, n...};
+  constexpr int Bdims[] = {p, q};
+  static_assert(sizeof...(n) < 3);
+  static_assert(Adims[i1] == Bdims[i2], "error: incompatible tensor dimensions");
+
+  // first, we have to figure out the dimensions of the output tensor
+  constexpr int new_dim = (i2 == 0) ? q : p;
+  constexpr int d1      = (i1 == 0) ? new_dim : Adims[0];
+  constexpr int d2      = (i1 == 1) ? new_dim : Adims[1];
+  constexpr int d3      = sizeof...(n) == 1 ? 0 : ((i1 == 2) ? new_dim : Adims[2]);
+  using U               = decltype(S{} * T{});
+  if constexpr (d3 == 0) {
+    return serac::tensor<U, d1, d2>{};
+  }
+  return tensor<U, d1, d2, d3>{};
+}
+
+template <int i1, int i2, typename T, int p, int q>
+SERAC_HOST_DEVICE constexpr auto deduce_contract_return_type(const zero&, const tensor<T, p, q>&)
+{
+  return zero{};
+}
+
+#ifdef USE_CUDA
+template <int l1, int l2, typename S, int m, typename T, int p, int q, int n0, int n1, int n2, int... n>
+SERAC_DEVICE void contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B, tensor<S, n0, n1, n2>* C, int qx,
+                           int qy, int qz, bool accumulate = false)
+{
+  constexpr int Adims[] = {m, n...};
+  for (int i0 = qz; i0 < n0; i0 += BLOCK_Z) {
+    for (int i1 = qy; i1 < n1; i1 += BLOCK_Y) {
+      for (int i2 = qx; i2 < n2; i2 += BLOCK_X) {
+        double sum = (accumulate) ? (*C)(i0, i1, i2) : 0.0;
+
+        for (int j = 0; j < Adims[l1]; j++) {
+          if constexpr (l1 == 0 && l2 == 1) {
+            sum += A(j, i1, i2) * B(i0, j);
+          }
+          if constexpr (l1 == 1 && l2 == 1) {
+            sum += A(i0, j, i2) * B(i1, j);
+          }
+          if constexpr (l1 == 2 && l2 == 1) {
+            sum += A(i0, i1, j) * B(i2, j);
+          }
+        }
+
+        (*C)(i0, i1, i2) = sum;
+      }
+    }
+  }
+}
+
+template <int l1, int l2, typename T, int p, int q>
+SERAC_DEVICE void contract(const zero&, const tensor<T, p, q>&, zero*, int, int, int, bool accumulate = false)
+{
+  return;
+}
+
+template <int l1, int l2, typename S, typename T, int p, int q, int n0, int n1, int n2>
+SERAC_DEVICE void contract(const zero&, const tensor<T, p, q>&, tensor<S, n0, n1, n2>*, int, int, int,
+                           bool accumulate = false)
+{
+  return;
+}
+
+template <int l1, int l2, typename S, int m, typename T, int p, int q, int... n>
+SERAC_DEVICE void contract(const tensor<S, m, n...>&, const tensor<T, p, q>&, zero*, int, int, int,
+                           bool accumulate = false)
+{
+  return;
+}
+
+#endif
 
 /// @overload
 template <int i1, int i2, typename T>
@@ -1591,6 +1696,62 @@ SERAC_HOST_DEVICE constexpr tensor<double, 3, 3> inv(const tensor<double, 3, 3>&
 
   return invA;
 }
+
+/**
+ * @overload
+ * @note Compute ith jth inverse element
+ */
+template <int i, int j>
+SERAC_HOST_DEVICE constexpr double inv_elem(const tensor<double, 3, 3>& A)
+{
+  double inv_detA(1.0 / det(A));
+
+  if constexpr (i == 0 && j == 0) {
+    return (A[1][1] * A[2][2] - A[1][2] * A[2][1]) * inv_detA;
+  } else if constexpr (i == 0 && j == 1) {
+    return (A[0][2] * A[2][1] - A[0][1] * A[2][2]) * inv_detA;
+  } else if constexpr (i == 0 && j == 2) {
+    return (A[0][1] * A[1][2] - A[0][2] * A[1][1]) * inv_detA;
+  } else if constexpr (i == 1 && j == 0) {
+    return (A[1][2] * A[2][0] - A[1][0] * A[2][2]) * inv_detA;
+  } else if constexpr (i == 1 && j == 1) {
+    return (A[0][0] * A[2][2] - A[0][2] * A[2][0]) * inv_detA;
+  } else if constexpr (i == 1 && j == 2) {
+    return (A[0][2] * A[1][0] - A[0][0] * A[1][2]) * inv_detA;
+  } else if constexpr (i == 2 && j == 0) {
+    return (A[1][0] * A[2][1] - A[1][1] * A[2][0]) * inv_detA;
+  } else if constexpr (i == 2 && j == 1) {
+    return (A[0][1] * A[2][0] - A[0][0] * A[2][1]) * inv_detA;
+  } else if constexpr (i == 2 && j == 2) {
+    return (A[0][0] * A[1][1] - A[0][1] * A[1][0]) * inv_detA;
+  }
+  // error case
+  return 0;
+}
+
+/**
+ * @overload
+ * @note Compute ith jth inverse element
+ */
+template <int i, int j>
+SERAC_HOST_DEVICE constexpr double inv_elem(const tensor<double, 2, 2>& A)
+{
+  double inv_detA(1.0 / det(A));
+
+  if constexpr (i == 0 && j == 0) {
+    return A[1][1] * inv_detA;
+  } else if constexpr (i == 0 && j == 1) {
+    return -A[0][1] * inv_detA;
+  } else if constexpr (i == 1 && j == 0) {
+    return -A[1][0] * inv_detA;
+  } else if constexpr (i == 1 && j == 1) {
+    return A[0][0] * inv_detA;
+  }
+
+  // error case
+  return 0;
+}
+
 /**
  * @overload
  * @note For N-by-N matrices with N > 3, requires Gaussian elimination
@@ -1644,8 +1805,8 @@ inline SERAC_HOST_DEVICE void print(double value) { printf("%f", value); }
  * @brief print a tensor using `printf`, so that it is suitable for use inside cuda kernels.
  * @param[in] A The tensor to write out
  */
-template <int m, int... n>
-SERAC_HOST_DEVICE void print(const tensor<double, m, n...>& A)
+template <typename T, int m, int... n>
+SERAC_HOST_DEVICE void print(const tensor<T, m, n...>& A)
 {
   printf("{");
   print(A[0]);
@@ -1867,10 +2028,7 @@ SERAC_HOST_DEVICE constexpr int size(const tensor<T, n...>*)
  * @tparam n the extents of each dimension
  * @return the total number of values stored in the tensor
  */
-SERAC_HOST_DEVICE constexpr int size(const zero*)
-{
-  return 1;
-}
+SERAC_HOST_DEVICE constexpr int size(const zero*) { return 1; }
 
 /**
  * @overload
@@ -2012,12 +2170,12 @@ inline void eig(const r2tensor < 3, 3 > & A,
     // then just use the basis for the orthogonal complement
     // found earlier
     if (fabs(delta) <= 1.0e-15) {
-      
+
       for (int i = 0; i < 3; i++){
         Q(i,1) = s0(i);
         Q(i,2) = s1(i);
-      } 
-      
+      }
+
     // otherwise compute the remaining eigenvectors
     } else {
 
@@ -2143,7 +2301,7 @@ inline mat < 2, 2 > look_at(const vec < 2 > & direction) {
 
 inline mat < 3, 3 > R3_basis(const vec3 & n) {
   float sign = (n[2] >= 0.0f) ? 1.0f : -1.0f;
-  float a = -1.0f / (sign + n[2]); 
+  float a = -1.0f / (sign + n[2]);
   float b = n[0] * n[1] * a;
 
   return mat < 3, 3 >{

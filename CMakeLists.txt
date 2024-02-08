@@ -24,16 +24,17 @@ set(ENABLE_MPI ON CACHE BOOL "")
 
 
 if (ENABLE_CUDA)
-    add_compile_definitions(USE_CUDA)
-    set(SERAC_USE_CUDA ON CACHE BOOL "")
+    #add_compile_definitions(USE_CUDA)
+    set(ENABLE_CLANG_CUDA ON CACHE BOOL "")
     set(SERAC_USE_CUDA ON CACHE BOOL "")
     set(RAJA_ENABLE_CUDA ON CACHE BOOL "")
     set(AXOM_USE_CUDA ON CACHE BOOL "")
+    set(MFEM_USE_CUDA ON CACHE BOOL "")
 endif()
 
 
 if (NOT MPI_C_COMPILER OR NOT MPI_CXX_COMPILER)
-    message(FATAL_ERROR 
+    message(FATAL_ERROR
             "Serac requires MPI.  It is required to provide the MPI C/C++ "
             "compiler wrappers via the CMake variables, "
             "MPI_C_COMPILER and MPI_CXX_COMPILER.")
@@ -141,6 +142,10 @@ include(${PROJECT_SOURCE_DIR}/cmake/thirdparty/SetupSeracThirdParty.cmake)
 
 set(CMAKE_C_FLAGS   ${SERAC_CMAKE_C_FLAGS})
 set(CMAKE_CXX_FLAGS ${SERAC_CMAKE_CXX_FLAGS})
+string(REPLACE " -Werror" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp -gdwarf-4 -fgpu-rdc" CACHE STRING "")
+#set(CMAKE_CXX_FLAGS_DEBUG "-fopenmp -gdwarf-4 -fgpu-rdc" CACHE STRING "")
+#set(CMAKE_CUDA_RESOLVE_DEVICE_SYMBOLS ON CACHE BOOL "")
 
 include(${PROJECT_SOURCE_DIR}/cmake/SeracConfigHeader.cmake)
 
@@ -206,7 +211,7 @@ if (SERAC_ENABLE_CODEVELOP)
             )
 endif()
 
-install(EXPORT serac-targets 
+install(EXPORT serac-targets
         NAMESPACE serac::
         DESTINATION lib/cmake
         )

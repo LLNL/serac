@@ -244,16 +244,25 @@ struct QOI {
  * @param jacobians the jacobians of the isoparametric map from parent to physical space of each quadrature point
  */
 template <Family f, typename T, int q, int dim>
-SERAC_HOST_DEVICE void parent_to_physical(tensor<T, q>& qf_input, const tensor<double, dim, dim, q>& jacobians)
+SERAC_HOST_DEVICE void parent_to_physical(tensor<T, q>& qf_input, tensor<double, dim, dim, q>* jacobians,
+                                          uint32_t block_idx, RAJA::LaunchContext ctx = {})
 {
   [[maybe_unused]] constexpr int VALUE      = 0;
   [[maybe_unused]] constexpr int DERIVATIVE = 1;
-
-  for (int k = 0; k < q; k++) {
+#ifdef USE_CUDA
+  using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+#else
+  using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
+#endif
+  RAJA::RangeSegment k_range(0, BLOCK_SZ);
+  RAJA::loop<threads_x>(ctx, k_range, [&](int k) {
+    if (k >= q) {
+      return;
+    }
     tensor<double, dim, dim> J;
     for (int row = 0; row < dim; row++) {
       for (int col = 0; col < dim; col++) {
-        J[row][col] = jacobians(col, row, k);
+        J[row][col] = jacobians[block_idx](col, row, k);
       }
     }
 
@@ -269,7 +278,7 @@ SERAC_HOST_DEVICE void parent_to_physical(tensor<T, q>& qf_input, const tensor<d
         get<DERIVATIVE>(qf_input[k]) = dot(get<DERIVATIVE>(qf_input[k]), transpose(J));
       }
     }
-  }
+  });
 }
 
 /**

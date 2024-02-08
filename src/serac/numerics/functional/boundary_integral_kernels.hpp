@@ -182,41 +182,41 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, con
 
 #if defined(USE_CUDA)
   std::cout << "USING CUDA\n";
-  using policy = RAJA::cuda_exec<512>;
+  using policy = RAJA::cuda_exec<32>;
 #else
   using policy = RAJA::simd_exec;
 #endif
   // for each element in the domain
-  RAJA::forall<policy>(
-      RAJA::TypedRangeSegment<uint32_t>(0, num_elements),
-      [J, x, qf, u, rule, r, qpts_per_elem, qf_derivatives] RAJA_HOST_DEVICE(uint32_t e) {
-        // load the jacobians and positions for each quadrature point in this element
-        auto J_e = J[e];
-        auto x_e = x[e];
-        // Avoid unused warning/error ([[maybe_unused]] is not possible in the capture list)
-        (void)qf_derivatives;
-        (void)qpts_per_elem;
-
-        static constexpr trial_element_type empty_trial_element{};
-        // batch-calculate values / derivatives of each trial space, at each quadrature point
-        [[maybe_unused]] tuple qf_inputs = {promote_each_to_dual_when<indices == differentiation_index>(
-            get<indices>(empty_trial_element).interpolate(get<indices>(u)[e], rule))...};
-
-        // (batch) evalute the q-function at each quadrature point
-        auto qf_outputs = batch_apply_qf(qf, x_e, J_e, get<indices>(qf_inputs)...);
-
-        // write out the q-function derivatives after applying the
-        // physical_to_parent transformation, so that those transformations
-        // won't need to be applied in the action_of_gradient and element_gradient kernels
-        if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
-          for (int q = 0; q < leading_dimension(qf_outputs); q++) {
-            qf_derivatives[e * uint32_t(qpts_per_elem) + uint32_t(q)] = get_gradient(qf_outputs[q]);
-          }
-        }
-
-        // (batch) integrate the material response against the test-space basis functions
-        test_element::integrate(get_value(qf_outputs), rule, &r[e]);
-      });
+  //  RAJA::forall<policy>(
+  //      RAJA::TypedRangeSegment<uint32_t>(0, num_elements),
+  //      [J, x, qf, u, rule, r, qpts_per_elem, qf_derivatives] RAJA_HOST_DEVICE(uint32_t e) {
+  //        // load the jacobians and positions for each quadrature point in this element
+  //        auto J_e = J[e];
+  //        auto x_e = x[e];
+  //        // Avoid unused warning/error ([[maybe_unused]] is not possible in the capture list)
+  //        (void)qf_derivatives;
+  //        (void)qpts_per_elem;
+  //
+  //        static constexpr trial_element_type empty_trial_element{};
+  //        // batch-calculate values / derivatives of each trial space, at each quadrature point
+  //        [[maybe_unused]] tuple qf_inputs = {promote_each_to_dual_when<indices == differentiation_index>(
+  //            get<indices>(empty_trial_element).interpolate(get<indices>(u)[e], rule))...};
+  //
+  //        // (batch) evalute the q-function at each quadrature point
+  //        auto qf_outputs = batch_apply_qf(qf, x_e, J_e, get<indices>(qf_inputs)...);
+  //
+  //        // write out the q-function derivatives after applying the
+  //        // physical_to_parent transformation, so that those transformations
+  //        // won't need to be applied in the action_of_gradient and element_gradient kernels
+  //        if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
+  //          for (int q = 0; q < leading_dimension(qf_outputs); q++) {
+  //            qf_derivatives[e * uint32_t(qpts_per_elem) + uint32_t(q)] = get_gradient(qf_outputs[q]);
+  //          }
+  //        }
+  //
+  //        // (batch) integrate the material response against the test-space basis functions
+  //        test_element::integrate(get_value(qf_outputs), rule, &r[e]);
+  //      });
 }
 
 //clang-format off
@@ -278,7 +278,7 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
   constexpr TensorProductQuadratureRule<Q> rule{};
 
 #if defined(USE_CUDA)
-  using policy = RAJA::cuda_exec<512>;
+  using policy = RAJA::cuda_exec<32>;
 #else
   using policy = RAJA::simd_exec;
 #endif
@@ -334,7 +334,7 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
 
 #if defined(USE_CUDA)
   std::cout << "USING CUDA :)\n";
-  using policy = RAJA::cuda_exec<512>;
+  using policy = RAJA::cuda_exec<32>;
 #else
   using policy = RAJA::simd_exec;
 #endif

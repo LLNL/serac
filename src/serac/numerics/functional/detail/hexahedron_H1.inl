@@ -16,8 +16,9 @@
 // note: mfem assumes the parent element domain is [0,1]x[0,1]x[0,1]
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
+#include <RAJA/pattern/launch/launch_core.hpp>
 template <int p, int c>
-struct finite_element<mfem::Geometry::CUBE, H1<p, c> > {
+struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
   static constexpr auto geometry   = mfem::Geometry::CUBE;
   static constexpr auto family     = Family::H1;
   static constexpr int  components = c;
@@ -31,9 +32,9 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c> > {
 
   using dof_type = tensor<double, c, p + 1, p + 1, p + 1>;
 
-  using value_type = typename std::conditional<components == 1, double, tensor<double, components> >::type;
+  using value_type = typename std::conditional<components == 1, double, tensor<double, components>>::type;
   using derivative_type =
-      typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim> >::type;
+      typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim>>::type;
   using qf_input_type = tuple<value_type, derivative_type>;
 
   SERAC_HOST_DEVICE static constexpr tensor<double, ndof> shape_functions(tensor<double, dim> xi)
@@ -72,7 +73,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c> > {
       for (int j = 0; j < p + 1; j++) {
         for (int i = 0; i < p + 1; i++) {
           dN[count++] = {
-            dN_xi[i] *  N_eta[j] *  N_zeta[k], 
+            dN_xi[i] *  N_eta[j] *  N_zeta[k],
              N_xi[i] * dN_eta[j] *  N_zeta[k],
              N_xi[i] *  N_eta[j] * dN_zeta[k]
           };
@@ -105,6 +106,28 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c> > {
     }
     return B;
   }
+#ifdef USE_CUDA
+  // Compute B on device, and return a pointer to device memory.
+  template <bool apply_weights, int q>
+  static serac::tensor<double, q, n>* calculate_B_device()
+  {
+    constexpr auto                  points1D       = GaussLegendreNodes<q, mfem::Geometry::SEGMENT>();
+    [[maybe_unused]] constexpr auto weights1D      = GaussLegendreWeights<q, mfem::Geometry::SEGMENT>();
+    tensor<double, q, n>*           B_ptr          = nullptr;
+    auto&                           rm             = umpire::ResourceManager::getInstance();
+    auto                            dest_allocator = rm.getAllocator("DEVICE");
+    B_ptr        = static_cast<tensor<double, q, n>*>(dest_allocator.allocate(sizeof(tensor<double, q, n>)));
+    using policy = RAJA::cuda_exec<256>;
+    RAJA::forall<policy>(RAJA::TypedRangeSegment<int>(0, q), [points1D, weights1D, B_ptr] SERAC_HOST_DEVICE(int i) {
+      (*B_ptr)[i] = GaussLobattoInterpolation<n>(points1D[i]);
+      if constexpr (apply_weights) {
+        (*B_ptr)[i] = (*B_ptr)[i] * weights1D[i];
+      }
+    });
+
+    return B_ptr;
+  }
+#endif
 
   /**
    * @brief G(i,j) is the derivative of the
@@ -128,6 +151,27 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c> > {
     }
     return G;
   }
+
+#ifdef USE_CUDA
+  template <bool apply_weights, int q>
+  static serac::tensor<double, q, n>* calculate_G_device()
+  {
+    constexpr auto                  points1D       = GaussLegendreNodes<q, mfem::Geometry::SEGMENT>();
+    [[maybe_unused]] constexpr auto weights1D      = GaussLegendreWeights<q, mfem::Geometry::SEGMENT>();
+    tensor<double, q, n>*           G_ptr          = nullptr;
+    auto&                           rm             = umpire::ResourceManager::getInstance();
+    auto                            dest_allocator = rm.getAllocator("DEVICE");
+    G_ptr        = static_cast<tensor<double, q, n>*>(dest_allocator.allocate(sizeof(tensor<double, q, n>)));
+    using policy = RAJA::cuda_exec<256>;
+    RAJA::forall<policy>(RAJA::TypedRangeSegment<int>(0, q), [points1D, weights1D, G_ptr] SERAC_HOST_DEVICE(int i) {
+      (*G_ptr)[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
+      if constexpr (apply_weights) {
+        (*G_ptr)[i] = (*G_ptr)[i] * weights1D[i];
+      }
+    });
+    return G_ptr;
+  }
+#endif
 
   template <typename in_t, int q>
   static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q * q> input,
@@ -168,7 +212,9 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c> > {
   }
 
   template <int q>
-  SERAC_HOST_DEVICE static auto interpolate(const dof_type& X, const TensorProductQuadratureRule<q>&)
+  SERAC_HOST_DEVICE static auto interpolate(const dof_type&                   X, const TensorProductQuadratureRule<q>&,
+                                            tensor<qf_input_type, q * q * q>* foo = nullptr,
+                                            RAJA::LaunchContext               ctx = RAJA::LaunchContext{})
   {
     // we want to compute the following:
     //
@@ -186,11 +232,20 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c> > {
     // A2(dz, qy, qx)  := B(qy, dy) * A1(dz, dy, qx)
     // X_q(qz, qy, qx) := B(qz, dz) * A2(dz, qy, qx)
     static constexpr bool apply_weights = false;
-    static constexpr auto B             = calculate_B<apply_weights, q>();
-    static constexpr auto G             = calculate_G<apply_weights, q>();
 
+#ifdef USE_CUDA
+    using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+#else
+    using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
+#endif
+
+    RAJA::RangeSegment x_range(0, BLOCK_SZ);
+
+#if not defined(USE_CUDA)
     tensor<double, c, q, q, q>      value{};
     tensor<double, c, dim, q, q, q> gradient{};
+    static constexpr auto           B = calculate_B<apply_weights, q>();
+    static constexpr auto           G = calculate_G<apply_weights, q>();
 
     for (int i = 0; i < c; i++) {
       auto A10 = contract<2, 1>(X[i], B);
@@ -205,33 +260,112 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c> > {
       gradient(i, 1) = contract<0, 1>(A22, B);
       gradient(i, 2) = contract<0, 1>(A20, G);
     }
+#else
 
-    // transpose the quadrature data into a flat tensor of tuples
-    union {
-      tensor<qf_input_type, q * q * q>                                   one_dimensional;
-      tensor<tuple<tensor<double, c>, tensor<double, c, dim> >, q, q, q> three_dimensional;
-    } output;
+    RAJA_TEAM_SHARED tensor<double, c, q, q, q> value;
+    RAJA_TEAM_SHARED tensor<double, c, dim, q, q, q> gradient;
+    constexpr auto                                   B = calculate_B<apply_weights, q>();
+    constexpr auto                                   G = calculate_G<apply_weights, q>();
+    for (int i = 0; i < c; i++) {
+      RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 1>(X[i], B)) A10;
+      RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 1>(X[i], G)) A11;
+      RAJA_TEAM_SHARED decltype(deduce_contract_return_type<1, 1>(A10, B))  A20;
+      RAJA_TEAM_SHARED decltype(deduce_contract_return_type<1, 1>(A11, B))  A21;
+      RAJA_TEAM_SHARED decltype(deduce_contract_return_type<1, 1>(A10, G))  A22;
 
-    for (int qz = 0; qz < q; qz++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
-          for (int i = 0; i < c; i++) {
-            get<VALUE>(output.three_dimensional(qz, qy, qx))[i] = value(i, qz, qy, qx);
-            for (int j = 0; j < dim; j++) {
-              get<GRADIENT>(output.three_dimensional(qz, qy, qx))[i][j] = gradient(i, j, qz, qy, qx);
-            }
-          }
-        }
-      }
+      RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
+        int qx = tid % BLOCK_X;
+        int qy = tid / BLOCK_X;
+        int qz = tid / (BLOCK_X * BLOCK_Y);
+
+        // Perform actual contractions
+        contract<2, 1>(X[i], B, &A10, qx, qy, qz);
+
+        ctx.teamSync();
+        contract<2, 1>(X[i], G, &A11, qx, qy, qz);
+
+        ctx.teamSync();
+        contract<1, 1>(A10, B, &A20, qx, qy, qz);
+
+        ctx.teamSync();
+        contract<1, 1>(A11, B, &A21, qx, qy, qz);
+
+        ctx.teamSync();
+        contract<1, 1>(A10, G, &A22, qx, qy, qz);
+
+        ctx.teamSync();
+
+        contract<0, 1>(A20, B, &value(i), qx, qy, qz);
+
+        ctx.teamSync();
+        contract<0, 1>(A21, B, &gradient(i, 0), qx, qy, qz);
+
+        ctx.teamSync();
+        contract<0, 1>(A22, B, &gradient(i, 1), qx, qy, qz);
+
+        ctx.teamSync();
+        contract<0, 1>(A20, G, &gradient(i, 2), qx, qy, qz);
+
+        ctx.teamSync();
+      });
     }
 
+#endif
+    // transpose the quadrature data into a flat tensor of tuples
+
+    RAJA_TEAM_SHARED union {
+      tensor<qf_input_type, q * q * q>                                  one_dimensional;
+      tensor<tuple<tensor<double, c>, tensor<double, c, dim>>, q, q, q> three_dimensional;
+    } output;
+
+    RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
+      int qx = tid % BLOCK_X;
+      int qy = tid / BLOCK_X;
+      int qz = tid / (BLOCK_X * BLOCK_Y);
+      if (qx >= q || qy >= q || qz >= q) {
+        return;
+      }
+      for (int i = 0; i < c; i++) {
+        get<VALUE>(output.three_dimensional(qz, qy, qx))[i] = value(i, qz, qy, qx);
+        for (int j = 0; j < dim; j++) {
+          get<GRADIENT>(output.three_dimensional(qz, qy, qx))[i][j] = gradient(i, j, qz, qy, qx);
+        }
+      }
+    });
+    if (foo) {
+      RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
+        if (tid < serac::size(output.one_dimensional)) {
+          (*foo)[tid] = output.one_dimensional[tid];
+        }
+      });
+    }
     return output.one_dimensional;
+  }
+
+  template <typename T, typename DestinationTensor, int... n>
+  static void copy_tensor_to_host(serac::tensor<T, n...>* src, DestinationTensor* dst)
+  {
+    auto& rm             = umpire::ResourceManager::getInstance();
+    auto  dest_allocator = rm.getAllocator("DEVICE");
+
+    umpire::register_external_allocation(
+        dst,
+        umpire::util::AllocationRecord(dst, sizeof(DestinationTensor), rm.getAllocator("HOST").getAllocationStrategy(),
+                                       std::string("external array")));
+
+    rm.copy(dst, src);
+  }
+
+  template <typename DestinationTensor>
+  static void copy_tensor_to_host(serac::zero* src, DestinationTensor* dst)
+  {
+    *dst = serac::zero{};
   }
 
   template <typename source_type, typename flux_type, int q>
   SERAC_HOST_DEVICE static void integrate(const tensor<tuple<source_type, flux_type>, q * q * q>& qf_output,
                                           const TensorProductQuadratureRule<q>&, dof_type* element_residual,
-                                          int step = 1)
+                                          RAJA::LaunchContext ctx = RAJA::LaunchContext{}, int step = 1)
   {
     if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) {
       return;
@@ -239,39 +373,88 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c> > {
 
     constexpr int ntrial = std::max(size(source_type{}), size(flux_type{}) / dim) / c;
 
-    using s_buffer_type = std::conditional_t<is_zero<source_type>{}, zero, tensor<double, q, q, q> >;
-    using f_buffer_type = std::conditional_t<is_zero<flux_type>{}, zero, tensor<double, dim, q, q, q> >;
+    using s_buffer_type = std::conditional_t<is_zero<source_type>{}, zero, tensor<double, q, q, q>>;
+    using f_buffer_type = std::conditional_t<is_zero<flux_type>{}, zero, tensor<double, dim, q, q, q>>;
 
-    static constexpr bool apply_weights = true;
-    static constexpr auto B             = calculate_B<apply_weights, q>();
-    static constexpr auto G             = calculate_G<apply_weights, q>();
+    /*static*/ constexpr bool apply_weights = true;
+
+    RAJA::RangeSegment x_range(0, BLOCK_SZ);
+
+#ifdef USE_CUDA
+    using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+#else
+
+    using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
+#endif
 
     for (int j = 0; j < ntrial; j++) {
       for (int i = 0; i < c; i++) {
         s_buffer_type source;
         f_buffer_type flux;
 
-        for (int qz = 0; qz < q; qz++) {
-          for (int qy = 0; qy < q; qy++) {
-            for (int qx = 0; qx < q; qx++) {
-              int Q              = (qz * q + qy) * q + qx;
-              source(qz, qy, qx) = reinterpret_cast<const double*>(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
-              for (int k = 0; k < dim; k++) {
-                flux(k, qz, qy, qx) =
-                    reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
-              }
-            }
+        RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
+          int qx = tid % BLOCK_X;
+          int qy = tid / BLOCK_X;
+          int qz = tid / (BLOCK_X * BLOCK_Y);
+          if (qx >= q || qy >= q || qz >= q) {
+            return;
           }
-        }
-
-        auto A20 = contract<2, 0>(source, B) + contract<2, 0>(flux(0), G);
-        auto A21 = contract<2, 0>(flux(1), B);
-        auto A22 = contract<2, 0>(flux(2), B);
+          constexpr auto B   = calculate_B<apply_weights, q>();
+          constexpr auto G   = calculate_G<apply_weights, q>();
+          int            Q   = (qz * q + qy) * q + qx;
+          source(qz, qy, qx) = reinterpret_cast<const double*>(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
+          for (int k = 0; k < dim; k++) {
+            flux(k, qz, qy, qx) = reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
+          }
+        });
+#if not defined USE_CUDA
+        constexpr auto B   = calculate_B<apply_weights, q>();
+        constexpr auto G   = calculate_G<apply_weights, q>();
+        auto           A20 = contract<2, 0>(source, B) + contract<2, 0>(flux(0), G);
+        auto           A21 = contract<2, 0>(flux(1), B);
+        auto           A22 = contract<2, 0>(flux(2), B);
 
         auto A10 = contract<1, 0>(A20, B) + contract<1, 0>(A21, G);
         auto A11 = contract<1, 0>(A22, B);
 
         element_residual[j * step](i) += contract<0, 0>(A10, B) + contract<0, 0>(A11, G);
+#else
+        RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
+          int                                                                      qx = tid % BLOCK_X;
+          int                                                                      qy = tid / BLOCK_X;
+          int                                                                      qz = tid / (BLOCK_X * BLOCK_Y);
+          constexpr auto                                                           B  = calculate_B<apply_weights, q>();
+          constexpr auto                                                           G  = calculate_G<apply_weights, q>();
+          RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 0>(source, B))  A20, A20_tmp;
+          RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 0>(flux(1), B)) A21;
+          RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 0>(flux(2), B)) A22;
+          RAJA_TEAM_SHARED decltype(deduce_contract_return_type<1, 0>(A20, B))     A10;
+          RAJA_TEAM_SHARED decltype(deduce_contract_return_type<1, 0>(A22, B))     A11;
+          ctx.teamSync();
+
+          contract<2, 0>(source, B, &A20, qx, qy, qz);
+          ctx.teamSync();
+          contract<2, 0>(flux(0), G, &A20, qx, qy, qz, true);
+          ctx.teamSync();
+
+          contract<2, 0>(flux(1), B, &A21, qx, qy, qz);
+          ctx.teamSync();
+          contract<2, 0>(flux(2), B, &A22, qx, qy, qz);
+          ctx.teamSync();
+
+          contract<1, 0>(A21, G, &A10, qx, qy, qz);
+          ctx.teamSync();
+          contract<1, 0>(A20, B, &A10, qx, qy, qz, true);
+          ctx.teamSync();
+          contract<1, 0>(A22, B, &A11, qx, qy, qz);
+          ctx.teamSync();
+
+          contract<0, 0>(A10, B, &(element_residual[j * step](i)), qx, qy, qz, true);
+          ctx.teamSync();
+          contract<0, 0>(A11, G, &(element_residual[j * step](i)), qx, qy, qz, true);
+          ctx.teamSync();
+        });
+#endif
       }
     }
   }

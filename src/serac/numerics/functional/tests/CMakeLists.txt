@@ -74,6 +74,4 @@ target_compile_definitions(functional_cuda PUBLIC RAJA_ENABLE_CUDA)
     
     target_compile_definitions(functional_basic_h1_scalar_cuda PUBLIC ENABLE_CUDA)
     target_compile_definitions(functional_basic_h1_vector_cuda PUBLIC USE_CUDA)
-
-    target_compile_definitions(functional_basic_h1_vector_cuda PUBLIC RAJA_ENABLE_CUDA)
 endif()

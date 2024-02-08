@@ -19,15 +19,24 @@ void check_gradient(serac::Functional<T, exec>& f, mfem::Vector& U, double epsil
   int seed = 42;
 
   mfem::Vector dU(U.Size());
+  // Set memory backend to device if using GPU execution.
+  if constexpr (exec == serac::ExecutionSpace::GPU) {
+    dU.UseDevice(true);
+  }
   dU.Randomize(seed);
 
   auto [value, dfdU]                                = f(serac::differentiate_wrt(U));
   std::unique_ptr<mfem::HypreParMatrix> dfdU_matrix = assemble(dfdU);
 
   // jacobian vector products
-  mfem::Vector df_jvp1 = dfdU(dU);  // matrix-free
+  mfem::Vector df_jvp1;
+  df_jvp1.UseDevice(true);
+  df_jvp1 = dfdU(dU);  // matrix-free
 
   mfem::Vector df_jvp2(df_jvp1.Size());
+  if constexpr (exec == serac::ExecutionSpace::GPU) {
+    df_jvp2.UseDevice(true);
+  }
   dfdU_matrix->Mult(dU, df_jvp2);  // sparse matvec
 
   if (df_jvp1.Norml2() != 0) {

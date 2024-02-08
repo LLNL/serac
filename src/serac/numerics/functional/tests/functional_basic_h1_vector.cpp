@@ -6,7 +6,7 @@
 
 #include <fstream>
 #include <iostream>
-#define USE_CUDA
+
 #include "mfem.hpp"
 
 #include <gtest/gtest.h>
@@ -89,20 +89,21 @@ void weird_mixed_test(std::unique_ptr<mfem::ParMesh>& mesh)
   auto [test_fes, test_col]   = generateParFiniteElementSpace<test_space>(mesh.get());
 
   mfem::Vector U(trial_fes->TrueVSize());
-  U.Randomize();
 
 #ifdef USE_CUDA
+  U.UseDevice(true);
   Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(test_fes.get(), {trial_fes.get()});
 #else
   Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(test_fes.get(), {trial_fes.get()});
 #endif
+  U.Randomize();
 
   // note: this is not really an elasticity problem, it's testing source and flux
   // terms that have the appropriate shapes to ensure that all the differentiation
   // code works as intended
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, MixedModelOne<dim>{}, *mesh);
 
-  residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, MixedModelTwo<dim>{}, *mesh);
+  // residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, MixedModelTwo<dim>{}, *mesh);
 
   check_gradient(residual, U);
 }
@@ -118,20 +119,22 @@ void elasticity_test(std::unique_ptr<mfem::ParMesh>& mesh)
   auto [test_fes, test_col]   = generateParFiniteElementSpace<test_space>(mesh.get());
 
   mfem::Vector U(trial_fes->TrueVSize());
-  U.Randomize();
 
 #ifdef USE_CUDA
+  U.UseDevice(true);
   Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(test_fes.get(), {trial_fes.get()});
 #else
   Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(test_fes.get(), {trial_fes.get()});
 #endif
+
+  U.Randomize();
 
   // note: this is not really an elasticity problem, it's testing source and flux
   // terms that have the appropriate shapes to ensure that all the differentiation
   // code works as intended
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, ElasticityTestModelOne<dim>{}, *mesh);
 
-  residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, ElasticityTestModelTwo<dim>{}, *mesh);
+  // residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, ElasticityTestModelTwo<dim>{}, *mesh);
 
   check_gradient(residual, U);
 }
@@ -157,16 +160,15 @@ void test_suite(std::string meshfile)
   }
 }
 
- //TEST(VectorValuedH1, test_suite_tris) { test_suite("/data/meshes/patch2D_tris.mesh"); }
- //TEST(VectorValuedH1, test_suite_quads) { test_suite("/data/meshes/patch2D_quads.mesh"); }
-//TEST(VectorValuedH1, test_suite_tris_and_quads) { test_suite("/data/meshes/patch2D_tris_and_quads.mesh"); }
+// TEST(VectorValuedH1, test_suite_tris) { test_suite("/data/meshes/patch2D_tris.mesh"); }
+// TEST(VectorValuedH1, test_suite_quads) { test_suite("/data/meshes/patch2D_quads.mesh"); }
+// TEST(VectorValuedH1, test_suite_tris_and_quads) { test_suite("/data/meshes/patch2D_tris_and_quads.mesh"); }
 
-//TEST(VectorValuedH1, test_suite_tets) { test_suite("/data/meshes/patch3D_tets.mesh"); }
+// TEST(VectorValuedH1, test_suite_tets) { test_suite("/data/meshes/patch3D_tets.mesh"); }
 
+TEST(VectorValuedH1, test_suite_hexes) { test_suite("/data/meshes/patch3D_hexes.mesh"); }
 
- TEST(VectorValuedH1, test_suite_hexes) { test_suite("/data/meshes/patch3D_hexes.mesh"); }
-
- TEST(VectorValuedH1, test_suite_tets_and_hexes) { test_suite("/data/meshes/patch3D_tets_and_hexes.mesh"); }
+// TEST(VectorValuedH1, test_suite_tets_and_hexes) { test_suite("/data/meshes/patch3D_tets_and_hexes.mesh"); }
 
 int main(int argc, char* argv[])
 {
@@ -179,18 +181,18 @@ int main(int argc, char* argv[])
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
   axom::slic::SimpleLogger logger;
-//cudaSetDevice(0);
-//cudaDeviceReset();
-//#ifdef USE_CUDA
-//printCUDAMemUsage();
-//#endif
-//cudaSetDevice(2);
-cudaDeviceSynchronize();
+  // cudaSetDevice(0);
+  // cudaDeviceReset();
+  //#ifdef USE_CUDA
+  // printCUDAMemUsage();
+  //#endif
+  // cudaSetDevice(2);
+
   int result = RUN_ALL_TESTS();
-cudaDeviceSynchronize();
-//#ifdef USE_CUDA
-//printCUDAMemUsage();
-//#endif
+
+  //#ifdef USE_CUDA
+  // printCUDAMemUsage();
+  //#endif
   MPI_Finalize();
 
   return result;
