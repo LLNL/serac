@@ -20,6 +20,7 @@ set(functional_tests_serial
     geometric_factors_tests.cpp
     hcurl_unit_tests.cpp
     test_tensor_ad.cpp
+    qdata_example.cpp
     tuple_arithmetic_unit_tests.cpp
     test_newton.cpp)
 
