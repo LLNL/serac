@@ -35,8 +35,8 @@ spack:
       modules: []
       operating_system: ubuntu22.04
       paths:
-        cc: /usr/bin/gcc-13
-        cxx: /usr/bin/g++-13
+        cc: /usr/bin/gcc
+        cxx: /usr/bin/g++
         f77: /usr/bin/gfortran-13
         fc: /usr/bin/gfortran-13
       spec: gcc@13.1.0
