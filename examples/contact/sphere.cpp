@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
 {
   serac::initialize(argc, argv);
 
-  // NOTE: p must be equal to 1
+  // NOTE: p must be equal to 1 to work with Tribol's mortar method
   constexpr int p = 1;
   // NOTE: dim must be equal to 3
   constexpr int dim = 3;
