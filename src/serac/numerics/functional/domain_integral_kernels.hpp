@@ -222,8 +222,13 @@ void evaluation_kernel_impl(trial_element_tuple_type          trial_elements, te
       static_cast<interpolate_out_type*>(dest_allocator.allocate(sizeof(interpolate_out_type) * num_elements));
   std::cout << "USING CUDA :)\n";
 
-  auto device_J = copy_data(J, serac::size(*J) * sizeof(double), "DEVICE");
-  auto device_x = copy_data(x, serac::size(*x) * sizeof(double), "DEVICE");
+  // It's safer to copy the raw POD type using umpire
+  auto device_jacobians = copy_data(const_cast<double*>(jacobians), sizeof(J_Type) * num_elements, "DEVICE");
+  auto device_positions = copy_data(const_cast<double*>(positions), sizeof(X_Type) * num_elements, "DEVICE");
+  // Reinterpret these pointers to enable simpler indexing etc.
+  auto device_J = reinterpret_cast<const J_Type*>(device_jacobians);
+  auto device_x = reinterpret_cast<const X_Type*>(device_jacobians);
+
   auto device_r = copy_data(r, serac::size(*r) * sizeof(double), "DEVICE");
 
   // These more complex types require a helper struct to deduce the data structure size.
@@ -283,9 +288,12 @@ void evaluation_kernel_impl(trial_element_tuple_type          trial_elements, te
                                      .interpolate(get<indices>(u)[e], rule, &get<indices>(interpolate_result[e]), ctx),
                                  ...);
 
+ctx.teamSync();
+
                                 (promote_each_to_dual_when<indices == differentiation_index>(
                                      get<indices>(interpolate_result[e]), &get<indices>(qf_inputs[e]), ctx),
                                  ...);
+ctx.teamSync();
 
                                 //// use J_e to transform values / derivatives on the parent element
                                 //// to the to the corresponding values / derivatives on the physical element
@@ -309,7 +317,8 @@ void evaluation_kernel_impl(trial_element_tuple_type          trial_elements, te
                                                           get<indices>(qf_inputs[e])...);
                                   }
                                 }();
-
+ctx.teamSync();
+//printf("here5\n");
 #ifdef USE_CUDA
                                 using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
@@ -325,12 +334,13 @@ void evaluation_kernel_impl(trial_element_tuple_type          trial_elements, te
                                 if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
                                   RAJA::RangeSegment x_range(0, leading_dimension(qf_outputs));
                                   RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
-                                    // qf_derivatives[e * uint32_t(qpts_per_elem) + uint32_t(q)] =
-                                    //    get_gradient(qf_outputs[q]);
+
+                                    qf_derivatives[e * uint32_t(qpts_per_elem) + uint32_t(q)] =
+                                       get_gradient(qf_outputs[q]);
                                   });
                                 }
                                 ctx.teamSync();
-
+//printf("here6\n");
                                 // (batch) integrate the material response against the test-space basis functions
                                 test_element_type::integrate(get_value(qf_outputs), rule, &device_r[e], ctx);
                               }
@@ -340,10 +350,10 @@ void evaluation_kernel_impl(trial_element_tuple_type          trial_elements, te
   rm.copy(r, device_r);
   // rm.copy(&u, device_u);
   // rm.copy(qf_derivatives, device_qf_derivatives);
-  deallocate(device_J, "DEVICE");
+  deallocate(device_jacobians, "DEVICE");
   deallocate(qf_inputs, "DEVICE");
   deallocate(interpolate_result, "DEVICE");
-  deallocate(device_x, "DEVICE");
+  deallocate(device_positions, "DEVICE");
   deallocate(device_r, "DEVICE");
   std::cout << "312\n";
   printCUDAMemUsage();
@@ -487,10 +497,10 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
   // tuple with a "zero" type in the second position to treat it like the standard case
   constexpr bool is_QOI        = test::family == Family::QOI;
   using padded_derivative_type = std::conditional_t<is_QOI, tuple<derivatives_type, zero>, derivatives_type>;
-
+  std::cout << "num elem " << num_elements << std::endl;
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
-
+  RAJA::RangeSegment     elements_range(0, num_elements);
   constexpr int                            nquad = num_quadrature_points(g, Q);
   constexpr TensorProductQuadratureRule<Q> rule{};
 #if defined(USE_CUDA)
@@ -500,46 +510,54 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
   using teams_e = RAJA::LoopPolicy<RAJA::seq_exec>;
   using launch_policy = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
 #endif
-
+#ifdef USE_CUDA
+                                  using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+#else
+    using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
+#endif
   // for each element in the domain
-//  RAJA::launch<launch_policy>(RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_SZ)),
-//                              [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
-//                                if constexpr (g == mfem::Geometry::CUBE) {
-//                                  static constexpr bool  is_QOI_2 = test::family == Family::QOI;
-//                                  [[maybe_unused]] auto* output_ptr =
-//                                      reinterpret_cast<typename test_element::dof_type*>(&dK(e, 0, 0));
-//
-//                                  (void*)qf_derivatives;
-//#ifdef USE_CUDA
-//                                  using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
-//#else
-//    using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
-//#endif
-//                                  tensor<padded_derivative_type, nquad> derivatives{};
-//                                  RAJA::RangeSegment                    x_range(0, nquad);
-//                                  RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
-//                                    if constexpr (is_QOI_2) {
-//                                      get<0>(derivatives(q)) = qf_derivatives[e * nquad + uint32_t(q)];
-//                                    } else {
-//                                      derivatives(q) = qf_derivatives[e * nquad + uint32_t(q)];
-//                                    }
-//                                  });
-//                                  printf("here 3, num elem %d\n", trial_element::ndof);
-//
-//                                  RAJA::RangeSegment J_range(0, trial_element::ndof);
-//                                  RAJA::loop<threads_x>(ctx, x_range, [&](int J) {
-//                                    auto source_and_flux = trial_element::batch_apply_shape_fn(J, derivatives, rule);
-//                                    test_element::integrate(source_and_flux, rule, output_ptr + J,
-//                                    trial_element::ndof);
-//                                  });
-//                                }
-//                              });
-//});
+  RAJA::launch<launch_policy>(RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_SZ)),
+                              [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
+                              RAJA::loop<teams_e>(ctx, elements_range, [&ctx, dK, qf_derivatives, nquad, rule](uint32_t e) {
+                                if constexpr (g == mfem::Geometry::CUBE) {
+                                  static constexpr bool  is_QOI_2 = test::family == Family::QOI;
+                                  [[maybe_unused]] auto* output_ptr =
+                                      reinterpret_cast<typename test_element::dof_type*>(&dK(e, 0, 0));
+
+                                  (void*)qf_derivatives;
+
+                                  tensor<padded_derivative_type, nquad> derivatives{};
+                                  RAJA::RangeSegment x_range(0, nquad);
+                                  RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
+                                    if constexpr (is_QOI_2) {
+                                      get<0>(derivatives(q)) = qf_derivatives[e * nquad + uint32_t(q)];
+                                    } else {
+                                      derivatives(q) = qf_derivatives[e * nquad + uint32_t(q)];
+                                    }
+                                  });
+
+
+                                  ctx.teamSync();
+
+
+                                  for (int J = 0; J < trial_element::ndof; ++J) {
+                                    RAJA_TEAM_SHARED decltype(trial_element::batch_apply_shape_fn(J, derivatives, rule, ctx)) source_and_flux;
+                                    source_and_flux = trial_element::batch_apply_shape_fn(J, derivatives, rule, ctx);
+                                    test_element::integrate(source_and_flux, rule, output_ptr + J,ctx,
+                                      trial_element::ndof);
+                                  }
+
+
+                                  ctx.teamSync();
+                                  }
+                                });
+                              });
 #if defined(USE_CUDA)
   std::cout << "L480\n";
   printCUDAMemUsage();
 #endif
-}  // namespace domain_integral
+}
+
 
 template <uint32_t wrt, int Q, mfem::Geometry::Type geom, typename signature, typename lambda_type, typename state_type,
           typename derivative_type>

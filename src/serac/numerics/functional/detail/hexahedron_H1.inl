@@ -16,6 +16,7 @@
 // note: mfem assumes the parent element domain is [0,1]x[0,1]x[0,1]
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
+#include <RAJA/index/RangeSegment.hpp>
 #include <RAJA/pattern/launch/launch_core.hpp>
 template <int p, int c>
 struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
@@ -175,7 +176,8 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
 
   template <typename in_t, int q>
   static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q * q> input,
-                                                    const TensorProductQuadratureRule<q>&)
+                                                    const TensorProductQuadratureRule<q>&,
+                                                    RAJA::LaunchContext& ctx)
   {
     static constexpr bool apply_weights = false;
     static constexpr auto B             = calculate_B<apply_weights, q>();
@@ -189,24 +191,29 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
     using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, dim>{}));
 
     tensor<tuple<source_t, flux_t>, q * q * q> output;
+#ifdef USE_CUDA
+    using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+#else
+    using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
+#endif
+    auto x_range = RAJA::RangeSegment(0, q*q*q);
+    RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
+        int qx = tid % q;
+        int qy = (tid / q) % q;
+        int qz = (tid / (q * q)) % q;
 
-    for (int qz = 0; qz < q; qz++) {
-      for (int qy = 0; qy < q; qy++) {
-        for (int qx = 0; qx < q; qx++) {
-          double              phi_j      = B(qx, jx) * B(qy, jy) * B(qz, jz);
-          tensor<double, dim> dphi_j_dxi = {G(qx, jx) * B(qy, jy) * B(qz, jz), B(qx, jx) * G(qy, jy) * B(qz, jz),
-                                            B(qx, jx) * B(qy, jy) * G(qz, jz)};
+        double              phi_j      = B(qx, jx) * B(qy, jy) * B(qz, jz);
+        tensor<double, dim> dphi_j_dxi = {G(qx, jx) * B(qy, jy) * B(qz, jz), B(qx, jx) * G(qy, jy) * B(qz, jz),
+                                          B(qx, jx) * B(qy, jy) * G(qz, jz)};
 
-          int   Q   = (qz * q + qy) * q + qx;
-          auto& d00 = get<0>(get<0>(input(Q)));
-          auto& d01 = get<1>(get<0>(input(Q)));
-          auto& d10 = get<0>(get<1>(input(Q)));
-          auto& d11 = get<1>(get<1>(input(Q)));
+        int   Q   = (qz * q + qy) * q + qx;
+        auto& d00 = get<0>(get<0>(input(Q)));
+        auto& d01 = get<1>(get<0>(input(Q)));
+        auto& d10 = get<0>(get<1>(input(Q)));
+        auto& d11 = get<1>(get<1>(input(Q)));
 
-          output[Q] = {d00 * phi_j + dot(d01, dphi_j_dxi), d10 * phi_j + dot(d11, dphi_j_dxi)};
-        }
-      }
-    }
+        output[Q] = {d00 * phi_j + dot(d01, dphi_j_dxi), d10 * phi_j + dot(d11, dphi_j_dxi)};
+    });
 
     return output;
   }
@@ -275,8 +282,8 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
 
       RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
         int qx = tid % BLOCK_X;
-        int qy = tid / BLOCK_X;
-        int qz = tid / (BLOCK_X * BLOCK_Y);
+        int qy = (tid / BLOCK_X) % BLOCK_Y;
+        int qz = (tid / (BLOCK_X * BLOCK_Y)) % BLOCK_Z;
 
         // Perform actual contractions
         contract<2, 1>(X[i], B, &A10, qx, qy, qz);

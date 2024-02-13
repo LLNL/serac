@@ -244,7 +244,7 @@ struct QOI {
  * @param jacobians the jacobians of the isoparametric map from parent to physical space of each quadrature point
  */
 template <Family f, typename T, int q, int dim>
-SERAC_HOST_DEVICE void parent_to_physical(tensor<T, q>& qf_input, tensor<double, dim, dim, q>* jacobians,
+SERAC_HOST_DEVICE void parent_to_physical(tensor<T, q>& qf_input, const tensor<double, dim, dim, q>* jacobians,
                                           uint32_t block_idx, RAJA::LaunchContext ctx = {})
 {
   [[maybe_unused]] constexpr int VALUE      = 0;
@@ -255,6 +255,7 @@ SERAC_HOST_DEVICE void parent_to_physical(tensor<T, q>& qf_input, tensor<double,
   using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
 #endif
   RAJA::RangeSegment k_range(0, BLOCK_SZ);
+
   RAJA::loop<threads_x>(ctx, k_range, [&](int k) {
     if (k >= q) {
       return;
