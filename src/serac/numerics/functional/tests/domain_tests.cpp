@@ -173,6 +173,9 @@ TEST(domain, of_edges)
 
     // check that by_attr compiles
     Domain d4 = Domain::ofEdges(mesh, by_attr<dim>(3));
+
+    Domain d5 = Domain::ofBoundaryElements(mesh, [](std::vector<vec2>, int) { return true; });
+    EXPECT_EQ(d5.edge_ids_.size(), 18);  // 1x8 row of quads has 18 boundary edges
   }
 }
 
@@ -203,6 +206,9 @@ TEST(domain, of_faces)
 
     // check that by_attr compiles
     Domain d4 = Domain::ofFaces(mesh, by_attr<dim>(3));
+
+    Domain d5 = Domain::ofBoundaryElements(mesh, [](std::vector<vec3>, int) { return true; });
+    EXPECT_EQ(d5.quad_ids_.size(), 6);
   }
 
   {
@@ -233,6 +239,9 @@ TEST(domain, of_faces)
 
     // check that by_attr compiles
     Domain d4 = Domain::ofFaces(mesh, by_attr<dim>(3));
+
+    Domain d5 = Domain::ofBoundaryElements(mesh, [](std::vector<vec3>, int) { return true; });
+    EXPECT_EQ(d5.tri_ids_.size(), 4);
   }
 
   {
