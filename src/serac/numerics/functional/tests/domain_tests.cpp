@@ -114,6 +114,10 @@ TEST(domain, of_edges)
     Domain d3 = d0 & d1;
     EXPECT_EQ(d3.edge_ids_.size(), 1);
     EXPECT_EQ(d3.dim_, 1);
+
+    // note: by_attr doesn't apply to edge sets in 3D, since
+    //       mfem doesn't have the notion of edge attributes
+    // Domain d4 = Domain::ofEdges(mesh, by_attr<dim>(3));
   }
 
   {
@@ -137,9 +141,14 @@ TEST(domain, of_edges)
     Domain d3 = d0 & d1;
     EXPECT_EQ(d3.edge_ids_.size(), 1);
     EXPECT_EQ(d3.dim_, 1);
+
+    // note: by_attr doesn't apply to edge sets in 3D, since
+    //       mfem doesn't have the notion of edge attributes
+    // Domain d4 = Domain::ofEdges(mesh, by_attr<dim>(3));
   }
 
   {
+    constexpr int dim = 2;
     auto mesh = import_mesh("beam-quad.mesh");
     mesh.FinalizeQuadMesh(true);
     Domain d0 = Domain::ofEdges(mesh, std::function([](std::vector<vec2> x, int /* bdr_attr */) {
@@ -161,12 +170,16 @@ TEST(domain, of_edges)
     Domain d3 = d0 & d1;
     EXPECT_EQ(d3.edge_ids_.size(), 0);
     EXPECT_EQ(d3.dim_, 1);
+
+    // check that by_attr compiles
+    Domain d4 = Domain::ofEdges(mesh, by_attr<dim>(3));
   }
 }
 
 TEST(domain, of_faces)
 {
   {
+    constexpr int dim = 3;
     auto   mesh = import_mesh("onehex.mesh");
     Domain d0   = Domain::ofFaces(mesh, std::function([](std::vector<vec3> vertices, int /*bdr_attr*/) {
                                   return average(vertices)[0] < 0.25;  // x coordinate of face center
@@ -187,9 +200,13 @@ TEST(domain, of_faces)
     Domain d3 = d0 & d1;
     EXPECT_EQ(d3.quad_ids_.size(), 0);
     EXPECT_EQ(d3.dim_, 2);
+
+    // check that by_attr compiles
+    Domain d4 = Domain::ofFaces(mesh, by_attr<dim>(3));
   }
 
   {
+    constexpr int dim = 3;
     auto   mesh = import_mesh("onetet.mesh");
     Domain d0   = Domain::ofFaces(mesh, std::function([](std::vector<vec3> vertices, int /* bdr_attr */) {
                                   // accept face if it contains a vertex whose x coordinate is less than 0.1
@@ -213,9 +230,13 @@ TEST(domain, of_faces)
     Domain d3 = d0 & d1;
     EXPECT_EQ(d3.tri_ids_.size(), 1);
     EXPECT_EQ(d3.dim_, 2);
+
+    // check that by_attr compiles
+    Domain d4 = Domain::ofFaces(mesh, by_attr<dim>(3));
   }
 
   {
+    constexpr int dim = 2;
     auto   mesh = import_mesh("beam-quad.mesh");
     Domain d0   = Domain::ofFaces(mesh, std::function([](std::vector<vec2> vertices, int /* attr */) {
                                   return average(vertices)[0] < 2.25;  // x coordinate of face center
@@ -236,12 +257,16 @@ TEST(domain, of_faces)
     Domain d3 = d0 & d1;
     EXPECT_EQ(d3.quad_ids_.size(), 2);
     EXPECT_EQ(d3.dim_, 2);
+
+    // check that by_attr compiles
+    Domain d4 = Domain::ofFaces(mesh, by_attr<dim>(3));
   }
 }
 
 TEST(domain, of_elements)
 {
   {
+    constexpr int dim = 3;
     auto   mesh = import_mesh("patch3D_tets_and_hexes.mesh");
     Domain d0   = Domain::ofElements(mesh, std::function([](std::vector<vec3> vertices, int /*bdr_attr*/) {
                                      return average(vertices)[0] < 0.7;  // x coordinate of face center
@@ -267,9 +292,13 @@ TEST(domain, of_elements)
     EXPECT_EQ(d3.tet_ids_.size(), 0);
     EXPECT_EQ(d3.hex_ids_.size(), 0);
     EXPECT_EQ(d3.dim_, 3);
+
+    // check that by_attr works
+    Domain d4 = Domain::ofElements(mesh, by_attr<dim>(3));
   }
 
   {
+    constexpr int dim = 2;
     auto   mesh = import_mesh("patch2D_tris_and_quads.mesh");
     Domain d0   = Domain::ofElements(
         mesh, std::function([](std::vector<vec2> vertices, int /* attr */) { return average(vertices)[0] < 0.45; }));
@@ -292,6 +321,9 @@ TEST(domain, of_elements)
     EXPECT_EQ(d3.tri_ids_.size(), 0);
     EXPECT_EQ(d3.quad_ids_.size(), 0);
     EXPECT_EQ(d3.dim_, 2);
+
+    // check that by_attr compiles
+    Domain d4 = Domain::ofElements(mesh, by_attr<dim>(3));
   }
 }
 
