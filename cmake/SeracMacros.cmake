@@ -8,7 +8,7 @@
 #------------------------------------------------------------------------------
 # Adds code checks for all cpp/hpp files recursively under the current directory
 # that regex match INCLUDES and excludes any files that regex match EXCLUDES
-# 
+#
 # This creates the following parent build targets:
 #  check - Runs a non file changing style check and CppCheck
 #  style - In-place code formatting
@@ -71,7 +71,7 @@ macro(serac_add_code_checks)
     blt_add_clang_tidy_target(NAME              ${arg_PREFIX}_guidelines_check_tests
                               CHECKS            "clang-analyzer-*,clang-analyzer-cplusplus*,cppcoreguidelines-*,-cppcoreguidelines-avoid-magic-numbers"
                               SRC_FILES         ${_test_sources})
-                                  
+
     if (ENABLE_COVERAGE)
         blt_add_code_coverage_target(NAME   ${arg_PREFIX}_coverage
                                      RUNNER ${CMAKE_MAKE_PROGRAM} test
@@ -126,12 +126,14 @@ endmacro(serac_convert_to_native_escaped_file_path)
 ##                  )
 ##
 ## Creates an executable per given source and then adds the test to CTest
+## If USE_CUDA is set, this macro will compile a CUDA enabled version of
+## of each unit test.
 ##------------------------------------------------------------------------------
 
 macro(serac_add_tests)
 
     set(options )
-    set(singleValueArgs NUM_MPI_TASKS)
+    set(singleValueArgs NUM_MPI_TASKS USE_CUDA)
     set(multiValueArgs SOURCES DEPENDS_ON)
 
     # Parse the arguments to the macro
@@ -144,12 +146,20 @@ macro(serac_add_tests)
 
     foreach(filename ${arg_SOURCES})
         get_filename_component(test_name ${filename} NAME_WE)
+        if (DEFINED arg_USE_CUDA)
+            set(test_name "${test_name}_cuda")
+        endif()
 
         blt_add_executable(NAME        ${test_name}
                            SOURCES     ${filename}
                            OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
                            DEPENDS_ON  ${arg_DEPENDS_ON}
                            FOLDER      serac/tests )
+
+        if (DEFINED arg_USE_CUDA)
+            target_compile_definitions(${test_name} PUBLIC ENABLE_CUDA)
+            target_compile_definitions(${test_name} PUBLIC USE_CUDA)
+        endif()
 
         blt_add_test(NAME          ${test_name}
                      COMMAND       ${test_name}
