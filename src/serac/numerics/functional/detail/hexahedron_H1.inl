@@ -175,9 +175,8 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
 #endif
 
   template <typename in_t, int q>
-  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q * q> input,
-                                                    const TensorProductQuadratureRule<q>&,
-                                                    RAJA::LaunchContext& ctx)
+  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q * q>                              input,
+                                                    const TensorProductQuadratureRule<q>&, RAJA::LaunchContext& ctx)
   {
     static constexpr bool apply_weights = false;
     static constexpr auto B             = calculate_B<apply_weights, q>();
@@ -196,23 +195,23 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
 #else
     using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
 #endif
-    auto x_range = RAJA::RangeSegment(0, q*q*q);
+    auto x_range = RAJA::RangeSegment(0, q * q * q);
     RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
-        int qx = tid % q;
-        int qy = (tid / q) % q;
-        int qz = (tid / (q * q)) % q;
+      int qx = tid % q;
+      int qy = (tid / q) % q;
+      int qz = (tid / (q * q)) % q;
 
-        double              phi_j      = B(qx, jx) * B(qy, jy) * B(qz, jz);
-        tensor<double, dim> dphi_j_dxi = {G(qx, jx) * B(qy, jy) * B(qz, jz), B(qx, jx) * G(qy, jy) * B(qz, jz),
-                                          B(qx, jx) * B(qy, jy) * G(qz, jz)};
+      double              phi_j      = B(qx, jx) * B(qy, jy) * B(qz, jz);
+      tensor<double, dim> dphi_j_dxi = {G(qx, jx) * B(qy, jy) * B(qz, jz), B(qx, jx) * G(qy, jy) * B(qz, jz),
+                                        B(qx, jx) * B(qy, jy) * G(qz, jz)};
 
-        int   Q   = (qz * q + qy) * q + qx;
-        auto& d00 = get<0>(get<0>(input(Q)));
-        auto& d01 = get<1>(get<0>(input(Q)));
-        auto& d10 = get<0>(get<1>(input(Q)));
-        auto& d11 = get<1>(get<1>(input(Q)));
+      int   Q   = (qz * q + qy) * q + qx;
+      auto& d00 = get<0>(get<0>(input(Q)));
+      auto& d01 = get<1>(get<0>(input(Q)));
+      auto& d10 = get<0>(get<1>(input(Q)));
+      auto& d11 = get<1>(get<1>(input(Q)));
 
-        output[Q] = {d00 * phi_j + dot(d01, dphi_j_dxi), d10 * phi_j + dot(d11, dphi_j_dxi)};
+      output[Q] = {d00 * phi_j + dot(d01, dphi_j_dxi), d10 * phi_j + dot(d11, dphi_j_dxi)};
     });
 
     return output;

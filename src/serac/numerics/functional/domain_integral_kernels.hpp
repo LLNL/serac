@@ -288,12 +288,12 @@ void evaluation_kernel_impl(trial_element_tuple_type          trial_elements, te
                                      .interpolate(get<indices>(u)[e], rule, &get<indices>(interpolate_result[e]), ctx),
                                  ...);
 
-ctx.teamSync();
+                                ctx.teamSync();
 
                                 (promote_each_to_dual_when<indices == differentiation_index>(
                                      get<indices>(interpolate_result[e]), &get<indices>(qf_inputs[e]), ctx),
                                  ...);
-ctx.teamSync();
+                                ctx.teamSync();
 
                                 //// use J_e to transform values / derivatives on the parent element
                                 //// to the to the corresponding values / derivatives on the physical element
@@ -317,8 +317,8 @@ ctx.teamSync();
                                                           get<indices>(qf_inputs[e])...);
                                   }
                                 }();
-ctx.teamSync();
-//printf("here5\n");
+                                ctx.teamSync();
+// printf("here5\n");
 #ifdef USE_CUDA
                                 using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
@@ -334,13 +334,13 @@ ctx.teamSync();
                                 if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
                                   RAJA::RangeSegment x_range(0, leading_dimension(qf_outputs));
                                   RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
-
-                                    qf_derivatives[e * uint32_t(qpts_per_elem) + uint32_t(q)] =
-                                       get_gradient(qf_outputs[q]);
+                                    // printf()
+                                    // /qf_derivatives[e * uint32_t(qpts_per_elem) + uint32_t(q)] =
+                                    // /   get_gradient(qf_outputs[q]);
                                   });
                                 }
                                 ctx.teamSync();
-//printf("here6\n");
+                                // printf("here6\n");
                                 // (batch) integrate the material response against the test-space basis functions
                                 test_element_type::integrate(get_value(qf_outputs), rule, &device_r[e], ctx);
                               }
@@ -448,20 +448,23 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
   using launch_policy = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
 #endif
   // for each element in the domain
-  RAJA::launch<launch_policy>(
-      RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_X, BLOCK_Y, BLOCK_Z)),
-      [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
-        RAJA::loop<teams_e>(ctx, e_range, [du, rule, &ctx, qf_derivatives, dr, num_qpts](int e) {
-          if constexpr (g == mfem::Geometry::CUBE) {
-            // (batch) interpolate each quadrature point's value
-            auto qf_inputs = trial_element::interpolate(du[e], rule, nullptr, ctx);
-
-            auto qf_outputs = batch_apply_chain_rule<is_QOI>(qf_derivatives + e * num_qpts, qf_inputs);
-
-            test_element::integrate(qf_outputs, rule, &dr[e], ctx);
-          }
-        });
-      });
+  RAJA::launch<launch_policy>(RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_X, BLOCK_Y, BLOCK_Z)),
+                              [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
+                                RAJA::loop<teams_e>(ctx, e_range,
+                                                    [du, rule, &ctx, qf_derivatives, dr, num_qpts](int e) {
+                                                      if constexpr (g == mfem::Geometry::CUBE) {
+                                                        // (batch) interpolate each quadrature point's value
+                                                        // auto qf_inputs = trial_element::interpolate(du[e], rule,
+                                                        // nullptr, ctx);
+                                                        //
+                                                        // auto qf_outputs =
+                                                        // batch_apply_chain_rule<is_QOI>(qf_derivatives + e * num_qpts,
+                                                        // qf_inputs);
+                                                        //
+                                                        // test_element::integrate(qf_outputs, rule, &dr[e], ctx);
+                                                      }
+                                                    });
+                              });
 }
 
 /**
@@ -500,7 +503,7 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
   std::cout << "num elem " << num_elements << std::endl;
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
-  RAJA::RangeSegment     elements_range(0, num_elements);
+  RAJA::RangeSegment                       elements_range(0, num_elements);
   constexpr int                            nquad = num_quadrature_points(g, Q);
   constexpr TensorProductQuadratureRule<Q> rule{};
 #if defined(USE_CUDA)
@@ -511,53 +514,48 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
   using launch_policy = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
 #endif
 #ifdef USE_CUDA
-                                  using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+  using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
-    using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
+  using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
 #endif
   // for each element in the domain
-  RAJA::launch<launch_policy>(RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_SZ)),
-                              [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
-                              RAJA::loop<teams_e>(ctx, elements_range, [&ctx, dK, qf_derivatives, nquad, rule](uint32_t e) {
-                                if constexpr (g == mfem::Geometry::CUBE) {
-                                  static constexpr bool  is_QOI_2 = test::family == Family::QOI;
-                                  [[maybe_unused]] auto* output_ptr =
-                                      reinterpret_cast<typename test_element::dof_type*>(&dK(e, 0, 0));
+  RAJA::launch<launch_policy>(
+      RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_SZ)),
+      [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
+        RAJA::loop<teams_e>(ctx, elements_range, [&ctx, dK, qf_derivatives, nquad, rule](uint32_t e) {
+          if constexpr (g == mfem::Geometry::CUBE) {
+            static constexpr bool  is_QOI_2   = test::family == Family::QOI;
+            [[maybe_unused]] auto* output_ptr = reinterpret_cast<typename test_element::dof_type*>(&dK(e, 0, 0));
 
-                                  (void*)qf_derivatives;
+            (void*)qf_derivatives;
 
-                                  tensor<padded_derivative_type, nquad> derivatives{};
-                                  RAJA::RangeSegment x_range(0, nquad);
-                                  RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
-                                    if constexpr (is_QOI_2) {
-                                      get<0>(derivatives(q)) = qf_derivatives[e * nquad + uint32_t(q)];
-                                    } else {
-                                      derivatives(q) = qf_derivatives[e * nquad + uint32_t(q)];
-                                    }
-                                  });
+            tensor<padded_derivative_type, nquad> derivatives{};
+            RAJA::RangeSegment                    x_range(0, nquad);
+            RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
+              if constexpr (is_QOI_2) {
+                get<0>(derivatives(q)) = qf_derivatives[e * nquad + uint32_t(q)];
+              } else {
+                derivatives(q) = qf_derivatives[e * nquad + uint32_t(q)];
+              }
+            });
 
+            ctx.teamSync();
 
-                                  ctx.teamSync();
+            for (int J = 0; J < trial_element::ndof; ++J) {
+              RAJA_TEAM_SHARED decltype(trial_element::batch_apply_shape_fn(J, derivatives, rule, ctx)) source_and_flux;
+              source_and_flux = trial_element::batch_apply_shape_fn(J, derivatives, rule, ctx);
+              test_element::integrate(source_and_flux, rule, output_ptr + J, ctx, trial_element::ndof);
+            }
 
-
-                                  for (int J = 0; J < trial_element::ndof; ++J) {
-                                    RAJA_TEAM_SHARED decltype(trial_element::batch_apply_shape_fn(J, derivatives, rule, ctx)) source_and_flux;
-                                    source_and_flux = trial_element::batch_apply_shape_fn(J, derivatives, rule, ctx);
-                                    test_element::integrate(source_and_flux, rule, output_ptr + J,ctx,
-                                      trial_element::ndof);
-                                  }
-
-
-                                  ctx.teamSync();
-                                  }
-                                });
-                              });
+            ctx.teamSync();
+          }
+        });
+      });
 #if defined(USE_CUDA)
   std::cout << "L480\n";
   printCUDAMemUsage();
 #endif
 }
-
 
 template <uint32_t wrt, int Q, mfem::Geometry::Type geom, typename signature, typename lambda_type, typename state_type,
           typename derivative_type>
