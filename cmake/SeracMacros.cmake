@@ -120,10 +120,11 @@ endmacro(serac_convert_to_native_escaped_file_path)
 
 
 ##------------------------------------------------------------------------------
-## serac_add_tests( SOURCES       [source1 [source2 ...]]
-##                  DEPENDS_ON    [dep1 [dep2 ...]]
-##                  NUM_MPI_TASKS [num tasks]
-##                  )
+## serac_add_tests( SOURCES         [source1 [source2 ...]]
+##                  USE_CUDA        [use CUDA if set]
+##                  DEPENDS_ON      [dep1 [dep2 ...]]
+##                  NUM_MPI_TASKS   [num tasks]
+##                  NUM_OMP_THREADS [num threads])
 ##
 ## Creates an executable per given source and then adds the test to CTest
 ## If USE_CUDA is set, this macro will compile a CUDA enabled version of
@@ -133,7 +134,7 @@ endmacro(serac_convert_to_native_escaped_file_path)
 macro(serac_add_tests)
 
     set(options )
-    set(singleValueArgs NUM_MPI_TASKS USE_CUDA)
+    set(singleValueArgs NUM_MPI_TASKS NUM_OMP_THREADS USE_CUDA)
     set(multiValueArgs SOURCES DEPENDS_ON)
 
     # Parse the arguments to the macro
@@ -142,6 +143,10 @@ macro(serac_add_tests)
 
     if ( NOT DEFINED arg_NUM_MPI_TASKS )
         set( arg_NUM_MPI_TASKS 1 )
+    endif()
+
+    if ( NOT DEFINED arg_NUM_OMP_THREADS )
+        set( arg_NUM_OMP_THREADS 1 )
     endif()
 
     foreach(filename ${arg_SOURCES})
@@ -161,9 +166,10 @@ macro(serac_add_tests)
             target_compile_definitions(${test_name} PUBLIC USE_CUDA)
         endif()
 
-        blt_add_test(NAME          ${test_name}
-                     COMMAND       ${test_name}
-                     NUM_MPI_TASKS ${arg_NUM_MPI_TASKS} )
+        blt_add_test(NAME            ${test_name}
+                     COMMAND         ${test_name}
+                     NUM_MPI_TASKS   ${arg_NUM_MPI_TASKS}
+                     NUM_OMP_THREADS ${arg_NUM_OMP_THREADS} )
     endforeach()
 
 endmacro(serac_add_tests)

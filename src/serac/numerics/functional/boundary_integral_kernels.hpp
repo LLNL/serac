@@ -80,45 +80,51 @@ RAJA_HOST_DEVICE struct QFunctionArgument<L2<p, c>, Dimension<dim>> {
 /// @overload
 SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <typename lambda, typename T, int... i>
-SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, const tensor<double, 2>& x_q, const T& arg_tuple,
+SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, double t, const tensor<double, 2>& x_q, const T& arg_tuple,
                                        std::integer_sequence<int, i...>)
 {
   tensor<double, 2> J_q{};
-  return qf(serac::tuple{x_q, J_q}, serac::get<i>(arg_tuple)...);
+  return qf(t, serac::tuple{x_q, J_q}, serac::get<i>(arg_tuple)...);
 }
 
 /// @overload
 SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <typename lambda, typename T, int... i>
-SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, const tensor<double, 3>& x_q, const T& arg_tuple,
+SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, double t, const tensor<double, 3>& x_q, const T& arg_tuple,
                                        std::integer_sequence<int, i...>)
 {
   constexpr int                dim = 3;
   tensor<double, dim, dim - 1> J_q{};
-  return qf(serac::tuple{x_q, J_q}, serac::get<i>(arg_tuple)...);
+  return qf(t, serac::tuple{x_q, J_q}, serac::get<i>(arg_tuple)...);
 }
 
 /// @overload
 template <typename lambda, typename coords_type, typename... T>
-SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, const serac::tuple<T...>& arg_tuple)
+SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, double t, coords_type&& x_q, const serac::tuple<T...>& arg_tuple)
 {
-  return apply_qf_helper(qf, x_q, arg_tuple, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>{});
+  return apply_qf_helper(qf, t, x_q, arg_tuple, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>{});
 }
 
 template <int i, int dim, typename... trials, typename lambda>
 RAJA_HOST_DEVICE auto get_derivative_type(lambda qf)
 {
   using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim>>::type...>;
-  return tuple{get_gradient(apply_qf(qf, tensor<double, dim + 1>{}, make_dual_wrt<i>(qf_arguments{}))), zero{}};
+  return tuple{get_gradient(apply_qf(qf, double{}, tensor<double, dim + 1>{}, make_dual_wrt<i>(qf_arguments{}))),
+               zero{}};
 };
 
 template <typename lambda, int n, typename... T>
+<<<<<<< HEAD
 RAJA_HOST_DEVICE auto batch_apply_qf(lambda qf, const tensor<double, 2, n>& positions,
                                      const tensor<double, 1, 2, n>& jacobians, const T&... inputs)
+=======
+auto batch_apply_qf(lambda qf, double t, const tensor<double, 2, n>& positions,
+                    const tensor<double, 1, 2, n>& jacobians, const T&... inputs)
+>>>>>>> develop
 {
   constexpr int dim = 2;
   using first_arg_t = serac::tuple<tensor<double, dim>, tensor<double, dim>>;
-  using return_type = decltype(qf(first_arg_t{}, T{}[0]...));
+  using return_type = decltype(qf(double{}, first_arg_t{}, T{}[0]...));
   tensor<tuple<return_type, zero>, n> outputs{};
   for (int i = 0; i < n; i++) {
     tensor<double, dim> x_q;
@@ -129,18 +135,23 @@ RAJA_HOST_DEVICE auto batch_apply_qf(lambda qf, const tensor<double, 2, n>& posi
     }
     double scale = norm(cross(J_q));
 
-    get<0>(outputs[i]) = qf(serac::tuple{x_q, J_q}, inputs[i]...) * scale;
+    get<0>(outputs[i]) = qf(t, serac::tuple{x_q, J_q}, inputs[i]...) * scale;
   }
   return outputs;
 }
 
 template <typename lambda, int n, typename... T>
+<<<<<<< HEAD
 RAJA_HOST_DEVICE auto batch_apply_qf(lambda qf, const tensor<double, 3, n>& positions,
                                      const tensor<double, 2, 3, n>& jacobians, const T&... inputs)
+=======
+auto batch_apply_qf(lambda qf, double t, const tensor<double, 3, n>& positions,
+                    const tensor<double, 2, 3, n>& jacobians, const T&... inputs)
+>>>>>>> develop
 {
   constexpr int dim = 3;
   using first_arg_t = serac::tuple<tensor<double, dim>, tensor<double, dim, dim - 1>>;
-  using return_type = decltype(qf(first_arg_t{}, T{}[0]...));
+  using return_type = decltype(qf(double{}, first_arg_t{}, T{}[0]...));
   tensor<tuple<return_type, zero>, n> outputs{};
   for (int i = 0; i < n; i++) {
     tensor<double, dim>          x_q;
@@ -153,7 +164,7 @@ RAJA_HOST_DEVICE auto batch_apply_qf(lambda qf, const tensor<double, 3, n>& posi
     }
     double scale = norm(cross(J_q));
 
-    get<0>(outputs[i]) = qf(serac::tuple{x_q, J_q}, inputs[i]...) * scale;
+    get<0>(outputs[i]) = qf(t, serac::tuple{x_q, J_q}, inputs[i]...) * scale;
   }
   return outputs;
 }
@@ -161,10 +172,10 @@ RAJA_HOST_DEVICE auto batch_apply_qf(lambda qf, const tensor<double, 3, n>& posi
 /// @trial_elements the element type for each trial space
 template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, typename test_element,
           typename trial_element_type, typename lambda_type, typename derivative_type, int... indices>
-void evaluation_kernel_impl(trial_element_type trial_elements, test_element, const std::vector<const double*>& inputs,
-                            double* outputs, const double* positions, const double* jacobians, lambda_type qf,
-                            [[maybe_unused]] derivative_type* qf_derivatives, uint32_t num_elements,
-                            camp::int_seq<int, indices...>)
+void evaluation_kernel_impl(trial_element_type trial_elements, test_element, double t,
+                            const std::vector<const double*>& inputs, double* outputs, const double* positions,
+                            const double* jacobians, lambda_type qf, [[maybe_unused]] derivative_type* qf_derivatives,
+                            const int* elements, uint32_t num_elements, camp::int_seq<int, indices...>)
 {
   // mfem provides this information as opaque arrays of doubles,
   // so we reinterpret the pointer with
@@ -187,6 +198,7 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, con
   using policy = RAJA::simd_exec;
 #endif
   // for each element in the domain
+<<<<<<< HEAD
   //  RAJA::forall<policy>(
   //      RAJA::TypedRangeSegment<uint32_t>(0, num_elements),
   //      [J, x, qf, u, rule, r, qpts_per_elem, qf_derivatives] RAJA_HOST_DEVICE(uint32_t e) {
@@ -217,6 +229,32 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, con
   //        // (batch) integrate the material response against the test-space basis functions
   //        test_element::integrate(get_value(qf_outputs), rule, &r[e]);
   //      });
+=======
+  for (uint32_t e = 0; e < num_elements; e++) {
+    // load the jacobians and positions for each quadrature point in this element
+    auto J_e = J[e];
+    auto x_e = x[e];
+
+    // batch-calculate values / derivatives of each trial space, at each quadrature point
+    [[maybe_unused]] tuple qf_inputs = {promote_each_to_dual_when<indices == differentiation_index>(
+        get<indices>(trial_elements).interpolate(get<indices>(u)[elements[e]], rule))...};
+
+    // (batch) evalute the q-function at each quadrature point
+    auto qf_outputs = batch_apply_qf(qf, t, x_e, J_e, get<indices>(qf_inputs)...);
+
+    // write out the q-function derivatives after applying the
+    // physical_to_parent transformation, so that those transformations
+    // won't need to be applied in the action_of_gradient and element_gradient kernels
+    if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
+      for (int q = 0; q < leading_dimension(qf_outputs); q++) {
+        qf_derivatives[e * qpts_per_elem + uint32_t(q)] = get_gradient(qf_outputs[q]);
+      }
+    }
+
+    // (batch) integrate the material response against the test-space basis functions
+    test_element::integrate(get_value(qf_outputs), rule, &r[elements[e]]);
+  }
+>>>>>>> develop
 }
 
 //clang-format off
@@ -265,7 +303,12 @@ RAJA_HOST_DEVICE auto batch_apply_chain_rule(derivative_type* qf_derivatives, co
  * @param[in] num_elements The number of elements in the mesh
  */
 template <int Q, mfem::Geometry::Type geom, typename test, typename trial, typename derivatives_type>
+<<<<<<< HEAD
 void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* qf_derivatives, uint32_t num_elements)
+=======
+void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* qf_derivatives, const int* elements,
+                               std::size_t num_elements)
+>>>>>>> develop
 {
   using test_element  = finite_element<geom, test>;
   using trial_element = finite_element<geom, trial>;
@@ -286,14 +329,19 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
   // for each element in the domain
   RAJA::forall<policy>(RAJA::TypedRangeSegment<uint32_t>(0, num_elements), [=] RAJA_HOST_DEVICE(uint32_t e) {
     // (batch) interpolate each quadrature point's value
-    auto qf_inputs = trial_element::interpolate(du[e], rule);
+    auto qf_inputs = trial_element::interpolate(du[elements[e]], rule);
 
     // (batch) evalute the q-function at each quadrature point
     auto qf_outputs = batch_apply_chain_rule(qf_derivatives + e * nqp, qf_inputs);
 
     // (batch) integrate the material response against the test-space basis functions
+<<<<<<< HEAD
     test_element::integrate(qf_outputs, rule, &dr[e]);
   });
+=======
+    test_element::integrate(qf_outputs, rule, &dr[elements[e]]);
+  }
+>>>>>>> develop
 }
 
 /**
@@ -318,12 +366,17 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
  * @param[in] num_elements The number of elements in the mesh
  */
 template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type>
+<<<<<<< HEAD
 #if defined(USE_CUDA)
 void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::GPU> dK,
 #else
 void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
 #endif
                              derivatives_type* qf_derivatives, std::size_t num_elements)
+=======
+void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, derivatives_type* qf_derivatives,
+                             const int* elements, std::size_t num_elements)
+>>>>>>> develop
 {
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
@@ -340,8 +393,13 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
 #endif
 
   // for each element in the domain
+<<<<<<< HEAD
   RAJA::forall<policy>(RAJA::TypedRangeSegment<std::size_t>(0, num_elements), [=] RAJA_HOST_DEVICE(std::size_t e) {
     auto* output_ptr = reinterpret_cast<typename test_element::dof_type*>(&dK(e, 0, 0));
+=======
+  for (uint32_t e = 0; e < num_elements; e++) {
+    auto* output_ptr = reinterpret_cast<typename test_element::dof_type*>(&dK(elements[e], 0, 0));
+>>>>>>> develop
 
     tensor<derivatives_type, nquad> derivatives{};
     for (int q = 0; q < nquad; q++) {
@@ -357,26 +415,25 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
 
 template <uint32_t wrt, int Q, mfem::Geometry::Type geom, typename signature, typename lambda_type,
           typename derivative_type>
-std::function<void(const std::vector<const double*>&, double*, bool)> evaluation_kernel(
-    signature s, lambda_type qf, const double* positions, const double* jacobians,
-    std::shared_ptr<derivative_type> qf_derivatives, uint32_t num_elements)
+auto evaluation_kernel(signature s, lambda_type qf, const double* positions, const double* jacobians,
+                       std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {
   auto trial_elements = trial_elements_tuple<geom>(s);
-  auto test           = get_test_element<geom>(s);
-  return [=](const std::vector<const double*>& inputs, double* outputs, bool /* update state */) {
-    evaluation_kernel_impl<wrt, Q, geom>(trial_elements, test, inputs, outputs, positions, jacobians, qf,
-                                         qf_derivatives.get(), num_elements, s.index_seq);
+  auto test_element   = get_test_element<geom>(s);
+  return [=](double time, const std::vector<const double*>& inputs, double* outputs, bool /* update state */) {
+    evaluation_kernel_impl<wrt, Q, geom>(trial_elements, test_element, time, inputs, outputs, positions, jacobians, qf,
+                                         qf_derivatives.get(), elements, num_elements, s.index_seq);
   };
 }
 
 template <int wrt, int Q, mfem::Geometry::Type geom, typename signature, typename derivative_type>
 std::function<void(const double*, double*)> jacobian_vector_product_kernel(
-    signature, std::shared_ptr<derivative_type> qf_derivatives, uint32_t num_elements)
+    signature, std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {
   return [=](const double* du, double* dr) {
     using test_space  = typename signature::return_type;
     using trial_space = typename std::tuple_element<wrt, typename signature::parameter_types>::type;
-    action_of_gradient_kernel<Q, geom, test_space, trial_space>(du, dr, qf_derivatives.get(), num_elements);
+    action_of_gradient_kernel<Q, geom, test_space, trial_space>(du, dr, qf_derivatives.get(), elements, num_elements);
   };
 }
 
@@ -385,8 +442,12 @@ template <int wrt, int Q, mfem::Geometry::Type geom, typename signature, typenam
 std::function<void(ExecArrayView<double, 3, ExecutionSpace::GPU>)> element_gradient_kernel(
 #else
 std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)> element_gradient_kernel(
+<<<<<<< HEAD
 #endif
     signature, std::shared_ptr<derivative_type> qf_derivatives, uint32_t num_elements)
+=======
+    signature, std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
+>>>>>>> develop
 {
 #if defined(USE_CUDA)
   return [=](ExecArrayView<double, 3, ExecutionSpace::GPU> K_elem) {
@@ -395,7 +456,7 @@ std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)> element_gradi
 #endif
     using test_space  = typename signature::return_type;
     using trial_space = typename std::tuple_element<wrt, typename signature::parameter_types>::type;
-    element_gradient_kernel<geom, test_space, trial_space, Q>(K_elem, qf_derivatives.get(), num_elements);
+    element_gradient_kernel<geom, test_space, trial_space, Q>(K_elem, qf_derivatives.get(), elements, num_elements);
   };
 }
 

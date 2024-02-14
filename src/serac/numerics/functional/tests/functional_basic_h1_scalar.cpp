@@ -78,22 +78,19 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
   Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(&test_fespace, {&trial_fespace});
 #endif
 
-  cudaDeviceSynchronize();
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, TestThermalModelOne<dim>{}, *mesh);
 
-  cudaDeviceSynchronize();
-
-  // residual.AddBoundaryIntegral(
-  //    Dimension<dim - 1>{}, DependsOn<0>{},
-  //    TestThermalModelTwo {},
-  //    *mesh);
-
-#ifdef USE_CUDA
-  check_gradient(residual, U);
-#else
-  check_gradient(residual, U);
+#if not defined USE_CUDA
+  residual.AddBoundaryIntegral(
+     Dimension<dim - 1>{}, DependsOn<0>{},
+     TestThermalModelTwo {},
+     *mesh);
 #endif
+  double t = 0.0;
+
+  check_gradient(residual, t, U);
 }
+
 
 template <int ptest, int ptrial>
 void thermal_test(std::string meshfile)
@@ -109,16 +106,18 @@ void thermal_test(std::string meshfile)
   }
 }
 
-// TEST(basic, thermal_tris) { thermal_test<1, 1>("/data/meshes/patch2D_tris.mesh"); }
-// TEST(basic, thermal_quads) { thermal_test<1, 1>("/data/meshes/patch2D_quads.mesh"); }
-// TEST(basic, thermal_tris_and_quads) { thermal_test<1, 1>("/data/meshes/patch2D_tris_and_quads.mesh"); }
-//
-// TEST(basic, thermal_tets) { thermal_test<1, 1>("/data/meshes/patch3D_tets.mesh"); }
-TEST(basic, thermal_hexes) { thermal_test<1, 1>("/data/meshes/patch3D_hexes.mesh"); }
-// TEST(basic, thermal_tets_and_hexes) { thermal_test<1, 1>("/data/meshes/patch3D_tets_and_hexes.mesh"); }
-//
-// TEST(mixed, thermal_tris_and_quads) { thermal_test<2, 1>("/data/meshes/patch2D_tris_and_quads.mesh"); }
-// TEST(mixed, thermal_tets_and_hexes) { thermal_test<2, 1>("/data/meshes/patch3D_tets_and_hexes.mesh"); }
+  TEST(basic, thermal_hexes) { thermal_test<1, 1>("/data/meshes/patch3D_hexes.mesh"); }
+#if not defined(USE_CUDA)
+  TEST(basic, thermal_tris) { thermal_test<1, 1>("/data/meshes/patch2D_tris.mesh"); }
+  TEST(basic, thermal_quads) { thermal_test<1, 1>("/data/meshes/patch2D_quads.mesh"); }
+  TEST(basic, thermal_tris_and_quads) { thermal_test<1, 1>("/data/meshes/patch2D_tris_and_quads.mesh"); }
+
+  TEST(basic, thermal_tets) { thermal_test<1, 1>("/data/meshes/patch3D_tets.mesh"); }
+  TEST(basic, thermal_tets_and_hexes) { thermal_test<1, 1>("/data/meshes/patch3D_tets_and_hexes.mesh"); }
+
+  TEST(mixed, thermal_tris_and_quads) { thermal_test<2, 1>("/data/meshes/patch2D_tris_and_quads.mesh"); }
+  TEST(mixed, thermal_tets_and_hexes) { thermal_test<2, 1>("/data/meshes/patch3D_tets_and_hexes.mesh"); }
+#endif
 
 int main(int argc, char* argv[])
 {

@@ -7,6 +7,7 @@
 add_subdirectory(materials)
 add_subdirectory(state)
 add_subdirectory(boundary_conditions)
+add_subdirectory(contact)
 
 if(ENABLE_TESTS)
     add_subdirectory(tests)
@@ -30,6 +31,7 @@ set(physics_headers
     heat_transfer.hpp
     heat_transfer_input.hpp
     solid_mechanics.hpp
+    solid_mechanics_contact.hpp
     solid_mechanics_input.hpp
     thermomechanics.hpp
     thermomechanics_input.hpp
@@ -38,7 +40,9 @@ set(physics_headers
 set(physics_dependencies
     serac_state
     serac_boundary_conditions
+    serac_contact
     serac_numerics
+    serac_physics_materials
     )
 
 blt_add_library(

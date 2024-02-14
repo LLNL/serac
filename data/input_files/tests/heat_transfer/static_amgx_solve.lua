@@ -1,5 +1,5 @@
 -- Comparison information
-expected_temperature_l2norm = 1.99716
+expected_temperature_l2norm = 2.02263
 epsilon = 0.00001
 
 -- Simulation time parameters
@@ -15,7 +15,7 @@ main_mesh = {
 }
 
 -- Solver parameters
-thermal_conduction = {
+heat_transfer = {
     equation_solver = {
         linear = {
             type = "iterative",
@@ -24,8 +24,8 @@ thermal_conduction = {
                 abs_tol     = 1.0e-12,
                 max_iter    = 200,
                 print_level = 0,
-                solver_type = "cg",
-                prec_type   = "JacobiSmoother",
+                solver_type = "gmres",
+                prec_type   = "AMGX",
             },
         },
 
@@ -41,17 +41,7 @@ thermal_conduction = {
     order = 2,
 
     -- material parameters
-    kappa = 0.5,
-
-    -- add a nonlinear source
-    nonlinear_reaction = {
-        reaction_function = function (temp)
-            return 0.1 * temp^2
-        end,
-        d_reaction_function = function (temp)
-            return 0.2 * temp
-        end
-    },
+    materials = { { model = "LinearIsotropicConductor", kappa = 0.5, cp = 1.0, density = 1.0 }, },
 
     -- boundary condition parameters
     boundary_conds = {

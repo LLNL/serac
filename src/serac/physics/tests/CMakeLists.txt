@@ -29,10 +29,12 @@ set(solver_tests
     solid.cpp
     solid_periodic.cpp
     solid_shape.cpp
+    solid_robin_condition.cpp
     thermal_shape.cpp
     thermal_mechanics.cpp
     dynamic_thermal_adjoint.cpp
     )
+blt_list_append(TO solver_tests ELEMENTS contact_patch.cpp contact_beam.cpp IF TRIBOL_FOUND)
 
 serac_add_tests( SOURCES ${solver_tests}
                  DEPENDS_ON ${test_dependencies}

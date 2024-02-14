@@ -15,11 +15,11 @@ namespace serac {
  * @param positions_q (output) the positions for each quadrature point
  * @param jacobians_q (output) the jacobians for each quadrature point
  * @param positions_e (input) the "e-vector" of position data
- * @param num_elements (input) the number of elements of the specified geometry
+ * @param elements (input) the list of element indices that are part of this domain
  */
 template <int Q, mfem::Geometry::Type geom, typename function_space>
 void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobians_q, const mfem::Vector& positions_e,
-                               uint32_t num_elements)
+                               const std::vector<int>& elements)
 {
   constexpr TensorProductQuadratureRule<Q> rule{};
 
@@ -44,16 +44,14 @@ void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobian
   auto X_q = reinterpret_cast<position_type*>(positions_q.ReadWrite());
   auto J_q = reinterpret_cast<jacobian_type*>(jacobians_q.ReadWrite());
   auto X   = reinterpret_cast<const typename element_type::dof_type*>(positions_e.Read());
-#if defined(USE_CUDA)
-  using policy = RAJA::cuda_exec<32>;
-#else
-  using policy = RAJA::simd_exec;
-#endif
+
+  std::size_t num_elements = elements.size();
+
   // for each element in the domain
-  // RAJA::forall<policy>(RAJA::TypedRangeSegment<uint32_t>(0, num_elements), [=] SERAC_HOST_DEVICE(uint32_t e) {
+
   for (uint32_t e = 0; e < num_elements; ++e) {
     // load the positions for the nodes in this element
-    auto X_e = X[e];
+    auto X_e = X[elements[e]];
 
     // calculate the values and derivatives (w.r.t. xi) of X at each quadrature point
     auto quadrature_values = element_type::interpolate(X_e, rule);
@@ -74,12 +72,12 @@ void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobian
       }
     }
   }
-  //});
+
 }
 
-GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry::Type g)
+GeometricFactors::GeometricFactors(const Domain& d, int q, mfem::Geometry::Type g)
 {
-  auto* nodes = mesh->GetNodes();
+  auto* nodes = d.mesh_.GetNodes();
   auto* fes   = nodes->FESpace();
 
   auto         restriction = serac::ElementRestriction(fes, g);
@@ -89,22 +87,25 @@ GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry
   // assumes all elements are the same order
   int p = fes->GetElementOrder(0);
 
-  int spatial_dim   = mesh->SpaceDimension();
+  int spatial_dim   = d.mesh_.SpaceDimension();
   int geometry_dim  = dimension_of(g);
   int qpts_per_elem = num_quadrature_points(g, q);
 
-  // NB: we only want the number of elements with the specified
-  // geometry, which is not the same as mesh->GetNE() in general
-  num_elements = std::size_t(restriction.dof_info.shape()[0]);
+  if (g == mfem::Geometry::TRIANGLE) elements = d.tri_ids_;
+  if (g == mfem::Geometry::SQUARE) elements = d.quad_ids_;
+  if (g == mfem::Geometry::TETRAHEDRON) elements = d.tet_ids_;
+  if (g == mfem::Geometry::CUBE) elements = d.hex_ids_;
+
+  num_elements = elements.size();
 
   X = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim);
   J = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim * geometry_dim);
 
-#define DISPATCH_KERNEL(GEOM, P, Q)                                                                 \
-  if (g == mfem::Geometry::GEOM && p == P && q == Q) {                                              \
-    compute_geometric_factors<Q, mfem::Geometry::GEOM, H1<P, dimension_of(mfem::Geometry::GEOM)> >( \
-        X, J, X_e, uint32_t(num_elements));                                                         \
-    return;                                                                                         \
+#define DISPATCH_KERNEL(GEOM, P, Q)                                                                           \
+  if (g == mfem::Geometry::GEOM && p == P && q == Q) {                                                        \
+    compute_geometric_factors<Q, mfem::Geometry::GEOM, H1<P, dimension_of(mfem::Geometry::GEOM)> >(X, J, X_e, \
+                                                                                                   elements); \
+    return;                                                                                                   \
   }
 
   DISPATCH_KERNEL(TRIANGLE, 1, 1);
@@ -152,9 +153,9 @@ GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry
   std::cout << "should never be reached " << std::endl;
 }
 
-GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry::Type g, FaceType type)
+GeometricFactors::GeometricFactors(const Domain& d, int q, mfem::Geometry::Type g, FaceType type)
 {
-  auto* nodes = mesh->GetNodes();
+  auto* nodes = d.mesh_.GetNodes();
   auto* fes   = nodes->FESpace();
 
   auto         restriction = serac::ElementRestriction(fes, g, type);
@@ -164,22 +165,24 @@ GeometricFactors::GeometricFactors(const mfem::Mesh* mesh, int q, mfem::Geometry
   // assumes all elements are the same order
   int p = fes->GetElementOrder(0);
 
-  int spatial_dim   = mesh->SpaceDimension();
+  int spatial_dim   = d.mesh_.SpaceDimension();
   int geometry_dim  = dimension_of(g);
   int qpts_per_elem = num_quadrature_points(g, q);
 
   // NB: we only want the number of elements with the specified
   // geometry, which is not the same as mesh->GetNE() in general
-  num_elements = std::size_t(restriction.dof_info.shape()[0]);
+  elements = d.get(g);
+
+  num_elements = std::size_t(elements.size());
 
   X = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim);
   J = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim * geometry_dim);
 
-#define DISPATCH_KERNEL(GEOM, P, Q)                                                                     \
-  if (g == mfem::Geometry::GEOM && p == P && q == Q) {                                                  \
-    compute_geometric_factors<Q, mfem::Geometry::GEOM, H1<P, dimension_of(mfem::Geometry::GEOM) + 1> >( \
-        X, J, X_e, uint32_t(num_elements));                                                             \
-    return;                                                                                             \
+#define DISPATCH_KERNEL(GEOM, P, Q)                                                                               \
+  if (g == mfem::Geometry::GEOM && p == P && q == Q) {                                                            \
+    compute_geometric_factors<Q, mfem::Geometry::GEOM, H1<P, dimension_of(mfem::Geometry::GEOM) + 1> >(X, J, X_e, \
+                                                                                                       elements); \
+    return;                                                                                                       \
   }
 
   DISPATCH_KERNEL(SEGMENT, 1, 1);

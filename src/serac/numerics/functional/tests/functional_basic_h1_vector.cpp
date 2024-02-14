@@ -102,10 +102,11 @@ void weird_mixed_test(std::unique_ptr<mfem::ParMesh>& mesh)
   // terms that have the appropriate shapes to ensure that all the differentiation
   // code works as intended
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, MixedModelOne<dim>{}, *mesh);
-
-  // residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, MixedModelTwo<dim>{}, *mesh);
-
-  check_gradient(residual, U);
+#if not defined USE_CUDA
+  residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, MixedModelTwo<dim>{}, *mesh);
+#endif
+  double t = 0.0;
+  check_gradient(residual, t, U);
 }
 
 template <int p, int dim>
@@ -133,10 +134,11 @@ void elasticity_test(std::unique_ptr<mfem::ParMesh>& mesh)
   // terms that have the appropriate shapes to ensure that all the differentiation
   // code works as intended
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, ElasticityTestModelOne<dim>{}, *mesh);
-
-  // residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, ElasticityTestModelTwo<dim>{}, *mesh);
-
-  check_gradient(residual, U);
+#if not defined USE_CUDA
+  residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, ElasticityTestModelTwo<dim>{}, *mesh);
+#endif
+  double t = 0.0;
+  check_gradient(residual, t, U);
 }
 
 void test_suite(std::string meshfile)
@@ -160,15 +162,15 @@ void test_suite(std::string meshfile)
   }
 }
 
-// TEST(VectorValuedH1, test_suite_tris) { test_suite("/data/meshes/patch2D_tris.mesh"); }
-// TEST(VectorValuedH1, test_suite_quads) { test_suite("/data/meshes/patch2D_quads.mesh"); }
-// TEST(VectorValuedH1, test_suite_tris_and_quads) { test_suite("/data/meshes/patch2D_tris_and_quads.mesh"); }
-
-// TEST(VectorValuedH1, test_suite_tets) { test_suite("/data/meshes/patch3D_tets.mesh"); }
-
 TEST(VectorValuedH1, test_suite_hexes) { test_suite("/data/meshes/patch3D_hexes.mesh"); }
 
-// TEST(VectorValuedH1, test_suite_tets_and_hexes) { test_suite("/data/meshes/patch3D_tets_and_hexes.mesh"); }
+#if not defined USE_CUDA
+TEST(VectorValuedH1, test_suite_tris) { test_suite("/data/meshes/patch2D_tris.mesh"); }
+TEST(VectorValuedH1, test_suite_quads) { test_suite("/data/meshes/patch2D_quads.mesh"); }
+TEST(VectorValuedH1, test_suite_tris_and_quads) { test_suite("/data/meshes/patch2D_tris_and_quads.mesh"); }
+TEST(VectorValuedH1, test_suite_tets) { test_suite("/data/meshes/patch3D_tets.mesh"); }
+TEST(VectorValuedH1, test_suite_tets_and_hexes) { test_suite("/data/meshes/patch3D_tets_and_hexes.mesh"); }
+#endif
 
 int main(int argc, char* argv[])
 {

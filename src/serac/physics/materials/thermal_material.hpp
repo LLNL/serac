@@ -16,7 +16,7 @@
 
 namespace serac::heat_transfer {
 
-/// Linear isotropic thermal conduction material model
+/// Linear isotropic heat transfer material model
 struct LinearIsotropicConductor {
   /**
    * @brief Construct a new Linear Isotropic Conductor object
@@ -65,7 +65,7 @@ private:
   double conductivity_;
 };
 
-/// Nonlinear isotropic thermal conduction material model
+/// Nonlinear isotropic heat transfer material model
 struct IsotropicConductorWithLinearConductivityVsTemperature {
   /**
    * @brief Construct a Isotropic Conductor with Conductivity linear with Temparture object
@@ -84,7 +84,6 @@ struct IsotropicConductorWithLinearConductivityVsTemperature {
         d_conductivity_d_temperature_(d_conductivity_d_temperature)
   {
     SLIC_ERROR_ROOT_IF(density_ < 0.0, "Density must be positive in the linear isotropic conductor material model.");
-
     SLIC_ERROR_ROOT_IF(specific_heat_capacity_ < 0.0,
                        "Specific heat capacity must be positive in the linear isotropic conductor material model.");
   }
@@ -97,8 +96,7 @@ struct IsotropicConductorWithLinearConductivityVsTemperature {
    * @tparam T3 Temperature gradient type
    * @param[in] temperature
    * @param[in] temperature_gradient
-   * @return The calculated material response (tuple of volumetric heat capacity and thermal flux) for a linear
-   * isotropic material
+   * @return The calculated material response (tuple of volumetric heat capacity and thermal flux)
    */
   template <typename T1, typename T2, typename T3>
   SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& temperature, const T3& temperature_gradient) const

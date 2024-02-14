@@ -15,6 +15,7 @@ set(functional_headers
     element_restriction.hpp
     geometry.hpp
     geometric_factors.hpp
+    domain.hpp
     domain_integral_kernels.hpp
     dual.hpp
     finite_element.hpp
@@ -26,12 +27,14 @@ set(functional_headers
     polynomials.hpp
     quadrature.hpp
     quadrature_data.hpp
+    shape_aware_functional.hpp
     tensor.hpp
     tuple.hpp
     tuple_tensor_dual_functions.hpp
     )
 
 set(functional_sources 
+    domain.cpp 
     element_restriction.cpp 
     geometric_factors.cpp 
     quadrature_data.cpp)

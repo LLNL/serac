@@ -27,6 +27,8 @@
 
 #include "serac/numerics/functional/element_restriction.hpp"
 
+#include "serac/numerics/functional/domain.hpp"
+
 #include <array>
 #include <axom/core/Types.hpp>
 #include <axom/core/memory_management.hpp>
@@ -79,8 +81,8 @@ inline void check_for_missing_nodal_gridfunc(const mfem::Mesh& mesh)
   if (mesh.GetNodes() == nullptr) {
     SLIC_ERROR_ROOT(
         R"errmsg(
-      the provided mesh does not have a nodal gridfunction. 
-      If you created an mfem::Mesh manually, make sure that the 
+      the provided mesh does not have a nodal gridfunction.
+      If you created an mfem::Mesh manually, make sure that the
       following member functions are invoked before use
 
       > mfem::Mesh::EnsureNodes();
@@ -204,7 +206,7 @@ public:
   class Gradient;
 
   // clang-format off
-  template <uint32_t i> 
+  template <uint32_t i>
   struct operator_paren_return {
     using type = typename std::conditional<
         i == NO_DIFFERENTIATION,               // if `i` indicates that we want to skip differentiation
@@ -222,11 +224,11 @@ public:
    */
   Functional(const mfem::ParFiniteElementSpace*                               test_fes,
              std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
-      : update_qdata(false), test_space_(test_fes), trial_space_(trial_fes)
+      : update_qdata_(false), test_space_(test_fes), trial_space_(trial_fes)
   {
     auto mem_type = mfem::Device::GetMemoryType();
 
-    for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
+    for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
       input_E_[type].resize(num_trial_spaces);
     }
 
@@ -236,8 +238,8 @@ public:
       input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
 
       // L->E
-      for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
-        if (type == Integral::Type::Domain) {
+      for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
+        if (type == Domain::Type::Elements) {
           G_trial_[type][i] = BlockElementRestriction(trial_fes[i]);
         } else {
           G_trial_[type][i] = BlockElementRestriction(trial_fes[i], FaceType::BOUNDARY);
@@ -250,8 +252,8 @@ public:
       }
     }
 
-    for (auto type : {Integral::Type::Domain, Integral::Type::Boundary}) {
-      if (type == Integral::Type::Domain) {
+    for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
+      if (type == Domain::Type::Elements) {
         G_test_[type] = BlockElementRestriction(test_fes);
       } else {
         G_test_[type] = BlockElementRestriction(test_fes, FaceType::BOUNDARY);
@@ -305,6 +307,23 @@ public:
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
     integrals_.push_back(
+        MakeDomainIntegral<signature, Q, dim>(EntireDomain(domain), integrand, qdata, std::vector<uint32_t>{args...}));
+  }
+
+  /// @overload
+  template <int dim, int... args, typename lambda, typename qpt_data_type = Nothing>
+  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, Domain& domain,
+                         std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
+  {
+    if (domain.mesh_.GetNE() == 0) return;
+
+    SLIC_ERROR_ROOT_IF(dim != domain.mesh_.Dimension(), "invalid mesh dimension for domain integral");
+
+    check_for_unsupported_elements(domain.mesh_);
+    check_for_missing_nodal_gridfunc(domain.mesh_);
+
+    using signature = test(decltype(serac::type<args>(trial_spaces))...);
+    integrals_.push_back(
         MakeDomainIntegral<signature, Q, dim>(domain, integrand, qdata, std::vector<uint32_t>{args...}));
   }
 
@@ -331,6 +350,22 @@ public:
     static_assert(!std::is_invocable<Integrand, DummyArgumentType>::value);
 
     check_for_missing_nodal_gridfunc(domain);
+
+    using signature = test(decltype(serac::type<args>(trial_spaces))...);
+    integrals_.push_back(
+        MakeBoundaryIntegral<signature, Q, dim>(EntireBoundary(domain), integrand, std::vector<uint32_t>{args...}));
+  }
+
+  /// @overload
+  template <int dim, int... args, typename lambda>
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, const Domain& domain)
+  {
+    auto num_bdr_elements = domain.mesh_.GetNBE();
+    if (num_bdr_elements == 0) return;
+
+    SLIC_ERROR_ROOT_IF(dim != domain.dim_, "invalid domain of integration for boundary integral");
+
+    check_for_missing_nodal_gridfunc(domain.mesh_);
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
     integrals_.push_back(MakeBoundaryIntegral<signature, Q, dim>(domain, integrand, std::vector<uint32_t>{args...}));
@@ -394,10 +429,10 @@ public:
 
     // this is used to mark when gather operations have been performed,
     // to avoid doing them more than once per trial space
-    bool already_computed[Integral::num_types]{};  // default initializes to `false`
+    bool already_computed[Domain::num_types]{};  // default initializes to `false`
 
     for (auto& integral : integrals_) {
-      auto type = integral.type;
+      auto type = integral.domain_.type_;
 
       if (!already_computed[type]) {
         G_trial_[type][which].Gather(input_L_[which], input_E_[type][which]);
@@ -422,11 +457,12 @@ public:
    * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
    *
    * @tparam T the types of the arguments passed in
+   * @param t the time
    * @param args the trial space dofs used to carry out the calculation,
    *  at most one of which may be of the type `differentiate_wrt_this(mfem::Vector)`
    */
   template <uint32_t wrt, typename... T>
-  typename operator_paren_return<wrt>::type operator()(DifferentiateWRT<wrt>, const T&... args)
+  typename operator_paren_return<wrt>::type operator()(DifferentiateWRT<wrt>, double t, const T&... args)
   {
     const mfem::Vector* input_T[] = {&static_cast<const mfem::Vector&>(args)...};
 
@@ -439,10 +475,10 @@ public:
 
     // this is used to mark when operations have been performed,
     // to avoid doing them more than once
-    bool already_computed[Integral::num_types][num_trial_spaces]{};  // default initializes to `false`
+    bool already_computed[Domain::num_types][num_trial_spaces]{};  // default initializes to `false`
 
     for (auto& integral : integrals_) {
-      auto type = integral.type;
+      auto type = integral.domain_.type_;
 
       for (auto i : integral.active_trial_spaces_) {
         if (!already_computed[type][i]) {
@@ -451,7 +487,7 @@ public:
         }
       }
 
-      integral.Mult(input_E_[type], output_E_[type], wrt, update_qdata);
+      integral.Mult(t, input_E_[type], output_E_[type], wrt, update_qdata_);
 
       // scatter-add to compute residuals on the local processor
       G_test_[type].ScatterAdd(output_E_[type], output_L_);
@@ -481,7 +517,7 @@ public:
 
   /// @overload
   template <typename... T>
-  auto operator()(const T&... args)
+  auto operator()(double t, const T&... args)
   {
     constexpr int num_differentiated_arguments = (std::is_same_v<T, differentiate_wrt_this> + ...);
     static_assert(num_differentiated_arguments <= 1,
@@ -491,12 +527,22 @@ public:
 
     [[maybe_unused]] constexpr uint32_t i = index_of_differentiation<T...>();
 
-    return (*this)(DifferentiateWRT<i>{}, args...);
+    return (*this)(DifferentiateWRT<i>{}, t, args...);
   }
 
-  // TODO: expose this feature a better way
+  /**
+   * @brief A flag to update the quadrature data for this operator following the computation
+   *
+   * Typically this is set to false during nonlinear solution iterations and is set to true for the
+   * final pass once equilibrium is found.
+   *
+   * @param update_flag A flag to update the related quadrature data
+   */
+  void updateQdata(bool update_flag) { update_qdata_ = update_flag; }
+
+private:
   /// @brief flag for denoting when a residual evaluation should update the material state buffers
-  bool update_qdata;
+  bool update_qdata_;
 
   /**
    * @brief mfem::Operator representing the gradient matrix that
@@ -512,7 +558,7 @@ public:
     Gradient(Functional<test(trials...), exec>& f, uint32_t which = 0)
         : mfem::Operator(f.test_space_->GetTrueVSize(), f.trial_space_[which]->GetTrueVSize()),
           form_(f),
-          lookup_tables(f.G_test_[Integral::Domain], f.G_trial_[Integral::Domain][which]),
+          lookup_tables(f.G_test_[Domain::Type::Elements], f.G_trial_[Domain::Type::Elements][which]),
           which_argument(which),
           test_space_(f.test_space_),
           trial_space_(f.trial_space_[which]),
@@ -559,12 +605,12 @@ public:
 
       double* values = new double[lookup_tables.nnz]{};
 
-      std::map<mfem::Geometry::Type, ExecArray<double, 3, exec>> element_gradients[Integral::num_types];
+      std::map<mfem::Geometry::Type, ExecArray<double, 3, exec>> element_gradients[Domain::num_types];
 
       for (auto& integral : form_.integrals_) {
-        auto& K_elem             = element_gradients[integral.type];
-        auto& test_restrictions  = form_.G_test_[integral.type].restrictions;
-        auto& trial_restrictions = form_.G_trial_[integral.type][which_argument].restrictions;
+        auto& K_elem             = element_gradients[integral.domain_.type_];
+        auto& test_restrictions  = form_.G_test_[integral.domain_.type_].restrictions;
+        auto& trial_restrictions = form_.G_trial_[integral.domain_.type_][which_argument].restrictions;
 
         if (K_elem.empty()) {
           for (auto& [geom, test_restriction] : test_restrictions) {
@@ -584,7 +630,7 @@ public:
       std::cout << "Printing USAGE before assemble\n";
       printCUDAMemUsage();
 #endif
-      for (auto type : Integral::Types) {
+      for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
         auto K_elem             = element_gradients[type];
         auto test_restrictions  = form_.G_test_[type].restrictions;
         auto trial_restrictions = form_.G_trial_[type][which_argument].restrictions;
@@ -636,10 +682,6 @@ public:
           }
         }
       }
-#ifdef USE_CUDA
-      std::cout << "Printing USAGE AFTER assemble\n";
-      printCUDAMemUsage();
-#endif
 
       // Copy the column indices to an auxilliary array as MFEM can mutate these during HypreParMatrix construction
       col_ind_copy_ = lookup_tables.col_ind;
@@ -720,15 +762,15 @@ public:
   /// @brief The input set of local DOF values (i.e., on the current rank)
   mutable mfem::Vector input_L_[num_trial_spaces];
 
-  BlockElementRestriction G_trial_[Integral::num_types][num_trial_spaces];
+  BlockElementRestriction G_trial_[Domain::num_types][num_trial_spaces];
 
-  mutable std::vector<mfem::BlockVector> input_E_[Integral::num_types];
+  mutable std::vector<mfem::BlockVector> input_E_[Domain::num_types];
 
   std::vector<Integral> integrals_;
 
-  mutable mfem::BlockVector output_E_[Integral::num_types];
+  mutable mfem::BlockVector output_E_[Domain::num_types];
 
-  BlockElementRestriction G_test_[Integral::num_types];
+  BlockElementRestriction G_test_[Domain::num_types];
 
   /// @brief The output set of local DOF values (i.e., on the current rank)
   mutable mfem::Vector output_L_;

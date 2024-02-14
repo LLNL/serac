@@ -69,9 +69,8 @@ solid = {
     -- polynomial interpolation order
     order = 1,
 
-    -- neo-Hookean material parameters corresponding to lienar elasticity
-    mu = linear_bulk(E, nu)/2.;
-    K  = linear_bulk(E, nu)/2.;
+    -- neo-Hookean material parameters corresponding to linear elasticity
+    materials = { { model = "NeoHookean", mu = linear_bulk(E, nu)/2., K = linear_bulk(E, nu)/2., density = 1.0 }, },
 
     -- initial conditions
     initial_displacement = {
