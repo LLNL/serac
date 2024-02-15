@@ -24,7 +24,7 @@ tag_name="${name}-${maj_ver}"
 
 dockerfile_name="dockerfile_$tag_name"
 
-image="ghcr.io/llnl/radiuss:llvm-${maj_ver}-ubuntu-22.04"
+image="ghcr.io/llnl/radiuss:${name}-${maj_ver}-ubuntu-22.04"
 
 sed -e "s/<VER>/$ver/g" \
     -e "s/<MAJ_VER>/$maj_ver/g" \

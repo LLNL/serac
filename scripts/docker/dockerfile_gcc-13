@@ -1,4 +1,4 @@
-FROM ghcr.io/llnl/radiuss:llvm-13-ubuntu-22.04
+FROM ghcr.io/llnl/radiuss:gcc-13-ubuntu-22.04
 LABEL maintainer="bramwell1@llnl.gov"
 ARG branch=develop
 
