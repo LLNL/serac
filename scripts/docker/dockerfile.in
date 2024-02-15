@@ -8,6 +8,16 @@ RUN sudo apt-get install doxygen gettext gfortran-$(gcc -dumpversion) graphviz l
                          lsb-release lua5.2 lua5.2-dev mpich python3-sphinx ssh texlive-full -fy
 RUN sudo useradd -m -s /bin/bash -G sudo serac
 
+# Remove flags from mpich
+RUN sed -i "s/ -flto=auto//g" /usr/bin/mpicxx.mpich
+RUN sed -i "s/ -flto=auto//g" /usr/bin/mpicc.mpich
+RUN sed -i "s/ -flto=auto//g" /usr/bin/mpifort.mpich
+RUN sed -i "s/ -ffat-lto-objects//g" /usr/bin/mpicxx.mpich
+RUN sed -i "s/ -ffat-lto-objects//g" /usr/bin/mpicc.mpich
+RUN sed -i "s/ -ffat-lto-objects//g" /usr/bin/mpifort.mpich
+RUN sed -i "s/ -fallow-invalid-boz//g" /usr/bin/mpifort.mpich
+RUN sed -i "s/ -fallow-argument-mismatch//g" /usr/bin/mpifort.mpich
+
 WORKDIR "/home/serac"
 USER serac
 
