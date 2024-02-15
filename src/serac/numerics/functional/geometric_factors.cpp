@@ -72,7 +72,6 @@ void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobian
       }
     }
   }
-
 }
 
 GeometricFactors::GeometricFactors(const Domain& d, int q, mfem::Geometry::Type g)

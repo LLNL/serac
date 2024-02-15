@@ -87,8 +87,7 @@ struct Integral {
 #endif
       }
 <<<<<<< HEAD
-#ifdef USE_CUDA
-      std::cout << "L103" << std::endl;
+#ifdef USE_CUDA std::cout << "L103" << std::endl;
       printCUDAMemUsage();
 #endif
       func(inputs, output_E.GetBlock(geometry).ReadWrite(), update_state);
@@ -266,8 +265,8 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
 #else
     auto ptr = accelerator::make_shared_array<ExecutionSpace::CPU, derivative_type>(num_elements * qpts_per_element);
 #endif
-    integral.evaluation_with_AD_[index][geom] =
-        domain_integral::evaluation_kernel<index, Q, geom>(s, qf, positions, jacobians, qdata, ptr, elements, num_elements);
+    integral.evaluation_with_AD_[index][geom] = domain_integral::evaluation_kernel<index, Q, geom>(
+        s, qf, positions, jacobians, qdata, ptr, elements, num_elements);
 
     integral.jvp_[index][geom] =
         domain_integral::jacobian_vector_product_kernel<index, Q, geom>(s, ptr, elements, num_elements);

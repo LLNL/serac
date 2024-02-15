@@ -135,8 +135,8 @@ auto get_derivative_type(lambda qf, qpt_data_type&& qpt_data)
 };
 
 template <typename lambda, int dim, int n, typename... T>
-SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(lambda qf, double t, const tensor<double, dim, n> x, RAJA::LaunchContext ctx,
-                                               const T&... inputs)
+SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(lambda qf, double t, const tensor<double, dim, n> x,
+                                               RAJA::LaunchContext ctx, const T&... inputs)
 {
   using return_type = decltype(qf(double{}, tensor<double, dim>{}, T{}[0]...));
 #ifdef USE_CUDA
@@ -275,76 +275,77 @@ void evaluation_kernel_impl(trial_element_tuple trial_elements, test_element, do
   RAJA::launch<launch_policy>(
       RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_SZ)),
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
-        RAJA::loop<teams_e>(ctx, e_range,
-                            [&ctx, device_J, device_x, u, qf, qpts_per_elem, rule, device_r, qf_state,
-                             /*device_*/ qf_derivatives, qf_inputs, interpolate_result, update_state](uint32_t e) {
-                              if constexpr (test_element_type::geometry == mfem::Geometry::CUBE) {
-                                // load the jacobians and positions for each quadrature point in this element
-                                static constexpr trial_element_tuple_type empty_trial_element{};
+        RAJA::loop<teams_e>(
+            ctx, e_range,
+            [&ctx, device_J, device_x, u, qf, qpts_per_elem, rule, device_r, qf_state,
+             /*device_*/ qf_derivatives, qf_inputs, interpolate_result, update_state](uint32_t e) {
+              if constexpr (test_element_type::geometry == mfem::Geometry::CUBE) {
+                // load the jacobians and positions for each quadrature point in this element
+                static constexpr trial_element_tuple_type empty_trial_element{};
 
-                                // batch-calculate values / derivatives of each trial space, at each quadrature point
+                // batch-calculate values / derivatives of each trial space, at each quadrature point
 
-                                (get<indices>(empty_trial_element)
-                                     .interpolate(get<indices>(u)[elements[e]], rule, &get<indices>(interpolate_result[elements[e]]), ctx),
-                                 ...);
+                (get<indices>(empty_trial_element)
+                     .interpolate(get<indices>(u)[elements[e]], rule, &get<indices>(interpolate_result[elements[e]]),
+                                  ctx),
+                 ...);
 
-                                ctx.teamSync();
+                ctx.teamSync();
 
-                                (promote_each_to_dual_when<indices == differentiation_index>(
-                                     get<indices>(interpolate_result[elements[e]]), &get<indices>(qf_inputs[elements[e]]), ctx),
-                                 ...);
-                                ctx.teamSync();
+                (promote_each_to_dual_when<indices == differentiation_index>(
+                     get<indices>(interpolate_result[elements[e]]), &get<indices>(qf_inputs[elements[e]]), ctx),
+                 ...);
+                ctx.teamSync();
 
-                                //// use J_e to transform values / derivatives on the parent element
-                                //// to the to the corresponding values / derivatives on the physical element
-                                (parent_to_physical<get<indices>(empty_trial_element).family>(
-                                     get<indices>(qf_inputs[elements[e]]), device_J, e, ctx),
-                                 ...);
-                                // parent_to_physical<get<0>(empty_trial_element).family>(qf_inputs, device_J,e, ctx);
+                //// use J_e to transform values / derivatives on the parent element
+                //// to the to the corresponding values / derivatives on the physical element
+                (parent_to_physical<get<indices>(empty_trial_element).family>(get<indices>(qf_inputs[elements[e]]),
+                                                                              device_J, e, ctx),
+                 ...);
+                // parent_to_physical<get<0>(empty_trial_element).family>(qf_inputs, device_J,e, ctx);
 
-                                ctx.teamSync();
-                                //// (batch) evalute the q-function at each quadrature point
-                                ////
-                                //// note: the weird immediately-invoked lambda expression is
-                                //// a workaround for a bug in GCC(<12.0) where it fails to
-                                //// decide which function overload to use, and crashes
-                                //
-                                auto qf_outputs = [&]() {
-                                  if constexpr (std::is_same_v<state_type, Nothing>) {
-                                    return batch_apply_qf_no_qdata(qf, device_x[e], ctx, get<indices>(qf_inputs[e])...);
-                                  } else {
-                                    return batch_apply_qf(qf, device_x[e], &qf_state(e, 0), update_state, ctx,
-                                                          get<indices>(qf_inputs[e])...);
-                                  }
-                                }();
-                                ctx.teamSync();
+                ctx.teamSync();
+                //// (batch) evalute the q-function at each quadrature point
+                ////
+                //// note: the weird immediately-invoked lambda expression is
+                //// a workaround for a bug in GCC(<12.0) where it fails to
+                //// decide which function overload to use, and crashes
+                //
+                auto qf_outputs = [&]() {
+                  if constexpr (std::is_same_v<state_type, Nothing>) {
+                    return batch_apply_qf_no_qdata(qf, device_x[e], ctx, get<indices>(qf_inputs[e])...);
+                  } else {
+                    return batch_apply_qf(qf, device_x[e], &qf_state(e, 0), update_state, ctx,
+                                          get<indices>(qf_inputs[e])...);
+                  }
+                }();
+                ctx.teamSync();
 // printf("here5\n");
 #ifdef USE_CUDA
-                                using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+                using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
-    using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
+                using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
 #endif
-                                // use J to transform sources / fluxes on the physical element
-                                // back to the corresponding sources / fluxes on the parent element
-                                // physical_to_parent<test_element_type::family>(qf_outputs, J_e);
+                // use J to transform sources / fluxes on the physical element
+                // back to the corresponding sources / fluxes on the parent element
+                // physical_to_parent<test_element_type::family>(qf_outputs, J_e);
 
-                                // write out the q-function derivatives after applying the
-                                // physical_to_parent transformation, so that those transformations
-                                // won't need to be applied in the action_of_gradient and element_gradient kernels
-                                if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
-                                  RAJA::RangeSegment x_range(0, leading_dimension(qf_outputs));
-                                  RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
-                                    // printf()
-                                    qf_derivatives[e * uint32_t(qpts_per_elem) + uint32_t(q)] =
-                                       get_gradient(qf_outputs[q]);
-                                  });
-                                }
-                                ctx.teamSync();
-                                // printf("here6\n");
-                                // (batch) integrate the material response against the test-space basis functions
-                                test_element_type::integrate(get_value(qf_outputs), rule, &device_r[elements[e]], ctx);
-                              }
-                            });
+                // write out the q-function derivatives after applying the
+                // physical_to_parent transformation, so that those transformations
+                // won't need to be applied in the action_of_gradient and element_gradient kernels
+                if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
+                  RAJA::RangeSegment x_range(0, leading_dimension(qf_outputs));
+                  RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
+                    // printf()
+                    qf_derivatives[e * uint32_t(qpts_per_elem) + uint32_t(q)] = get_gradient(qf_outputs[q]);
+                  });
+                }
+                ctx.teamSync();
+                // printf("here6\n");
+                // (batch) integrate the material response against the test-space basis functions
+                test_element_type::integrate(get_value(qf_outputs), rule, &device_r[elements[e]], ctx);
+              }
+            });
       });
 #ifdef USE_CUDA
   rm.copy(r, device_r);
@@ -448,23 +449,20 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
   using launch_policy = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
 #endif
   // for each element in the domain
-  RAJA::launch<launch_policy>(RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_X, BLOCK_Y, BLOCK_Z)),
-                              [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
-                                RAJA::loop<teams_e>(ctx, e_range,
-                                                    [du, rule, &ctx, qf_derivatives, dr, num_qpts](int e) {
-                                                      if constexpr (g == mfem::Geometry::CUBE) {
-                                                        // (batch) interpolate each quadrature point's value
-                                                        auto qf_inputs = trial_element::interpolate(du[elements[e]], rule,
-                                                          nullptr, ctx);
+  RAJA::launch<launch_policy>(
+      RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_X, BLOCK_Y, BLOCK_Z)),
+      [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
+        RAJA::loop<teams_e>(ctx, e_range, [du, rule, &ctx, qf_derivatives, dr, num_qpts](int e) {
+          if constexpr (g == mfem::Geometry::CUBE) {
+            // (batch) interpolate each quadrature point's value
+            auto qf_inputs = trial_element::interpolate(du[elements[e]], rule, nullptr, ctx);
 
-                                                        auto qf_outputs =
-                                                        batch_apply_chain_rule<is_QOI>(qf_derivatives + e * num_qpts,
-                                                        qf_inputs);
+            auto qf_outputs = batch_apply_chain_rule<is_QOI>(qf_derivatives + e * num_qpts, qf_inputs);
 
-                                                        test_element::integrate(qf_outputs, rule, &dr[elements[e]], ctx);
-                                                      }
-                                                    });
-                              });
+            test_element::integrate(qf_outputs, rule, &dr[elements[e]], ctx);
+          }
+        });
+      });
 }
 
 /**
@@ -524,8 +522,9 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(ctx, elements_range, [&ctx, dK, qf_derivatives, nquad, rule](uint32_t e) {
           if constexpr (g == mfem::Geometry::CUBE) {
-            static constexpr bool  is_QOI_2   = test::family == Family::QOI;
-            [[maybe_unused]] auto* output_ptr = reinterpret_cast<typename test_element::dof_type*>(&dK(elements[e], 0, 0));
+            static constexpr bool  is_QOI_2 = test::family == Family::QOI;
+            [[maybe_unused]] auto* output_ptr =
+                reinterpret_cast<typename test_element::dof_type*>(&dK(elements[e], 0, 0));
 
             (void*)qf_derivatives;
 
@@ -560,7 +559,7 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
 template <uint32_t wrt, int Q, mfem::Geometry::Type geom, typename signature, typename lambda_type, typename state_type,
           typename derivative_type>
 auto evaluation_kernel(signature s, lambda_type qf, const double* positions, const double* jacobians,
-                       std::shared_ptr<QuadratureData<state_type> > qf_state,
+                       std::shared_ptr<QuadratureData<state_type>> qf_state,
                        std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {
   auto trial_elements = trial_elements_tuple<geom>(s);

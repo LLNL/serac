@@ -367,15 +367,14 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
  */
 template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type>
 <<<<<<< HEAD
-#if defined(USE_CUDA)
-void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::GPU> dK,
+#if defined (USE_CUDA) void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::GPU> dK,
 #else
 void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
 #endif
-                             derivatives_type* qf_derivatives, std::size_t num_elements)
+                                                    derivatives_type* qf_derivatives, std::size_t num_elements)
 =======
-void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, derivatives_type* qf_derivatives,
-                             const int* elements, std::size_t num_elements)
+    void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, derivatives_type* qf_derivatives,
+                                 const int* elements, std::size_t num_elements)
 >>>>>>> develop
 {
   using test_element  = finite_element<g, test>;
@@ -443,8 +442,7 @@ std::function<void(ExecArrayView<double, 3, ExecutionSpace::GPU>)> element_gradi
 #else
 std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)> element_gradient_kernel(
 <<<<<<< HEAD
-#endif
-    signature, std::shared_ptr<derivative_type> qf_derivatives, uint32_t num_elements)
+    #endif signature, std::shared_ptr<derivative_type> qf_derivatives, uint32_t num_elements)
 =======
     signature, std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 >>>>>>> develop
