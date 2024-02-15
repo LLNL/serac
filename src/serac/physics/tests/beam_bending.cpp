@@ -49,7 +49,7 @@ TEST(BeamBending, TwoDimensional)
                                             .max_iterations = 500,
                                             .print_level    = 1};
 
-#ifdef MFEM_USE_SUNDIALS
+#ifdef SERAC_USE_SUNDIALS
   serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::KINFullStep,
                                                   .relative_tol   = 1.0e-12,
                                                   .absolute_tol   = 1.0e-12,
@@ -79,7 +79,8 @@ TEST(BeamBending, TwoDimensional)
   solid_solver.setDisplacementBCs(ess_bdr, bc);
   solid_solver.setDisplacement(bc);
 
-  solid_solver.setTraction([](const auto& x, const auto& n, const double) { return -0.01 * n * (x[1] > 0.99); });
+  solid_solver.setTraction([](const auto& x, const auto& n, const double) { return -0.01 * n * (x[1] > 0.99); },
+                           EntireBoundary(StateManager::mesh(mesh_tag)));
 
   // Finalize the data structures
   solid_solver.completeSetup();

@@ -49,7 +49,7 @@ TEST(Thermal, FiniteDifference)
   // As we only have one parameter in this example, the index is zero.
   constexpr int conductivity_parameter_index = 0;
 
-  // Construct a functional-based thermal conduction solver
+  // Construct a functional-based heat transfer solver
   //
   // Note that we now include an extra template parameter indicating the finite element space for the parameterized
   // field, in this case the thermal conductivity. We also pass an array of finite element states for each of the
@@ -78,11 +78,11 @@ TEST(Thermal, FiniteDifference)
 
   // Define a constant source term
   heat_transfer::ConstantSource source{1.0};
-  thermal_solver.setSource(source);
+  thermal_solver.setSource(source, EntireDomain(pmesh));
 
   // Set the flux term to zero for testing code paths
   heat_transfer::ConstantFlux flux_bc{0.0};
-  thermal_solver.setFluxBCs(flux_bc);
+  thermal_solver.setFluxBCs(flux_bc, EntireBoundary(pmesh));
 
   // Finalize the data structures
   thermal_solver.completeSetup();
@@ -205,7 +205,7 @@ TEST(HeatTransfer, FiniteDifferenceShape)
   thermal_solver.setTemperature(one);
 
   heat_transfer::ConstantSource source{1.0};
-  thermal_solver.setSource(source);
+  thermal_solver.setSource(source, EntireDomain(pmesh));
 
   // Finalize the data structures
   thermal_solver.completeSetup();

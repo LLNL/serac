@@ -143,6 +143,14 @@ public:
   FiniteElementVector& operator=(const mfem::HypreParVector& rhs);
 
   /**
+   * @brief Copy assignment from a hypre par vector
+   *
+   * @param rhs The rhs input hypre par vector
+   * @return The copy assigned input vector
+   */
+  FiniteElementVector& operator=(const mfem::Vector& rhs);
+
+  /**
    * @brief Returns the MPI communicator for the state
    * @return The underlying MPI communicator
    */

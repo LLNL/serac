@@ -41,6 +41,10 @@ Below is the documentation for Serac's command line options:
      - -p
      - N/A
      - Enable ParaView output
+   * - --print-unused
+     - -u
+     - N/A
+     - Prints unused entries in input file, then exits
    * - --version
      - -v
      - N/A

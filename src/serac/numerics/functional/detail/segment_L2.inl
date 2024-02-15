@@ -178,8 +178,12 @@ struct finite_element<mfem::Geometry::SEGMENT, L2<p, c> > {
         f_buffer_type flux;
 
         for (int qx = 0; qx < q; qx++) {
-          source(qx) = reinterpret_cast<const double*>(&get<SOURCE>(qf_output[qx]))[i * ntrial + j];
-          flux(qx)   = reinterpret_cast<const double*>(&get<FLUX>(qf_output[qx]))[i * ntrial + j];
+          if constexpr (!is_zero<source_type>{}) {
+            source(qx) = reinterpret_cast<const double*>(&get<SOURCE>(qf_output[qx]))[i * ntrial + j];
+          }
+          if constexpr (!is_zero<flux_type>{}) {
+            flux(qx) = reinterpret_cast<const double*>(&get<FLUX>(qf_output[qx]))[i * ntrial + j];
+          }
         }
 
         element_residual[j * step](i) += dot(source, B) + dot(flux, G);

@@ -62,7 +62,7 @@ In general, this process looks something like the following:
      a user of a physics module would find it more intuitive to pass the mesh pointer they wish to use.
      Specifically, the meaning of a mesh parameter is much easier to discern than a string parameter.
 
-  #. The physics module creates its fields (e.g., temperature for a thermal conduction module) via
+  #. The physics module creates its fields (e.g., temperature for a heat transfer module) via
      calls to ``StateManager::newState()``.  In addition to the ``serac::FiniteElementState`` constructor
      arguments, this method also accepts a string-valued tag for the mesh with which the field is
      associated.  The appropriate tag is a member of ``BasePhysics`` and initialized in the previous step.

@@ -14,8 +14,8 @@ void ThermomechanicsInputOptions::defineInputFileSchema(axom::inlet::Container& 
   auto& solid_solver_table = container.addStruct("solid", "Finite deformation solid mechanics module").required();
   serac::SolidMechanicsInputOptions::defineInputFileSchema(solid_solver_table);
 
-  // The thermal conduction options
-  auto& thermal_solver_table = container.addStruct("thermal_conduction", "Thermal conduction module").required();
+  // The heat transfer options
+  auto& thermal_solver_table = container.addStruct("heat_transfer", "Heat transfer module").required();
   serac::HeatTransferInputOptions::defineInputFileSchema(thermal_solver_table);
 
   auto& ref_temp = container.addStruct("reference_temperature",
@@ -53,7 +53,7 @@ serac::ThermomechanicsInputOptions FromInlet<serac::ThermomechanicsInputOptions>
 
   result.solid_options = base["solid"].get<serac::SolidMechanicsInputOptions>();
 
-  result.thermal_options = base["thermal_conduction"].get<serac::HeatTransferInputOptions>();
+  result.thermal_options = base["heat_transfer"].get<serac::HeatTransferInputOptions>();
 
   if (base.contains("coef_thermal_expansion")) {
     result.coef_thermal_expansion = base["coef_thermal_expansion"].get<serac::input::CoefficientInputOptions>();

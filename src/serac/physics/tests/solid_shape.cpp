@@ -115,7 +115,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
 
     solid_solver.setMaterial(mat);
 
-    solid_solver.addBodyForce(force);
+    solid_solver.addBodyForce(force, EntireDomain(StateManager::mesh(mesh_tag)));
 
     // Finalize the data structures
     solid_solver.completeSetup();
@@ -162,7 +162,7 @@ void shape_test(GeometricNonlinearities geo_nonlin)
 
     solid_solver_no_shape.setMaterial(mat);
 
-    solid_solver_no_shape.addBodyForce(force);
+    solid_solver_no_shape.addBodyForce(force, EntireDomain(StateManager::mesh(new_mesh_tag)));
 
     // Finalize the data structures
     solid_solver_no_shape.completeSetup();

@@ -35,6 +35,14 @@ namespace detail {
  * @param[in] target The string to prepend to
  */
 std::string addPrefix(const std::string& prefix, const std::string& target);
+
+/**
+ * @brief Removes a prefix and the underscore delimiter from a target string
+ * @param[in] prefix The prefix string to remove
+ * @param[in] target The larger string to remove the prefix from
+ */
+std::string removePrefix(const std::string& prefix, const std::string& target);
+
 }  // namespace detail
 
 /**
@@ -101,11 +109,26 @@ public:
   virtual int minCycle() const;
 
   /**
+   * @brief Check if the physics is setup as quasistatic
+   *
+   * @return true if quasistatic, false if transient
+   */
+  bool isQuasistatic() const { return is_quasistatic_; }
+
+  /**
    * @brief Get a vector of the timestep sizes (i.e. \f$\Delta t\f$s) taken by the forward solver
    *
    * @return The vector of timestep sizes taken by the foward solver
    */
   virtual std::vector<double> timesteps() const;
+
+  /**
+   * @brief Base method to reset physics states to zero.  This does not reset design parameters or shape.
+   *
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
+   */
+  virtual void resetStates(int cycle = 0, double time = 0.0) = 0;
 
   /**
    * @brief Complete the setup and allocate the necessary data structures
@@ -162,11 +185,16 @@ public:
    *
    * @param parameter_name The name of the Finite Element State parameter to retrieve
    * @return The named parameter Finite Element State
+   *
+   * @note The input parameter name should not contain the base physics name. It should be identical to what
+   * is in the physics module constructor argument list.
    */
   const FiniteElementState& parameter(const std::string& parameter_name) const
   {
+    std::string appended_name = detail::addPrefix(name_, parameter_name);
+
     for (auto& parameter : parameters_) {
-      if (parameter_name == parameter.state->name()) {
+      if (appended_name == parameter.state->name()) {
         return *parameter.state;
       }
     }
@@ -203,7 +231,7 @@ public:
     std::vector<std::string> parameter_names;
 
     for (auto& parameter : parameters_) {
-      parameter_names.emplace_back(parameter.state->name());
+      parameter_names.emplace_back(detail::removePrefix(name_, parameter.state->name()));
     }
 
     return parameter_names;
@@ -354,6 +382,15 @@ public:
   mfem::ParMesh& mesh() { return mesh_; }
 
 protected:
+  /**
+   * @brief Protected, non-virtual method to reset physics states to zero.  This does not reset design parameters or
+   * shape.
+   *
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
+   */
+  void initializeBasePhysicsStates(int cycle, double time);
+
   /// @brief Name of the physics module
   std::string name_ = {};
 

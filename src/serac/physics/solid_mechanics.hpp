@@ -20,7 +20,7 @@
 #include "serac/physics/base_physics.hpp"
 #include "serac/numerics/odes.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
-#include "serac/numerics/functional/functional.hpp"
+#include "serac/numerics/functional/shape_aware_functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/materials/solid_material.hpp"
 
@@ -100,13 +100,13 @@ class SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_se
 public:
   //! @cond Doxygen_Suppress
   static constexpr int  VALUE = 0, DERIVATIVE = 1;
-  static constexpr int  SHAPE = 2;
+  static constexpr int  SHAPE = 0;
   static constexpr auto I     = Identity<dim>();
   //! @endcond
 
-  /// @brief The total number of non-parameter state variables (displacement, acceleration, shape) passed to the FEM
+  /// @brief The total number of non-parameter state variables (displacement, acceleration) passed to the FEM
   /// integrators
-  static constexpr auto NUM_STATE_VARS = 3;
+  static constexpr auto NUM_STATE_VARS = 2;
 
   /// @brief a container holding quadrature point data of the specified type
   /// @tparam T the type of data to store at each quadrature point
@@ -169,8 +169,6 @@ public:
         ode2_(displacement_.space().TrueVSize(),
               {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = v_, .d2u_dt2 = acceleration_},
               *nonlin_solver_, bcs_),
-        c0_(0.0),
-        c1_(0.0),
         geom_nonlin_(geom_nonlin)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
@@ -201,12 +199,12 @@ public:
     duals_.push_back(&reactions_);
 
     // Create a pack of the primal field and parameter finite element spaces
-    mfem::ParFiniteElementSpace* test_space = &displacement_.space();
+    mfem::ParFiniteElementSpace* test_space  = &displacement_.space();
+    mfem::ParFiniteElementSpace* shape_space = &shape_displacement_.space();
 
     std::array<const mfem::ParFiniteElementSpace*, NUM_STATE_VARS + sizeof...(parameter_space)> trial_spaces;
     trial_spaces[0] = &displacement_.space();
     trial_spaces[1] = &displacement_.space();
-    trial_spaces[2] = &shape_displacement_.space();
 
     SLIC_ERROR_ROOT_IF(
         sizeof...(parameter_space) != parameter_names.size(),
@@ -222,20 +220,8 @@ public:
       });
     }
 
-    residual_ =
-        std::make_unique<Functional<test(trial, trial, shape_trial, parameter_space...)>>(test_space, trial_spaces);
-
-    displacement_              = 0.0;
-    velocity_                  = 0.0;
-    acceleration_              = 0.0;
-    shape_displacement_        = 0.0;
-    adjoint_displacement_      = 0.0;
-    displacement_adjoint_load_ = 0.0;
-    velocity_adjoint_load_     = 0.0;
-    acceleration_adjoint_load_ = 0.0;
-
-    implicit_sensitivity_displacement_start_of_step_ = 0.0;
-    implicit_sensitivity_velocity_start_of_step_     = 0.0;
+    residual_ = std::make_unique<ShapeAwareFunctional<shape_trial, test(trial, trial, parameter_space...)>>(
+        shape_space, test_space, trial_spaces);
 
     // If the user wants the AMG preconditioner with a linear solver, set the pfes
     // to be the displacement
@@ -255,13 +241,11 @@ public:
     v_.SetSize(true_size);
 
     du_.SetSize(true_size);
-    du_ = 0.0;
-
     dr_.SetSize(true_size);
-    dr_ = 0.0;
-
     predicted_displacement_.SetSize(true_size);
-    predicted_displacement_ = 0.0;
+
+    shape_displacement_ = 0.0;
+    initializeSolidMechanicsStates();
   }
 
   /**
@@ -355,6 +339,50 @@ public:
 
   /// @brief Destroy the SolidMechanics Functional object
   virtual ~SolidMechanics() {}
+
+  /**
+   * @brief Non virtual method to reset thermal states to zero.  This does not reset design parameters or shape.
+   *
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
+   */
+  void initializeSolidMechanicsStates()
+  {
+    c0_ = 0.0;
+    c1_ = 0.0;
+
+    displacement_ = 0.0;
+    velocity_     = 0.0;
+    acceleration_ = 0.0;
+
+    adjoint_displacement_      = 0.0;
+    displacement_adjoint_load_ = 0.0;
+    velocity_adjoint_load_     = 0.0;
+    acceleration_adjoint_load_ = 0.0;
+
+    implicit_sensitivity_displacement_start_of_step_ = 0.0;
+    implicit_sensitivity_velocity_start_of_step_     = 0.0;
+
+    reactions_ = 0.0;
+
+    u_                      = 0.0;
+    v_                      = 0.0;
+    du_                     = 0.0;
+    dr_                     = 0.0;
+    predicted_displacement_ = 0.0;
+  }
+
+  /**
+   * @brief Method to reset physics states to zero.  This does not reset design parameters or shape.
+   *
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
+   */
+  void resetStates(int cycle = 0, double time = 0.0) override
+  {
+    BasePhysics::initializeBasePhysicsStates(cycle, time);
+    initializeSolidMechanicsStates();
+  }
 
   /**
    * @brief Create a shared ptr to a quadrature data buffer for the given material type
@@ -650,9 +678,9 @@ public:
   std::vector<std::string> stateNames() const override
   {
     if (is_quasistatic_) {
-      return std::vector<std::string>{{"displacement"}};
+      return std::vector<std::string>{"displacement"};
     } else {
-      return std::vector<std::string>{{"displacement"}, {"velocity"}, {"acceleration"}};
+      return std::vector<std::string>{"displacement", "velocity", "acceleration"};
     }
   }
 
@@ -679,7 +707,7 @@ public:
   template <int... active_parameters, typename callable>
   void addCustomBoundaryIntegral(DependsOn<active_parameters...>, callable qfunction)
   {
-    residual_->AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
+    residual_->AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
                                    qfunction, mesh_);
   }
 
@@ -740,8 +768,8 @@ public:
   void addCustomDomainIntegral(DependsOn<active_parameters...>, callable qfunction,
                                qdata_type<StateType> qdata = NoQData)
   {
-    residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
-                                 qfunction, mesh_, qdata);
+    residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{}, qfunction,
+                                 mesh_, qdata);
   }
 
   /**
@@ -773,33 +801,19 @@ public:
   {
     residual_->AddDomainIntegral(
         Dimension<dim>{},
-        DependsOn<0, 1, 2,
+        DependsOn<0, 1,
                   active_parameters + NUM_STATE_VARS...>{},  // the magic number "+ NUM_STATE_VARS" accounts for the
                                                              // fact that the displacement, acceleration, and shape
                                                              // fields are always-on and come first, so the `n`th
                                                              // parameter will actually be argument `n + NUM_STATE_VARS`
         [material, geom_nonlin = geom_nonlin_](double /*t*/, auto /*x*/, auto& state, auto displacement,
-                                               auto acceleration, auto shape, auto... params) {
+                                               auto acceleration, auto... params) {
           auto du_dX   = get<DERIVATIVE>(displacement);
           auto d2u_dt2 = get<VALUE>(acceleration);
-          auto dp_dX   = get<DERIVATIVE>(shape);
 
-          // Compute the displacement gradient with respect to the shape-adjusted coordinate.
+          auto stress = material(state, du_dX, params...);
 
-          // Note that the current configuration x = X + u + p, where X is the original reference
-          // configuration, u is the displacement, and p is the shape displacement. We need the gradient with
-          // respect to the perturbed reference configuration X' = X + p for the material model. Therefore, we calculate
-          // du/dX' = du/dX * dX/dX' = du/dX * (dX'/dX)^-1 = du/dX * (I + dp/dX)^-1
-
-          auto du_dX_prime = dot(du_dX, inv(I + dp_dX));
-
-          auto stress = material(state, du_dX_prime, params...);
-
-          // dx_dX is the volumetric transform to get us back to the original
-          // reference configuration (dx/dX = I + du/dX + dp/dX). If we are not including geometric
-          // nonlinearities, we ignore the du/dX factor.
-
-          auto dx_dX = 0.0 * du_dX + dp_dX + I;
+          auto dx_dX = 0.0 * du_dX + I;
 
           if (geom_nonlin == GeometricNonlinearities::On) {
             dx_dX += du_dX;
@@ -807,14 +821,7 @@ public:
 
           auto flux = dot(stress, transpose(inv(dx_dX))) * det(dx_dX);
 
-          // This transpose on the stress in the following line is a
-          // hack to fix a bug in the residual operator. The stress
-          // should be transposed in the contraction of the Piola
-          // stress with the shape function gradients.
-          //
-          // Note that the mass part of the return is integrated in the perturbed reference
-          // configuration, hence the det(I + dp_dx) = det(dX'/dX)
-          return serac::tuple{material.density * d2u_dt2 * det(I + dp_dX), flux};
+          return serac::tuple{material.density * d2u_dt2, flux};
         },
         mesh_, qdata);
   }
@@ -860,6 +867,9 @@ public:
    * @brief Set the body forcefunction
    *
    * @tparam BodyForceType The type of the body force load
+   * @param body_force A function describing the body force applied
+   * @param optional_domain The domain over which the body force is applied. If nothing is supplied the entire domain is
+   * used.
    * @pre body_force must be a object that can be called with the following arguments:
    *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
    *    2. `double t` the time (note: time will be handled differently in the future)
@@ -873,25 +883,24 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename BodyForceType>
-  void addBodyForce(DependsOn<active_parameters...>, BodyForceType body_force)
+  void addBodyForce(DependsOn<active_parameters...>, BodyForceType body_force,
+                    const std::optional<Domain>& optional_domain = std::nullopt)
   {
+    Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireDomain(mesh_);
+
     residual_->AddDomainIntegral(
-        Dimension<dim>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
-        [body_force](double t, auto x, auto /* displacement */, auto /* acceleration */, auto shape, auto... params) {
-          // note: this assumes that the body force function is defined
-          // per unit volume in the reference configuration
-          auto p     = get<VALUE>(shape);
-          auto dp_dX = get<DERIVATIVE>(shape);
-          return serac::tuple{-1.0 * body_force(x + p, t, params...) * det(dp_dX + I), zero{}};
+        Dimension<dim>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
+        [body_force](double t, auto x, auto /* displacement */, auto /* acceleration */, auto... params) {
+          return serac::tuple{-1.0 * body_force(x, t, params...), zero{}};
         },
-        mesh_);
+        domain);
   }
 
   /// @overload
   template <typename BodyForceType>
-  void addBodyForce(BodyForceType body_force)
+  void addBodyForce(BodyForceType body_force, const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    addBodyForce(DependsOn<>{}, body_force);
+    addBodyForce(DependsOn<>{}, body_force, optional_domain);
   }
 
   /**
@@ -899,7 +908,8 @@ public:
    *
    * @tparam TractionType The type of the traction load
    * @param traction_function A function describing the traction applied to a boundary
-   *
+   * @param optional_domain The domain over which the traction is applied. If nothing is supplied the entire boundary is
+   * used.
    * @pre TractionType must be a object that can be called with the following arguments:
    *    1. `tensor<T,dim> x` the spatial coordinates for the quadrature point
    *    2. `tensor<T,dim> n` the outward-facing unit normal for the quadrature point
@@ -917,34 +927,26 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename TractionType>
-  void setTraction(DependsOn<active_parameters...>, TractionType traction_function)
+  void setTraction(DependsOn<active_parameters...>, TractionType traction_function,
+                   const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    residual_->AddBoundaryIntegral(
-        Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
-        [traction_function](double t, auto X, auto /* displacement */, auto /* acceleration */, auto shape,
-                            auto... params) {
-          auto x = X + shape;
-          auto n = cross(get<DERIVATIVE>(x));
+    Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireBoundary(mesh_);
 
-          // serac::Functional's boundary integrals multiply the q-function output by
-          // norm(cross(dX_dxi)) at that quadrature point, but if we impose a shape displacement
-          // then that weight needs to be corrected. The new weight should be
-          // norm(cross(dX_dxi + dp_dxi)), so we multiply by the ratio w_new / w_old
-          // to get
-          //   q * area_correction * w_old
-          // = q * (w_new / w_old) * w_old
-          // = q * w_new
-          auto area_correction = norm(n) / norm(cross(get<DERIVATIVE>(X)));
-          return -1.0 * traction_function(get<VALUE>(x), normalize(n), t, params...) * area_correction;
+    residual_->AddBoundaryIntegral(
+        Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
+        [traction_function](double t, auto X, auto /* displacement */, auto /* acceleration */, auto... params) {
+          auto n = cross(get<DERIVATIVE>(X));
+
+          return -1.0 * traction_function(get<VALUE>(X), normalize(n), t, params...);
         },
-        mesh_);
+        domain);
   }
 
   /// @overload
   template <typename TractionType>
-  void setTraction(TractionType traction_function)
+  void setTraction(TractionType traction_function, const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    setTraction(DependsOn<>{}, traction_function);
+    setTraction(DependsOn<>{}, traction_function, optional_domain);
   }
 
   /**
@@ -952,7 +954,8 @@ public:
    *
    * @tparam PressureType The type of the pressure load
    * @param pressure_function A function describing the pressure applied to a boundary
-   *
+   * @param optional_domain The domain over which the pressure is applied. If nothing is supplied the entire boundary is
+   * used.
    * @pre PressureType must be a object that can be called with the following arguments:
    *    1. `tensor<T,dim> x` the reference configuration spatial coordinates for the quadrature point
    *    2. `double t` the time (note: time will be handled differently in the future)
@@ -969,14 +972,17 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename PressureType>
-  void setPressure(DependsOn<active_parameters...>, PressureType pressure_function)
+  void setPressure(DependsOn<active_parameters...>, PressureType pressure_function,
+                   const std::optional<Domain>& optional_domain = std::nullopt)
   {
+    Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireBoundary(mesh_);
+
     residual_->AddBoundaryIntegral(
-        Dimension<dim - 1>{}, DependsOn<0, 1, 2, active_parameters + NUM_STATE_VARS...>{},
+        Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
         [pressure_function, geom_nonlin = geom_nonlin_](double t, auto X, auto displacement, auto /* acceleration */,
-                                                        auto shape, auto... params) {
+                                                        auto... params) {
           // Calculate the position and normal in the shape perturbed deformed configuration
-          auto x = X + shape + 0.0 * displacement;
+          auto x = X + 0.0 * displacement;
 
           if (geom_nonlin == GeometricNonlinearities::On) {
             x = x + displacement;
@@ -996,16 +1002,16 @@ public:
           // = pressure * (normal_new / norm(normal_old)) * w_old
 
           // We always query the pressure function in the undeformed configuration
-          return pressure_function(get<VALUE>(X + shape), t, params...) * (n / norm(cross(get<DERIVATIVE>(X))));
+          return pressure_function(get<VALUE>(X), t, params...) * (n / norm(cross(get<DERIVATIVE>(X))));
         },
-        mesh_);
+        domain);
   }
 
   /// @overload
   template <typename PressureType>
-  void setPressure(PressureType pressure_function)
+  void setPressure(PressureType pressure_function, const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    setPressure(DependsOn<>{}, pressure_function);
+    setPressure(DependsOn<>{}, pressure_function, optional_domain);
   }
 
   /// @brief Build the quasi-static operator corresponding to the total Lagrangian formulation
@@ -1018,7 +1024,7 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          const mfem::Vector res = (*residual_)(ode_time_point_, u, acceleration_, shape_displacement_,
+          const mfem::Vector res = (*residual_)(ode_time_point_, shape_displacement_, u, acceleration_,
                                                 *parameters_[parameter_indices].state...);
 
           // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
@@ -1030,7 +1036,7 @@ public:
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          auto [r, drdu] = (*residual_)(ode_time_point_, differentiate_wrt(u), acceleration_, shape_displacement_,
+          auto [r, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(u), acceleration_,
                                         *parameters_[parameter_indices].state...);
           J_             = assemble(drdu);
           J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
@@ -1077,8 +1083,8 @@ public:
 
           [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
             add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
-            const mfem::Vector res = (*residual_)(ode_time_point_, predicted_displacement_, d2u_dt2,
-                                                  shape_displacement_, *parameters_[parameter_indices].state...);
+            const mfem::Vector res = (*residual_)(ode_time_point_, shape_displacement_, predicted_displacement_,
+                                                  d2u_dt2, *parameters_[parameter_indices].state...);
 
             // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
             // tracking strategy
@@ -1091,14 +1097,14 @@ public:
             add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
 
             // K := dR/du
-            auto K = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, differentiate_wrt(predicted_displacement_),
-                                                         d2u_dt2, shape_displacement_,
+            auto K = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_,
+                                                         differentiate_wrt(predicted_displacement_), d2u_dt2,
                                                          *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/da
-            auto M = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, predicted_displacement_,
-                                                         differentiate_wrt(d2u_dt2), shape_displacement_,
+            auto M = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_, predicted_displacement_,
+                                                         differentiate_wrt(d2u_dt2),
                                                          *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
@@ -1165,16 +1171,12 @@ public:
       // after finding displacements that satisfy equilibrium,
       // compute the residual one more time, this time enabling
       // the material state buffers to be updated
-      residual_->update_qdata = true;
+      residual_->updateQdata(true);
 
-      // this seems like the wrong way to be doing this assignment, but
-      // reactions_ = residual(displacement, ...);
-      // isn't currently supported
+      reactions_ = (*residual_)(ode_time_point_, shape_displacement_, displacement_, acceleration_,
+                                *parameters_[parameter_indices].state...);
 
-      reactions_.Vector::operator=((*residual_)(ode_time_point_, displacement_, acceleration_, shape_displacement_,
-                                                *parameters_[parameter_indices].state...));
-
-      residual_->update_qdata = false;
+      residual_->updateQdata(false);
     }
 
     cycle_ += 1;
@@ -1243,8 +1245,8 @@ public:
     adjoint_essential = 0.0;
 
     if (is_quasistatic_) {
-      auto [_, drdu] = (*residual_)(ode_time_point_, differentiate_wrt(displacement_), acceleration_,
-                                    shape_displacement_, *parameters_[parameter_indices].state...);
+      auto [_, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(displacement_),
+                                    acceleration_, *parameters_[parameter_indices].state...);
       auto jacobian  = assemble(drdu);
       auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -1275,13 +1277,14 @@ public:
     double dt_n   = loadCheckpointedTimestep(cycle_ - 1);
 
     // K := dR/du
-    auto K = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, differentiate_wrt(displacement_), acceleration_,
-                                                 shape_displacement_, *parameters_[parameter_indices].state...));
+    auto K = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(displacement_),
+                                                 acceleration_, *parameters_[parameter_indices].state...));
     std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
     // M := dR/da
-    auto M = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, displacement_, differentiate_wrt(acceleration_),
-                                                 shape_displacement_, *parameters_[parameter_indices].state...));
+    auto M = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_, displacement_,
+                                                 differentiate_wrt(acceleration_),
+                                                 *parameters_[parameter_indices].state...));
     std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
     solid_mechanics::detail::adjoint_integrate(
@@ -1358,8 +1361,8 @@ public:
   FiniteElementDual& computeTimestepShapeSensitivity() override
   {
     auto drdshape =
-        serac::get<DERIVATIVE>((*residual_)(DifferentiateWRT<SHAPE>{}, ode_time_point_, displacement_, acceleration_,
-                                            shape_displacement_, *parameters_[parameter_indices].state...));
+        serac::get<DERIVATIVE>((*residual_)(ode_time_point_, differentiate_wrt(shape_displacement_), displacement_,
+                                            acceleration_, *parameters_[parameter_indices].state...));
 
     auto drdshape_mat = assemble(drdshape);
 
@@ -1448,7 +1451,7 @@ protected:
   FiniteElementDual reactions_;
 
   /// serac::Functional that is used to calculate the residual and its derivatives
-  std::unique_ptr<Functional<test(trial, trial, shape_trial, parameter_space...)>> residual_;
+  std::unique_ptr<ShapeAwareFunctional<shape_trial, test(trial, trial, parameter_space...)>> residual_;
 
   /// mfem::Operator that calculates the residual after applying essential boundary conditions
   std::unique_ptr<mfem_ext::StdFunctionOperator> residual_with_bcs_;
@@ -1503,13 +1506,12 @@ protected:
   /// @brief Array functions computing the derivative of the residual with respect to each given parameter
   /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
   /// template parameter.
-  std::array<
-      std::function<decltype((*residual_)(DifferentiateWRT<0>{}, 0.0, displacement_, acceleration_, shape_displacement_,
-                                          *parameters_[parameter_indices].state...))(double)>,
-      sizeof...(parameter_indices)>
+  std::array<std::function<decltype((*residual_)(DifferentiateWRT<1>{}, 0.0, shape_displacement_, displacement_,
+                                                 acceleration_, *parameters_[parameter_indices].state...))(double)>,
+             sizeof...(parameter_indices)>
       d_residual_d_ = {[&](double t) {
-        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + parameter_indices>{}, t, displacement_, acceleration_,
-                            shape_displacement_, *parameters_[parameter_indices].state...);
+        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + 1 + parameter_indices>{}, t, shape_displacement_,
+                            displacement_, acceleration_, *parameters_[parameter_indices].state...);
       }...};
 
   /**
@@ -1577,7 +1579,7 @@ protected:
   void warmStartDisplacement()
   {
     // Update the linearized Jacobian matrix
-    auto [r, drdu] = (*residual_)(ode_time_point_, differentiate_wrt(displacement_), acceleration_, shape_displacement_,
+    auto [r, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
                                   *parameters_[parameter_indices].state...);
     J_             = assemble(drdu);
     J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);

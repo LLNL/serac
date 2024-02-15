@@ -14,6 +14,7 @@
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils_base.hpp"
 #include "serac/numerics/functional/functional.hpp"
+#include "serac/numerics/functional/shape_aware_functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/infrastructure/profiling.hpp"
 
@@ -410,39 +411,137 @@ TEST(QoI, UsingL2)
 
 TEST(QoI, ShapeAndParameter)
 {
+  // _average_start
+  // Define the compile-time finite element spaces for the shape displacement and parameter fields
   static constexpr int dim{3};
-  using shape_space     = H1<2, dim>;
+
+  // The shape displacement must be vector-valued H1
+  using shape_space = H1<2, dim>;
+
+  // Shape-aware functional only supports H1 and L2 trial functions
   using parameter_space = H1<1>;
 
-  using qoi_type = serac::Functional<double(shape_space, parameter_space)>;
+  // Define the QOI type. Note that the shape-aware functional has an extra template argument
+  // for the shape displacement finite element space
+  using qoi_type = serac::ShapeAwareFunctional<shape_space, double(parameter_space)>;
 
+  // Define the mesh and runtime finite element spaces for the calculation
   mfem::ParMesh& mesh = *mesh3D;
 
   auto [shape_fe_space, shape_fe_coll]         = generateParFiniteElementSpace<shape_space>(&mesh);
   auto [parameter_fe_space, parameter_fe_coll] = generateParFiniteElementSpace<parameter_space>(&mesh);
 
-  std::array<const mfem::ParFiniteElementSpace*, 2> trial_fes = {shape_fe_space.get(), parameter_fe_space.get()};
+  std::array<const mfem::ParFiniteElementSpace*, 1> trial_fes = {parameter_fe_space.get()};
+  const mfem::ParFiniteElementSpace*                shape_fes = shape_fe_space.get();
 
-  auto serac_qoi = std::make_unique<qoi_type>(trial_fes);
-  serac_qoi->AddDomainIntegral(
-      serac::Dimension<dim>{}, serac::DependsOn<0, 1>{},
-      [](double /*t*/, auto /*X*/, auto shape, auto param) {
-        auto dp_dx = serac::get<1>(shape);
-        auto I     = serac::Identity<dim>();
-        return serac::get<0>(param) * serac::det(dp_dx + I);
-      },
-      mesh);
+  auto   everything = [](std::vector<tensor<double, dim>> /*X*/, int /* attr */) { return true; };
+  Domain whole_mesh = Domain::ofElements(mesh, everything);
 
-  std::unique_ptr<mfem::HypreParVector> shape(shape_fe_space->NewTrueDofVector());
-  *shape = 1.0;
+  // Define the shape-aware QOI objects
+  qoi_type serac_qoi(shape_fes, trial_fes);
+
+  // Note that the integral does not have a shape parameter field. The transformations are handled under the hood
+  // so the user only sees the modified x = X + p input arguments
+  serac_qoi.AddDomainIntegral(
+      serac::Dimension<dim>{}, serac::DependsOn<0>{},
+      [](double /*t*/, auto /*x*/, auto param) { return serac::get<0>(param); }, whole_mesh);
+
+  qoi_type serac_volume(shape_fes, trial_fes);
+
+  serac_volume.AddDomainIntegral(
+      serac::Dimension<dim>{}, serac::DependsOn<>{}, [](double /*t*/, auto /*x*/) { return 1.0; }, whole_mesh);
+
+  std::unique_ptr<mfem::HypreParVector> shape_displacement(shape_fe_space->NewTrueDofVector());
+  *shape_displacement = 1.0;
 
   std::unique_ptr<mfem::HypreParVector> parameter(parameter_fe_space->NewTrueDofVector());
   *parameter = 0.1;
 
-  double val = serac_qoi->operator()(t, *shape, *parameter);
+  // Note that the first argument after time is always the shape displacement field
+  double val    = serac_qoi(t, *shape_displacement, *parameter);
+  double volume = serac_volume(t, *shape_displacement, *parameter);
 
-  constexpr double expected = 1.6;  // volume of 2 2x2x2 cubes == 16, so expected is 0.1 * 16
-  EXPECT_NEAR(val, expected, 1.0e-14);
+  double average = val / volume;
+  // _average_end
+
+  constexpr double expected_vol = 16.0;  // volume of 2 2x2x2 cubes == 16, so expected is 0.1 * 16
+  EXPECT_NEAR(volume, expected_vol, 3.0e-14);
+
+  constexpr double expected_val = 1.6;
+  EXPECT_NEAR(val, expected_val, 1.0e-14);
+
+  constexpr double expected_avg = 0.1;
+  EXPECT_NEAR(average, expected_avg, 1.0e-14);
+}
+
+TEST(QoI, ShapeAndParameterBoundary)
+{
+  // _boundary_start
+  // Define the compile-time finite element spaces for the shape displacement and parameter fields
+  static constexpr int dim{3};
+
+  // The shape displacement must be vector-valued H1
+  using shape_space = H1<2, dim>;
+
+  // Shape-aware functional only supports H1 and L2 trial functions
+  using parameter_space = H1<1, dim>;
+
+  // Define the QOI type. Note that the shape-aware functional has an extra template argument
+  // for the shape displacement finite element space
+  using qoi_type = serac::ShapeAwareFunctional<shape_space, double(parameter_space)>;
+
+  // Define the mesh and runtime finite element spaces for the calculation
+  mfem::ParMesh& mesh = *mesh3D;
+
+  auto [shape_fe_space, shape_fe_coll]         = generateParFiniteElementSpace<shape_space>(&mesh);
+  auto [parameter_fe_space, parameter_fe_coll] = generateParFiniteElementSpace<parameter_space>(&mesh);
+
+  std::array<const mfem::ParFiniteElementSpace*, 1> trial_fes = {parameter_fe_space.get()};
+  const mfem::ParFiniteElementSpace*                shape_fes = shape_fe_space.get();
+
+  // Define the shape-aware QOI objects
+  qoi_type serac_qoi(shape_fes, trial_fes);
+
+  auto   everything     = [](std::vector<tensor<double, dim>> /*X*/, int /* attr */) { return true; };
+  Domain whole_boundary = Domain::ofBoundaryElements(mesh, everything);
+
+  // Note that the integral does not have a shape parameter field. The transformations are handled under the hood
+  // so the user only sees the modified x = X + p input arguments
+  serac_qoi.AddBoundaryIntegral(
+      serac::Dimension<dim - 1>{}, serac::DependsOn<0>{},
+      [](double /*t*/, auto x, auto param) {
+        using std::abs;
+        auto n = normalize(cross(get<DERIVATIVE>(x)));
+        return abs(dot(serac::get<VALUE>(param), n));
+      },
+      whole_boundary);
+
+  qoi_type serac_area(shape_fes, trial_fes);
+
+  serac_area.AddBoundaryIntegral(
+      serac::Dimension<dim - 1>{}, serac::DependsOn<>{}, [](double /*t*/, auto /*x*/) { return 1.0; }, whole_boundary);
+
+  std::unique_ptr<mfem::HypreParVector> shape_displacement(shape_fe_space->NewTrueDofVector());
+  *shape_displacement = 1.0;
+
+  std::unique_ptr<mfem::HypreParVector> parameter(parameter_fe_space->NewTrueDofVector());
+  *parameter = 5.0;
+
+  // Note that the first argument after time is always the shape displacement field
+  double val    = serac_qoi(t, *shape_displacement, *parameter);
+  double volume = serac_area(t, *shape_displacement, *parameter);
+
+  double average = val / volume;
+  // _boundary_end
+
+  constexpr double expected_vol = 48.0;  // volume of 2 2x2x2 cubes == 16, so expected is 0.1 * 16
+  EXPECT_NEAR(volume, expected_vol, 3.0e-14);
+
+  constexpr double expected_val = 240.0;
+  EXPECT_NEAR(val, expected_val, 1.5e-13);
+
+  constexpr double expected_avg = 5.0;
+  EXPECT_NEAR(average, expected_avg, 1.0e-14);
 }
 
 // clang-format off
@@ -471,6 +570,58 @@ TEST(Variadic, 2DQuadratic) { qoi_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}
 TEST(Variadic, 3DLinear   ) { qoi_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
 TEST(Variadic, 3DQuadratic) { qoi_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
 // clang-format on
+
+// TODO Functional currently doesn't support HCurl. When it does, this test should work without other changes as
+// shape-aware functional already contains the appropriate Hcurl transformations
+
+// TEST(QoI, MixedShapeAware)
+// {
+//   // _boundary_start
+//   static constexpr int dim{3};
+
+//   using shape_space = H1<2, dim>;
+
+//   using parameter_1_space = H1<1>;
+//   using parameter_2_space = Hcurl<1>;
+
+//   // Define the QOI type. Note that the shape aware functional has an extra template argument
+//   // for the shape displacement finite element space
+//   using qoi_type = serac::ShapeAwareFunctional<shape_space, double(parameter_1_space, parameter_2_space)>;
+
+//   // Define the mesh and runtime finite element spaces for the calculation
+//   mfem::ParMesh& mesh = *mesh3D;
+
+//   auto [shape_fe_space, shape_fe_coll]             = generateParFiniteElementSpace<shape_space>(&mesh);
+//   auto [parameter_1_fe_space, parameter_1_fe_coll] = generateParFiniteElementSpace<parameter_1_space>(&mesh);
+//   auto [parameter_2_fe_space, parameter_2_fe_coll] = generateParFiniteElementSpace<parameter_2_space>(&mesh);
+
+//   std::array<const mfem::ParFiniteElementSpace*, 2> trial_fes = {parameter_1_fe_space.get(),
+//                                                                  parameter_2_fe_space.get()};
+//   const mfem::ParFiniteElementSpace*                shape_fes = shape_fe_space.get();
+
+//   // Define the shape-aware QOI objects
+//   qoi_type serac_qoi(shape_fes, trial_fes);
+
+//   serac_qoi.AddDomainIntegral(
+//       serac::Dimension<dim>{}, serac::DependsOn<0>{},
+//       [](double /*t*/, auto /*x*/, auto scalar_param) { return serac::get<0>(scalar_param); }, mesh);
+
+//   serac_qoi.AddDomainIntegral(
+//       serac::Dimension<dim>{}, serac::DependsOn<1>{},
+//       [](double /*t*/, auto /*x*/, auto vector_hcurl_param) { return norm(serac::get<0>(vector_hcurl_param)); },
+//       mesh);
+
+//   std::unique_ptr<mfem::HypreParVector> shape_displacement(shape_fe_space->NewTrueDofVector());
+//   *shape_displacement = 1.0;
+
+//   std::unique_ptr<mfem::HypreParVector> parameter_1(parameter_1_fe_space->NewTrueDofVector());
+//   *parameter_1 = 0.1;
+
+//   std::unique_ptr<mfem::HypreParVector> parameter_2(parameter_2_fe_space->NewTrueDofVector());
+//   *parameter_2 = 0.5;
+
+//   double val = serac_qoi(t, *shape_displacement, *parameter_1, *parameter_2);
+// }
 
 int main(int argc, char* argv[])
 {

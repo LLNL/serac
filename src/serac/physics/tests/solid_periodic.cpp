@@ -99,7 +99,7 @@ void periodic_test(mfem::Element::Type element_type)
   }
 
   solid_mechanics::ConstantBodyForce<dim> force{constant_force};
-  solid_solver.addBodyForce(force);
+  solid_solver.addBodyForce(force, EntireDomain(pmesh));
 
   // Finalize the data structures
   solid_solver.completeSetup();

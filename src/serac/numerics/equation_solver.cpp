@@ -8,6 +8,7 @@
 
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
+#include "serac/serac_config.hpp"
 
 namespace serac {
 
@@ -164,7 +165,7 @@ std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions 
   }
   // KINSOL
   else {
-#ifdef MFEM_USE_SUNDIALS
+#ifdef SERAC_USE_SUNDIALS
 
     int kinsol_strat = KIN_NONE;
 

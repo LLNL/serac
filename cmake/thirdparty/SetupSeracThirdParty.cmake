@@ -167,6 +167,24 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
 
     #------------------------------------------------------------------------------
+    # Sundials
+    #------------------------------------------------------------------------------
+    if (SUNDIALS_DIR)
+        # Note: Sundials is currently only used via MFEM and MFEM's target contains it's information
+        serac_assert_is_directory(VARIABLE_NAME SUNDIALS_DIR)
+        set(SERAC_USE_SUNDIALS ON CACHE BOOL "")
+        
+        # Note: MFEM sets SUNDIALS_FOUND itself
+        if (NOT SERAC_ENABLE_CODEVELOP)
+            set(SUNDIALS_FOUND TRUE)
+        endif()
+    else()
+        set(SERAC_USE_SUNDIALS OFF CACHE BOOL "")
+        set(SUNDIALS_FOUND FALSE)
+    endif()
+    message(STATUS "Sundials support is ${SERAC_USE_SUNDIALS}")
+
+    #------------------------------------------------------------------------------
     # MFEM
     #------------------------------------------------------------------------------
     if(NOT SERAC_ENABLE_CODEVELOP)
@@ -209,12 +227,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(MFEM_USE_OPENMP ${ENABLE_OPENMP} CACHE BOOL "")
         set(MFEM_USE_PETSC ${PETSC_FOUND} CACHE BOOL "")
         set(MFEM_USE_RAJA OFF CACHE BOOL "")
-        if(SUNDIALS_DIR)
-            serac_assert_is_directory(VARIABLE_NAME SUNDIALS_DIR)
-            set(MFEM_USE_SUNDIALS ON CACHE BOOL "")
-        else()
-            set(MFEM_USE_SUNDIALS OFF CACHE BOOL "")
-        endif()
+        set(MFEM_USE_SUNDIALS ${SERAC_USE_SUNDIALS} CACHE BOOL "")
         if(SUPERLUDIST_DIR)
             serac_assert_is_directory(VARIABLE_NAME SUPERLUDIST_DIR)
             # MFEM uses a slightly different naming convention
@@ -439,47 +452,23 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(TRIBOL_ENABLE_TESTS OFF CACHE BOOL "")
         set(TRIBOL_ENABLE_EXAMPLES OFF CACHE BOOL "")
         set(TRIBOL_ENABLE_DOCS OFF CACHE BOOL "")
+
         if(${PROJECT_NAME} STREQUAL "smith")
-            include(serac/tribol/cmake/TribolMacros.cmake)
-            add_subdirectory(${PROJECT_SOURCE_DIR}/serac/tribol/src  ${CMAKE_BINARY_DIR}/tribol)
-            # NOTE: This needs to be removed when Tribol PR #45 is merged and serac is updated
-            tribol_configure_file(${PROJECT_SOURCE_DIR}/serac/tribol/src/tribol/config.hpp.in
-                                  ${PROJECT_BINARY_DIR}/tribol/include/tribol/config.hpp)
-
-            target_include_directories(redecomp PUBLIC
-                $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/serac/tribol/src>
-            )
-            target_include_directories(tribol PUBLIC
-                $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/serac/tribol/src>
-                $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/tribol/include>
-                $<INSTALL_INTERFACE:include>
-            )
+            set(tribol_repo_dir "${PROJECT_SOURCE_DIR}/serac/tribol")
         else()
-            include(tribol/cmake/TribolMacros.cmake)
-            add_subdirectory(${PROJECT_SOURCE_DIR}/tribol/src ${CMAKE_BINARY_DIR}/tribol)
-            # NOTE: This needs to be removed when Tribol PR #45 is merged and serac is updated
-            tribol_configure_file(${PROJECT_SOURCE_DIR}/tribol/src/tribol/config.hpp.in
-                                  ${PROJECT_BINARY_DIR}/tribol/include/tribol/config.hpp)
-
-            target_include_directories(redecomp PUBLIC
-                $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/tribol/src>
-            )
-            target_include_directories(tribol PUBLIC
-                $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/tribol/src>
-                $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/tribol/include>
-                $<INSTALL_INTERFACE:include>
-            ) 
+            set(tribol_repo_dir "${PROJECT_SOURCE_DIR}/tribol")
         endif()
 
-        set(tribol_depends mfem)
-        blt_list_append(TO tribol_depends ELEMENTS mpi IF ENABLE_MPI)
-        install(TARGETS              ${tribol_depends}
-                EXPORT               tribol-targets
-                DESTINATION          lib
-        )
+        add_subdirectory(${tribol_repo_dir}  ${CMAKE_BINARY_DIR}/tribol)
         
-        set(tribol_exported_targets tribol)
-        blt_list_append(TO tribol_exported_targets ELEMENTS redecomp IF BUILD_REDECOMP)
+        target_include_directories(redecomp PUBLIC
+            $<BUILD_INTERFACE:${tribol_repo_dir}/src>
+        )
+        target_include_directories(tribol PUBLIC
+            $<BUILD_INTERFACE:${tribol_repo_dir}/src>
+            $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/tribol/include>
+            $<INSTALL_INTERFACE:include>
+        )
         
         set(TRIBOL_FOUND TRUE CACHE BOOL "" FORCE)
         set(ENABLE_FORTRAN ON CACHE BOOL "" FORCE)
