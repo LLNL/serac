@@ -74,13 +74,22 @@ void functional_solid_test_robin_condition()
   solid_solver.setDisplacementBCs(support, zero, z_direction);
 
   // clang-format off
+  Domain robinDomain = Domain::ofBoundaryElements(StateManager::mesh(mesh_tag), 
+    [](std::vector<serac::tensor<double, dim>> X, int) {
+      bool inDomain = false;
+      for (const auto& p : X) {
+        if (p[0]<0.01) {
+          inDomain = true;
+        }
+      }
+      return inDomain;
+    });
   solid_solver.addCustomBoundaryIntegral(DependsOn<>{}, 
-      [](double /* t */, auto position, auto displacement, auto /*acceleration*/) {
-        auto [X, dX_dxi] = position;
+      [](double /* t */, auto /*position*/, auto displacement, auto /*acceleration*/) {
         auto [u, du_dxi] = displacement;
-        auto f           = u * 3.0 * (X[0] < 0.01);
+        auto f           = u * 3.0;
         return f;  // define a displacement-proportional traction at the support
-      });
+      }, robinDomain);
   // clang-format on
 
   // apply an axial displacement at the the tip of the beam
