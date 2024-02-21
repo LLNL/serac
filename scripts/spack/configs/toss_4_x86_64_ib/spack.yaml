@@ -78,10 +78,10 @@ spack:
     mvapich2:
       buildable: false
       externals:
-      - spec: mvapich2@2.3.6%clang@14.0.6 process_managers=slurm arch=linux-rhel8-ivybridge
-        prefix: /usr/tce/packages/mvapich2/mvapich2-2.3.6-clang-14.0.6
-      - spec: mvapich2@2.3.6%gcc@10.3.1 process_managers=slurm arch=linux-rhel8-ivybridge
-        prefix: /usr/tce/packages/mvapich2/mvapich2-2.3.6-gcc-10.3.1
+      - spec: mvapich2@2.3.7%clang@14.0.6~alloca~cuda~debug~hwloc_graphics~hwlocv2+regcache+wrapperrpath build_system=autotools ch3_rank_bits=32 fabrics=mrail file_systems=auto process_managers=slurm threads=multiple
+        prefix: /usr/tce/packages/mvapich2/mvapich2-2.3.7-clang-14.0.6
+      - spec: mvapich2@2.3.7%gcc@10.3.1~alloca~cuda~debug~hwloc_graphics~hwlocv2+regcache+wrapperrpath build_system=autotools ch3_rank_bits=32 fabrics=mrail file_systems=auto process_managers=slurm threads=multiple
+        prefix: /usr/tce/packages/mvapich2/mvapich2-2.3.7-gcc-10.3.1
 
     netlib-lapack:
       buildable: false

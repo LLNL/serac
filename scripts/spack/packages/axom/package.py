@@ -5,26 +5,9 @@
 
 from spack.pkg.builtin.axom import Axom as BuiltinAxom
 
-def get_spec_path(spec, package_name, path_replacements={}, use_bin=False):
-    """Extracts the prefix path for the given spack package
-    path_replacements is a dictionary with string replacements for the path.
-    """
-
-    if not use_bin:
-        path = spec[package_name].prefix
-    else:
-        path = spec[package_name].prefix.bin
-
-    path = os.path.realpath(path)
-
-    for key in path_replacements:
-        path = path.replace(key, path_replacements[key])
-
-    return path
-
 
 class Axom(BuiltinAxom):
     # Note: Make sure this sha coincides with the git submodule
     # Note: We add a number to the end of the real version number to indicate that we have
     #  moved forward past the release. Increment the last number when updating the commit sha.
-    version("0.8.1.0", commit="0da8a5b1be596887158ac2fcd321524ba5259e15", submodules=False)
+    version("0.8.1.1", commit="ca344e2226402ba864993280a768d024e75b3296", submodules=False)
