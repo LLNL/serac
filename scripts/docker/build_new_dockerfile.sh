@@ -6,8 +6,10 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 ##############################################################################
 
+usage="Usage: ./build_new_dockerfile.sh <compiler_name> <compiler_full_version>"
+
 if [ "$#" -ne 2 ]; then
-    echo "Usage: ./build_new_dockerfile.sh <compiler_name> <compiler_full_version>"
+    echo $usage
     exit 1
 fi
 
@@ -15,9 +17,10 @@ name=$1
 ver=$2
 maj_ver="${ver%%\.*}"
 
-# If no minor version specified, use zero
-if [[ "$ver" != *"."* ]]; then
-    ver="$ver.0.0"
+if [[ "$ver" != *"."*"."* ]]; then
+    echo "Error: specify full compiler version"
+    echo $usage
+    exit 1
 fi
 
 tag_name="${name}-${maj_ver}"
