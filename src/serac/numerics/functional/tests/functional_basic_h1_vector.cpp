@@ -27,7 +27,7 @@ using namespace serac::profiling;
 template <int dim>
 struct MixedModelOne {
   template <typename unused_type, typename displacement_type>
-  SERAC_HOST_DEVICE auto operator()(unused_type, displacement_type displacement)
+  SERAC_HOST_DEVICE auto operator()(double, unused_type, displacement_type displacement)
   {
     constexpr static auto d11 =
         1.0 * make_tensor<dim + 1, dim, dim + 2, dim>([](int i, int j, int k, int l) { return i - j + 2 * k - 3 * l; });
@@ -41,7 +41,7 @@ struct MixedModelOne {
 template <int dim>
 struct MixedModelTwo {
   template <typename position_type, typename displacement_type>
-  SERAC_HOST_DEVICE auto operator()(position_type position, displacement_type displacement)
+  SERAC_HOST_DEVICE auto operator()(double, position_type position, displacement_type displacement)
   {
     constexpr static auto s11 = 1.0 * make_tensor<dim + 1, dim + 2>([](int i, int j) { return i * i - j; });
     auto [X, dX_dxi]          = position;
@@ -53,7 +53,7 @@ struct MixedModelTwo {
 template <int dim>
 struct ElasticityTestModelOne {
   template <typename position_type, typename displacement_type>
-  SERAC_HOST_DEVICE auto operator()(position_type, displacement_type displacement)
+  SERAC_HOST_DEVICE auto operator()(double, position_type, displacement_type displacement)
   {
     constexpr static auto d00 = make_tensor<dim, dim>([](int i, int j) { return i + 2 * j + 1; });
     constexpr static auto d01 = make_tensor<dim, dim, dim>([](int i, int j, int k) { return i + 2 * j - k + 1; });
@@ -70,7 +70,7 @@ struct ElasticityTestModelOne {
 template <int dim>
 struct ElasticityTestModelTwo {
   template <typename position_type, typename displacement_type>
-  SERAC_HOST_DEVICE auto operator()(position_type position, displacement_type displacement)
+  SERAC_HOST_DEVICE auto operator()(double, position_type position, displacement_type displacement)
   {
     auto [X, dX_dxi] = position;
     auto [u, du_dxi] = displacement;

@@ -239,6 +239,7 @@ SERAC_HOST_DEVICE auto promote_each_to_dual_when(const tensor<T, n>& x, void* ou
 #ifndef USE_CUDA
       output[i] = make_dual(x[i]);
 #else
+      printf("USE_CUDA\n");
         (*casted_output_ptr)[i] = make_dual(x[i]);
 #endif
     });

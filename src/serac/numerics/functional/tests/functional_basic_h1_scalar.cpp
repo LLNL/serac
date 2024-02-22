@@ -26,7 +26,7 @@ using namespace serac::profiling;
 template <int dim>
 struct TestThermalModelOne {
   template <typename X, typename Temp>
-  SERAC_HOST_DEVICE auto operator()([[maybe_unused]] X x, [[maybe_unused]] Temp temperature)
+  SERAC_HOST_DEVICE auto operator()(double, [[maybe_unused]] X x, [[maybe_unused]] Temp temperature)
   {
     double                d00 = 1.0;
     constexpr static auto d01 = 1.0 * make_tensor<dim>([](int i) { return i; });
@@ -41,7 +41,7 @@ struct TestThermalModelOne {
 
 struct TestThermalModelTwo {
   template <typename PositionType, typename TempType>
-  SERAC_HOST_DEVICE auto operator()(PositionType position, TempType temperature)
+  SERAC_HOST_DEVICE auto operator()(double, PositionType position, TempType temperature)
   {
     auto [X, dX_dxi] = position;
     auto [u, du_dxi] = temperature;
