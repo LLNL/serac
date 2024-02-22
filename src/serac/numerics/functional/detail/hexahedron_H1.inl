@@ -415,9 +415,9 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
                   reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
             }
           }
-          constexpr auto B   = calculate_B<apply_weights, q>();
-          constexpr auto G   = calculate_G<apply_weights, q>();
-          int            Q   = (qz * q + qy) * q + qx;
+          constexpr auto B = calculate_B<apply_weights, q>();
+          constexpr auto G = calculate_G<apply_weights, q>();
+
           source(qz, qy, qx) = reinterpret_cast<const double*>(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
           for (int k = 0; k < dim; k++) {
             flux(k, qz, qy, qx) = reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];

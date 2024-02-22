@@ -202,9 +202,9 @@ class Functional<test(trials...), exec> {
   static constexpr mfem::Geometry::Type simplex_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT,
                                                            mfem::Geometry::TRIANGLE, mfem::Geometry::TETRAHEDRON};
 
-public:
   class Gradient;
 
+public:
   // clang-format off
   template <uint32_t i>
   struct operator_paren_return {

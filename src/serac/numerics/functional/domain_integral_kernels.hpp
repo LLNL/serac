@@ -183,10 +183,10 @@ SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, 
   return outputs;
 }
 
-template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, typename test_element,
-          typename trial_element_tuple, typename lambda_type, typename state_type, typename derivative_type,
+template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, typename test_element_type,
+          typename trial_element_tuple_type, typename lambda_type, typename state_type, typename derivative_type,
           int... indices>
-void evaluation_kernel_impl(trial_element_tuple trial_elements, test_element, double t,
+void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_element_type, double t,
                             const std::vector<const double*>& inputs, double* outputs, const double* positions,
                             const double* jacobians, lambda_type qf,
                             [[maybe_unused]] axom::ArrayView<state_type, 2> qf_state,
@@ -269,7 +269,6 @@ void evaluation_kernel_impl(trial_element_tuple trial_elements, test_element, do
   using teams_e       = RAJA::LoopPolicy<RAJA::seq_exec>;
   using launch_policy = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
 #endif
-  std::cout << "NUM elements " << num_elements << std::endl;
 
   // for each element in the domain
   RAJA::launch<launch_policy>(
@@ -277,8 +276,8 @@ void evaluation_kernel_impl(trial_element_tuple trial_elements, test_element, do
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(
             ctx, e_range,
-            [&ctx, device_J, device_x, u, qf, qpts_per_elem, rule, device_r, qf_state,
-             /*device_*/ qf_derivatives, qf_inputs, interpolate_result, update_state](uint32_t e) {
+            [&ctx, t, device_J, device_x, u, qf, qpts_per_elem, rule, device_r, qf_state, elements, qf_derivatives,
+             qf_inputs, interpolate_result, update_state](uint32_t e) {
               if constexpr (test_element_type::geometry == mfem::Geometry::CUBE) {
                 // load the jacobians and positions for each quadrature point in this element
                 static constexpr trial_element_tuple_type empty_trial_element{};
@@ -313,9 +312,9 @@ void evaluation_kernel_impl(trial_element_tuple trial_elements, test_element, do
                 //
                 auto qf_outputs = [&]() {
                   if constexpr (std::is_same_v<state_type, Nothing>) {
-                    return batch_apply_qf_no_qdata(qf, device_x[e], ctx, get<indices>(qf_inputs[e])...);
+                    return batch_apply_qf_no_qdata(qf, t, device_x[e], ctx, get<indices>(qf_inputs[e])...);
                   } else {
-                    return batch_apply_qf(qf, device_x[e], &qf_state(e, 0), update_state, ctx,
+                    return batch_apply_qf(qf, t, device_x[e], &qf_state(e, 0), update_state, ctx,
                                           get<indices>(qf_inputs[e])...);
                   }
                 }();
@@ -421,7 +420,8 @@ SERAC_HOST_DEVICE tensor<decltype(chain_rule<is_QOI>(derivative_type{}, T{})), n
  */
 
 template <int Q, mfem::Geometry::Type g, typename test, typename trial, typename derivatives_type>
-void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* qf_derivatives, uint32_t num_elements)
+void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* qf_derivatives, const int* elements,
+                               uint32_t num_elements)
 {
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
@@ -452,7 +452,7 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
   RAJA::launch<launch_policy>(
       RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_X, BLOCK_Y, BLOCK_Z)),
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
-        RAJA::loop<teams_e>(ctx, e_range, [du, rule, &ctx, qf_derivatives, dr, num_qpts](int e) {
+        RAJA::loop<teams_e>(ctx, e_range, [du, rule, &ctx, elements, qf_derivatives, dr, num_qpts](int e) {
           if constexpr (g == mfem::Geometry::CUBE) {
             // (batch) interpolate each quadrature point's value
             auto qf_inputs = trial_element::interpolate(du[elements[e]], rule, nullptr, ctx);
@@ -520,13 +520,11 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
   RAJA::launch<launch_policy>(
       RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_SZ)),
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
-        RAJA::loop<teams_e>(ctx, elements_range, [&ctx, dK, qf_derivatives, nquad, rule](uint32_t e) {
+        RAJA::loop<teams_e>(ctx, elements_range, [&ctx, dK, elements, qf_derivatives, nquad, rule](uint32_t e) {
           if constexpr (g == mfem::Geometry::CUBE) {
             static constexpr bool  is_QOI_2 = test::family == Family::QOI;
             [[maybe_unused]] auto* output_ptr =
                 reinterpret_cast<typename test_element::dof_type*>(&dK(elements[e], 0, 0));
-
-            (void*)qf_derivatives;
 
             tensor<padded_derivative_type, nquad> derivatives{};
             RAJA::RangeSegment                    x_range(0, nquad);
@@ -562,11 +560,11 @@ auto evaluation_kernel(signature s, lambda_type qf, const double* positions, con
                        std::shared_ptr<QuadratureData<state_type>> qf_state,
                        std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {
-  auto trial_elements = trial_elements_tuple<geom>(s);
-  auto test_element   = get_test_element<geom>(s);
+  auto trial_element_tuple = trial_elements_tuple<geom>(s);
+  auto test_element        = get_test_element<geom>(s);
   return [=](double time, const std::vector<const double*>& inputs, double* outputs, bool update_state) {
     domain_integral::evaluation_kernel_impl<wrt, Q, geom>(
-        trial_elements, test_element, time, inputs, outputs, positions, jacobians, qf, (*qf_state)[geom],
+        trial_element_tuple, test_element, time, inputs, outputs, positions, jacobians, qf, (*qf_state)[geom],
         qf_derivatives.get(), elements, num_elements, update_state, s.index_seq);
   };
 }

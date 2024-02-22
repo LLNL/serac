@@ -74,9 +74,6 @@ struct Integral {
     for (auto& [geometry, func] : kernels) {
       std::vector<const double*> inputs(active_trial_spaces_.size());
       for (std::size_t i = 0; i < active_trial_spaces_.size(); i++) {
-        if (input_E[uint32_t(active_trial_spaces_[i])].UseDevice()) {
-          std::cout << "is device " << std::endl;
-        }
         input_E[uint32_t(active_trial_spaces_[i])].GetBlock(geometry).UseDevice(true);
 #ifdef USE_CUDA
         const auto& mfem_vec = input_E[uint32_t(active_trial_spaces_[i])].GetBlock(geometry);
@@ -86,21 +83,14 @@ struct Integral {
         inputs[i]          = input_E[uint32_t(active_trial_spaces_[i])].GetBlock(geometry).Read();
 #endif
       }
-<<<<<<< HEAD
-#ifdef USE_CUDA std::cout << "L103" << std::endl;
-      printCUDAMemUsage();
-#endif
-      func(inputs, output_E.GetBlock(geometry).ReadWrite(), update_state);
+
+      func(t, inputs, output_E.GetBlock(geometry).ReadWrite(), update_state);
 // Deallocate
 #ifdef USE_CUDA
       for (auto input : inputs) {
         deallocate(const_cast<double*>(input), "DEVICE");
       }
-      printCUDAMemUsage();
 #endif
-=======
-      func(t, inputs, output_E.GetBlock(geometry).ReadWrite(), update_state);
->>>>>>> develop
     }
   }
 
@@ -243,13 +233,21 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
 
   const double*  positions        = gf.X.Read();
   const double*  jacobians        = gf.J.Read();
-  const int*     elements         = &integral.domain_.get(geom)[0];
+  const int*     elements         = integral.domain_.get(geom).data();
   const uint32_t num_elements     = uint32_t(gf.num_elements);
   const uint32_t qpts_per_element = num_quadrature_points(geom, Q);
 
   std::shared_ptr<zero> dummy_derivatives;
+// Copy elements to device if using CUDA
+#ifdef USE_CUDA
+  int* device_elements =
+      copy_data(const_cast<int*>(elements), sizeof(int) * integral.domain_.get(geom).size(), "DEVICE");
+  integral.evaluation_[geom] = domain_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom>(
+      s, qf, positions, jacobians, qdata, dummy_derivatives, device_elements, num_elements);
+#else
   integral.evaluation_[geom] = domain_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom>(
       s, qf, positions, jacobians, qdata, dummy_derivatives, elements, num_elements);
+#endif
 
   constexpr std::size_t                 num_args = s.num_args;
   [[maybe_unused]] static constexpr int dim      = dimension_of(geom);
@@ -262,9 +260,15 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
     using derivative_type = decltype(domain_integral::get_derivative_type<index, dim, trials...>(qf, qpt_data_type{}));
 #if defined(USE_CUDA)
     auto ptr = accelerator::make_shared_array<ExecutionSpace::GPU, derivative_type>(num_elements * qpts_per_element);
+    integral.evaluation_with_AD_[index][geom] = domain_integral::evaluation_kernel<index, Q, geom>(
+        s, qf, positions, jacobians, qdata, ptr, device_elements, num_elements);
+
+    integral.jvp_[index][geom] =
+        domain_integral::jacobian_vector_product_kernel<index, Q, geom>(s, ptr, device_elements, num_elements);
+    integral.element_gradient_[index][geom] =
+        domain_integral::element_gradient_kernel<index, Q, geom>(s, ptr, device_elements, num_elements);
 #else
     auto ptr = accelerator::make_shared_array<ExecutionSpace::CPU, derivative_type>(num_elements * qpts_per_element);
-#endif
     integral.evaluation_with_AD_[index][geom] = domain_integral::evaluation_kernel<index, Q, geom>(
         s, qf, positions, jacobians, qdata, ptr, elements, num_elements);
 
@@ -272,6 +276,7 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
         domain_integral::jacobian_vector_product_kernel<index, Q, geom>(s, ptr, elements, num_elements);
     integral.element_gradient_[index][geom] =
         domain_integral::element_gradient_kernel<index, Q, geom>(s, ptr, elements, num_elements);
+#endif
   });
 }
 
