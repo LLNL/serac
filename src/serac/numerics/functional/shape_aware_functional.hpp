@@ -341,9 +341,10 @@ public:
     functional_ = std::make_unique<Functional<double(shape, trials...), exec>>(prepended_spaces);
   }
 
-  template <int dim, typename Integrand, int... args>
+  template <typename Integrand, int dim, int... args>
   struct ShapeAwareIntegrandWrapper {
-    Integrand integrand{};
+    ShapeAwareIntegrandWrapper(Integrand integrand) : integrand_(integrand) {}
+    Integrand integrand_;
     template <typename PositionType, typename ShapeValueType, typename... QFuncArgs>
     SERAC_HOST_DEVICE auto operator()(double time, PositionType x, ShapeValueType shape_val,
                                       QFuncArgs... qfunc_args) const
@@ -355,15 +356,16 @@ public:
       // TODO(CUDA): When this is compiled to device code, the below make_integer_sequence will
       // need to change to a camp integer sequence.
       auto unmodified_qf_return = detail::apply_shape_aware_qf_helper(
-          integrand, time, x, shape_val, reduced_trial_space_tuple, qfunc_tuple, shape_correction,
+          integrand_, time, x, shape_val, reduced_trial_space_tuple, qfunc_tuple, shape_correction,
           std::make_integer_sequence<int, sizeof...(qfunc_args)>{});
       return shape_correction.modify_shape_aware_qf_return(test_space, unmodified_qf_return);
     }
   };
 
-  template <int dim, typename Integrand, int... args>
+  template <typename Integrand, int dim, int... args>
   struct ShapeAwareIntegrandWrapperWithState {
-    Integrand integrand{};
+    ShapeAwareIntegrandWrapperWithState(Integrand integrand) : integrand_(integrand) {}
+    Integrand integrand_;
     template <typename PositionType, typename StateType, typename ShapeValueType, typename... QFuncArgs>
     auto operator()(double time, PositionType x, StateType& state, ShapeValueType shape_val,
                     QFuncArgs... qfunc_args) const
@@ -375,7 +377,7 @@ public:
       // TODO(CUDA): When this is compiled to device code, the below make_integer_sequence will
       // need to change to a camp integer sequence.
       auto unmodified_qf_return = detail::apply_shape_aware_qf_helper_with_state(
-          integrand, time, x, state, shape_val, reduced_trial_space_tuple, qfunc_tuple, shape_correction,
+          integrand_, time, x, state, shape_val, reduced_trial_space_tuple, qfunc_tuple, shape_correction,
           std::make_integer_sequence<int, sizeof...(qfunc_args)>{});
       return shape_correction.modify_shape_aware_qf_return(test_space, unmodified_qf_return);
     }
@@ -403,21 +405,23 @@ public:
   {
     if constexpr (std::is_same_v<qpt_data_type, Nothing>) {
       functional_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
-                                     ShapeAwareIntegrandWrapper<dim, lambda, args...>{}, domain, qdata);
+                                     ShapeAwareIntegrandWrapper<lambda, dim, args...>(integrand), domain, qdata);
     } else {
       functional_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
-                                     ShapeAwareIntegrandWrapperWithState<dim, lambda, args...>{}, domain, qdata);
+                                     ShapeAwareIntegrandWrapperWithState<lambda, dim, args...>(integrand), domain,
+                                     qdata);
     }
   }
 
-  template <int dim, typename Integrand, int... args>
+  template <typename Integrand, int dim, int... args>
   struct ShapeAwareBoundaryIntegrandWrapper {
-    Integrand integrand{};
+    ShapeAwareBoundaryIntegrandWrapper(Integrand integrand) : integrand_(integrand) {}
+    Integrand integrand_;
     template <typename PositionType, typename ShapeValueType, typename... QFuncArgs>
     SERAC_HOST_DEVICE auto operator()(double time, PositionType x, ShapeValueType shape_val,
                                       QFuncArgs... qfunc_args) const
     {
-      auto unmodified_qf_return = integrand(time, x + shape_val, qfunc_args...);
+      auto unmodified_qf_return = integrand_(time, x + shape_val, qfunc_args...);
       return unmodified_qf_return * detail::compute_boundary_area_correction(x, shape_val);
     }
   };
@@ -440,7 +444,7 @@ public:
   void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, domain_type& domain)
   {
     functional_->AddBoundaryIntegral(Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
-                                     ShapeAwareBoundaryIntegrandWrapper<dim, lambda, args...>{}, domain);
+                                     ShapeAwareBoundaryIntegrandWrapper<lambda, dim, args...>(integrand), domain);
   }
 
   /**

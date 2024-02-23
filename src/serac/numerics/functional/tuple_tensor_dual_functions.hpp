@@ -1,6 +1,6 @@
 #pragma once
 
-#include <RAJA/pattern/launch/launch_core.hpp>
+#include <RAJA/RAJA.hpp>
 #include "serac/numerics/functional/tuple.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/dual.hpp"

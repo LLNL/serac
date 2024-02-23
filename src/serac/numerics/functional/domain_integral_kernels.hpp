@@ -142,7 +142,7 @@ SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(lambda qf, double t, const tensor
 #ifdef USE_CUDA
   using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
-  using threads_x                          = RAJA::LoopPolicy<RAJA::seq_exec>;
+  using threads_x                                          = RAJA::LoopPolicy<RAJA::seq_exec>;
 #endif
   RAJA::RangeSegment     x_range(0, n);
   tensor<return_type, n> outputs{};
@@ -164,7 +164,7 @@ SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, 
 #ifdef USE_CUDA
   using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
-  using threads_x                          = RAJA::LoopPolicy<RAJA::seq_exec>;
+  using threads_x                                          = RAJA::LoopPolicy<RAJA::seq_exec>;
 #endif
   RAJA::RangeSegment     x_range(0, n);
   tensor<return_type, n> outputs{};
@@ -251,11 +251,11 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
   printCUDAMemUsage();
   cudaSetDevice(0);
 #else
-  type*                 qf_inputs          = nullptr;
-  interpolate_out_type* interpolate_result = nullptr;
-  auto                  device_J           = J;
-  auto                  device_x           = x;
-  auto                  device_r           = r;
+  type*                                 qf_inputs          = nullptr;
+  interpolate_out_type*                 interpolate_result = nullptr;
+  auto                                  device_J           = J;
+  auto                                  device_x           = x;
+  typename test_element_type::dof_type* device_r           = r;
   // auto device_qf_derivatives = qf_derivatives;
 #endif
 
@@ -278,7 +278,8 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
             ctx, e_range,
             [&ctx, t, device_J, device_x, u, qf, qpts_per_elem, rule, device_r, qf_state, elements, qf_derivatives,
              qf_inputs, interpolate_result, update_state](uint32_t e) {
-              if constexpr (test_element_type::geometry == mfem::Geometry::CUBE) {
+              if constexpr (test_element_type::geometry == mfem::Geometry::CUBE &&
+                            test_element_type::family == serac::Family::H1) {
                 // load the jacobians and positions for each quadrature point in this element
                 static constexpr trial_element_tuple_type empty_trial_element{};
 
@@ -319,7 +320,7 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
                   }
                 }();
                 ctx.teamSync();
-// printf("here5\n");
+
 #ifdef USE_CUDA
                 using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
@@ -340,7 +341,7 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
                   });
                 }
                 ctx.teamSync();
-                // printf("here6\n");
+
                 // (batch) integrate the material response against the test-space basis functions
                 test_element_type::integrate(get_value(qf_outputs), rule, &device_r[elements[e]], ctx);
               }
@@ -421,7 +422,7 @@ SERAC_HOST_DEVICE tensor<decltype(chain_rule<is_QOI>(derivative_type{}, T{})), n
 
 template <int Q, mfem::Geometry::Type g, typename test, typename trial, typename derivatives_type>
 void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* qf_derivatives, const int* elements,
-                               uint32_t num_elements)
+                               std::size_t num_elements)
 {
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
@@ -453,7 +454,7 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
       RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_X, BLOCK_Y, BLOCK_Z)),
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(ctx, e_range, [du, rule, &ctx, elements, qf_derivatives, dr, num_qpts](int e) {
-          if constexpr (g == mfem::Geometry::CUBE) {
+          if constexpr (test_element::geometry == mfem::Geometry::CUBE && test_element::family == serac::Family::H1) {
             // (batch) interpolate each quadrature point's value
             auto qf_inputs = trial_element::interpolate(du[elements[e]], rule, nullptr, ctx);
 
@@ -521,7 +522,7 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
       RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_SZ)),
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(ctx, elements_range, [&ctx, dK, elements, qf_derivatives, nquad, rule](uint32_t e) {
-          if constexpr (g == mfem::Geometry::CUBE) {
+          if constexpr (test_element::geometry == mfem::Geometry::CUBE && test_element::family == serac::Family::H1) {
             static constexpr bool  is_QOI_2 = test::family == Family::QOI;
             [[maybe_unused]] auto* output_ptr =
                 reinterpret_cast<typename test_element::dof_type*>(&dK(elements[e], 0, 0));
@@ -581,7 +582,11 @@ std::function<void(const double*, double*)> jacobian_vector_product_kernel(
 }
 
 template <int wrt, int Q, mfem::Geometry::Type geom, typename signature, typename derivative_type>
+#if defined(USE_CUDA)
+std::function<void(ExecArrayView<double, 3, ExecutionSpace::GPU>)> element_gradient_kernel(
+#else
 std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)> element_gradient_kernel(
+#endif
     signature, std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {
 #if defined(USE_CUDA)

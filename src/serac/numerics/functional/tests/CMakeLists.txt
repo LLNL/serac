@@ -52,20 +52,21 @@ endforeach()
 if(ENABLE_CUDA)
 
     set(functional_tests_cuda
-        tensor_unit_tests_cuda.cu
-#        some of the GPU functionality is temporarily disabled to
-#        help incrementally roll-out the variadic implementation of Functional
-#        TODO: re-enable GPU kernels in a follow-up PR
-#        functional_comparisons_cuda.cu
-       )
+    #functional_basic_hcurl.cpp
+    # functional_with_domain.cpp
+    #functional_basic_h1_scalar.cpp
+    #functional_basic_h1_vector.cpp
+    # functional_multiphysics.cpp
+    # functional_qoi.cpp
+    # functional_nonlinear.cpp
+    # functional_boundary_test.cpp
+    # functional_comparisons.cpp
+    # functional_comparison_L2.cpp
+    )
 
-    serac_add_tests( SOURCES ${functional_tests_mpi}
+    serac_add_tests( SOURCES ${functional_tests_cuda}
                      USE_CUDA On
                      DEPENDS_ON gtest serac_functional serac_state ${functional_depends} cuda)
 
-
-    blt_add_executable(NAME functional_cuda
-                       SOURCES functional_cuda.cpp
-                       DEPENDS_ON gtest serac_functional serac_state ${functional_depends} cuda)
 
 endif()
