@@ -16,6 +16,7 @@
 // note: mfem assumes the parent element domain is [0,1]x[0,1]
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
+#include <RAJA/pattern/launch/launch_core.hpp>
 template <int p, int c>
 struct finite_element<mfem::Geometry::SQUARE, H1<p, c> > {
   static constexpr auto geometry   = mfem::Geometry::SQUARE;
@@ -156,7 +157,8 @@ struct finite_element<mfem::Geometry::SQUARE, H1<p, c> > {
 
   template <typename in_t, int q>
   static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q> input,
-                                                    const TensorProductQuadratureRule<q>&)
+                                                    const TensorProductQuadratureRule<q>&,
+                                                    RAJA::LaunchContext ctx = RAJA::LaunchContext{})
   {
     static constexpr bool apply_weights = false;
     static constexpr auto B             = calculate_B<apply_weights, q>();
@@ -203,7 +205,9 @@ struct finite_element<mfem::Geometry::SQUARE, H1<p, c> > {
   // A(dy, qx)  := B(qx, dx) * X_e(dy, dx)
   // X_q(qy, qx) := B(qy, dy) * A(dy, qx)
   template <int q>
-  SERAC_HOST_DEVICE static auto interpolate(const dof_type& X, const TensorProductQuadratureRule<q>&)
+  SERAC_HOST_DEVICE static auto interpolate(const dof_type&               X, const TensorProductQuadratureRule<q>&,
+                                            tensor<qf_input_type, q * q>* ouput_ptr = nullptr,
+                                            RAJA::LaunchContext           ctx       = RAJA::LaunchContext{})
   {
     static constexpr bool apply_weights = false;
     static constexpr auto B             = calculate_B<apply_weights, q>();
@@ -248,7 +252,7 @@ struct finite_element<mfem::Geometry::SQUARE, H1<p, c> > {
   template <typename source_type, typename flux_type, int q>
   SERAC_HOST_DEVICE static void integrate(const tensor<tuple<source_type, flux_type>, q * q>& qf_output,
                                           const TensorProductQuadratureRule<q>&, dof_type* element_residual,
-                                          int step = 1)
+                                          RAJA::LaunchContext ctx = RAJA::LaunchContext{}, int step = 1)
   {
     if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) {
       return;

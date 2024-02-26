@@ -226,9 +226,9 @@ SERAC_HOST_DEVICE auto promote_each_to_dual_when(const tensor<T, n>& x, void* ou
 {
   if constexpr (dualify) {
 #ifdef USE_CUDA
-    using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
-    using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
+    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
 #endif
 
     RAJA::RangeSegment x_range(0, n);
@@ -247,7 +247,7 @@ SERAC_HOST_DEVICE auto promote_each_to_dual_when(const tensor<T, n>& x, void* ou
   }
   if constexpr (!dualify) {
 #ifdef USE_CUDA
-    using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 
     RAJA::RangeSegment x_range(0, n);
     auto               casted_output_ptr = static_cast<tensor<T, n>*>(output_ptr);

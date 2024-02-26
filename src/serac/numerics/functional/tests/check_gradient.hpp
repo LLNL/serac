@@ -224,8 +224,8 @@ void check_gradient(serac::Functional<T>& f, double t, const mfem::Vector& U, co
 // qoi overloads //
 ///////////////////
 
-template <typename T, serac::ExecutionSpace execution_space>
-void check_gradient(serac::Functional<double(T), execution_space>& f, double t, mfem::HypreParVector& U)
+template <typename T, serac::ExecutionSpace execution_space = serac::ExecutionSpace::CPU>
+void check_gradient(serac::Functional<double(T), execution_space>& f, double t, const mfem::HypreParVector& U)
 {
   int seed = 42;
 

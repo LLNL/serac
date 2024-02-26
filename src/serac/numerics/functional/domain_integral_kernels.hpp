@@ -140,9 +140,9 @@ SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(lambda qf, double t, const tensor
 {
   using return_type = decltype(qf(double{}, tensor<double, dim>{}, T{}[0]...));
 #ifdef USE_CUDA
-  using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
-  using threads_x                                          = RAJA::LoopPolicy<RAJA::seq_exec>;
+  using threads_x [[maybe_unused]]                         = RAJA::LoopPolicy<RAJA::seq_exec>;
 #endif
   RAJA::RangeSegment     x_range(0, n);
   tensor<return_type, n> outputs{};
@@ -162,9 +162,9 @@ SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, 
 {
   using return_type = decltype(qf(double{}, tensor<double, dim>{}, qpt_data[0], T{}[0]...));
 #ifdef USE_CUDA
-  using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
-  using threads_x                                          = RAJA::LoopPolicy<RAJA::seq_exec>;
+  using threads_x [[maybe_unused]]                         = RAJA::LoopPolicy<RAJA::seq_exec>;
 #endif
   RAJA::RangeSegment     x_range(0, n);
   tensor<return_type, n> outputs{};
@@ -265,9 +265,9 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
   using teams_e       = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
   using launch_policy = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
 #else
-  using policy        = RAJA::simd_exec;
-  using teams_e       = RAJA::LoopPolicy<RAJA::seq_exec>;
-  using launch_policy = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
+  using policy [[maybe_unused]] = RAJA::simd_exec;
+  using teams_e                 = RAJA::LoopPolicy<RAJA::seq_exec>;
+  using launch_policy           = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
 #endif
 
   // for each element in the domain
@@ -278,73 +278,70 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
             ctx, e_range,
             [&ctx, t, device_J, device_x, u, qf, qpts_per_elem, rule, device_r, qf_state, elements, qf_derivatives,
              qf_inputs, interpolate_result, update_state](uint32_t e) {
-              if constexpr (test_element_type::geometry == mfem::Geometry::CUBE &&
-                            test_element_type::family == serac::Family::H1) {
-                // load the jacobians and positions for each quadrature point in this element
-                static constexpr trial_element_tuple_type empty_trial_element{};
+              // load the jacobians and positions for each quadrature point in this element
+              static constexpr trial_element_tuple_type empty_trial_element{};
 
-                // batch-calculate values / derivatives of each trial space, at each quadrature point
+              // batch-calculate values / derivatives of each trial space, at each quadrature point
 
-                (get<indices>(empty_trial_element)
-                     .interpolate(get<indices>(u)[elements[e]], rule, &get<indices>(interpolate_result[elements[e]]),
-                                  ctx),
-                 ...);
+              (get<indices>(empty_trial_element)
+                   .interpolate(get<indices>(u)[elements[e]], rule, &get<indices>(interpolate_result[elements[e]]),
+                                ctx),
+               ...);
 
-                ctx.teamSync();
+              ctx.teamSync();
 
-                (promote_each_to_dual_when<indices == differentiation_index>(
-                     get<indices>(interpolate_result[elements[e]]), &get<indices>(qf_inputs[elements[e]]), ctx),
-                 ...);
-                ctx.teamSync();
+              (promote_each_to_dual_when<indices == differentiation_index>(
+                   get<indices>(interpolate_result[elements[e]]), &get<indices>(qf_inputs[elements[e]]), ctx),
+               ...);
+              ctx.teamSync();
 
-                //// use J_e to transform values / derivatives on the parent element
-                //// to the to the corresponding values / derivatives on the physical element
-                (parent_to_physical<get<indices>(empty_trial_element).family>(get<indices>(qf_inputs[elements[e]]),
-                                                                              device_J, e, ctx),
-                 ...);
-                // parent_to_physical<get<0>(empty_trial_element).family>(qf_inputs, device_J,e, ctx);
+              //// use J_e to transform values / derivatives on the parent element
+              //// to the to the corresponding values / derivatives on the physical element
+              (parent_to_physical<get<indices>(empty_trial_element).family>(get<indices>(qf_inputs[elements[e]]),
+                                                                            device_J, e, ctx),
+               ...);
+              // parent_to_physical<get<0>(empty_trial_element).family>(qf_inputs, device_J,e, ctx);
 
-                ctx.teamSync();
-                //// (batch) evalute the q-function at each quadrature point
-                ////
-                //// note: the weird immediately-invoked lambda expression is
-                //// a workaround for a bug in GCC(<12.0) where it fails to
-                //// decide which function overload to use, and crashes
-                //
-                auto qf_outputs = [&]() {
-                  if constexpr (std::is_same_v<state_type, Nothing>) {
-                    return batch_apply_qf_no_qdata(qf, t, device_x[e], ctx, get<indices>(qf_inputs[e])...);
-                  } else {
-                    return batch_apply_qf(qf, t, device_x[e], &qf_state(e, 0), update_state, ctx,
-                                          get<indices>(qf_inputs[e])...);
-                  }
-                }();
-                ctx.teamSync();
+              ctx.teamSync();
+              //// (batch) evalute the q-function at each quadrature point
+              ////
+              //// note: the weird immediately-invoked lambda expression is
+              //// a workaround for a bug in GCC(<12.0) where it fails to
+              //// decide which function overload to use, and crashes
+              //
+              auto qf_outputs = [&]() {
+                if constexpr (std::is_same_v<state_type, Nothing>) {
+                  return batch_apply_qf_no_qdata(qf, t, device_x[e], ctx, get<indices>(qf_inputs[e])...);
+                } else {
+                  return batch_apply_qf(qf, t, device_x[e], &qf_state(e, 0), update_state, ctx,
+                                        get<indices>(qf_inputs[e])...);
+                }
+              }();
+              ctx.teamSync();
 
 #ifdef USE_CUDA
-                using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+              using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
-                using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
+              using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
 #endif
-                // use J to transform sources / fluxes on the physical element
-                // back to the corresponding sources / fluxes on the parent element
-                // physical_to_parent<test_element_type::family>(qf_outputs, J_e);
+              // use J to transform sources / fluxes on the physical element
+              // back to the corresponding sources / fluxes on the parent element
+              // physical_to_parent<test_element_type::family>(qf_outputs, J_e);
 
-                // write out the q-function derivatives after applying the
-                // physical_to_parent transformation, so that those transformations
-                // won't need to be applied in the action_of_gradient and element_gradient kernels
-                if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
-                  RAJA::RangeSegment x_range(0, leading_dimension(qf_outputs));
-                  RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
-                    // printf()
-                    qf_derivatives[e * uint32_t(qpts_per_elem) + uint32_t(q)] = get_gradient(qf_outputs[q]);
-                  });
-                }
-                ctx.teamSync();
-
-                // (batch) integrate the material response against the test-space basis functions
-                test_element_type::integrate(get_value(qf_outputs), rule, &device_r[elements[e]], ctx);
+              // write out the q-function derivatives after applying the
+              // physical_to_parent transformation, so that those transformations
+              // won't need to be applied in the action_of_gradient and element_gradient kernels
+              if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
+                RAJA::RangeSegment x_range(0, leading_dimension(qf_outputs));
+                RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
+                  // printf()
+                  qf_derivatives[e * uint32_t(qpts_per_elem) + uint32_t(q)] = get_gradient(qf_outputs[q]);
+                });
               }
+              ctx.teamSync();
+
+              // (batch) integrate the material response against the test-space basis functions
+              test_element_type::integrate(get_value(qf_outputs), rule, &device_r[elements[e]], ctx);
             });
       });
 #ifdef USE_CUDA
@@ -436,32 +433,27 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
   auto                                     dr = reinterpret_cast<typename test_element::dof_type*>(dR);
   constexpr TensorProductQuadratureRule<Q> rule{};
 
-  const int n_blocks_x = RAJA_DIVIDE_CEILING_INT(Q, BLOCK_X);
-  const int n_blocks_y = RAJA_DIVIDE_CEILING_INT(Q, BLOCK_Y);
-  const int n_blocks_z = RAJA_DIVIDE_CEILING_INT(Q, BLOCK_Z);
-  auto      e_range    = RAJA::RangeSegment(0, num_elements);
+  auto e_range = RAJA::RangeSegment(0, num_elements);
 
 #if defined(USE_CUDA)
   using teams_e       = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
   using launch_policy = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
 #else
-  using policy        = RAJA::simd_exec;
-  using teams_e       = RAJA::LoopPolicy<RAJA::seq_exec>;
-  using launch_policy = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
+  using policy [[maybe_unused]] = RAJA::simd_exec;
+  using teams_e                 = RAJA::LoopPolicy<RAJA::seq_exec>;
+  using launch_policy           = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
 #endif
   // for each element in the domain
   RAJA::launch<launch_policy>(
       RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_X, BLOCK_Y, BLOCK_Z)),
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(ctx, e_range, [du, rule, &ctx, elements, qf_derivatives, dr, num_qpts](int e) {
-          if constexpr (test_element::geometry == mfem::Geometry::CUBE && test_element::family == serac::Family::H1) {
-            // (batch) interpolate each quadrature point's value
-            auto qf_inputs = trial_element::interpolate(du[elements[e]], rule, nullptr, ctx);
+          // (batch) interpolate each quadrature point's value
+          auto qf_inputs = trial_element::interpolate(du[elements[e]], rule, nullptr, ctx);
 
-            auto qf_outputs = batch_apply_chain_rule<is_QOI>(qf_derivatives + e * num_qpts, qf_inputs);
+          auto qf_outputs = batch_apply_chain_rule<is_QOI>(qf_derivatives + e * num_qpts, qf_inputs);
 
-            test_element::integrate(qf_outputs, rule, &dr[elements[e]], ctx);
-          }
+          test_element::integrate(qf_outputs, rule, &dr[elements[e]], ctx);
         });
       });
 }
@@ -513,40 +505,38 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
   using launch_policy = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
 #endif
 #ifdef USE_CUDA
-  using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
-  using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
 #endif
   // for each element in the domain
   RAJA::launch<launch_policy>(
       RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_SZ)),
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(ctx, elements_range, [&ctx, dK, elements, qf_derivatives, nquad, rule](uint32_t e) {
-          if constexpr (test_element::geometry == mfem::Geometry::CUBE && test_element::family == serac::Family::H1) {
-            static constexpr bool  is_QOI_2 = test::family == Family::QOI;
-            [[maybe_unused]] auto* output_ptr =
-                reinterpret_cast<typename test_element::dof_type*>(&dK(elements[e], 0, 0));
+          static constexpr bool  is_QOI_2 = test::family == Family::QOI;
+          [[maybe_unused]] auto* output_ptr =
+              reinterpret_cast<typename test_element::dof_type*>(&dK(elements[e], 0, 0));
 
-            tensor<padded_derivative_type, nquad> derivatives{};
-            RAJA::RangeSegment                    x_range(0, nquad);
-            RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
-              if constexpr (is_QOI_2) {
-                get<0>(derivatives(q)) = qf_derivatives[e * nquad + uint32_t(q)];
-              } else {
-                derivatives(q) = qf_derivatives[e * nquad + uint32_t(q)];
-              }
-            });
-
-            ctx.teamSync();
-
-            for (int J = 0; J < trial_element::ndof; ++J) {
-              RAJA_TEAM_SHARED decltype(trial_element::batch_apply_shape_fn(J, derivatives, rule, ctx)) source_and_flux;
-              source_and_flux = trial_element::batch_apply_shape_fn(J, derivatives, rule, ctx);
-              test_element::integrate(source_and_flux, rule, output_ptr + J, ctx, trial_element::ndof);
+          tensor<padded_derivative_type, nquad> derivatives{};
+          RAJA::RangeSegment                    x_range(0, nquad);
+          RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
+            if constexpr (is_QOI_2) {
+              get<0>(derivatives(q)) = qf_derivatives[e * nquad + uint32_t(q)];
+            } else {
+              derivatives(q) = qf_derivatives[e * nquad + uint32_t(q)];
             }
+          });
 
-            ctx.teamSync();
+          ctx.teamSync();
+
+          for (int J = 0; J < trial_element::ndof; ++J) {
+            RAJA_TEAM_SHARED decltype(trial_element::batch_apply_shape_fn(J, derivatives, rule, ctx)) source_and_flux;
+            source_and_flux = trial_element::batch_apply_shape_fn(J, derivatives, rule, ctx);
+            test_element::integrate(source_and_flux, rule, output_ptr + J, ctx, trial_element::ndof);
           }
+
+          ctx.teamSync();
         });
       });
 #if defined(USE_CUDA)

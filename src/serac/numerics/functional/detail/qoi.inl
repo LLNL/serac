@@ -25,6 +25,7 @@ struct finite_element<g, QOI> {
 
   template <int Q, int q>
   SERAC_HOST_DEVICE static void integrate(const tensor<zero, Q>&, const TensorProductQuadratureRule<q>&, dof_type*,
+                                          RAJA::LaunchContext  ctx  = RAJA::LaunchContext{},
                                           [[maybe_unused]] int step = 1)
   {
     return;  // integrating zeros is a no-op
@@ -32,7 +33,8 @@ struct finite_element<g, QOI> {
 
   template <int Q, int q>
   SERAC_HOST_DEVICE static void integrate(const tensor<double, Q>& qf_output, const TensorProductQuadratureRule<q>&,
-                                          dof_type* element_total, [[maybe_unused]] int step = 1)
+                                          dof_type* element_total, RAJA::LaunchContext ctx = RAJA::LaunchContext{},
+                                          [[maybe_unused]] int step = 1)
   {
     if constexpr (geometry == mfem::Geometry::SEGMENT) {
       static_assert(Q == q);
@@ -79,6 +81,7 @@ struct finite_element<g, QOI> {
   template <typename source_type, int Q, int q>
   SERAC_HOST_DEVICE static void integrate(const tensor<serac::tuple<source_type, zero>, Q>& qf_output,
                                           const TensorProductQuadratureRule<q>&, dof_type* element_total,
+                                          RAJA::LaunchContext  ctx  = RAJA::LaunchContext{},
                                           [[maybe_unused]] int step = 1)
   {
     if constexpr (is_zero<source_type>{}) {

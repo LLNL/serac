@@ -250,9 +250,9 @@ SERAC_HOST_DEVICE void parent_to_physical(tensor<T, q>& qf_input, const tensor<d
   [[maybe_unused]] constexpr int VALUE      = 0;
   [[maybe_unused]] constexpr int DERIVATIVE = 1;
 #ifdef USE_CUDA
-  using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
-  using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
 #endif
   RAJA::RangeSegment k_range(0, BLOCK_SZ);
 

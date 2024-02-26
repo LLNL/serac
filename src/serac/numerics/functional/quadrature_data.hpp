@@ -42,6 +42,11 @@ struct Nothing {
  * @brief see `Nothing` for a complete description of this class and when to use it
  */
 struct Empty {
+  template <typename T>
+  SERAC_HOST_DEVICE auto operator=(T) const
+  {
+    return Empty{};
+  }
 };
 
 template <typename T>

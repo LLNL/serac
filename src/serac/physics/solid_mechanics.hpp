@@ -772,6 +772,32 @@ public:
                                  mesh_, qdata);
   }
 
+  template <typename Material>
+  struct SetMaterialStressFunctor {
+    Material                material_;
+    GeometricNonlinearities geom_nonlin;
+    SetMaterialStressFunctor(Material material, GeometricNonlinearities gn) : material_(material), geom_nonlin(gn) {}
+    template <typename T, typename X, typename State, typename Displacement, typename Acceleration, typename... Params>
+    auto SERAC_HOST_DEVICE operator()(T /*t*/, X /*x*/, State& state, Displacement displacement,
+                                      Acceleration acceleration, Params... params) const
+    {
+      auto du_dX   = get<DERIVATIVE>(displacement);
+      auto d2u_dt2 = get<VALUE>(acceleration);
+
+      auto stress = material_(state, du_dX, params...);
+
+      auto dx_dX = 0.0 * du_dX + I;
+
+      if (geom_nonlin == GeometricNonlinearities::On) {
+        dx_dX += du_dX;
+      }
+
+      auto flux = dot(stress, transpose(inv(dx_dX))) * det(dx_dX);
+
+      return serac::tuple{material_.density * d2u_dt2, flux};
+    }
+  };
+
   /**
    * @brief Set the material stress response and mass properties for the physics module
    *
@@ -799,6 +825,7 @@ public:
   template <int... active_parameters, typename MaterialType, typename StateType = Empty>
   void setMaterial(DependsOn<active_parameters...>, MaterialType material, qdata_type<StateType> qdata = EmptyQData)
   {
+    SetMaterialStressFunctor<MaterialType> fntor(material, geom_nonlin_);
     residual_->AddDomainIntegral(
         Dimension<dim>{},
         DependsOn<0, 1,
@@ -806,24 +833,7 @@ public:
                                                              // fact that the displacement, acceleration, and shape
                                                              // fields are always-on and come first, so the `n`th
                                                              // parameter will actually be argument `n + NUM_STATE_VARS`
-        [material, geom_nonlin = geom_nonlin_](double /*t*/, auto /*x*/, auto& state, auto displacement,
-                                               auto acceleration, auto... params) {
-          auto du_dX   = get<DERIVATIVE>(displacement);
-          auto d2u_dt2 = get<VALUE>(acceleration);
-
-          auto stress = material(state, du_dX, params...);
-
-          auto dx_dX = 0.0 * du_dX + I;
-
-          if (geom_nonlin == GeometricNonlinearities::On) {
-            dx_dX += du_dX;
-          }
-
-          auto flux = dot(stress, transpose(inv(dx_dX))) * det(dx_dX);
-
-          return serac::tuple{material.density * d2u_dt2, flux};
-        },
-        mesh_, qdata);
+        fntor, mesh_, qdata);
   }
 
   /// @overload
@@ -863,6 +873,18 @@ public:
   /// @overload
   void setVelocity(const FiniteElementState& temp) { velocity_ = temp; }
 
+  template <typename BodyForceType>
+  struct AddBodyForceIntegrand {
+    BodyForceType body_force_;
+    AddBodyForceIntegrand(BodyForceType body_force) : body_force_(body_force) {}
+    template <typename T, typename X, typename Displacement, typename Acceleration, typename... Params>
+    auto SERAC_HOST_DEVICE operator()(T t, X x, Displacement /* displacement */, Acceleration /* acceleration */,
+                                      Params... params) const
+    {
+      return serac::tuple{-1.0 * body_force_(x, t, params...), zero{}};
+    }
+  };
+
   /**
    * @brief Set the body forcefunction
    *
@@ -887,13 +909,9 @@ public:
                     const std::optional<Domain>& optional_domain = std::nullopt)
   {
     Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireDomain(mesh_);
-
-    residual_->AddDomainIntegral(
-        Dimension<dim>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
-        [body_force](double t, auto x, auto /* displacement */, auto /* acceleration */, auto... params) {
-          return serac::tuple{-1.0 * body_force(x, t, params...), zero{}};
-        },
-        domain);
+    AddBodyForceIntegrand<BodyForceType> force_integrand(body_force);
+    residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
+                                 force_integrand, domain);
   }
 
   /// @overload

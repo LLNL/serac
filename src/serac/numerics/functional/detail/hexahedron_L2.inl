@@ -76,7 +76,7 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
       for (int j = 0; j < p + 1; j++) {
         for (int i = 0; i < p + 1; i++) {
           dN[count++] = {
-            dN_xi[i] *  N_eta[j] *  N_zeta[k], 
+            dN_xi[i] *  N_eta[j] *  N_zeta[k],
              N_xi[i] * dN_eta[j] *  N_zeta[k],
              N_xi[i] *  N_eta[j] * dN_zeta[k]
           };
@@ -135,7 +135,8 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
 
   template <typename in_t, int q>
   static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q * q> input,
-                                                    const TensorProductQuadratureRule<q>&)
+                                                    const TensorProductQuadratureRule<q>&,
+                                                    RAJA::LaunchContext ctx = RAJA::LaunchContext{})
   {
     static constexpr bool apply_weights = false;
     static constexpr auto B             = calculate_B<apply_weights, q>();
@@ -172,7 +173,9 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
   }
 
   template <int q>
-  SERAC_HOST_DEVICE static auto interpolate(const dof_type& X, const TensorProductQuadratureRule<q>&)
+  SERAC_HOST_DEVICE static auto interpolate(const dof_type&                   X, const TensorProductQuadratureRule<q>&,
+                                            tensor<qf_input_type, q * q * q>* ouput_ptr = nullptr,
+                                            RAJA::LaunchContext               ctx       = RAJA::LaunchContext{})
   {
     // we want to compute the following:
     //
@@ -235,7 +238,7 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
   template <typename source_type, typename flux_type, int q>
   SERAC_HOST_DEVICE static void integrate(const tensor<tuple<source_type, flux_type>, q * q * q>& qf_output,
                                           const TensorProductQuadratureRule<q>&, dof_type* element_residual,
-                                          int step = 1)
+                                          RAJA::LaunchContext ctx = RAJA::LaunchContext{}, int step = 1)
   {
     if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) {
       return;

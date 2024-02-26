@@ -256,7 +256,8 @@ struct finite_element<mfem::Geometry::CUBE, Hcurl<p>> {
 
   template <typename in_t, int q>
   static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q * q> input,
-                                                    const TensorProductQuadratureRule<q>&)
+                                                    const TensorProductQuadratureRule<q>&,
+                                                    RAJA::LaunchContext ctx = RAJA::LaunchContext{})
   {
     constexpr bool                     apply_weights = false;
     constexpr tensor<double, q, p>     B1            = calculate_B1<apply_weights, q>();
@@ -334,7 +335,10 @@ struct finite_element<mfem::Geometry::CUBE, Hcurl<p>> {
   }
 
   template <int q>
-  SERAC_HOST_DEVICE static auto interpolate(const dof_type& element_values, const TensorProductQuadratureRule<q>&)
+  SERAC_HOST_DEVICE static auto interpolate(
+      const dof_type& element_values, const TensorProductQuadratureRule<q>&,
+      tensor<tuple<tensor<double, 3>, tensor<double, 3>>, q * q * q>* ouput_ptr = nullptr,
+      RAJA::LaunchContext                                             ctx       = RAJA::LaunchContext{})
   {
     constexpr bool                     apply_weights = false;
     constexpr tensor<double, q, p>     B1            = calculate_B1<apply_weights, q>();
@@ -397,6 +401,7 @@ struct finite_element<mfem::Geometry::CUBE, Hcurl<p>> {
   template <typename source_type, typename flux_type, int q>
   SERAC_HOST_DEVICE static void integrate(const tensor<tuple<source_type, flux_type>, q * q * q>& qf_output,
                                           const TensorProductQuadratureRule<q>&, dof_type* element_residual,
+                                          RAJA::LaunchContext  ctx  = RAJA::LaunchContext{},
                                           [[maybe_unused]] int step = 1)
   {
     constexpr bool                     apply_weights = true;
@@ -445,8 +450,8 @@ struct finite_element<mfem::Geometry::CUBE, Hcurl<p>> {
       element_residual[0].y += contract< y, 0 >(A1, B1);
     }
 
-    //  r(2, dz, dy, dx) = s(2, qz, qy, qx) * B1(qz, dz) * B2(qy, dy) * B2(qx, dx) 
-    //                   + f(0, qz, qy, qx) * B1(qz, dz) * G2(qy, dy) * B2(qx, dx) 
+    //  r(2, dz, dy, dx) = s(2, qz, qy, qx) * B1(qz, dz) * B2(qy, dy) * B2(qx, dx)
+    //                   + f(0, qz, qy, qx) * B1(qz, dz) * G2(qy, dy) * B2(qx, dx)
     //                   - f(1, qz, qy, qx) * B1(qz, dz) * B2(qy, dy) * G2(qx, dx);
     {
       auto A20 = contract< y, 0 >(source[2], B2) + contract< y, 0 >(flux[0], G2);

@@ -318,7 +318,7 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, d
 
     for (int J = 0; J < trial_element::ndof; J++) {
       auto source_and_flux = trial_element::batch_apply_shape_fn(J, derivatives, rule);
-      test_element::integrate(source_and_flux, rule, output_ptr + J, trial_element::ndof);
+      test_element::integrate(source_and_flux, rule, output_ptr + J, RAJA::LaunchContext{}, trial_element::ndof);
     }
   }
 }

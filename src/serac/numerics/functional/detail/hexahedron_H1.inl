@@ -117,8 +117,8 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
     tensor<double, q, n>*           B_ptr          = nullptr;
     auto&                           rm             = umpire::ResourceManager::getInstance();
     auto                            dest_allocator = rm.getAllocator("DEVICE");
-    B_ptr        = static_cast<tensor<double, q, n>*>(dest_allocator.allocate(sizeof(tensor<double, q, n>)));
-    using policy = RAJA::cuda_exec<256>;
+    B_ptr = static_cast<tensor<double, q, n>*>(dest_allocator.allocate(sizeof(tensor<double, q, n>)));
+    using policy [[maybe_unused]] = RAJA::cuda_exec<256>;
     RAJA::forall<policy>(RAJA::TypedRangeSegment<int>(0, q), [points1D, weights1D, B_ptr] SERAC_HOST_DEVICE(int i) {
       (*B_ptr)[i] = GaussLobattoInterpolation<n>(points1D[i]);
       if constexpr (apply_weights) {
@@ -162,8 +162,8 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
     tensor<double, q, n>*           G_ptr          = nullptr;
     auto&                           rm             = umpire::ResourceManager::getInstance();
     auto                            dest_allocator = rm.getAllocator("DEVICE");
-    G_ptr        = static_cast<tensor<double, q, n>*>(dest_allocator.allocate(sizeof(tensor<double, q, n>)));
-    using policy = RAJA::cuda_exec<256>;
+    G_ptr = static_cast<tensor<double, q, n>*>(dest_allocator.allocate(sizeof(tensor<double, q, n>)));
+    using policy [[maybe_unused]] = RAJA::cuda_exec<256>;
     RAJA::forall<policy>(RAJA::TypedRangeSegment<int>(0, q), [points1D, weights1D, G_ptr] SERAC_HOST_DEVICE(int i) {
       (*G_ptr)[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
       if constexpr (apply_weights) {
@@ -175,8 +175,8 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
 #endif
 
   template <typename in_t, int q>
-  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q * q>                              input,
-                                                    const TensorProductQuadratureRule<q>&, RAJA::LaunchContext& ctx)
+  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q * q>                             input,
+                                                    const TensorProductQuadratureRule<q>&, RAJA::LaunchContext ctx)
   {
     static constexpr bool apply_weights = false;
     static constexpr auto B             = calculate_B<apply_weights, q>();
@@ -191,9 +191,9 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
 
     tensor<tuple<source_t, flux_t>, q * q * q> output;
 #ifdef USE_CUDA
-    using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
-    using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
+    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
 #endif
     auto x_range = RAJA::RangeSegment(0, q * q * q);
     RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
@@ -240,9 +240,9 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
     static constexpr bool apply_weights = false;
 
 #ifdef USE_CUDA
-    using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
-    using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
+    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
 #endif
 
     RAJA::RangeSegment x_range(0, BLOCK_SZ);
@@ -387,10 +387,10 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
     RAJA::RangeSegment x_range(0, BLOCK_SZ);
 
 #ifdef USE_CUDA
-    using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
 
-    using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
+    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
 #endif
 
     for (int j = 0; j < ntrial; j++) {
