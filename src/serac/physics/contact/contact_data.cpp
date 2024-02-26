@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/contact/contact_data.hpp"
-#include <HYPRE_utilities.h>
 
 #include "axom/slic.hpp"
 
@@ -323,10 +322,17 @@ void ContactData::updateDofOffsets() const
   }
   if (HYPRE_AssumedPartitionCheck()) {
     auto total_dofs = global_pressure_dof_offsets_[global_pressure_dof_offsets_.Size() - 1];
-    global_pressure_dof_offsets_.SetSize(3);
+    // If the number of ranks is less than 2, ensure the size of global_pressure_dof_offsets_ is large enough
+    if (mesh_.GetNRanks() < 2) {
+      global_pressure_dof_offsets_.SetSize(3);
+    }
     global_pressure_dof_offsets_[0] = global_pressure_dof_offsets_[mesh_.GetMyRank()];
     global_pressure_dof_offsets_[1] = global_pressure_dof_offsets_[mesh_.GetMyRank() + 1];
     global_pressure_dof_offsets_[2] = total_dofs;
+    // If the number of ranks is greater than 2, shrink the size of global_pressure_dof_offsets_
+    if (mesh_.GetNRanks() > 2) {
+      global_pressure_dof_offsets_.SetSize(3);
+    }
   }
   offsets_up_to_date_ = true;
 }
