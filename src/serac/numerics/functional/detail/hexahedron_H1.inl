@@ -107,28 +107,6 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
     }
     return B;
   }
-#ifdef USE_CUDA
-  // Compute B on device, and return a pointer to device memory.
-  template <bool apply_weights, int q>
-  static serac::tensor<double, q, n>* calculate_B_device()
-  {
-    constexpr auto                  points1D       = GaussLegendreNodes<q, mfem::Geometry::SEGMENT>();
-    [[maybe_unused]] constexpr auto weights1D      = GaussLegendreWeights<q, mfem::Geometry::SEGMENT>();
-    tensor<double, q, n>*           B_ptr          = nullptr;
-    auto&                           rm             = umpire::ResourceManager::getInstance();
-    auto                            dest_allocator = rm.getAllocator("DEVICE");
-    B_ptr = static_cast<tensor<double, q, n>*>(dest_allocator.allocate(sizeof(tensor<double, q, n>)));
-    using policy [[maybe_unused]] = RAJA::cuda_exec<256>;
-    RAJA::forall<policy>(RAJA::TypedRangeSegment<int>(0, q), [points1D, weights1D, B_ptr] SERAC_HOST_DEVICE(int i) {
-      (*B_ptr)[i] = GaussLobattoInterpolation<n>(points1D[i]);
-      if constexpr (apply_weights) {
-        (*B_ptr)[i] = (*B_ptr)[i] * weights1D[i];
-      }
-    });
-
-    return B_ptr;
-  }
-#endif
 
   /**
    * @brief G(i,j) is the derivative of the
@@ -152,27 +130,6 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
     }
     return G;
   }
-
-#ifdef USE_CUDA
-  template <bool apply_weights, int q>
-  static serac::tensor<double, q, n>* calculate_G_device()
-  {
-    constexpr auto                  points1D       = GaussLegendreNodes<q, mfem::Geometry::SEGMENT>();
-    [[maybe_unused]] constexpr auto weights1D      = GaussLegendreWeights<q, mfem::Geometry::SEGMENT>();
-    tensor<double, q, n>*           G_ptr          = nullptr;
-    auto&                           rm             = umpire::ResourceManager::getInstance();
-    auto                            dest_allocator = rm.getAllocator("DEVICE");
-    G_ptr = static_cast<tensor<double, q, n>*>(dest_allocator.allocate(sizeof(tensor<double, q, n>)));
-    using policy [[maybe_unused]] = RAJA::cuda_exec<256>;
-    RAJA::forall<policy>(RAJA::TypedRangeSegment<int>(0, q), [points1D, weights1D, G_ptr] SERAC_HOST_DEVICE(int i) {
-      (*G_ptr)[i] = GaussLobattoInterpolationDerivative<n>(points1D[i]);
-      if constexpr (apply_weights) {
-        (*G_ptr)[i] = (*G_ptr)[i] * weights1D[i];
-      }
-    });
-    return G_ptr;
-  }
-#endif
 
   template <typename in_t, int q>
   static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q * q>                             input,
@@ -217,9 +174,14 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
     return output;
   }
 
+  template<int q>
+  struct InterpolateResult {
+    using type = tensor<qf_input_type, q * q * q>;
+  };
+
   template <int q>
   SERAC_HOST_DEVICE static auto interpolate(const dof_type&                   X, const TensorProductQuadratureRule<q>&,
-                                            tensor<qf_input_type, q * q * q>* foo = nullptr,
+                                            tensor<qf_input_type, q * q * q>* output_ptr = nullptr,
                                             RAJA::LaunchContext               ctx = RAJA::LaunchContext{})
   {
     // we want to compute the following:
@@ -318,8 +280,10 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
 
 #endif
     // transpose the quadrature data into a flat tensor of tuples
-
-    RAJA_TEAM_SHARED union {
+#ifdef USE_CUDA
+    RAJA_TEAM_SHARED
+#endif
+    union {
       tensor<qf_input_type, q * q * q>                                  one_dimensional;
       tensor<tuple<tensor<double, c>, tensor<double, c, dim>>, q, q, q> three_dimensional;
     } output;
@@ -338,34 +302,14 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
         }
       }
     });
-    if (foo) {
+    if (output_ptr) {
       RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
         if (tid < serac::size(output.one_dimensional)) {
-          (*foo)[tid] = output.one_dimensional[tid];
+          ((*output_ptr))[tid] = output.one_dimensional[tid];
         }
       });
     }
     return output.one_dimensional;
-  }
-
-  template <typename T, typename DestinationTensor, int... n>
-  static void copy_tensor_to_host(serac::tensor<T, n...>* src, DestinationTensor* dst)
-  {
-    auto& rm             = umpire::ResourceManager::getInstance();
-    auto  dest_allocator = rm.getAllocator("DEVICE");
-
-    umpire::register_external_allocation(
-        dst,
-        umpire::util::AllocationRecord(dst, sizeof(DestinationTensor), rm.getAllocator("HOST").getAllocationStrategy(),
-                                       std::string("external array")));
-
-    rm.copy(dst, src);
-  }
-
-  template <typename DestinationTensor>
-  static void copy_tensor_to_host(serac::zero* src, DestinationTensor* dst)
-  {
-    *dst = serac::zero{};
   }
 
   template <typename source_type, typename flux_type, int q>
@@ -414,13 +358,6 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
               flux(k, qz, qy, qx) =
                   reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
             }
-          }
-          constexpr auto B = calculate_B<apply_weights, q>();
-          constexpr auto G = calculate_G<apply_weights, q>();
-
-          source(qz, qy, qx) = reinterpret_cast<const double*>(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
-          for (int k = 0; k < dim; k++) {
-            flux(k, qz, qy, qx) = reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
           }
         });
 #if not defined USE_CUDA

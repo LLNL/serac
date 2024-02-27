@@ -206,8 +206,8 @@ struct finite_element<mfem::Geometry::SQUARE, H1<p, c> > {
   // X_q(qy, qx) := B(qy, dy) * A(dy, qx)
   template <int q>
   SERAC_HOST_DEVICE static auto interpolate(const dof_type&               X, const TensorProductQuadratureRule<q>&,
-                                            tensor<qf_input_type, q * q>* ouput_ptr = nullptr,
-                                            RAJA::LaunchContext           ctx       = RAJA::LaunchContext{})
+                                            tensor<qf_input_type, q * q>* output_ptr = nullptr,
+                                            RAJA::LaunchContext           ctx    = RAJA::LaunchContext{})
   {
     static constexpr bool apply_weights = false;
     static constexpr auto B             = calculate_B<apply_weights, q>();
@@ -242,6 +242,15 @@ struct finite_element<mfem::Geometry::SQUARE, H1<p, c> > {
         }
       }
     }
+    RAJA::TypedRangeSegment<int> x_range(0, BLOCK_SZ);
+    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
+    if (output_ptr) {
+      RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
+        if (tid < serac::size(output.one_dimensional)) {
+          ((*output_ptr))[tid] = output.one_dimensional[tid];
+        }
+      });
+    }
 
     return output.one_dimensional;
   }
@@ -252,7 +261,8 @@ struct finite_element<mfem::Geometry::SQUARE, H1<p, c> > {
   template <typename source_type, typename flux_type, int q>
   SERAC_HOST_DEVICE static void integrate(const tensor<tuple<source_type, flux_type>, q * q>& qf_output,
                                           const TensorProductQuadratureRule<q>&, dof_type* element_residual,
-                                          RAJA::LaunchContext ctx = RAJA::LaunchContext{}, int step = 1)
+                                          RAJA::LaunchContext ctx = RAJA::LaunchContext{},
+                                          int step = 1)
   {
     if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) {
       return;

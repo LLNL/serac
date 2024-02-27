@@ -211,13 +211,13 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
   using interpolate_out_type =
       decltype(tuple{get<indices>(empty_trial_element).interpolate(get<indices>(u)[0], rule)...});
 
-  using type = decltype(tuple{promote_each_to_dual_when<indices == differentiation_index>(
+  using qf_inputs_type = decltype(tuple{promote_each_to_dual_when<indices == differentiation_index>(
       get<indices>(empty_trial_element).interpolate(get<indices>(u)[0], rule))...});
 
 #ifdef USE_CUDA
   auto&                 rm             = umpire::ResourceManager::getInstance();
   auto                  dest_allocator = rm.getAllocator("DEVICE");
-  type*                 qf_inputs      = static_cast<type*>(dest_allocator.allocate(sizeof(type) * num_elements));
+  qf_inputs_type*                 qf_inputs      = static_cast<qf_inputs_type*>(dest_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
   interpolate_out_type* interpolate_result =
       static_cast<interpolate_out_type*>(dest_allocator.allocate(sizeof(interpolate_out_type) * num_elements));
   std::cout << "USING CUDA :)\n";
@@ -231,32 +231,16 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
 
   auto device_r = copy_data(r, serac::size(*r) * sizeof(double), "DEVICE");
 
-  // These more complex types require a helper struct to deduce the data structure size.
-  // decltype(u)* device_u = static_cast<decltype(u)*>(dest_allocator.allocate(serac::size(u)));
-
-  // vector of pointers to device inputs
-
-  // umpire::register_external_allocation(
-  //   &u, umpire::util::AllocationRecord(&u, serac::size(u) * sizeof(double),
-  //   rm.getAllocator("HOST").getAllocationStrategy(),
-  //                                         std::string("external array")));
-  // rm.copy(device_u, &u);
-  // auto device_qf_derivatives = static_cast<derivative_type*>(dest_allocator.allocate(serac::size(*qf_derivatives) *
-  // sizeof(double))); umpire::register_external_allocation(
-  //   qf_derivatives, umpire::util::AllocationRecord(qf_derivatives, serac::size(*qf_derivatives) * sizeof(double),
-  //   rm.getAllocator("HOST").getAllocationStrategy(),
-  //                                         std::string("external array")));
-  // rm.copy(device_qf_derivatives, qf_derivatives);
-
   printCUDAMemUsage();
   cudaSetDevice(0);
 #else
-  type*                                 qf_inputs          = nullptr;
-  interpolate_out_type*                 interpolate_result = nullptr;
+  auto&                 rm             = umpire::ResourceManager::getInstance();
+  auto                  host_allocator = rm.getAllocator("HOST");
+  qf_inputs_type*                                 qf_inputs          = static_cast<qf_inputs_type*>(host_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
+  interpolate_out_type*                 interpolate_result = static_cast<interpolate_out_type*>(host_allocator.allocate(sizeof(interpolate_out_type) * num_elements));
   auto                                  device_J           = J;
   auto                                  device_x           = x;
   typename test_element_type::dof_type* device_r           = r;
-  // auto device_qf_derivatives = qf_derivatives;
 #endif
 
   auto e_range = RAJA::TypedRangeSegment<uint32_t>(0, num_elements);
@@ -289,6 +273,7 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
                ...);
 
               ctx.teamSync();
+
 
               (promote_each_to_dual_when<indices == differentiation_index>(
                    get<indices>(interpolate_result[elements[e]]), &get<indices>(qf_inputs[elements[e]]), ctx),
@@ -334,7 +319,6 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
               if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
                 RAJA::RangeSegment x_range(0, leading_dimension(qf_outputs));
                 RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
-                  // printf()
                   qf_derivatives[e * uint32_t(qpts_per_elem) + uint32_t(q)] = get_gradient(qf_outputs[q]);
                 });
               }

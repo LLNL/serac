@@ -574,7 +574,6 @@ template <typename... S, typename... T, int... i>
 SERAC_HOST_DEVICE constexpr auto mult_helper(const tuple<S...>& x, const tuple<T...>& y,
                                              std::integer_sequence<int, i...>)
 {
-  // printf("mult helper* 3\n");
   return tuple{get<i>(x) * get<i>(y)...};
 }
 
@@ -588,7 +587,6 @@ SERAC_HOST_DEVICE constexpr auto mult_helper(const tuple<S...>& x, const tuple<T
 template <typename... S, typename... T>
 SERAC_HOST_DEVICE constexpr auto operator*(const tuple<S...>& x, const tuple<T...>& y)
 {
-  // printf("operator* 1\n");
   static_assert(sizeof...(S) == sizeof...(T));
   return mult_helper(x, y, std::make_integer_sequence<int, static_cast<int>(sizeof...(S))>());
 }
@@ -605,7 +603,6 @@ SERAC_HOST_DEVICE constexpr auto operator*(const tuple<S...>& x, const tuple<T..
 template <typename TupleType, int... i>
 SERAC_HOST_DEVICE constexpr auto mult_helper(const double a, const TupleType& x, std::integer_sequence<int, i...>)
 {
-  // printf("mult helper* 1\n");
   return tuple{a * get<i>(x)...};
 }
 
@@ -621,7 +618,6 @@ SERAC_HOST_DEVICE constexpr auto mult_helper(const double a, const TupleType& x,
 template <typename TupleType, int... i>
 SERAC_HOST_DEVICE constexpr auto mult_helper(const TupleType& x, const double a, std::integer_sequence<int, i...>)
 {
-  // printf("mult helper* 2\n");
   return tuple{get<i>(x) * a...};
 }
 
@@ -634,7 +630,6 @@ SERAC_HOST_DEVICE constexpr auto mult_helper(const TupleType& x, const double a,
 template <typename... T>
 SERAC_HOST_DEVICE constexpr auto operator*(const double a, const tuple<T...>& x)
 {
-  // printf("operator* 2\n");
   return mult_helper(a, x, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
 }
 
@@ -647,7 +642,6 @@ SERAC_HOST_DEVICE constexpr auto operator*(const double a, const tuple<T...>& x)
 template <typename... T>
 SERAC_HOST_DEVICE constexpr auto operator*(const tuple<T...>& x, const double a)
 {
-  // printf("operator* 3\n");
   return mult_helper(x, a, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
 }
 

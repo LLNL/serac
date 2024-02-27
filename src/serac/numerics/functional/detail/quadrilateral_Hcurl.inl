@@ -288,7 +288,7 @@ struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
 
   template <int q>
   SERAC_HOST_DEVICE static auto interpolate(const dof_type& element_values, const TensorProductQuadratureRule<q>&,
-                                            tensor<tuple<tensor<double, 2>, double>, q * q>* ouput_ptr = nullptr,
+                                            tensor<tuple<tensor<double, 2>, double>, q * q>* output_ptr = nullptr,
                                             RAJA::LaunchContext ctx = RAJA::LaunchContext{})
   {
     constexpr bool                     apply_weights = false;
@@ -316,9 +316,17 @@ struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
         for (int i = 0; i < dim; i++) {
-          get<VALUE>(qf_inputs(count))[i] = value[i](qy, qx);
+          if (!output_ptr) {
+            get<VALUE>(qf_inputs(count))[i] = value[i](qy, qx);
+          } else {
+            get<VALUE>((*output_ptr)(count))[i] = value[i](qy, qx);
+          }
         }
-        get<CURL>(qf_inputs(count)) = curl(qy, qx);
+        if (!output_ptr) {
+          get<CURL>(qf_inputs(count)) = curl(qy, qx);
+        } else {
+          get<CURL>((*output_ptr)(count)) = curl(qy, qx);
+        }
         count++;
       }
     }
@@ -329,7 +337,7 @@ struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
   template <typename source_type, typename flux_type, int q>
   SERAC_HOST_DEVICE static void integrate(const tensor<tuple<source_type, flux_type>, q * q>& qf_output,
                                           const TensorProductQuadratureRule<q>&, dof_type* element_residual,
-                                          RAJA::LaunchContext  ctx  = RAJA::LaunchContext{},
+                                          RAJA::LaunchContext ctx = RAJA::LaunchContext{},
                                           [[maybe_unused]] int step = 1)
   {
     constexpr bool                     apply_weights = true;

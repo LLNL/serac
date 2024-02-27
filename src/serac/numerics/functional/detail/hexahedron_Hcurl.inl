@@ -337,7 +337,7 @@ struct finite_element<mfem::Geometry::CUBE, Hcurl<p>> {
   template <int q>
   SERAC_HOST_DEVICE static auto interpolate(
       const dof_type& element_values, const TensorProductQuadratureRule<q>&,
-      tensor<tuple<tensor<double, 3>, tensor<double, 3>>, q * q * q>* ouput_ptr = nullptr,
+      tensor<tuple<tensor<double, 3>, tensor<double, 3>>, q * q * q>* output_ptr = nullptr,
       RAJA::LaunchContext                                             ctx       = RAJA::LaunchContext{})
   {
     constexpr bool                     apply_weights = false;
@@ -387,8 +387,13 @@ struct finite_element<mfem::Geometry::CUBE, Hcurl<p>> {
       for (int qy = 0; qy < q; qy++) {
         for (int qx = 0; qx < q; qx++) {
           for (int i = 0; i < 3; i++) {
-            get<VALUE>(qf_inputs(count))[i] = value[i](qz, qy, qx);
-            get<CURL>(qf_inputs(count))[i]  = curl[i](qz, qy, qx);
+            if (output_ptr) {
+              get<VALUE>(qf_inputs(count))[i] = value[i](qz, qy, qx);
+              get<CURL>(qf_inputs(count))[i]  = curl[i](qz, qy, qx);
+            } else {
+              get<VALUE>((*output_ptr)(count))[i] = value[i](qz, qy, qx);
+              get<CURL>((*output_ptr)(count))[i]  = curl[i](qz, qy, qx);
+            }
           }
           count++;
         }
