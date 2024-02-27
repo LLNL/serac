@@ -550,7 +550,7 @@ protected:
   mutable std::unordered_map<std::string, std::unique_ptr<mfem::ParGridFunction>> paraview_dual_grid_functions_;
 
   /**
-   * @brief A optional view of the shape sensitivity in grid funciton form for paraview output
+   * @brief A optional view of the shape sensitivity in grid function form for paraview output
    */
   mutable std::unique_ptr<mfem::ParGridFunction> shape_sensitivity_grid_function_;
 
