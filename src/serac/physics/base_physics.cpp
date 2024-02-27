@@ -128,9 +128,6 @@ void BasePhysics::CreateParaviewDataCollection() const
   }
 
   for (const FiniteElementDual* dual : duals_) {
-    // These are really const calls, but MFEM doesn't label them as such
-    serac::FiniteElementDual* non_const_dual = const_cast<serac::FiniteElementDual*>(dual);
-
     paraview_dual_grid_functions_[dual->name()] =
         std::make_unique<mfem::ParGridFunction>(const_cast<mfem::ParFiniteElementSpace*>(&dual->space()));
     max_order_in_fields = std::max(max_order_in_fields, dual->space().GetOrder(0));
