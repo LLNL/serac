@@ -629,14 +629,17 @@ public:
    * @brief register a custom boundary integral calculation as part of the residual
    *
    * @tparam active_parameters a list of indices, describing which parameters to pass to the q-function
-   * @param qfunction a callable that returns the traction on a boundary surface
+   * @param qfunction a callable that returns the normal heat flux on a boundary surface
    * @param optional_domain The domain over which the integral is computed
    *
    * ~~~ {.cpp}
    *
-   *  heat_transfer.addCustomBoundaryIntegral(DependsOn<>{}, [](double t, auto position, auto temperature, auto
-   * temperature_rate){ auto [T, dT_dxi] = temperature; auto q           = 5.0*(T-25.0); return q;  // define a
-   * temperature-proportional heat-flux
+   *  heat_transfer.addCustomBoundaryIntegral(
+   *     DependsOn<>{}, 
+   *     [](double t, auto position, auto temperature, auto temperature_rate) { 
+   *         auto [T, dT_dxi] = temperature; 
+   *         auto q           = 5.0*(T-25.0); 
+   *         return q;  // define a temperature-proportional heat-flux
    *  });
    *
    * ~~~
