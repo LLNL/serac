@@ -626,6 +626,34 @@ public:
   }
 
   /**
+   * @brief register a custom boundary integral calculation as part of the residual
+   *
+   * @tparam active_parameters a list of indices, describing which parameters to pass to the q-function
+   * @param qfunction a callable that returns the traction on a boundary surface
+   * @param optional_domain The domain over which the integral is computed
+   *
+   * ~~~ {.cpp}
+   *
+   *  heat_transfer.addCustomBoundaryIntegral(DependsOn<>{}, [](double t, auto position, auto temperature, auto
+   * temperature_rate){ auto [T, dT_dxi] = temperature; auto q           = 5.0*(T-25.0); return q;  // define a
+   * temperature-proportional heat-flux
+   *  });
+   *
+   * ~~~
+   *
+   * @note This method must be called prior to completeSetup()
+   */
+  template <int... active_parameters, typename callable>
+  void addCustomBoundaryIntegral(DependsOn<active_parameters...>, callable qfunction,
+                                 const std::optional<Domain>& optional_domain = std::nullopt)
+  {
+    Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireBoundary(mesh_);
+
+    residual_->AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
+                                   qfunction, domain);
+  }
+
+  /**
    * @brief Accessor for getting named finite element state adjoint solution from the physics modules
    *
    * @param state_name The name of the Finite Element State adjoint solution to retrieve
