@@ -338,7 +338,7 @@ struct finite_element<mfem::Geometry::CUBE, Hcurl<p>> {
   SERAC_HOST_DEVICE static auto interpolate(
       const dof_type& element_values, const TensorProductQuadratureRule<q>&,
       tensor<tuple<tensor<double, 3>, tensor<double, 3>>, q * q * q>* output_ptr = nullptr,
-      RAJA::LaunchContext                                             ctx       = RAJA::LaunchContext{})
+      RAJA::LaunchContext                                             ctx        = RAJA::LaunchContext{})
   {
     constexpr bool                     apply_weights = false;
     constexpr tensor<double, q, p>     B1            = calculate_B1<apply_weights, q>();

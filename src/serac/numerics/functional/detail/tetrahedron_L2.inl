@@ -370,7 +370,7 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, L2<p, c> > {
   template <int q>
   SERAC_HOST_DEVICE static auto interpolate(const tensor<double, c, ndof>&   X, const TensorProductQuadratureRule<q>&,
                                             tensor<qf_input_type, nqpts(q)>* output_ptr = nullptr,
-                                            RAJA::LaunchContext              ctx       = RAJA::LaunchContext{})
+                                            RAJA::LaunchContext              ctx        = RAJA::LaunchContext{})
   {
     constexpr auto xi = GaussLegendreNodes<q, mfem::Geometry::TETRAHEDRON>();
 
@@ -394,7 +394,7 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, L2<p, c> > {
     if (output_ptr) {
       RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
         if (tid < serac::size(output.flattened)) {
-          get<VALUE>(((*output_ptr))[tid]) = get<VALUE>(output.flattened[tid]);
+          get<VALUE>(((*output_ptr))[tid])    = get<VALUE>(output.flattened[tid]);
           get<GRADIENT>(((*output_ptr))[tid]) = get<GRADIENT>(output.flattened[tid]);
         }
       });

@@ -174,7 +174,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
     return output;
   }
 
-  template<int q>
+  template <int q>
   struct InterpolateResult {
     using type = tensor<qf_input_type, q * q * q>;
   };
@@ -182,7 +182,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
   template <int q>
   SERAC_HOST_DEVICE static auto interpolate(const dof_type&                   X, const TensorProductQuadratureRule<q>&,
                                             tensor<qf_input_type, q * q * q>* output_ptr = nullptr,
-                                            RAJA::LaunchContext               ctx = RAJA::LaunchContext{})
+                                            RAJA::LaunchContext               ctx        = RAJA::LaunchContext{})
   {
     // we want to compute the following:
     //
@@ -289,12 +289,13 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
     } output;
 
     RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
-      int qx = tid % BLOCK_X;
-      int qy = tid / BLOCK_X;
-      int qz = tid / (BLOCK_X * BLOCK_Y);
-      if (qx >= q || qy >= q || qz >= q) {
+      if (tid >= q * q * q) {
         return;
       }
+      int qx = tid % q;
+      int qy = (tid / q) % q;
+      int qz = tid / (q * q);
+
       for (int i = 0; i < c; i++) {
         get<VALUE>(output.three_dimensional(qz, qy, qx))[i] = value(i, qz, qy, qx);
         for (int j = 0; j < dim; j++) {
@@ -343,13 +344,13 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
         f_buffer_type flux;
 
         RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
-          int qx = tid % BLOCK_X;
-          int qy = tid / BLOCK_X;
-          int qz = tid / (BLOCK_X * BLOCK_Y);
-          if (qx >= q || qy >= q || qz >= q) {
+          if (tid >= q * q * q) {
             return;
           }
-          int Q = (qz * q + qy) * q + qx;
+          int qx = tid % q;
+          int qy = (tid / q) % q;
+          int qz = tid / (q * q);
+          int Q  = (qz * q + qy) * q + qx;
           if constexpr (!is_zero<source_type>{}) {
             source(qz, qy, qx) = reinterpret_cast<const double*>(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
           }
@@ -360,6 +361,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
             }
           }
         });
+
 #if not defined USE_CUDA
         constexpr auto B   = calculate_B<apply_weights, q>();
         constexpr auto G   = calculate_G<apply_weights, q>();

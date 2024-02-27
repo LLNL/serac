@@ -14,7 +14,7 @@
 
 #define BLOCK_SZ 128
 #define BLOCK_X 8
-#define BLOCK_Y 8
+#define BLOCK_Y 4
 #define BLOCK_Z 4
 
 #include "serac/infrastructure/accelerator.hpp"

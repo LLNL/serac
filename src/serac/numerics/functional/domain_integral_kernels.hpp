@@ -18,9 +18,10 @@
 #include <array>
 #include <cstdint>
 #include <umpire/ResourceManager.hpp>
+
+namespace {
 #ifdef USE_CUDA
 #include <cuda_runtime.h>
-namespace {
 void printCUDAMemUsage()
 {
   int deviceCount = 0;
@@ -37,7 +38,7 @@ void printCUDAMemUsage()
   std::cout << " Free Memory (MB): " << (freeBytes / 1024.0 / 1024.0) << std::endl;
   std::cout << " Used Memory (MB): " << (usedBytes / 1024.0 / 1024.0) << std::endl;
 }
-
+#endif
 template <typename DataType>
 void deallocate(DataType* data, const std::string& destination)
 {
@@ -47,7 +48,7 @@ void deallocate(DataType* data, const std::string& destination)
 }
 
 }  // namespace
-#endif
+
 namespace serac {
 
 namespace domain_integral {
@@ -142,7 +143,7 @@ SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(lambda qf, double t, const tensor
 #ifdef USE_CUDA
   using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
-  using threads_x [[maybe_unused]]                         = RAJA::LoopPolicy<RAJA::seq_exec>;
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
 #endif
   RAJA::RangeSegment     x_range(0, n);
   tensor<return_type, n> outputs{};
@@ -164,7 +165,7 @@ SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, 
 #ifdef USE_CUDA
   using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
-  using threads_x [[maybe_unused]]                         = RAJA::LoopPolicy<RAJA::seq_exec>;
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
 #endif
   RAJA::RangeSegment     x_range(0, n);
   tensor<return_type, n> outputs{};
@@ -215,11 +216,13 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
       get<indices>(empty_trial_element).interpolate(get<indices>(u)[0], rule))...});
 
 #ifdef USE_CUDA
-  auto&                 rm             = umpire::ResourceManager::getInstance();
-  auto                  dest_allocator = rm.getAllocator("DEVICE");
-  qf_inputs_type*                 qf_inputs      = static_cast<qf_inputs_type*>(dest_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
+  auto&           rm             = umpire::ResourceManager::getInstance();
+  auto            dest_allocator = rm.getAllocator("DEVICE");
+  qf_inputs_type* qf_inputs =
+      static_cast<qf_inputs_type*>(dest_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
   interpolate_out_type* interpolate_result =
       static_cast<interpolate_out_type*>(dest_allocator.allocate(sizeof(interpolate_out_type) * num_elements));
+
   std::cout << "USING CUDA :)\n";
 
   // It's safer to copy the raw POD type using umpire
@@ -234,26 +237,28 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
   printCUDAMemUsage();
   cudaSetDevice(0);
 #else
-  auto&                 rm             = umpire::ResourceManager::getInstance();
-  auto                  host_allocator = rm.getAllocator("HOST");
-  qf_inputs_type*                                 qf_inputs          = static_cast<qf_inputs_type*>(host_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
-  interpolate_out_type*                 interpolate_result = static_cast<interpolate_out_type*>(host_allocator.allocate(sizeof(interpolate_out_type) * num_elements));
-  auto                                  device_J           = J;
-  auto                                  device_x           = x;
-  typename test_element_type::dof_type* device_r           = r;
+  auto&           rm               = umpire::ResourceManager::getInstance();
+  auto            host_allocator   = rm.getAllocator("HOST");
+  qf_inputs_type* qf_inputs =
+      static_cast<qf_inputs_type*>(host_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
+  interpolate_out_type* interpolate_result =
+      static_cast<interpolate_out_type*>(host_allocator.allocate(sizeof(interpolate_out_type) * num_elements));
+
+  auto                                  device_J = J;
+  auto                                  device_x = x;
+  typename test_element_type::dof_type* device_r = r;
 #endif
+  rm.memset(qf_inputs, 0);
+  rm.memset(interpolate_result, 0);
 
   auto e_range = RAJA::TypedRangeSegment<uint32_t>(0, num_elements);
-
 #if defined(USE_CUDA)
   using teams_e       = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
   using launch_policy = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
 #else
-  using policy [[maybe_unused]] = RAJA::simd_exec;
-  using teams_e                 = RAJA::LoopPolicy<RAJA::seq_exec>;
-  using launch_policy           = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
+  using teams_e                                  = RAJA::LoopPolicy<RAJA::seq_exec>;
+  using launch_policy                            = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
 #endif
-
   // for each element in the domain
   RAJA::launch<launch_policy>(
       RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_SZ)),
@@ -274,7 +279,6 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
 
               ctx.teamSync();
 
-
               (promote_each_to_dual_when<indices == differentiation_index>(
                    get<indices>(interpolate_result[elements[e]]), &get<indices>(qf_inputs[elements[e]]), ctx),
                ...);
@@ -285,7 +289,6 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
               (parent_to_physical<get<indices>(empty_trial_element).family>(get<indices>(qf_inputs[elements[e]]),
                                                                             device_J, e, ctx),
                ...);
-              // parent_to_physical<get<0>(empty_trial_element).family>(qf_inputs, device_J,e, ctx);
 
               ctx.teamSync();
               //// (batch) evalute the q-function at each quadrature point
@@ -330,19 +333,16 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
       });
 #ifdef USE_CUDA
   rm.copy(r, device_r);
-  // rm.copy(&u, device_u);
-  // rm.copy(qf_derivatives, device_qf_derivatives);
   deallocate(device_jacobians, "DEVICE");
   deallocate(qf_inputs, "DEVICE");
   deallocate(interpolate_result, "DEVICE");
   deallocate(device_positions, "DEVICE");
   deallocate(device_r, "DEVICE");
-  std::cout << "312\n";
   printCUDAMemUsage();
-  // deallocate(device_u, "DEVICE");
-  // deallocate(device_qf_derivatives, "DEVICE");
+#else
+  host_allocator.deallocate(interpolate_result);
+  host_allocator.deallocate(qf_inputs);
 #endif
-  return;
 }
 
 //clang-format off
@@ -417,29 +417,45 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
   auto                                     dr = reinterpret_cast<typename test_element::dof_type*>(dR);
   constexpr TensorProductQuadratureRule<Q> rule{};
 
-  auto e_range = RAJA::RangeSegment(0, num_elements);
+  auto          e_range = RAJA::RangeSegment(0, num_elements);
+  trial_element empty_trial_element{};
+
+  using qf_inputs_type = decltype(trial_element::interpolate(du[0], rule, nullptr));
+
+#ifdef USE_CUDA
+  auto&           rm             = umpire::ResourceManager::getInstance();
+  auto            dest_allocator = rm.getAllocator("DEVICE");
+  qf_inputs_type* qf_inputs =
+      static_cast<qf_inputs_type*>(dest_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
+#else
+  auto&           rm             = umpire::ResourceManager::getInstance();
+  auto            host_allocator = rm.getAllocator("HOST");
+  qf_inputs_type* qf_inputs =
+      static_cast<qf_inputs_type*>(host_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
+#endif
+  rm.memset(qf_inputs, 0);
 
 #if defined(USE_CUDA)
   using teams_e       = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
   using launch_policy = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
 #else
-  using policy [[maybe_unused]] = RAJA::simd_exec;
-  using teams_e                 = RAJA::LoopPolicy<RAJA::seq_exec>;
-  using launch_policy           = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
+  using teams_e       = RAJA::LoopPolicy<RAJA::seq_exec>;
+  using launch_policy = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
 #endif
   // for each element in the domain
   RAJA::launch<launch_policy>(
       RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_X, BLOCK_Y, BLOCK_Z)),
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
-        RAJA::loop<teams_e>(ctx, e_range, [du, rule, &ctx, elements, qf_derivatives, dr, num_qpts](int e) {
+        RAJA::loop<teams_e>(ctx, e_range, [du, rule, &ctx, qf_inputs, elements, qf_derivatives, dr, num_qpts](int e) {
           // (batch) interpolate each quadrature point's value
-          auto qf_inputs = trial_element::interpolate(du[elements[e]], rule, nullptr, ctx);
+          trial_element::interpolate(du[elements[e]], rule, qf_inputs, ctx);
 
-          auto qf_outputs = batch_apply_chain_rule<is_QOI>(qf_derivatives + e * num_qpts, qf_inputs);
+          auto qf_outputs = batch_apply_chain_rule<is_QOI>(qf_derivatives + e * num_qpts, *qf_inputs, ctx);
 
           test_element::integrate(qf_outputs, rule, &dr[elements[e]], ctx);
         });
       });
+  rm.deallocate(qf_inputs);
 }
 
 /**
@@ -475,7 +491,7 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
   // tuple with a "zero" type in the second position to treat it like the standard case
   constexpr bool is_QOI        = test::family == Family::QOI;
   using padded_derivative_type = std::conditional_t<is_QOI, tuple<derivatives_type, zero>, derivatives_type>;
-  std::cout << "num elem " << num_elements << std::endl;
+
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
   RAJA::RangeSegment                       elements_range(0, num_elements);
@@ -523,10 +539,6 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
           ctx.teamSync();
         });
       });
-#if defined(USE_CUDA)
-  std::cout << "L480\n";
-  printCUDAMemUsage();
-#endif
 }
 
 template <uint32_t wrt, int Q, mfem::Geometry::Type geom, typename signature, typename lambda_type, typename state_type,
