@@ -507,6 +507,10 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
         else:
             print("[SUCCESS: Build and test of src vs tpls test passed.]\n")
 
+    # Clean up spack repo
+    cmd = f"{prefix}/spack/bin/spack -D {prefix}/spack_env clean --all"
+    sexe(cmd, echo=True)
+
     # set proper perms for installed tpls
     set_group_and_perms(prefix)
 

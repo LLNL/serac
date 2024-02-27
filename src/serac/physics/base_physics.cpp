@@ -110,6 +110,74 @@ void BasePhysics::setShapeDisplacement(const FiniteElementState& shape_displacem
   shape_displacement_ = shape_displacement;
 }
 
+void BasePhysics::CreateParaviewDataCollection() const
+{
+  std::string output_name = name_;
+  if (output_name == "") {
+    output_name = "default";
+  }
+
+  paraview_dc_ =
+      std::make_unique<mfem::ParaViewDataCollection>(output_name, const_cast<mfem::ParMesh*>(&states_.front()->mesh()));
+  int max_order_in_fields = 0;
+
+  // Find the maximum polynomial order in the physics module's states
+  for (const FiniteElementState* state : states_) {
+    paraview_dc_->RegisterField(state->name(), &state->gridFunction());
+    max_order_in_fields = std::max(max_order_in_fields, state->space().GetOrder(0));
+  }
+
+  for (const FiniteElementDual* dual : duals_) {
+    paraview_dual_grid_functions_[dual->name()] =
+        std::make_unique<mfem::ParGridFunction>(const_cast<mfem::ParFiniteElementSpace*>(&dual->space()));
+    max_order_in_fields = std::max(max_order_in_fields, dual->space().GetOrder(0));
+    paraview_dc_->RegisterField(dual->name(), paraview_dual_grid_functions_[dual->name()].get());
+  }
+
+  for (auto& parameter : parameters_) {
+    paraview_dc_->RegisterField(parameter.state->name(), &parameter.state->gridFunction());
+    max_order_in_fields = std::max(max_order_in_fields, parameter.state->space().GetOrder(0));
+  }
+
+  paraview_dc_->RegisterField(shape_displacement_.name(), &shape_displacement_.gridFunction());
+  max_order_in_fields = std::max(max_order_in_fields, shape_displacement_.space().GetOrder(0));
+
+  shape_sensitivity_grid_function_ = std::make_unique<mfem::ParGridFunction>(&shape_displacement_sensitivity_->space());
+  shape_displacement_sensitivity_->space().GetRestrictionMatrix()->MultTranspose(*shape_displacement_sensitivity_,
+                                                                                 *shape_sensitivity_grid_function_);
+  max_order_in_fields = std::max(max_order_in_fields, shape_displacement_sensitivity_->space().GetOrder(0));
+  paraview_dc_->RegisterField(shape_displacement_sensitivity_->name(), shape_sensitivity_grid_function_.get());
+
+  // Set the options for the paraview output files
+  paraview_dc_->SetLevelsOfDetail(max_order_in_fields);
+  paraview_dc_->SetHighOrderOutput(true);
+  paraview_dc_->SetDataFormat(mfem::VTKFormat::BINARY);
+  paraview_dc_->SetCompression(true);
+}
+
+void BasePhysics::UpdateParaviewDataCollection(const std::string& paraview_output_dir) const
+{
+  for (const FiniteElementState* state : states_) {
+    state->gridFunction();  // update grid function values
+  }
+  for (const FiniteElementDual* dual : duals_) {
+    // These are really const calls, but MFEM doesn't label them as such
+    serac::FiniteElementDual* non_const_dual = const_cast<serac::FiniteElementDual*>(dual);
+    non_const_dual->space().GetRestrictionMatrix()->MultTranspose(*dual, *paraview_dual_grid_functions_[dual->name()]);
+  }
+  for (auto& parameter : parameters_) {
+    parameter.state->gridFunction();
+  }
+  shape_displacement_.gridFunction();
+  shape_displacement_sensitivity_->space().GetRestrictionMatrix()->MultTranspose(*shape_displacement_sensitivity_,
+                                                                                 *shape_sensitivity_grid_function_);
+
+  // Set the current time, cycle, and requested paraview directory
+  paraview_dc_->SetCycle(cycle_);
+  paraview_dc_->SetTime(time_);
+  paraview_dc_->SetPrefixPath(paraview_output_dir);
+}
+
 void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_dir) const
 {
   // Update the states and duals in the state manager
@@ -136,48 +204,10 @@ void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_d
   if (paraview_output_dir) {
     // Check to see if the paraview data collection exists. If not, create it.
     if (!paraview_dc_) {
-      std::string output_name = name_;
-      if (output_name == "") {
-        output_name = "default";
-      }
-
-      paraview_dc_ = std::make_unique<mfem::ParaViewDataCollection>(
-          output_name, const_cast<mfem::ParMesh*>(&states_.front()->mesh()));
-      int max_order_in_fields = 0;
-
-      // Find the maximum polynomial order in the physics module's states
-      for (const FiniteElementState* state : states_) {
-        paraview_dc_->RegisterField(state->name(), &state->gridFunction());
-        max_order_in_fields = std::max(max_order_in_fields, state->space().GetOrder(0));
-      }
-
-      for (auto& parameter : parameters_) {
-        paraview_dc_->RegisterField(parameter.state->name(), &parameter.state->gridFunction());
-        max_order_in_fields = std::max(max_order_in_fields, parameter.state->space().GetOrder(0));
-      }
-
-      paraview_dc_->RegisterField(shape_displacement_.name(), &shape_displacement_.gridFunction());
-      max_order_in_fields = std::max(max_order_in_fields, shape_displacement_.space().GetOrder(0));
-
-      // Set the options for the paraview output files
-      paraview_dc_->SetLevelsOfDetail(max_order_in_fields);
-      paraview_dc_->SetHighOrderOutput(true);
-      paraview_dc_->SetDataFormat(mfem::VTKFormat::BINARY);
-      paraview_dc_->SetCompression(true);
-    } else {
-      for (const FiniteElementState* state : states_) {
-        state->gridFunction();  // update grid function values
-      }
-      for (auto& parameter : parameters_) {
-        parameter.state->gridFunction();
-      }
-      shape_displacement_.gridFunction();
+      CreateParaviewDataCollection();
     }
 
-    // Set the current time, cycle, and requested paraview directory
-    paraview_dc_->SetCycle(cycle_);
-    paraview_dc_->SetTime(time_);
-    paraview_dc_->SetPrefixPath(*paraview_output_dir);
+    UpdateParaviewDataCollection(*paraview_output_dir);
 
     // Write the paraview file
     paraview_dc_->Save();
