@@ -155,7 +155,7 @@ void BasePhysics::CreateParaviewDataCollection() const
   paraview_dc_->SetCompression(true);
 }
 
-void BasePhysics::UpdateParaviewFields() const
+void BasePhysics::UpdateParaviewDataCollection(const std::string& paraview_output_dir) const
 {
   for (const FiniteElementState* state : states_) {
     state->gridFunction();  // update grid function values
@@ -171,6 +171,11 @@ void BasePhysics::UpdateParaviewFields() const
   shape_displacement_.gridFunction();
   shape_displacement_sensitivity_->space().GetRestrictionMatrix()->MultTranspose(*shape_displacement_sensitivity_,
                                                                                  *shape_sensitivity_grid_function_);
+
+  // Set the current time, cycle, and requested paraview directory
+  paraview_dc_->SetCycle(cycle_);
+  paraview_dc_->SetTime(time_);
+  paraview_dc_->SetPrefixPath(paraview_output_dir);
 }
 
 void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_dir) const
@@ -202,12 +207,7 @@ void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_d
       CreateParaviewDataCollection();
     }
 
-    UpdateParaviewFields();
-
-    // Set the current time, cycle, and requested paraview directory
-    paraview_dc_->SetCycle(cycle_);
-    paraview_dc_->SetTime(time_);
-    paraview_dc_->SetPrefixPath(*paraview_output_dir);
+    UpdateParaviewDataCollection(*paraview_output_dir);
 
     // Write the paraview file
     paraview_dc_->Save();

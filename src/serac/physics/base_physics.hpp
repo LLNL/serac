@@ -388,9 +388,11 @@ protected:
   void CreateParaviewDataCollection() const;
 
   /**
-   * @brief Update the paraview states, duals, and parameters in preparation for output
+   * @brief Update the paraview states, duals, parameters, and metadata (cycle, time) in preparation for output
+   *
+   * @param paraview_output_dir The directory to write the paraview output
    */
-  void UpdateParaviewFields() const;
+  void UpdateParaviewDataCollection(const std::string& paraview_output_dir) const;
 
   /**
    * @brief Protected, non-virtual method to reset physics states to zero.  This does not reset design parameters or
