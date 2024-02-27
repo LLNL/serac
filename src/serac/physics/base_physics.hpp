@@ -383,6 +383,16 @@ public:
 
 protected:
   /**
+   * @brief Create a paraview data collection for the physics package if requested
+   */
+  void CreateParaviewDataCollection() const;
+
+  /**
+   * @brief Update the paraview states, duals, and parameters in preparation for output
+   */
+  void UpdateParaviewFields() const;
+
+  /**
    * @brief Protected, non-virtual method to reset physics states to zero.  This does not reset design parameters or
    * shape.
    *
