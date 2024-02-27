@@ -635,10 +635,10 @@ public:
    * ~~~ {.cpp}
    *
    *  heat_transfer.addCustomBoundaryIntegral(
-   *     DependsOn<>{}, 
-   *     [](double t, auto position, auto temperature, auto temperature_rate) { 
-   *         auto [T, dT_dxi] = temperature; 
-   *         auto q           = 5.0*(T-25.0); 
+   *     DependsOn<>{},
+   *     [](double t, auto position, auto temperature, auto temperature_rate) {
+   *         auto [T, dT_dxi] = temperature;
+   *         auto q           = 5.0*(T-25.0);
    *         return q;  // define a temperature-proportional heat-flux
    *  });
    *
