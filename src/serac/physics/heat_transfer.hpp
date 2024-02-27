@@ -470,7 +470,7 @@ public:
   void setSource(DependsOn<active_parameters...>, SourceType source_function,
                  const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireDomain(mesh_);
+    Domain domain = (optional_domain) ? *optional_domain : EntireDomain(mesh_);
 
     residual_->AddDomainIntegral(
         Dimension<dim>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
@@ -520,7 +520,7 @@ public:
   void setFluxBCs(DependsOn<active_parameters...>, FluxType flux_function,
                   const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireBoundary(mesh_);
+    Domain domain = (optional_domain) ? *optional_domain : EntireBoundary(mesh_);
 
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
@@ -650,7 +650,7 @@ public:
   void addCustomBoundaryIntegral(DependsOn<active_parameters...>, callable qfunction,
                                  const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireBoundary(mesh_);
+    Domain domain = (optional_domain) ? *optional_domain : EntireBoundary(mesh_);
 
     residual_->AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
                                    qfunction, domain);
