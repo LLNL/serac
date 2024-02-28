@@ -76,13 +76,12 @@ void functional_solid_test_robin_condition()
   // clang-format off
   Domain robinDomain = Domain::ofBoundaryElements(StateManager::mesh(mesh_tag), 
     [](std::vector<serac::tensor<double, dim>> X, int) {
-      bool inDomain = false;
-      for (const auto& p : X) {
-        if (p[0]<0.01) {
-          inDomain = true;
+      for (const auto& coordinate : X) {
+        if (coordinate[0]<0.01) {
+          return true;
         }
       }
-      return inDomain;
+      return false;
     });
   solid_solver.addCustomBoundaryIntegral(DependsOn<>{}, 
       [](double /* t */, auto /*position*/, auto displacement, auto /*acceleration*/) {
