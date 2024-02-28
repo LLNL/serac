@@ -709,7 +709,7 @@ public:
   void addCustomBoundaryIntegral(DependsOn<active_parameters...>, callable qfunction,
                                  const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireBoundary(mesh_);
+    Domain domain = (optional_domain) ? *optional_domain : EntireBoundary(mesh_);
 
     residual_->AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
                                    qfunction, domain);
@@ -890,7 +890,7 @@ public:
   void addBodyForce(DependsOn<active_parameters...>, BodyForceType body_force,
                     const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireDomain(mesh_);
+    Domain domain = (optional_domain) ? *optional_domain : EntireDomain(mesh_);
 
     residual_->AddDomainIntegral(
         Dimension<dim>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
@@ -934,7 +934,7 @@ public:
   void setTraction(DependsOn<active_parameters...>, TractionType traction_function,
                    const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireBoundary(mesh_);
+    Domain domain = (optional_domain) ? *optional_domain : EntireBoundary(mesh_);
 
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
@@ -979,7 +979,7 @@ public:
   void setPressure(DependsOn<active_parameters...>, PressureType pressure_function,
                    const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireBoundary(mesh_);
+    Domain domain = (optional_domain) ? *optional_domain : EntireBoundary(mesh_);
 
     residual_->AddBoundaryIntegral(
         Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
