@@ -48,17 +48,21 @@ void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobian
   std::size_t num_elements = elements.size();
 
   // for each element in the domain
+  using qf_inputs_type              = decltype(element_type{}.template interpolate_output_helper<Q>());
+  auto&           rm                = umpire::ResourceManager::getInstance();
+  auto            host_allocator    = rm.getAllocator("HOST");
+  qf_inputs_type* quadrature_values = static_cast<qf_inputs_type*>(host_allocator.allocate(sizeof(qf_inputs_type)));
 
   for (uint32_t e = 0; e < num_elements; ++e) {
     // load the positions for the nodes in this element
     auto X_e = X[elements[e]];
 
     // calculate the values and derivatives (w.r.t. xi) of X at each quadrature point
-    auto quadrature_values = element_type::interpolate(X_e, rule);
+    element_type::interpolate(X_e, rule, quadrature_values, RAJA::LaunchContext{});
 
     // mfem wants to store this data in a different layout, so we have to transpose it
     for (int q = 0; q < qpts_per_elem; q++) {
-      auto [value, gradient] = quadrature_values[q];
+      auto [value, gradient] = (*quadrature_values)[q];
       for (int i = 0; i < spatial_dim; i++) {
         X_q[e](i, q) = value[i];
         if constexpr (std::is_same_v<decltype(value), decltype(gradient)>) {

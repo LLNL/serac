@@ -243,9 +243,8 @@ struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
   }
 
   template <typename in_t, int q>
-  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q> input,
-                                                    const TensorProductQuadratureRule<q>&,
-                                                    RAJA::LaunchContext ctx = RAJA::LaunchContext{})
+  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q>                                 input,
+                                                    const TensorProductQuadratureRule<q>&, RAJA::LaunchContext ctx)
   {
     constexpr bool                     apply_weights = false;
     constexpr tensor<double, q, p>     B1            = calculate_B1<apply_weights, q>();
@@ -287,9 +286,15 @@ struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
   }
 
   template <int q>
-  SERAC_HOST_DEVICE static auto interpolate(const dof_type& element_values, const TensorProductQuadratureRule<q>&,
-                                            tensor<tuple<tensor<double, 2>, double>, q * q>* output_ptr = nullptr,
-                                            RAJA::LaunchContext ctx = RAJA::LaunchContext{})
+  static auto interpolate_output_helper()
+  {
+    return tensor<tuple<tensor<double, 2>, double>, q * q>{};
+  };
+
+  template <int q>
+  SERAC_HOST_DEVICE static void interpolate(const dof_type& element_values, const TensorProductQuadratureRule<q>&,
+                                            tensor<tuple<tensor<double, 2>, double>, q * q>* output_ptr,
+                                            RAJA::LaunchContext                              ctx)
   {
     constexpr bool                     apply_weights = false;
     constexpr tensor<double, q, p>     B1            = calculate_B1<apply_weights, q>();
@@ -316,29 +321,18 @@ struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
         for (int i = 0; i < dim; i++) {
-          if (!output_ptr) {
-            get<VALUE>(qf_inputs(count))[i] = value[i](qy, qx);
-          } else {
-            get<VALUE>((*output_ptr)(count))[i] = value[i](qy, qx);
-          }
+          get<VALUE>((*output_ptr)(count))[i] = value[i](qy, qx);
         }
-        if (!output_ptr) {
-          get<CURL>(qf_inputs(count)) = curl(qy, qx);
-        } else {
-          get<CURL>((*output_ptr)(count)) = curl(qy, qx);
-        }
+        get<CURL>((*output_ptr)(count)) = curl(qy, qx);
         count++;
       }
     }
-
-    return qf_inputs;
   }
 
   template <typename source_type, typename flux_type, int q>
   SERAC_HOST_DEVICE static void integrate(const tensor<tuple<source_type, flux_type>, q * q>& qf_output,
                                           const TensorProductQuadratureRule<q>&, dof_type* element_residual,
-                                          RAJA::LaunchContext  ctx  = RAJA::LaunchContext{},
-                                          [[maybe_unused]] int step = 1)
+                                          RAJA::LaunchContext ctx, [[maybe_unused]] int step = 1)
   {
     constexpr bool                     apply_weights = true;
     constexpr tensor<double, q, p>     B1            = calculate_B1<apply_weights, q>();
@@ -372,7 +366,7 @@ struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
 #if 0
 
   template <int q>
-  static SERAC_DEVICE auto interpolate(const dof_type& element_values, const tensor<double, dim, dim>& J,
+  static SERAC_DEVICE void interpolate(const dof_type& element_values, const tensor<double, dim, dim>& J,
                                        const TensorProductQuadratureRule<q>& rule, cache_type<q>& A)
   {
     int tidx = threadIdx.x % q;

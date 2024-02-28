@@ -96,7 +96,7 @@ struct finite_element<mfem::Geometry::SEGMENT, H1<p, c> > {
   template <typename T, int q>
   RAJA_HOST_DEVICE static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int jx, tensor<T, q> input,
                                                                      const TensorProductQuadratureRule<q>&,
-                                                                     RAJA::LaunchContext ctx = RAJA::LaunchContext{})
+                                                                     RAJA::LaunchContext ctx)
   {
     static constexpr bool apply_weights = false;
     static constexpr auto B             = calculate_B<apply_weights, q>();
@@ -121,11 +121,15 @@ struct finite_element<mfem::Geometry::SEGMENT, H1<p, c> > {
 
     return output;
   }
+  template <int q>
+  static auto interpolate_output_helper()
+  {
+    return tensor<qf_input_type, q>{};
+  }
 
   template <int q>
-  SERAC_HOST_DEVICE static auto interpolate(const dof_type&           X, const TensorProductQuadratureRule<q>&,
-                                            tensor<qf_input_type, q>* output_ptr = nullptr,
-                                            RAJA::LaunchContext       ctx        = RAJA::LaunchContext{})
+  SERAC_HOST_DEVICE static void interpolate(const dof_type&           X, const TensorProductQuadratureRule<q>&,
+                                            tensor<qf_input_type, q>* output_ptr, RAJA::LaunchContext ctx)
   {
     static constexpr bool apply_weights = false;
     static constexpr auto B             = calculate_B<apply_weights, q>();
@@ -144,37 +148,22 @@ struct finite_element<mfem::Geometry::SEGMENT, H1<p, c> > {
     tensor<qf_input_type, q> output;
 
     for (int qx = 0; qx < q; qx++) {
-      if (output_ptr) {
-        if constexpr (c == 1) {
-          get<VALUE>((*output_ptr)(qx))    = value(0, qx);
-          get<GRADIENT>((*output_ptr)(qx)) = gradient(0, qx);
-        } else {
-          for (int i = 0; i < c; i++) {
-            get<VALUE>((*output_ptr)(qx))[i]    = value(i, qx);
-            get<GRADIENT>((*output_ptr)(qx))[i] = gradient(i, qx);
-          }
-        }
+      if constexpr (c == 1) {
+        get<VALUE>((*output_ptr)(qx))    = value(0, qx);
+        get<GRADIENT>((*output_ptr)(qx)) = gradient(0, qx);
       } else {
-        if constexpr (c == 1) {
-          get<VALUE>(output(qx))    = value(0, qx);
-          get<GRADIENT>(output(qx)) = gradient(0, qx);
-        } else {
-          for (int i = 0; i < c; i++) {
-            get<VALUE>(output(qx))[i]    = value(i, qx);
-            get<GRADIENT>(output(qx))[i] = gradient(i, qx);
-          }
+        for (int i = 0; i < c; i++) {
+          get<VALUE>((*output_ptr)(qx))[i]    = value(i, qx);
+          get<GRADIENT>((*output_ptr)(qx))[i] = gradient(i, qx);
         }
       }
     }
-
-    return output;
   }
 
   template <typename source_type, typename flux_type, int q>
   SERAC_HOST_DEVICE static void integrate(const tensor<tuple<source_type, flux_type>, q>& qf_output,
                                           const TensorProductQuadratureRule<q>&, dof_type* element_residual,
-                                          RAJA::LaunchContext  ctx  = RAJA::LaunchContext{},
-                                          [[maybe_unused]] int step = 1)
+                                          RAJA::LaunchContext ctx, [[maybe_unused]] int step = 1)
   {
     if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) {
       return;

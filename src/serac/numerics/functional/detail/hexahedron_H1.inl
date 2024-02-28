@@ -175,14 +175,14 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
   }
 
   template <int q>
-  struct InterpolateResult {
-    using type = tensor<qf_input_type, q * q * q>;
-  };
+  static auto interpolate_output_helper()
+  {
+    return tensor<qf_input_type, q * q * q>{};
+  }
 
   template <int q>
-  SERAC_HOST_DEVICE static auto interpolate(const dof_type&                   X, const TensorProductQuadratureRule<q>&,
-                                            tensor<qf_input_type, q * q * q>* output_ptr = nullptr,
-                                            RAJA::LaunchContext               ctx        = RAJA::LaunchContext{})
+  SERAC_HOST_DEVICE static void interpolate(const dof_type&                   X, const TensorProductQuadratureRule<q>&,
+                                            tensor<qf_input_type, q * q * q>* output_ptr, RAJA::LaunchContext ctx)
   {
     // we want to compute the following:
     //
@@ -310,13 +310,12 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
         }
       });
     }
-    return output.one_dimensional;
   }
 
   template <typename source_type, typename flux_type, int q>
   SERAC_HOST_DEVICE static void integrate(const tensor<tuple<source_type, flux_type>, q * q * q>& qf_output,
                                           const TensorProductQuadratureRule<q>&, dof_type* element_residual,
-                                          RAJA::LaunchContext ctx = RAJA::LaunchContext{}, int step = 1)
+                                          RAJA::LaunchContext ctx, int step = 1)
   {
     if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) {
       return;
@@ -417,7 +416,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
 #if 0
 
   template <int q>
-  static SERAC_DEVICE auto interpolate(const dof_type& X, const tensor<double, dim, dim>& J,
+  static SERAC_DEVICE void interpolate(const dof_type& X, const tensor<double, dim, dim>& J,
                                        const TensorProductQuadratureRule<q>& rule, cache_type<q>& cache)
   {
     // we want to compute the following:
