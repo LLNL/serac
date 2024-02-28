@@ -498,7 +498,7 @@ serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const
         overall_size.push_back(size_input["z"]);
       }
     } else {
-      overall_size = std::vector<double>(overall_size.size(), 1.);
+      overall_size = std::vector<double>(elements.size(), 1.);
     }
 
     return {serac::mesh::BoxInputOptions{elements, overall_size}, ser_ref, par_ref};
