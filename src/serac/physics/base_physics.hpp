@@ -383,6 +383,18 @@ public:
 
 protected:
   /**
+   * @brief Create a paraview data collection for the physics package if requested
+   */
+  void CreateParaviewDataCollection() const;
+
+  /**
+   * @brief Update the paraview states, duals, parameters, and metadata (cycle, time) in preparation for output
+   *
+   * @param paraview_output_dir The directory to write the paraview output
+   */
+  void UpdateParaviewDataCollection(const std::string& paraview_output_dir) const;
+
+  /**
    * @brief Protected, non-virtual method to reset physics states to zero.  This does not reset design parameters or
    * shape.
    *
@@ -533,6 +545,16 @@ protected:
    * @brief DataCollection pointer for optional paraview output
    */
   mutable std::unique_ptr<mfem::ParaViewDataCollection> paraview_dc_;
+
+  /**
+   * @brief A optional map of the dual names and duals in grid function form for paraview output
+   */
+  mutable std::unordered_map<std::string, std::unique_ptr<mfem::ParGridFunction>> paraview_dual_grid_functions_;
+
+  /**
+   * @brief A optional view of the shape sensitivity in grid function form for paraview output
+   */
+  mutable std::unique_ptr<mfem::ParGridFunction> shape_sensitivity_grid_function_;
 
   /**
    * @brief Boundary condition manager instance
