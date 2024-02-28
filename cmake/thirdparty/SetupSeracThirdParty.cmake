@@ -237,7 +237,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         if(STRUMPACK_DIR)
             serac_assert_is_directory(VARIABLE_NAME STRUMPACK_DIR)
             set(MFEM_USE_STRUMPACK ON CACHE BOOL "")
-            find_package(strumpack CONFIG PATHS ${STRUMPACK_DIR}/lib/cmake/STRUMPACK)
+            find_package(strumpack CONFIG
+                PATHS ${STRUMPACK_DIR}/lib/cmake/STRUMPACK;${STRUMPACK_DIR}/lib64/cmake/STRUMPACK)
             set(STRUMPACK_REQUIRED_PACKAGES "MPI" "MPI_Fortran" "ParMETIS" "METIS"
                 "ScaLAPACK" CACHE STRING
                 "Additional packages required by STRUMPACK.")
