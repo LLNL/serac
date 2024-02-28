@@ -405,3 +405,70 @@ inside a ``std::function`` object with the appropriate signature. This
 Finally, when the user calls ``Functional::operator()``, it loops over the
 domain and surface integrals, calling ``Integral::Mult()`` on each one
 to compute the weighted residual contribution from each term.
+
+Shape-Aware Functional
+----------------------
+
+.. note::
+   This is only available for scalar and vector-valued :math:`H^1` and :math:`L_2` trial function spaces,
+   scalar and vector-valued :math:`H^1`, :math:`L_2`, and ``double`` (quantity of interest) test function spaces, and 
+   vector-valued :math:`H^1` shape displacement spaces.
+
+For shape optimization problems, it is often useful to compute derivatives with respect to a shape displacement field
+the modifies the nodal positions of the underlying computational mesh (for example, see `Swartz et al. <https://link.springer.com/article/10.1007/s00158-023-03684-9>`_).
+This method takes a spatial position :math:`X` in the reference computational domain :math:`\Omega` and perturbs it 
+by a spatial displacement vector :math:`p` such that the finite element computation occurs at the updated spatial
+coordinate :math:`x = X + p` in the updated computational domain :math:`\Omega_p`. This implies for a volumetric
+finite element integral with :math:`H^1` trial function :math:`u` and  :math:`H^1` test function :math:`\psi`:
+
+.. math::
+
+  \begin{align*}
+  r(p, u) &= \int_{\Omega_p} \left( \psi \cdot s(x, u, \nabla_x u) + \nabla_x \psi : f(x, u, \nabla_x u) \right) \; dx \\
+  &= \int_{\Omega} \left( \psi \cdot s\left(X + p, u, \frac{\partial u}{\partial x}\right) + \left(\frac{\partial \psi}{\partial x}\right) : f\left(X + p, u, \frac{\partial u}{\partial x}\right) \right) \; \mbox{det}\left(\frac{\partial x}{\partial X}\right)dX \\
+  &= \int_{\Omega} \left( \psi \cdot s\left(X + p, u, \frac{\partial u}{\partial X}\frac{\partial X}{\partial x} \right) + \left(\frac{\partial \psi}{\partial X}\frac{\partial X}{\partial x}\right) : f\left(X + p, u, \frac{\partial u}{\partial X}\frac{\partial X}{\partial x}\right) \right) \; \mbox{det}\left(\frac{\partial x}{\partial X}\right)dX \\
+  &= \int_{\Omega} \left( \psi \cdot s\left(X + p, u, \frac{\partial u}{\partial X}\left( I + \frac{\partial p}{\partial X}  \right)^{-1}\right) + \right. \\
+  & \;\;\;\;\; \left. \left(\frac{\partial \psi}{\partial X}\left( I + \frac{\partial p}{\partial X}  \right)^{-1} \right) : f\left(X + p, u, \frac{\partial u}{\partial X}\left( I + \frac{\partial p}{\partial X}  \right)^{-1}\right) \right) \; \mbox{det}\left( I + \frac{\partial p}{\partial X}  \right)dX \\
+  \end{align*}
+
+For a boundary finite element integral with :math:`H^1` trial function :math:`u` and  :math:`H^1` test function :math:`\psi`:
+
+.. math::
+
+  \begin{align*}
+  r(p, u) &= \int_{\Gamma_p}  t(x, u) \cdot \psi\, dS_x \\
+  &= \int_{\Gamma_p} t(x, u)\cdot  \psi \left \Vert \frac{\partial x}{\partial \xi} \times  \frac{\partial x}{\partial \eta}  \right \Vert d\xi d\eta \\
+  &= \int_{\Gamma} t(X + p, u)\cdot \psi \left \Vert \frac{\partial (X + p)}{\partial \xi} \times  \frac{\partial (X + p)}{\partial \eta}  \right \Vert d\xi d\eta \\
+  \end{align*}
+
+While simple, these transformations can become repetitive and error-prone when writing Q-functions for parameter-free shape optimization problems. To 
+address this issue, we automated these transformations in ``ShapeAwareFunctional``. This object has the same interface and integral definition routines as 
+``Functional``, but it takes the shape displacement field :math:`p` as a required trial parameter. 
+
+The integrands captured in the ``Functional::Add****Integral`` methods do not need any further modifications to become "shape-aware" and produce the shape derivatives
+needed for automated shape optimization. The integrands will have their arguments adjusted appropriately to reflect `x = X + p` and their output flux will
+be automatically modified per the formulas above.
+
+As a simple example, consider the implementation of two quantities of interest:
+
+1. Average of a trial function :math:`u` in a domain with an underlying shape displacement field :math:`p`:
+
+.. math::
+  
+  \mbox{average}(u) = \frac{\int_{\Omega_p} u\, dx }{\int_{\Omega_p} dx}  
+
+.. literalinclude:: ../../../../src/serac/numerics/functional/tests/functional_qoi.cpp
+   :start-after: _average_start
+   :end-before: _average_end
+   :language: C++
+
+2. Average of the absolute value of the normal component of a vector-valued trial function :math:`\mathbf{u}` on a boundary with an underlying shape displacement field :math:`p`:
+
+.. math::
+  
+  \mbox{boundary average}(| \mathbf{u} \cdot n |) = \frac{\int_{\Gamma_p} | \mathbf{u} \cdot n | \, dS }{\int_{\Gamma_p} dS}
+
+.. literalinclude:: ../../../../src/serac/numerics/functional/tests/functional_qoi.cpp
+ :start-after: _boundary_start
+ :end-before: _boundary_end
+ :language: C++

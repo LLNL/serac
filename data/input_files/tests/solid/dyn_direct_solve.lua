@@ -43,7 +43,7 @@ solid = {
     order = 1,
 
     -- neo-Hookean material parameters
-    materials = { { model = "NeoHookean", mu = 0.25, K = 5.0, density = 1.0 }, }
+    materials = { { model = "NeoHookean", mu = 0.25, K = 5.0, density = 1.0 }, },
 
     -- initial conditions
     initial_displacement = {
