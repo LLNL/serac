@@ -205,7 +205,7 @@ public:
    * @param[in] comm The MPI communicator used by the vectors and matrices in the solve
    * @param[in] print_level The verbosity level for the mfem::STRUMPACKSolver
    */
-  StrumpackSolver(int print_level, MPI_Comm comm) : strumpack_solver_(0, nullptr, comm)
+  StrumpackSolver(int print_level, MPI_Comm comm) : strumpack_solver_(comm)
   {
     strumpack_solver_.SetKrylovSolver(strumpack::KrylovSolver::DIRECT);
     strumpack_solver_.SetReorderingStrategy(strumpack::ReorderingStrategy::METIS);
