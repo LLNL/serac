@@ -709,7 +709,7 @@ public:
   void addCustomBoundaryIntegral(DependsOn<active_parameters...>, callable qfunction,
                                  const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireBoundary(mesh_);
+    Domain domain = (optional_domain) ? *optional_domain : EntireBoundary(mesh_);
 
     residual_->AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
                                    qfunction, domain);
