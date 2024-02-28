@@ -1705,61 +1705,6 @@ SERAC_HOST_DEVICE constexpr tensor<double, 3, 3> inv(const tensor<double, 3, 3>&
 
 /**
  * @overload
- * @note Compute ith jth inverse element
- */
-template <int i, int j>
-SERAC_HOST_DEVICE constexpr double inv_elem(const tensor<double, 3, 3>& A)
-{
-  double inv_detA(1.0 / det(A));
-
-  if constexpr (i == 0 && j == 0) {
-    return (A[1][1] * A[2][2] - A[1][2] * A[2][1]) * inv_detA;
-  } else if constexpr (i == 0 && j == 1) {
-    return (A[0][2] * A[2][1] - A[0][1] * A[2][2]) * inv_detA;
-  } else if constexpr (i == 0 && j == 2) {
-    return (A[0][1] * A[1][2] - A[0][2] * A[1][1]) * inv_detA;
-  } else if constexpr (i == 1 && j == 0) {
-    return (A[1][2] * A[2][0] - A[1][0] * A[2][2]) * inv_detA;
-  } else if constexpr (i == 1 && j == 1) {
-    return (A[0][0] * A[2][2] - A[0][2] * A[2][0]) * inv_detA;
-  } else if constexpr (i == 1 && j == 2) {
-    return (A[0][2] * A[1][0] - A[0][0] * A[1][2]) * inv_detA;
-  } else if constexpr (i == 2 && j == 0) {
-    return (A[1][0] * A[2][1] - A[1][1] * A[2][0]) * inv_detA;
-  } else if constexpr (i == 2 && j == 1) {
-    return (A[0][1] * A[2][0] - A[0][0] * A[2][1]) * inv_detA;
-  } else if constexpr (i == 2 && j == 2) {
-    return (A[0][0] * A[1][1] - A[0][1] * A[1][0]) * inv_detA;
-  }
-  // error case
-  return 0;
-}
-
-/**
- * @overload
- * @note Compute ith jth inverse element
- */
-template <int i, int j>
-SERAC_HOST_DEVICE constexpr double inv_elem(const tensor<double, 2, 2>& A)
-{
-  double inv_detA(1.0 / det(A));
-
-  if constexpr (i == 0 && j == 0) {
-    return A[1][1] * inv_detA;
-  } else if constexpr (i == 0 && j == 1) {
-    return -A[0][1] * inv_detA;
-  } else if constexpr (i == 1 && j == 0) {
-    return -A[1][0] * inv_detA;
-  } else if constexpr (i == 1 && j == 1) {
-    return A[0][0] * inv_detA;
-  }
-
-  // error case
-  return 0;
-}
-
-/**
- * @overload
  * @note For N-by-N matrices with N > 3, requires Gaussian elimination
  * with partial pivoting
  */

@@ -194,8 +194,6 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
   interpolate_out_type* interpolate_result =
       static_cast<interpolate_out_type*>(dest_allocator.allocate(sizeof(interpolate_out_type) * num_elements));
 
-  std::cout << "USING CUDA :)\n";
-
   // It's safer to copy the raw POD type using Umpire than J_Type.  const_cast is needed to be compatible with
   // the Umpire's API.
   auto device_jacobians = copy_data(const_cast<double*>(jacobians), sizeof(J_Type) * num_elements, "DEVICE");
