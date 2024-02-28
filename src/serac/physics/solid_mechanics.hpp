@@ -689,7 +689,8 @@ public:
    *
    * @tparam active_parameters a list of indices, describing which parameters to pass to the q-function
    * @param qfunction a callable that returns the traction on a boundary surface
-   *
+   * @param optional_domain The domain over which the boundary integral is evaluated. If nothing is supplied the entire
+   * boundary is used.
    * ~~~ {.cpp}
    *
    *  solid_mechanics.addCustomBoundaryIntegral(DependsOn<>{}, [](double t, auto position, auto displacement, auto
@@ -705,10 +706,13 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename callable>
-  void addCustomBoundaryIntegral(DependsOn<active_parameters...>, callable qfunction)
+  void addCustomBoundaryIntegral(DependsOn<active_parameters...>, callable qfunction,
+                                 const std::optional<Domain>& optional_domain = std::nullopt)
   {
+    Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireBoundary(mesh_);
+
     residual_->AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
-                                   qfunction, mesh_);
+                                   qfunction, domain);
   }
 
   /**
