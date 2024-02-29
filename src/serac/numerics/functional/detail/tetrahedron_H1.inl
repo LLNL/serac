@@ -393,8 +393,7 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
     if (output_ptr) {
       RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
         if (tid < serac::size(output.flattened)) {
-          get<VALUE>(((*output_ptr))[tid])    = get<VALUE>(output.flattened[tid]);
-          get<GRADIENT>(((*output_ptr))[tid]) = get<GRADIENT>(output.flattened[tid]);
+          (*output_ptr)[tid] = output.flattened[tid];
         }
       });
     }

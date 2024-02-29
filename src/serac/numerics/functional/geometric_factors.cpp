@@ -30,17 +30,7 @@ void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobian
   using element_type  = finite_element<geom, function_space>;
   using position_type = tensor<double, spatial_dim, qpts_per_elem>;
   using jacobian_type = tensor<double, geometry_dim, spatial_dim, qpts_per_elem>;
-  if (jacobians_q.UseDevice()) {
-    std::cout << "jacobians using device backend\n";
-  }
 
-  if (positions_q.UseDevice()) {
-    std::cout << "pos q using device backend\n";
-  }
-
-  if (positions_e.UseDevice()) {
-    std::cout << "pos e using device backend\n";
-  }
   auto X_q = reinterpret_cast<position_type*>(positions_q.ReadWrite());
   auto J_q = reinterpret_cast<jacobian_type*>(jacobians_q.ReadWrite());
   auto X   = reinterpret_cast<const typename element_type::dof_type*>(positions_e.Read());

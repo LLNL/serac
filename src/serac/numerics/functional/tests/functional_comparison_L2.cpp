@@ -26,7 +26,7 @@ std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
 static constexpr double a = 1.7;
-static constexpr double b = 2.1;
+static constexpr double b = 0.0;
 
 template <int dim>
 struct hcurl_qfunction {
@@ -49,20 +49,6 @@ struct test_qfunction {
     auto flux       = b * du_dx;
     return serac::tuple{source, flux};
   }
-};
-
-template <int dim>
-struct elastic_function {
-  template <typename X, typename Displacement>
-  SERAC_HOST_DEVICE auto operator()(X, Displacement displacement)
-  {
-    static constexpr auto I = DenseIdentity<dim>();
-    auto [u, du_dx]         = displacement;
-    auto body_force         = a * u + I[0];
-    auto strain             = 0.5 * (du_dx + transpose(du_dx));
-    auto stress             = b * tr(strain) * I + 2.0 * b * strain;
-    return serac::tuple{body_force, stress};
-  };
 };
 
 // this test sets up a toy "thermal" problem where the residual includes contributions

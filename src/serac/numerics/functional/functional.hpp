@@ -564,12 +564,6 @@ private:
           trial_space_(f.trial_space_[which]),
           df_(f.test_space_->GetTrueVSize())
     {
-      // #ifdef USE_CUDA
-      // df_.UseDevice(true);
-      // input_L_.UseDevice(true);
-      // output_L_.UseDevice(true);
-      // output_T_.UseDevice(true);
-      // #endif
     }
 
     /**

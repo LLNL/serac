@@ -54,40 +54,40 @@ namespace domain_integral {
  * trial space
  */
 template <typename space, typename dimension>
-SERAC_HOST_DEVICE struct QFunctionArgument;
+struct QFunctionArgument;
 
 /// @overload
 template <int p, int dim>
-SERAC_HOST_DEVICE struct QFunctionArgument<H1<p, 1>, Dimension<dim>> {
+struct QFunctionArgument<H1<p, 1>, Dimension<dim>> {
   using type = tuple<double, tensor<double, dim>>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p, int c, int dim>
-SERAC_HOST_DEVICE struct QFunctionArgument<H1<p, c>, Dimension<dim>> {
+struct QFunctionArgument<H1<p, c>, Dimension<dim>> {
   using type = tuple<tensor<double, c>, tensor<double, c, dim>>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p, int dim>
-SERAC_HOST_DEVICE struct QFunctionArgument<L2<p, 1>, Dimension<dim>> {
+struct QFunctionArgument<L2<p, 1>, Dimension<dim>> {
   using type = tuple<double, tensor<double, dim>>;  ///< what will be passed to the q-function
 };
 /// @overload
 template <int p, int c, int dim>
-SERAC_HOST_DEVICE struct QFunctionArgument<L2<p, c>, Dimension<dim>> {
+struct QFunctionArgument<L2<p, c>, Dimension<dim>> {
   using type = tuple<tensor<double, c>, tensor<double, c, dim>>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p>
-SERAC_HOST_DEVICE struct QFunctionArgument<Hcurl<p>, Dimension<2>> {
+struct QFunctionArgument<Hcurl<p>, Dimension<2>> {
   using type = tuple<tensor<double, 2>, double>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p>
-SERAC_HOST_DEVICE struct QFunctionArgument<Hcurl<p>, Dimension<3>> {
+struct QFunctionArgument<Hcurl<p>, Dimension<3>> {
   using type = tuple<tensor<double, 3>, tensor<double, 3>>;  ///< what will be passed to the q-function
 };
 
@@ -274,19 +274,19 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
                ...);
               ctx.teamSync();
 
-              //// use J_e to transform values / derivatives on the parent element
-              //// to the to the corresponding values / derivatives on the physical element
+              // use J_e to transform values / derivatives on the parent element
+              // to the to the corresponding values / derivatives on the physical element
               (parent_to_physical<get<indices>(empty_trial_element).family>(get<indices>(qf_inputs[elements[e]]),
                                                                             device_J, e, ctx),
                ...);
 
               ctx.teamSync();
-              //// (batch) evalute the q-function at each quadrature point
-              ////
-              //// note: the weird immediately-invoked lambda expression is
-              //// a workaround for a bug in GCC(<12.0) where it fails to
-              //// decide which function overload to use, and crashes
+              // (batch) evalute the q-function at each quadrature point
               //
+              // note: the weird immediately-invoked lambda expression is
+              // a workaround for a bug in GCC(<12.0) where it fails to
+              // decide which function overload to use, and crashes
+
               auto qf_outputs = [&]() {
                 if constexpr (std::is_same_v<state_type, Nothing>) {
                   return batch_apply_qf_no_qdata(qf, t, device_x[e], ctx, get<indices>(qf_inputs[e])...);
@@ -299,7 +299,7 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
 
               // use J to transform sources / fluxes on the physical element
               // back to the corresponding sources / fluxes on the parent element
-              // physical_to_parent<test_element_type::family>(qf_outputs, J_e);
+              physical_to_parent<test_element_type::family>(qf_outputs, device_J, e, ctx);
 
               // write out the q-function derivatives after applying the
               // physical_to_parent transformation, so that those transformations
@@ -316,6 +316,7 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
               test_element_type::integrate(get_value(qf_outputs), rule, &device_r[elements[e]], ctx);
             });
       });
+
 #ifdef USE_CUDA
   rm.copy(r, device_r);
   dest_allocator.deallocate(device_jacobians);

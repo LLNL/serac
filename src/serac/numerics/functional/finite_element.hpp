@@ -245,7 +245,7 @@ struct QOI {
  */
 template <Family f, typename T, int q, int dim>
 SERAC_HOST_DEVICE void parent_to_physical(tensor<T, q>& qf_input, const tensor<double, dim, dim, q>* jacobians,
-                                          uint32_t block_idx, RAJA::LaunchContext ctx = {})
+                                          uint32_t block_idx, RAJA::LaunchContext ctx)
 {
   [[maybe_unused]] constexpr int VALUE      = 0;
   [[maybe_unused]] constexpr int DERIVATIVE = 1;
@@ -295,16 +295,25 @@ SERAC_HOST_DEVICE void parent_to_physical(tensor<T, q>& qf_input, const tensor<d
  * @param jacobians the jacobians of the isoparametric map from parent to physical space of each quadrature point
  */
 template <Family f, typename T, int q, int dim>
-SERAC_HOST_DEVICE void physical_to_parent(tensor<T, q>& qf_output, const tensor<double, dim, dim, q>& jacobians)
+SERAC_HOST_DEVICE void physical_to_parent(tensor<T, q>& qf_output, const tensor<double, dim, dim, q>* jacobians,
+                                          uint32_t block_idx, RAJA::LaunchContext ctx)
 {
   [[maybe_unused]] constexpr int SOURCE = 0;
   [[maybe_unused]] constexpr int FLUX   = 1;
-
-  for (int k = 0; k < q; k++) {
+#ifdef USE_CUDA
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+#else
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
+#endif
+  RAJA::RangeSegment k_range(0, BLOCK_SZ);
+  RAJA::loop<threads_x>(ctx, k_range, [&](int k) {
+    if (k >= q) {
+      return;
+    }
     tensor<double, dim, dim> J_T;
     for (int row = 0; row < dim; row++) {
       for (int col = 0; col < dim; col++) {
-        J_T[row][col] = jacobians(row, col, k);
+        J_T[row][col] = jacobians[block_idx](row, col, k);
       }
     }
 
@@ -328,7 +337,7 @@ SERAC_HOST_DEVICE void physical_to_parent(tensor<T, q>& qf_output, const tensor<
     if constexpr (f == Family::QOI) {
       qf_output[k] = qf_output[k] * dv;
     }
-  }
+  });
 }
 
 /**

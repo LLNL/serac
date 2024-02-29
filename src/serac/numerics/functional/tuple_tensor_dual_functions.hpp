@@ -235,24 +235,18 @@ SERAC_HOST_DEVICE auto promote_each_to_dual_when(const tensor<T, n>& x, void* ou
     using return_type = decltype(make_dual(T{}));
     tensor<return_type, n> output;
     auto                   casted_output_ptr = static_cast<tensor<return_type, n>*>(output_ptr);
-    RAJA::loop<threads_x>(ctx, x_range, [&](int i) {
-#ifndef USE_CUDA
-      output[i] = make_dual(x[i]);
-#else
-      printf("USE_CUDA\n");
-        (*casted_output_ptr)[i] = make_dual(x[i]);
-#endif
-    });
+    RAJA::loop<threads_x>(ctx, x_range, [&](int i) { (*casted_output_ptr)[i] = make_dual(x[i]); });
     return output;
   }
   if constexpr (!dualify) {
 #ifdef USE_CUDA
     using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
-
+#else
+    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
+#endif
     RAJA::RangeSegment x_range(0, n);
     auto               casted_output_ptr = static_cast<tensor<T, n>*>(output_ptr);
     RAJA::loop<threads_x>(ctx, x_range, [&](int i) { (*casted_output_ptr)[i] = x[i]; });
-#endif
     return x;
   }
 }
