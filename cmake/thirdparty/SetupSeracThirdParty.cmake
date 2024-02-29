@@ -185,6 +185,19 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     message(STATUS "Sundials support is ${SERAC_USE_SUNDIALS}")
 
     #------------------------------------------------------------------------------
+    # PETSC
+    #------------------------------------------------------------------------------
+    if(PETSC_DIR)
+        serac_assert_is_directory(VARIABLE_NAME PETSC_DIR)
+        include(${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake)
+        message(STATUS "PETSc support is ON")
+        set(PETSC_FOUND TRUE)
+    else()
+        message(STATUS "PETSc support is OFF")
+        set(PETSC_FOUND FALSE)
+    endif()
+
+    #------------------------------------------------------------------------------
     # MFEM
     #------------------------------------------------------------------------------
     if(NOT SERAC_ENABLE_CODEVELOP)
@@ -472,19 +485,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         
         set(TRIBOL_FOUND TRUE CACHE BOOL "" FORCE)
         set(ENABLE_FORTRAN ON CACHE BOOL "" FORCE)
-    endif()
-
-    #------------------------------------------------------------------------------
-    # PETSC
-    #------------------------------------------------------------------------------
-    if(PETSC_DIR)
-        serac_assert_is_directory(VARIABLE_NAME PETSC_DIR)
-        include(${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake)
-        message(STATUS "PETSc support is ON")
-        set(PETSC_FOUND TRUE)
-    else()
-        message(STATUS "PETSc support is OFF")
-        set(PETSC_FOUND FALSE)
     endif()
 
     #------------------------------------------------------------------------------
