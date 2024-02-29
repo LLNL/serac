@@ -108,6 +108,11 @@ public:
    * @param[in] parameter_names A vector of the names of the requested parameter fields
    * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param[in] time The simulation time to initialize the physics module to
+   * @param[in] save_to_disk A flag to save the transient states on disk instead of memory for the transient adjoint
+   * solves
+   *
+   * @note On parallel file systems (e.g. lustre), significant slowdowns and occasional errors were observed when
+   *       writing and reading the needed trainsient states to disk for adjoint solves
    */
   HeatTransfer(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
                const serac::TimesteppingOptions timestepping_opts, const std::string& physics_name,
@@ -128,6 +133,11 @@ public:
    * @param[in] parameter_names A vector of the names of the requested parameter fields
    * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param[in] time The simulation time to initialize the physics module to
+   * @param[in] save_to_disk A flag to save the transient states on disk instead of memory for the transient adjoint
+   * solves
+   *
+   * @note On parallel file systems (e.g. lustre), significant slowdowns and occasional errors were observed when
+   *       writing and reading the needed trainsient states to disk for adjoint solves
    */
   HeatTransfer(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
                const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {},
@@ -1017,7 +1027,10 @@ protected:
   /// The temperature finite element state
   serac::FiniteElementState temperature_;
 
+  /// An optional vector of computed temperatures used for dynamic adjoints
   std::vector<serac::FiniteElementState> temperatures_;
+
+  /// An optional vector of computed temperature rates used for dynamic adjoints
   std::vector<serac::FiniteElementState> temperature_rates_;
 
   /// Rate of change in temperature at the current adjoint timestep
@@ -1079,6 +1092,7 @@ protected:
   /// Predicted temperature true dofs
   mfem::Vector u_predicted_;
 
+  /// A flag denoting whether to save the state to disk or memory as needed for dynamic adjoint solves
   bool save_to_disk_;
 
   /// @brief Array functions computing the derivative of the residual with respect to each given parameter

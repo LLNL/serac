@@ -125,14 +125,18 @@ public:
    * @param parameter_names A vector of the names of the requested parameter fields
    * @param cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param time The simulation time to initialize the physics module to
+   * @param save_to_disk A flag to save the transient states on disk instead of memory for the transient adjoint solves
+   *
+   * @note On parallel file systems (e.g. lustre), significant slowdowns and occasional errors were observed when
+   *       writing and reading the needed trainsient states to disk for adjoint solves
    */
   SolidMechanics(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
                  const serac::TimesteppingOptions timestepping_opts, const GeometricNonlinearities geom_nonlin,
                  const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {},
-                 int cycle = 0, double time = 0.0)
+                 int cycle = 0, double time = 0.0, bool save_to_disk = false)
       : SolidMechanics(
             std::make_unique<EquationSolver>(nonlinear_opts, lin_opts, StateManager::mesh(mesh_tag).GetComm()),
-            timestepping_opts, geom_nonlin, physics_name, mesh_tag, parameter_names, cycle, time)
+            timestepping_opts, geom_nonlin, physics_name, mesh_tag, parameter_names, cycle, time, save_to_disk)
   {
   }
 
@@ -147,10 +151,15 @@ public:
    * @param parameter_names A vector of the names of the requested parameter fields
    * @param cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param time The simulation time to initialize the physics module to
+   * @param save_to_disk A flag to save the transient states on disk instead of memory for the transient adjoint solves
+   *
+   * @note On parallel file systems (e.g. lustre), significant slowdowns and occasional errors were observed when
+   *       writing and reading the needed trainsient states to disk for adjoint solves
    */
   SolidMechanics(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
                  const GeometricNonlinearities geom_nonlin, const std::string& physics_name, std::string mesh_tag,
-                 std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0)
+                 std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0,
+                 bool save_to_disk = false)
       : BasePhysics(physics_name, mesh_tag, cycle, time),
         displacement_(
             StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "displacement"), mesh_tag_)),
@@ -169,7 +178,8 @@ public:
         ode2_(displacement_.space().TrueVSize(),
               {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = v_, .d2u_dt2 = acceleration_},
               *nonlin_solver_, bcs_),
-        geom_nonlin_(geom_nonlin)
+        geom_nonlin_(geom_nonlin),
+        save_to_disk_(save_to_disk)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension, {0}, and runtime mesh dimension, {1}, mismatch", dim,
@@ -370,6 +380,14 @@ public:
     du_                     = 0.0;
     dr_                     = 0.0;
     predicted_displacement_ = 0.0;
+
+    displacements_.clear();
+    velocities_.clear();
+    accelerations_.clear();
+
+    displacements_.push_back(displacement_);
+    velocities_.push_back(velocity_);
+    accelerations_.push_back(acceleration_);
   }
 
   /**
@@ -1121,6 +1139,13 @@ public:
     }
 
     nonlin_solver_->setOperator(*residual_with_bcs_);
+
+    if (!save_to_disk_) {
+      displacements_.clear();
+      velocities_.clear();
+      displacements_.push_back(displacement_);
+      velocities_.push_back(velocity_);
+    }
   }
 
   /// @brief Set field to zero wherever their are essential boundary conditions applies
@@ -1169,6 +1194,12 @@ public:
       quasiStaticSolve(dt);
     } else {
       ode2_.Step(displacement_, velocity_, time_, dt);
+
+      if (!save_to_disk_) {
+        displacements_.push_back(displacement_);
+        velocities_.push_back(velocity_);
+        accelerations_.push_back(acceleration_);
+      }
     }
 
     {
@@ -1275,7 +1306,9 @@ public:
                        "number of forward timesteps");
 
     // Load the end of step disp, velo, accel from the previous cycle from disk
-    StateManager::loadCheckpointedStates(cycle_, {displacement_, velocity_, acceleration_});
+    displacement_ = loadCheckpointedState("displacement", cycle_);
+    velocity_     = loadCheckpointedState("velocity", cycle_);
+    acceleration_ = loadCheckpointedState("acceleration", cycle_);
 
     double dt_np1 = loadCheckpointedTimestep(cycle_);
     double dt_n   = loadCheckpointedTimestep(cycle_ - 1);
@@ -1312,15 +1345,27 @@ public:
   {
     if (state_name == "displacement") {
       FiniteElementState previous_state = displacement_;
-      StateManager::loadCheckpointedStates(cycle, {previous_state});
+      if (save_to_disk_) {
+        StateManager::loadCheckpointedStates(cycle, {previous_state});
+      } else {
+        previous_state = displacements_[cycle];
+      }
       return previous_state;
     } else if (state_name == "velocity") {
       FiniteElementState previous_state = velocity_;
-      StateManager::loadCheckpointedStates(cycle, {previous_state});
+      if (save_to_disk_) {
+        StateManager::loadCheckpointedStates(cycle, {previous_state});
+      } else {
+        previous_state = velocities_[cycle];
+      }
       return previous_state;
     } else if (state_name == "acceleration") {
       FiniteElementState previous_state = acceleration_;
-      StateManager::loadCheckpointedStates(cycle, {previous_state});
+      if (save_to_disk_) {
+        StateManager::loadCheckpointedStates(cycle, {previous_state});
+      } else {
+        previous_state = accelerations_[cycle];
+      }
       return previous_state;
     }
 
@@ -1432,6 +1477,15 @@ protected:
   /// The acceleration finite element state
   FiniteElementState acceleration_;
 
+  /// An optional vector of computed displacements used for dynamic adjoints
+  std::vector<serac::FiniteElementState> displacements_;
+
+  /// An optional vector of computed velocities rates used for dynamic adjoints
+  std::vector<serac::FiniteElementState> velocities_;
+
+  /// An optional vector of computed accelerations rates used for dynamic adjoints
+  std::vector<serac::FiniteElementState> accelerations_;
+
   // In the case of transient dynamics, this is more like an adjoint_acceleration
   /// The displacement finite element adjoint state
   FiniteElementState adjoint_displacement_;
@@ -1506,6 +1560,9 @@ protected:
 
   /// @brief Coefficient containing the essential boundary values
   std::shared_ptr<mfem::Coefficient> component_disp_bdr_coef_;
+
+  /// A flag denoting whether to save the state to disk or memory as needed for dynamic adjoint solves
+  bool save_to_disk_;
 
   /// @brief Array functions computing the derivative of the residual with respect to each given parameter
   /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
