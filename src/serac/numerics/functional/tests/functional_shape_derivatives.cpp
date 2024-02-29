@@ -71,7 +71,7 @@
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils_base.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
-#include "serac/numerics/functional/functional.hpp"
+#include "serac/numerics/functional/shape_aware_functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/infrastructure/profiling.hpp"
 
@@ -204,8 +204,6 @@ void functional_test_2D(mfem::ParMesh& mesh, double tolerance)
 {
   constexpr int dim = 2;
 
-  constexpr auto I = Identity<dim>();
-
   tensor c = make_tensor<dim, (p + 1) * (p + 2) / 2>([](int i, int j) { return double(i + 1) / (j + 1); });
 
   // Create standard MFEM bilinear and linear forms on H1
@@ -234,31 +232,28 @@ void functional_test_2D(mfem::ParMesh& mesh, double tolerance)
   using shape_space = H1<p, dim>;
 
   // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space, shape_space)> residual(&fespace1, {&fespace1, &fespace2});
+  ShapeAwareFunctional<shape_space, test_space(trial_space)> residual(&fespace2, &fespace1, {&fespace1});
 
   auto div_f = [c](auto x) { return tr(dot(c, grad_monomials<p>(x))); };
   residual.AddDomainIntegral(
-      Dimension<dim>{}, DependsOn<1>{},
-      [=](double /*t*/, auto X, auto shape_displacement) {
-        auto [u, du_dx] = shape_displacement;
-        return serac::tuple{div_f(X + u) * det(I + du_dx), zero{}};
+      Dimension<dim>{}, DependsOn<>{},
+      [=](double /*t*/, auto X) {
+        return serac::tuple{div_f(X), zero{}};
       },
       mesh);
 
   auto f = [c](auto x) { return dot(c, monomials<p>(x)); };
   residual.AddBoundaryIntegral(
-      Dimension<dim - 1>{}, DependsOn<1>{},
-      [=](double /*t*/, auto position, auto shape_displacement) {
-        auto [X, dX_dxi]     = position;
-        auto [u, du_dxi]     = shape_displacement;
-        auto n               = normalize(cross(dX_dxi + du_dxi));
-        auto area_correction = norm(cross(dX_dxi + du_dxi)) / norm(cross(dX_dxi));
-        return -dot(f(X + u), n) * area_correction;
+      Dimension<dim - 1>{}, DependsOn<>{},
+      [=](double /*t*/, auto position) {
+        auto [X, dX_dxi] = position;
+        auto n           = normalize(cross(dX_dxi));
+        return -dot(f(X), n);
       },
       mesh);
 
   double t        = 0.0;
-  auto [r, drdU2] = residual(t, U1, serac::differentiate_wrt(U2));
+  auto [r, drdU2] = residual(t, serac::differentiate_wrt(U2), U1);
   EXPECT_NEAR(mfem::InnerProduct(r, ones), 0.0, tolerance);
 
   auto dr = drdU2(dU2);
@@ -269,8 +264,6 @@ template <int p>
 void functional_test_3D(mfem::ParMesh& mesh, double tolerance)
 {
   constexpr int dim = 3;
-
-  constexpr auto I = Identity<dim>();
 
   tensor c = make_tensor<dim, ((p + 1) * (p + 2) * (p + 3)) / 6>([](int i, int j) { return double(i + 1) / (j + 1); });
 
@@ -300,31 +293,28 @@ void functional_test_3D(mfem::ParMesh& mesh, double tolerance)
   using shape_space = H1<p, dim>;
 
   // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space, shape_space)> residual(&fespace1, {&fespace1, &fespace2});
+  ShapeAwareFunctional<shape_space, test_space(trial_space)> residual(&fespace2, &fespace1, {&fespace1});
 
   auto div_f = [c](auto x) { return tr(dot(c, grad_monomials<p>(x))); };
   residual.AddDomainIntegral(
-      Dimension<dim>{}, DependsOn<1>{},
-      [=](double /*t*/, auto X, auto shape_displacement) {
-        auto [u, du_dx] = shape_displacement;
-        return serac::tuple{div_f(X + u) * det(I + du_dx), zero{}};
+      Dimension<dim>{}, DependsOn<>{},
+      [=](double /*t*/, auto X) {
+        return serac::tuple{div_f(X), zero{}};
       },
       mesh);
 
   auto f = [c](auto x) { return dot(c, monomials<p>(x)); };
   residual.AddBoundaryIntegral(
-      Dimension<dim - 1>{}, DependsOn<1>{},
-      [=](double /*t*/, auto position, auto shape_displacement) {
-        auto [X, dX_dxi]     = position;
-        auto [u, du_dxi]     = shape_displacement;
-        auto n               = normalize(cross(dX_dxi + du_dxi));
-        auto area_correction = norm(cross(dX_dxi + du_dxi)) / norm(cross(dX_dxi));
-        return -dot(f(X + u), n) * area_correction;
+      Dimension<dim - 1>{}, DependsOn<>{},
+      [=](double /*t*/, auto position) {
+        auto [X, dX_dxi] = position;
+        auto n           = normalize(cross(dX_dxi));
+        return -dot(f(X), n);
       },
       mesh);
 
   double t        = 0.0;
-  auto [r, drdU2] = residual(t, U1, serac::differentiate_wrt(U2));
+  auto [r, drdU2] = residual(t, serac::differentiate_wrt(U2), U1);
   EXPECT_NEAR(mfem::InnerProduct(r, ones), 0.0, tolerance);
 
   auto dr = drdU2(dU2);

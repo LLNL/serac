@@ -164,7 +164,7 @@ public:
       auto T = dot(P, n0);
       return T;
     };
-    solid.setTraction(traction);
+    solid.setTraction(traction, EntireBoundary(solid.mesh()));
   }
 
 private:

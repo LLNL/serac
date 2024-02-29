@@ -323,6 +323,20 @@ input file functionality.
     serac::exitGracefully();
   }
 
+  // Optionally, print unused entries in input file and quit
+  if (cli_opts.find("print-unused") != cli_opts.end()) {
+    const std::vector<std::string> all_unexpected_names = inlet.unexpectedNames();
+    if (all_unexpected_names.size() != 0) {
+      SLIC_INFO("Printing unused entries in input file:");
+      for (auto& x : all_unexpected_names) {
+        SLIC_INFO("  " << x);
+      }
+    } else {
+      SLIC_INFO("No unused entries in input file.");
+    }
+    serac::exitGracefully();
+  }
+
   // Save input values to file
   std::string input_values_path = axom::utilities::filesystem::joinPath(output_directory, "serac_input_values.json");
   datastore.getRoot()->getGroup("input_file")->save(input_values_path, "json");

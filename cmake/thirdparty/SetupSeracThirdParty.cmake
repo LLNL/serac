@@ -167,6 +167,24 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
 
     #------------------------------------------------------------------------------
+    # Sundials
+    #------------------------------------------------------------------------------
+    if (SUNDIALS_DIR)
+        # Note: Sundials is currently only used via MFEM and MFEM's target contains it's information
+        serac_assert_is_directory(VARIABLE_NAME SUNDIALS_DIR)
+        set(SERAC_USE_SUNDIALS ON CACHE BOOL "")
+        
+        # Note: MFEM sets SUNDIALS_FOUND itself
+        if (NOT SERAC_ENABLE_CODEVELOP)
+            set(SUNDIALS_FOUND TRUE)
+        endif()
+    else()
+        set(SERAC_USE_SUNDIALS OFF CACHE BOOL "")
+        set(SUNDIALS_FOUND FALSE)
+    endif()
+    message(STATUS "Sundials support is ${SERAC_USE_SUNDIALS}")
+
+    #------------------------------------------------------------------------------
     # MFEM
     #------------------------------------------------------------------------------
     if(NOT SERAC_ENABLE_CODEVELOP)
@@ -209,12 +227,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(MFEM_USE_OPENMP ${ENABLE_OPENMP} CACHE BOOL "")
         set(MFEM_USE_PETSC ${PETSC_FOUND} CACHE BOOL "")
         set(MFEM_USE_RAJA OFF CACHE BOOL "")
-        if(SUNDIALS_DIR)
-            serac_assert_is_directory(VARIABLE_NAME SUNDIALS_DIR)
-            set(MFEM_USE_SUNDIALS ON CACHE BOOL "")
-        else()
-            set(MFEM_USE_SUNDIALS OFF CACHE BOOL "")
-        endif()
+        set(MFEM_USE_SUNDIALS ${SERAC_USE_SUNDIALS} CACHE BOOL "")
         if(SUPERLUDIST_DIR)
             serac_assert_is_directory(VARIABLE_NAME SUPERLUDIST_DIR)
             # MFEM uses a slightly different naming convention
@@ -224,7 +237,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         if(STRUMPACK_DIR)
             serac_assert_is_directory(VARIABLE_NAME STRUMPACK_DIR)
             set(MFEM_USE_STRUMPACK ON CACHE BOOL "")
-            find_package(strumpack CONFIG PATHS ${STRUMPACK_DIR}/lib/cmake/STRUMPACK)
+            find_package(strumpack CONFIG
+                PATHS ${STRUMPACK_DIR}/lib/cmake/STRUMPACK;${STRUMPACK_DIR}/lib64/cmake/STRUMPACK)
             set(STRUMPACK_REQUIRED_PACKAGES "MPI" "MPI_Fortran" "ParMETIS" "METIS"
                 "ScaLAPACK" CACHE STRING
                 "Additional packages required by STRUMPACK.")
@@ -383,15 +397,22 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             target_link_libraries(sidre PUBLIC STRUMPACK::strumpack)
         endif()
 
-        # Alias Axom's builtin thirdparty targets under axom namespace
-        foreach(_comp ${AXOM_COMPONENTS_ENABLED};cli11;fmt)
-            add_library(axom::${_comp} ALIAS ${_comp})
-        endforeach()
+        # NOTE: Keeping this for compatibility, but this section is already done in axom since 858531b.
+        if (NOT TARGET axom)
+            # Create convenience target that bundles all Axom targets (axom)
+            # This normally happens in axom's installed config file
+            add_library(axom INTERFACE IMPORTED)
+            target_link_libraries(axom INTERFACE ${AXOM_COMPONENTS_ENABLED})
 
-        # Create convenience target that bundles all Axom targets (axom)
-        # This normally happens in axom's installed config file
-        add_library(axom INTERFACE IMPORTED)
-        target_link_libraries(axom INTERFACE ${AXOM_COMPONENTS_ENABLED})
+            # Alias Axom's builtin thirdparty targets under axom namespace
+            foreach(_comp ${AXOM_COMPONENTS_ENABLED};cli11;fmt)
+                add_library(axom::${_comp} ALIAS ${_comp})
+            endforeach()
+        else()
+            foreach(_comp cli11;fmt)
+                add_library(axom::${_comp} ALIAS ${_comp})
+            endforeach()
+        endif()
 
         if(ENABLE_OPENMP)
             target_link_libraries(core INTERFACE openmp)

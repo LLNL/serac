@@ -112,7 +112,7 @@ TEST_P(EquationSolverSuite, All)
   }
 }
 
-#ifdef MFEM_USE_SUNDIALS
+#ifdef SERAC_USE_SUNDIALS
 INSTANTIATE_TEST_SUITE_P(
     AllEquationSolverTests, EquationSolverSuite,
     testing::Combine(testing::Values(NonlinearSolver::Newton, NonlinearSolver::LBFGS, NonlinearSolver::KINFullStep,
