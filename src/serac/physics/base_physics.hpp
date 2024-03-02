@@ -56,8 +56,11 @@ public:
    * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
    * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param[in] time The simulation time to initialize the physics module to
+   * @param[in] checkpoint_to_disk A flag to save the transient states on disk instead of memory for the transient
+   * adjoint solves
    */
-  BasePhysics(std::string physics_name, std::string mesh_tag, int cycle = 0, double time = 0.0);
+  BasePhysics(std::string physics_name, std::string mesh_tag, int cycle = 0, double time = 0.0,
+              bool checkpoint_to_disk = false);
 
   /**
    * @brief Construct a new Base Physics object (copy constructor)
@@ -343,14 +346,14 @@ public:
    * @param cycle The cycle to retrieve state from
    * @return The named primal Finite Element State
    */
-  virtual FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const;
+  virtual std::map<std::string, FiniteElementState> getCheckpointedStates(int cycle) const;
 
   /**
    * @brief Get a timestep increment which has been previously checkpointed at the give cycle
    * @param cycle The previous 'timestep' number where the timestep increment is requested
    * @return The timestep increment
    */
-  virtual double loadCheckpointedTimestep(int cycle) const;
+  virtual double getCheckpointedTimestep(int cycle) const;
 
   /**
    * @brief Initializes the Sidre structure for simulation summary data
@@ -481,6 +484,9 @@ protected:
   /// physics module)
   std::unique_ptr<FiniteElementDual> shape_displacement_sensitivity_;
 
+  /// @brief A map containing optionally in-memory checkpointed primal states for transient adjoint solvers
+  std::map<std::string, std::vector<serac::FiniteElementState>> checkpointed_states_;
+
   /**
    *@brief Whether the simulation is time-independent
    */
@@ -560,6 +566,9 @@ protected:
    * @brief Boundary condition manager instance
    */
   BoundaryConditionManager bcs_;
+
+  /// A flag denoting whether to save the state to disk or memory as needed for dynamic adjoint solves
+  bool checkpoint_to_disk_;
 };
 
 }  // namespace serac

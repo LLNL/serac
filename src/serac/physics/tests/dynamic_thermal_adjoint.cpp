@@ -178,9 +178,9 @@ std::tuple<double, FiniteElementDual, FiniteElementDual> computeThermalQoiAndIni
   FiniteElementDual adjoint_load(solver.state("temperature").space(), "adjoint_load");
 
   for (int i = solver.cycle(); i > 0; --i) {
-    double             dt                      = solver.loadCheckpointedTimestep(i - 1);
-    FiniteElementState temperature_end_of_step = solver.loadCheckpointedState("temperature", solver.cycle());
-    computeStepAdjointLoad(temperature_end_of_step, adjoint_load, dt);
+    double dt              = solver.getCheckpointedTimestep(i - 1);
+    auto   previous_states = solver.getCheckpointedStates(solver.cycle());
+    computeStepAdjointLoad(previous_states.at("temperature"), adjoint_load, dt);
     solver.setAdjointLoad({{"temperature", adjoint_load}});
     solver.reverseAdjointTimestep();
     shape_sensitivity += solver.computeTimestepShapeSensitivity();
@@ -207,9 +207,9 @@ std::tuple<double, FiniteElementDual> computeThermalConductivitySensitivity(Base
   FiniteElementDual adjoint_load(solver.state("temperature").space(), "adjoint_load");
 
   for (int i = solver.cycle(); i > 0; --i) {
-    double             dt                      = solver.loadCheckpointedTimestep(i - 1);
-    FiniteElementState temperature_end_of_step = solver.loadCheckpointedState("temperature", solver.cycle());
-    computeStepAdjointLoad(temperature_end_of_step, adjoint_load, dt);
+    double dt              = solver.getCheckpointedTimestep(i - 1);
+    auto   previous_states = solver.getCheckpointedStates(solver.cycle());
+    computeStepAdjointLoad(previous_states.at("temperature"), adjoint_load, dt);
     solver.setAdjointLoad({{"temperature", adjoint_load}});
     solver.reverseAdjointTimestep();
     conductivity_sensitivity += solver.computeTimestepSensitivity(0);

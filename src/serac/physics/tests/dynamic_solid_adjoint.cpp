@@ -142,10 +142,10 @@ std::tuple<double, FiniteElementDual, FiniteElementDual, FiniteElementDual> comp
   // for solids, we go back to time = 0, because there is an extra hidden implicit solve at the start
   // consider unifying the interface between solids and thermal
   for (int i = solid_solver.cycle(); i > 0; --i) {
-    FiniteElementState displacement = solid_solver.loadCheckpointedState("displacement", solid_solver.cycle());
+    auto previous_states = solid_solver.getCheckpointedStates(solid_solver.cycle());
     computeStepAdjointLoad(
-        displacement, adjoint_load,
-        0.5 * (solid_solver.loadCheckpointedTimestep(i - 1) + solid_solver.loadCheckpointedTimestep(i)));
+        previous_states.at("displacement"), adjoint_load,
+        0.5 * (solid_solver.getCheckpointedTimestep(i - 1) + solid_solver.getCheckpointedTimestep(i)));
     EXPECT_EQ(i, solid_solver.cycle());
     solid_solver.setAdjointLoad({{"displacement", adjoint_load}});
     solid_solver.reverseAdjointTimestep();

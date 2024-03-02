@@ -125,7 +125,8 @@ public:
    * @param parameter_names A vector of the names of the requested parameter fields
    * @param cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param time The simulation time to initialize the physics module to
-   * @param save_to_disk A flag to save the transient states on disk instead of memory for the transient adjoint solves
+   * @param checkpoint_to_disk A flag to save the transient states on disk instead of memory for the transient adjoint
+   * solves
    *
    * @note On parallel file systems (e.g. lustre), significant slowdowns and occasional errors were observed when
    *       writing and reading the needed trainsient states to disk for adjoint solves
@@ -133,10 +134,10 @@ public:
   SolidMechanics(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
                  const serac::TimesteppingOptions timestepping_opts, const GeometricNonlinearities geom_nonlin,
                  const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {},
-                 int cycle = 0, double time = 0.0, bool save_to_disk = false)
+                 int cycle = 0, double time = 0.0, bool checkpoint_to_disk = false)
       : SolidMechanics(
             std::make_unique<EquationSolver>(nonlinear_opts, lin_opts, StateManager::mesh(mesh_tag).GetComm()),
-            timestepping_opts, geom_nonlin, physics_name, mesh_tag, parameter_names, cycle, time, save_to_disk)
+            timestepping_opts, geom_nonlin, physics_name, mesh_tag, parameter_names, cycle, time, checkpoint_to_disk)
   {
   }
 
@@ -151,7 +152,8 @@ public:
    * @param parameter_names A vector of the names of the requested parameter fields
    * @param cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param time The simulation time to initialize the physics module to
-   * @param save_to_disk A flag to save the transient states on disk instead of memory for the transient adjoint solves
+   * @param checkpoint_to_disk A flag to save the transient states on disk instead of memory for the transient adjoint
+   * solves
    *
    * @note On parallel file systems (e.g. lustre), significant slowdowns and occasional errors were observed when
    *       writing and reading the needed trainsient states to disk for adjoint solves
@@ -159,8 +161,8 @@ public:
   SolidMechanics(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
                  const GeometricNonlinearities geom_nonlin, const std::string& physics_name, std::string mesh_tag,
                  std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0,
-                 bool save_to_disk = false)
-      : BasePhysics(physics_name, mesh_tag, cycle, time),
+                 bool checkpoint_to_disk = false)
+      : BasePhysics(physics_name, mesh_tag, cycle, time, checkpoint_to_disk),
         displacement_(
             StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "displacement"), mesh_tag_)),
         velocity_(StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "velocity"), mesh_tag_)),
@@ -178,8 +180,7 @@ public:
         ode2_(displacement_.space().TrueVSize(),
               {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = v_, .d2u_dt2 = acceleration_},
               *nonlin_solver_, bcs_),
-        geom_nonlin_(geom_nonlin),
-        save_to_disk_(save_to_disk)
+        geom_nonlin_(geom_nonlin)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension, {0}, and runtime mesh dimension, {1}, mismatch", dim,
@@ -381,13 +382,13 @@ public:
     dr_                     = 0.0;
     predicted_displacement_ = 0.0;
 
-    displacements_.clear();
-    velocities_.clear();
-    accelerations_.clear();
+    if (!checkpoint_to_disk_) {
+      checkpointed_states_.clear();
 
-    displacements_.push_back(displacement_);
-    velocities_.push_back(velocity_);
-    accelerations_.push_back(acceleration_);
+      checkpointed_states_["displacement"].push_back(displacement_);
+      checkpointed_states_["velocity"].push_back(velocity_);
+      checkpointed_states_["acceleration"].push_back(acceleration_);
+    }
   }
 
   /**
@@ -677,9 +678,15 @@ public:
   {
     if (state_name == "displacement") {
       displacement_ = state;
+      if (!checkpoint_to_disk_) {
+        checkpointed_states_["displacement"][cycle_] = displacement_;
+      }
       return;
     } else if (state_name == "velocity") {
       velocity_ = state;
+      if (!checkpoint_to_disk_) {
+        checkpointed_states_["velocity"][cycle_] = velocity_;
+      }
       return;
     }
 
@@ -1140,11 +1147,14 @@ public:
 
     nonlin_solver_->setOperator(*residual_with_bcs_);
 
-    if (!save_to_disk_) {
-      displacements_.clear();
-      velocities_.clear();
-      displacements_.push_back(displacement_);
-      velocities_.push_back(velocity_);
+    if (checkpoint_to_disk_) {
+      outputStateToDisk();
+    } else {
+      checkpointed_states_.clear();
+
+      checkpointed_states_["displacement"].push_back(displacement_);
+      checkpointed_states_["velocity"].push_back(velocity_);
+      checkpointed_states_["acceleration"].push_back(acceleration_);
     }
   }
 
@@ -1195,7 +1205,7 @@ public:
     } else {
       ode2_.Step(displacement_, velocity_, time_, dt);
 
-      if (!save_to_disk_) {
+      if (!checkpoint_to_disk_) {
         displacements_.push_back(displacement_);
         velocities_.push_back(velocity_);
         accelerations_.push_back(acceleration_);
@@ -1212,6 +1222,14 @@ public:
                                 *parameters_[parameter_indices].state...);
 
       residual_->updateQdata(false);
+
+      if (checkpoint_to_disk_) {
+        outputStateToDisk();
+      } else {
+        checkpointed_states_["displacement"].push_back(displacement_);
+        checkpointed_states_["velocity"].push_back(velocity_);
+        checkpointed_states_["acceleration"].push_back(acceleration_);
+      }
     }
 
     cycle_ += 1;
@@ -1305,13 +1323,17 @@ public:
                        "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
                        "number of forward timesteps");
 
-    // Load the end of step disp, velo, accel from the previous cycle from disk
-    displacement_ = loadCheckpointedState("displacement", cycle_);
-    velocity_     = loadCheckpointedState("velocity", cycle_);
-    acceleration_ = loadCheckpointedState("acceleration", cycle_);
+    // Load the end of step disp, velo, accel from the previous cycle
+    {
+      auto previous_states_n = getCheckpointedStates(cycle_);
 
-    double dt_np1 = loadCheckpointedTimestep(cycle_);
-    double dt_n   = loadCheckpointedTimestep(cycle_ - 1);
+      displacement_ = previous_states_n.at("displacement");
+      velocity_     = previous_states_n.at("velocity");
+      acceleration_ = previous_states_n.at("acceleration");
+    }
+
+    double dt_np1 = getCheckpointedTimestep(cycle_);
+    double dt_n   = getCheckpointedTimestep(cycle_ - 1);
 
     // K := dR/du
     auto K = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(displacement_),
@@ -1341,38 +1363,25 @@ public:
    * @param cycle The previous timestep where the state solution is requested
    * @return The named primal Finite Element State
    */
-  FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const override
+  std::map<std::string, FiniteElementState> getCheckpointedStates(int cycle_to_load) const override
   {
-    if (state_name == "displacement") {
-      FiniteElementState previous_state = displacement_;
-      if (save_to_disk_) {
-        StateManager::loadCheckpointedStates(cycle, {previous_state});
-      } else {
-        previous_state = displacements_[cycle];
-      }
-      return previous_state;
-    } else if (state_name == "velocity") {
-      FiniteElementState previous_state = velocity_;
-      if (save_to_disk_) {
-        StateManager::loadCheckpointedStates(cycle, {previous_state});
-      } else {
-        previous_state = velocities_[cycle];
-      }
-      return previous_state;
-    } else if (state_name == "acceleration") {
-      FiniteElementState previous_state = acceleration_;
-      if (save_to_disk_) {
-        StateManager::loadCheckpointedStates(cycle, {previous_state});
-      } else {
-        previous_state = accelerations_[cycle];
-      }
-      return previous_state;
+    std::map<std::string, FiniteElementState> previous_states;
+
+    if (checkpoint_to_disk_) {
+      previous_states.emplace("displacement", displacement_);
+      previous_states.emplace("velocity", velocity_);
+      previous_states.emplace("acceleration", acceleration_);
+      StateManager::loadCheckpointedStates(
+          cycle_to_load,
+          {previous_states.at("displacement"), previous_states.at("velocity"), previous_states.at("acceleration")});
+      return previous_states;
+    } else {
+      previous_states.emplace("displacement", checkpointed_states_.at("displacement")[cycle_to_load]);
+      previous_states.emplace("velocity", checkpointed_states_.at("velocity")[cycle_to_load]);
+      previous_states.emplace("acceleration", checkpointed_states_.at("acceleration")[cycle_to_load]);
     }
 
-    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requested from solid mechanics module '{}', but it doesn't exist",
-                                      state_name, name_));
-
-    return displacement_;
+    return previous_states;
   }
 
   /**
@@ -1560,9 +1569,6 @@ protected:
 
   /// @brief Coefficient containing the essential boundary values
   std::shared_ptr<mfem::Coefficient> component_disp_bdr_coef_;
-
-  /// A flag denoting whether to save the state to disk or memory as needed for dynamic adjoint solves
-  bool save_to_disk_;
 
   /// @brief Array functions computing the derivative of the residual with respect to each given parameter
   /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
