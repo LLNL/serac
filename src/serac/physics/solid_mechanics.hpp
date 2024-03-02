@@ -1205,10 +1205,12 @@ public:
     } else {
       ode2_.Step(displacement_, velocity_, time_, dt);
 
-      if (!checkpoint_to_disk_) {
-        displacements_.push_back(displacement_);
-        velocities_.push_back(velocity_);
-        accelerations_.push_back(acceleration_);
+      if (checkpoint_to_disk_) {
+        outputStateToDisk();
+      } else {
+        checkpointed_states_["displacement"].push_back(displacement_);
+        checkpointed_states_["velocity"].push_back(velocity_);
+        checkpointed_states_["acceleration"].push_back(acceleration_);
       }
     }
 
@@ -1222,14 +1224,6 @@ public:
                                 *parameters_[parameter_indices].state...);
 
       residual_->updateQdata(false);
-
-      if (checkpoint_to_disk_) {
-        outputStateToDisk();
-      } else {
-        checkpointed_states_["displacement"].push_back(displacement_);
-        checkpointed_states_["velocity"].push_back(velocity_);
-        checkpointed_states_["acceleration"].push_back(acceleration_);
-      }
     }
 
     cycle_ += 1;
@@ -1485,15 +1479,6 @@ protected:
 
   /// The acceleration finite element state
   FiniteElementState acceleration_;
-
-  /// An optional vector of computed displacements used for dynamic adjoints
-  std::vector<serac::FiniteElementState> displacements_;
-
-  /// An optional vector of computed velocities rates used for dynamic adjoints
-  std::vector<serac::FiniteElementState> velocities_;
-
-  /// An optional vector of computed accelerations rates used for dynamic adjoints
-  std::vector<serac::FiniteElementState> accelerations_;
 
   // In the case of transient dynamics, this is more like an adjoint_acceleration
   /// The displacement finite element adjoint state
