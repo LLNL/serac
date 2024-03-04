@@ -279,8 +279,8 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
               (parent_to_physical<get<indices>(empty_trial_element).family>(get<indices>(qf_inputs[elements[e]]),
                                                                             device_J, e, ctx),
                ...);
-
               ctx.teamSync();
+
               // (batch) evalute the q-function at each quadrature point
               //
               // note: the weird immediately-invoked lambda expression is
@@ -289,10 +289,10 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
 
               auto qf_outputs = [&]() {
                 if constexpr (std::is_same_v<state_type, Nothing>) {
-                  return batch_apply_qf_no_qdata(qf, t, device_x[e], ctx, get<indices>(qf_inputs[e])...);
+                  return batch_apply_qf_no_qdata(qf, t, device_x[e], ctx, get<indices>(qf_inputs[elements[e]])...);
                 } else {
                   return batch_apply_qf(qf, t, device_x[e], &qf_state(e, 0), update_state, ctx,
-                                        get<indices>(qf_inputs[e])...);
+                                        get<indices>(qf_inputs[elements[e]])...);
                 }
               }();
               ctx.teamSync();

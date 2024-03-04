@@ -256,7 +256,8 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
               ctx.teamSync();
 
               // (batch) evalute the q-function at each quadrature point
-              auto qf_outputs = batch_apply_qf(qf, t, device_x[e], device_J[e], get<indices>(*qf_inputs)...);
+              auto qf_outputs =
+                  batch_apply_qf(qf, t, device_x[e], device_J[e], get<indices>(qf_inputs[elements[e]])...);
 
               ctx.teamSync();
 
