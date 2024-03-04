@@ -139,7 +139,7 @@ if(NOT SERAC_FOUND)
 
   # Petsc
   if(SERAC_USE_PETSC)
-    find_dependency(petsc REQUIRED NO_DEFAULT_PATH PATHS "${PETSC_DIR}")
+    # Note: Targets not currently imported
   endif()
 
   # Umpire
