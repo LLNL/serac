@@ -43,6 +43,7 @@ struct ParameterizedThermoelasticMaterial {
     auto theta = get<VALUE>(temperature);
     auto alpha = get<VALUE>(coefficient_of_thermal_expansion);
 
+    // std::cout<<"print e" << E << "print nu " << nu <<std::endl;
     const double          K    = E / (3.0 * (1.0 - 2.0 * nu));
     const double          G    = 0.5 * E / (1.0 + nu);
     static constexpr auto I    = Identity<3>();

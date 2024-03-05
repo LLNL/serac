@@ -774,11 +774,11 @@ public:
 
   template <typename Material>
   struct SetMaterialStressFunctor {
+    SetMaterialStressFunctor(Material material, GeometricNonlinearities gn) : material_(material), geom_nonlin(gn) {}
     Material                material_;
     GeometricNonlinearities geom_nonlin;
-    SetMaterialStressFunctor(Material material, GeometricNonlinearities gn) : material_(material), geom_nonlin(gn) {}
-    template <typename T, typename X, typename State, typename Displacement, typename Acceleration, typename... Params>
-    auto SERAC_HOST_DEVICE operator()(T /*t*/, X /*x*/, State& state, Displacement displacement,
+    template <typename X, typename State, typename Displacement, typename Acceleration, typename... Params>
+    auto SERAC_HOST_DEVICE operator()(double /*t*/, X /*x*/, State& state, Displacement displacement,
                                       Acceleration acceleration, Params... params) const
     {
       auto du_dX   = get<DERIVATIVE>(displacement);
@@ -823,7 +823,7 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename MaterialType, typename StateType = Empty>
-  void setMaterial(DependsOn<active_parameters...>, MaterialType material, qdata_type<StateType> qdata = EmptyQData)
+  void setMaterial(DependsOn<active_parameters...>, MaterialType&& material, qdata_type<StateType> qdata = EmptyQData)
   {
     SetMaterialStressFunctor<MaterialType> fntor(material, geom_nonlin_);
     residual_->AddDomainIntegral(
@@ -833,7 +833,7 @@ public:
                                                              // fact that the displacement, acceleration, and shape
                                                              // fields are always-on and come first, so the `n`th
                                                              // parameter will actually be argument `n + NUM_STATE_VARS`
-        fntor, mesh_, qdata);
+        std::move(fntor), mesh_, qdata);
   }
 
   /// @overload
