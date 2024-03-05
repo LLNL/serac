@@ -333,10 +333,10 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
   }
 }
 
-std::map<std::string, FiniteElementState> BasePhysics::getCheckpointedStates(int /*cycle*/) const
+std::unordered_map<std::string, FiniteElementState> BasePhysics::getCheckpointedStates(int /*cycle*/) const
 {
   SLIC_ERROR_ROOT(axom::fmt::format("loadCheckpointedState not implemented for physics module {}.", name_));
-  std::map<std::string, FiniteElementState> empty_container;
+  std::unordered_map<std::string, FiniteElementState> empty_container;
   return empty_container;
 }
 

@@ -1357,9 +1357,9 @@ public:
    * @param cycle The previous timestep where the state solution is requested
    * @return The named primal Finite Element State
    */
-  std::map<std::string, FiniteElementState> getCheckpointedStates(int cycle_to_load) const override
+  std::unordered_map<std::string, FiniteElementState> getCheckpointedStates(int cycle_to_load) const override
   {
-    std::map<std::string, FiniteElementState> previous_states;
+    std::unordered_map<std::string, FiniteElementState> previous_states;
 
     if (checkpoint_to_disk_) {
       previous_states.emplace("displacement", displacement_);

@@ -346,7 +346,7 @@ public:
    * @param cycle The cycle to retrieve state from
    * @return The named primal Finite Element State
    */
-  virtual std::map<std::string, FiniteElementState> getCheckpointedStates(int cycle) const;
+  virtual std::unordered_map<std::string, FiniteElementState> getCheckpointedStates(int cycle) const;
 
   /**
    * @brief Get a timestep increment which has been previously checkpointed at the give cycle
@@ -485,7 +485,7 @@ protected:
   std::unique_ptr<FiniteElementDual> shape_displacement_sensitivity_;
 
   /// @brief A map containing optionally in-memory checkpointed primal states for transient adjoint solvers
-  std::map<std::string, std::vector<serac::FiniteElementState>> checkpointed_states_;
+  std::unordered_map<std::string, std::vector<serac::FiniteElementState>> checkpointed_states_;
 
   /**
    *@brief Whether the simulation is time-independent
