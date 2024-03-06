@@ -629,7 +629,7 @@ public:
     if (state_name == "temperature") {
       temperature_ = state;
       if (!checkpoint_to_disk_) {
-        checkpointed_states_["temperature"][cycle_] = temperature_;
+        checkpointed_states_["temperature"][static_cast<size_t>(cycle_)] = temperature_;
       }
       return;
     }
@@ -951,8 +951,10 @@ public:
                                            {previous_states.at("temperature"), previous_states.at("temperature_rate")});
       return previous_states;
     } else {
-      previous_states.emplace("temperature", checkpointed_states_.at("temperature")[cycle_to_load]);
-      previous_states.emplace("temperature_rate", checkpointed_states_.at("temperature_rate")[cycle_to_load]);
+      previous_states.emplace("temperature",
+                              checkpointed_states_.at("temperature")[static_cast<size_t>(cycle_to_load)]);
+      previous_states.emplace("temperature_rate",
+                              checkpointed_states_.at("temperature_rate")[static_cast<size_t>(cycle_to_load)]);
     }
 
     return previous_states;

@@ -679,13 +679,13 @@ public:
     if (state_name == "displacement") {
       displacement_ = state;
       if (!checkpoint_to_disk_) {
-        checkpointed_states_["displacement"][cycle_] = displacement_;
+        checkpointed_states_["displacement"][static_cast<size_t>(cycle_)] = displacement_;
       }
       return;
     } else if (state_name == "velocity") {
       velocity_ = state;
       if (!checkpoint_to_disk_) {
-        checkpointed_states_["velocity"][cycle_] = velocity_;
+        checkpointed_states_["velocity"][static_cast<size_t>(cycle_)] = velocity_;
       }
       return;
     }
@@ -1370,9 +1370,11 @@ public:
           {previous_states.at("displacement"), previous_states.at("velocity"), previous_states.at("acceleration")});
       return previous_states;
     } else {
-      previous_states.emplace("displacement", checkpointed_states_.at("displacement")[cycle_to_load]);
-      previous_states.emplace("velocity", checkpointed_states_.at("velocity")[cycle_to_load]);
-      previous_states.emplace("acceleration", checkpointed_states_.at("acceleration")[cycle_to_load]);
+      previous_states.emplace("displacement",
+                              checkpointed_states_.at("displacement")[static_cast<size_t>(cycle_to_load)]);
+      previous_states.emplace("velocity", checkpointed_states_.at("velocity")[static_cast<size_t>(cycle_to_load)]);
+      previous_states.emplace("acceleration",
+                              checkpointed_states_.at("acceleration")[static_cast<size_t>(cycle_to_load)]);
     }
 
     return previous_states;
