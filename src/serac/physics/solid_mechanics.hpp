@@ -1353,8 +1353,7 @@ public:
    * @brief Accessor for getting named finite element state primal solution from the physics modules at a given
    * checkpointed cycle index
    *
-   * @param state_name The name of the Finite Element State primal solution to retrieve
-   * @param cycle The previous timestep where the state solution is requested
+   * @param cycle_to_load The previous timestep where the state solution is requested
    * @return The named primal Finite Element State
    */
   std::unordered_map<std::string, FiniteElementState> getCheckpointedStates(int cycle_to_load) const override
