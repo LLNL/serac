@@ -13,3 +13,9 @@ set(infrastructure_tests
 
 serac_add_tests( SOURCES ${infrastructure_tests}
                  DEPENDS_ON ${test_dependencies})
+
+if(SERAC_USE_PETSC)
+    serac_add_tests(SOURCES       petsc_smoketest.cpp
+                    DEPENDS_ON    PkgConfig::PETSC gtest serac_infrastructure
+                    NUM_MPI_TASKS 4)
+endif()
