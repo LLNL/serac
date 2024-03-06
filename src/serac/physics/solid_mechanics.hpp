@@ -840,7 +840,7 @@ public:
   template <typename MaterialType, typename StateType = Empty>
   void setMaterial(MaterialType material, std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
   {
-    setMaterial(DependsOn<>{}, material, qdata);
+    setMaterial(DependsOn<>{}, std::move(material), qdata);
   }
 
   /**
@@ -911,7 +911,7 @@ public:
     Domain domain = (optional_domain.has_value()) ? optional_domain.value() : EntireDomain(mesh_);
     AddBodyForceIntegrand<BodyForceType> force_integrand(body_force);
     residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
-                                 force_integrand, domain);
+                                 std::move(force_integrand), domain);
   }
 
   /// @overload

@@ -405,11 +405,12 @@ public:
   {
     if constexpr (std::is_same_v<qpt_data_type, Nothing>) {
       functional_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
-                                     ShapeAwareIntegrandWrapper<lambda, dim, args...>(integrand), domain, qdata);
+                                     std::move(ShapeAwareIntegrandWrapper<lambda, dim, args...>(integrand)), domain,
+                                     qdata);
     } else {
       functional_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
-                                     ShapeAwareIntegrandWrapperWithState<lambda, dim, args...>(integrand), domain,
-                                     qdata);
+                                     std::move(ShapeAwareIntegrandWrapperWithState<lambda, dim, args...>(integrand)),
+                                     domain, qdata);
     }
   }
 
@@ -444,7 +445,8 @@ public:
   void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, domain_type& domain)
   {
     functional_->AddBoundaryIntegral(Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
-                                     ShapeAwareBoundaryIntegrandWrapper<lambda, dim, args...>(integrand), domain);
+                                     std::move(ShapeAwareBoundaryIntegrandWrapper<lambda, dim, args...>(integrand)),
+                                     domain);
   }
 
   /**

@@ -413,15 +413,15 @@ public:
   {
     ThermalMaterialIntegrand<MaterialType> integrand(material);
 
-    residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, NUM_STATE_VARS + active_parameters...>{}, integrand,
-                                 mesh_);
+    residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, NUM_STATE_VARS + active_parameters...>{},
+                                 std::move(integrand), mesh_);
   }
 
   /// @overload
   template <typename MaterialType>
   void setMaterial(MaterialType material)
   {
-    setMaterial(DependsOn<>{}, material);
+    setMaterial(DependsOn<>{}, std::move(material));
   }
 
   /**

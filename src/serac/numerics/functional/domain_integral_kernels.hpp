@@ -226,7 +226,6 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
   auto device_r = copy_data(r, serac::size(*r) * sizeof(double), "DEVICE");
 
   printCUDAMemUsage();
-  cudaSetDevice(0);
 #else
   auto&           rm               = umpire::ResourceManager::getInstance();
   auto            host_allocator   = rm.getAllocator("HOST");
@@ -266,7 +265,6 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
                    .interpolate(get<indices>(u)[elements[e]], rule, &get<indices>(interpolate_result[elements[e]]),
                                 ctx),
                ...);
-
               ctx.teamSync();
 
               (promote_each_to_dual_when<indices == differentiation_index>(
