@@ -237,7 +237,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         if(STRUMPACK_DIR)
             serac_assert_is_directory(VARIABLE_NAME STRUMPACK_DIR)
             set(MFEM_USE_STRUMPACK ON CACHE BOOL "")
-            find_package(strumpack CONFIG PATHS ${STRUMPACK_DIR}/lib/cmake/STRUMPACK)
+            find_package(strumpack CONFIG
+                PATHS ${STRUMPACK_DIR}/lib/cmake/STRUMPACK;${STRUMPACK_DIR}/lib64/cmake/STRUMPACK)
             set(STRUMPACK_REQUIRED_PACKAGES "MPI" "MPI_Fortran" "ParMETIS" "METIS"
                 "ScaLAPACK" CACHE STRING
                 "Additional packages required by STRUMPACK.")
@@ -396,15 +397,22 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             target_link_libraries(sidre PUBLIC STRUMPACK::strumpack)
         endif()
 
-        # Alias Axom's builtin thirdparty targets under axom namespace
-        foreach(_comp ${AXOM_COMPONENTS_ENABLED};cli11;fmt)
-            add_library(axom::${_comp} ALIAS ${_comp})
-        endforeach()
+        # NOTE: Keeping this for compatibility, but this section is already done in axom since 858531b.
+        if (NOT TARGET axom)
+            # Create convenience target that bundles all Axom targets (axom)
+            # This normally happens in axom's installed config file
+            add_library(axom INTERFACE IMPORTED)
+            target_link_libraries(axom INTERFACE ${AXOM_COMPONENTS_ENABLED})
 
-        # Create convenience target that bundles all Axom targets (axom)
-        # This normally happens in axom's installed config file
-        add_library(axom INTERFACE IMPORTED)
-        target_link_libraries(axom INTERFACE ${AXOM_COMPONENTS_ENABLED})
+            # Alias Axom's builtin thirdparty targets under axom namespace
+            foreach(_comp ${AXOM_COMPONENTS_ENABLED};cli11;fmt)
+                add_library(axom::${_comp} ALIAS ${_comp})
+            endforeach()
+        else()
+            foreach(_comp cli11;fmt)
+                add_library(axom::${_comp} ALIAS ${_comp})
+            endforeach()
+        endif()
 
         if(ENABLE_OPENMP)
             target_link_libraries(core INTERFACE openmp)
