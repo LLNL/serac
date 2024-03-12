@@ -231,8 +231,10 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
   GeometricFactors& gf              = integral.geometric_factors_[geom];
   if (gf.num_elements == 0) return;
 
-  const double*  positions        = gf.X.Read();
-  const double*  jacobians        = gf.J.Read();
+  gf.X.UseDevice(true);
+  gf.J.UseDevice(true);
+  const double*  positions        = gf.X.Read(true);
+  const double*  jacobians        = gf.J.Read(true);
   const int*     elements         = integral.domain_.get(geom).data();
   const uint32_t num_elements     = uint32_t(gf.num_elements);
   const uint32_t qpts_per_element = num_quadrature_points(geom, Q);
@@ -338,8 +340,8 @@ void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integr
   GeometricFactors& gf              = integral.geometric_factors_[geom];
   if (gf.num_elements == 0) return;
 
-  const double*  positions        = gf.X.Read();
-  const double*  jacobians        = gf.J.Read();
+  const double*  positions        = gf.X.Read(true);
+  const double*  jacobians        = gf.J.Read(true);
   const uint32_t num_elements     = uint32_t(gf.num_elements);
   const uint32_t qpts_per_element = num_quadrature_points(geom, Q);
   const int*     elements         = &gf.elements[0];

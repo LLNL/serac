@@ -31,9 +31,9 @@ void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobian
   using position_type = tensor<double, spatial_dim, qpts_per_elem>;
   using jacobian_type = tensor<double, geometry_dim, spatial_dim, qpts_per_elem>;
 
-  auto X_q = reinterpret_cast<position_type*>(positions_q.ReadWrite());
-  auto J_q = reinterpret_cast<jacobian_type*>(jacobians_q.ReadWrite());
-  auto X   = reinterpret_cast<const typename element_type::dof_type*>(positions_e.Read());
+  auto X_q = reinterpret_cast<position_type*>(positions_q.HostReadWrite());
+  auto J_q = reinterpret_cast<jacobian_type*>(jacobians_q.HostReadWrite());
+  auto X   = reinterpret_cast<const typename element_type::dof_type*>(positions_e.HostRead());
 
   std::size_t num_elements = elements.size();
 

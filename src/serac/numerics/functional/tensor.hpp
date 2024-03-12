@@ -25,27 +25,6 @@
 
 #include <cmath>
 
-namespace {
-template <typename DataType>
-DataType* copy_data(DataType* source_data, std::size_t size, const std::string& destination)
-{
-  auto& rm             = umpire::ResourceManager::getInstance();
-  auto  dest_allocator = rm.getAllocator(destination);
-
-  DataType* dest_data = static_cast<DataType*>(dest_allocator.allocate(size));
-
-  umpire::register_external_allocation(
-      source_data, umpire::util::AllocationRecord(source_data, size, rm.getAllocator("HOST").getAllocationStrategy(),
-                                                  std::string("external array")));
-
-  // _sphinx_tag_tut_copy_start
-  rm.copy(dest_data, source_data);
-  // _sphinx_tag_tut_copy_end
-
-  return dest_data;
-}
-}  // namespace
-
 namespace serac {
 
 /**
@@ -2030,6 +2009,30 @@ bool isnan(const tensor<T, n...>& A)
 
 /// @overload
 inline bool isnan(const zero&) { return false; }
+
+template <typename DataType>
+DataType* copy_data(DataType* source_data, std::size_t size, const std::string& destination)
+{
+  auto& rm             = umpire::ResourceManager::getInstance();
+  auto  dest_allocator = rm.getAllocator(destination);
+
+  DataType* dest_data = static_cast<DataType*>(dest_allocator.allocate(size));
+
+  umpire::register_external_allocation(
+      source_data, umpire::util::AllocationRecord(source_data, size, rm.getAllocator("HOST").getAllocationStrategy(),
+                                                  std::string("external array")));
+  rm.copy(dest_data, source_data);
+
+  return dest_data;
+}
+
+template <typename DataType>
+void deallocate(DataType* data, const std::string& destination)
+{
+  auto& rm             = umpire::ResourceManager::getInstance();
+  auto  dest_allocator = rm.getAllocator(destination);
+  dest_allocator.deallocate(data);
+}
 
 }  // namespace serac
 

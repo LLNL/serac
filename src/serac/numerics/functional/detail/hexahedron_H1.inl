@@ -153,16 +153,15 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
     using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
 #endif
     auto x_range = RAJA::RangeSegment(0, q * q * q);
-    RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
-      int qx = tid % q;
-      int qy = (tid / q) % q;
-      int qz = (tid / (q * q)) % q;
+    RAJA::loop<threads_x>(ctx, x_range, [&](int Q) {
+      int qx = Q % q;
+      int qy = (Q / q) % q;
+      int qz = (Q / (q * q));
 
       double              phi_j      = B(qx, jx) * B(qy, jy) * B(qz, jz);
       tensor<double, dim> dphi_j_dxi = {G(qx, jx) * B(qy, jy) * B(qz, jz), B(qx, jx) * G(qy, jy) * B(qz, jz),
                                         B(qx, jx) * B(qy, jy) * G(qz, jz)};
 
-      int   Q   = (qz * q + qy) * q + qx;
       auto& d00 = get<0>(get<0>(input(Q)));
       auto& d01 = get<1>(get<0>(input(Q)));
       auto& d10 = get<0>(get<1>(input(Q)));
@@ -280,9 +279,8 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
 
 #endif
     // transpose the quadrature data into a flat tensor of tuples
-#ifdef USE_CUDA
+
     RAJA_TEAM_SHARED
-#endif
     union {
       tensor<qf_input_type, q * q * q>                                  one_dimensional;
       tensor<tuple<tensor<double, c>, tensor<double, c, dim>>, q, q, q> three_dimensional;

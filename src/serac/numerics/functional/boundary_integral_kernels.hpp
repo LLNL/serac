@@ -194,14 +194,6 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
   interpolate_out_type* interpolate_result =
       static_cast<interpolate_out_type*>(dest_allocator.allocate(sizeof(interpolate_out_type) * num_elements));
 
-  // It's safer to copy the raw POD type using Umpire than J_Type.  const_cast is needed to be compatible with
-  // the Umpire's API.
-  auto device_jacobians = copy_data(const_cast<double*>(jacobians), sizeof(J_Type) * num_elements, "DEVICE");
-  auto device_positions = copy_data(const_cast<double*>(positions), sizeof(X_Type) * num_elements, "DEVICE");
-  // Reinterpret these pointers to enable simpler indexing etc.
-  auto device_J = reinterpret_cast<const J_Type*>(device_jacobians);
-  auto device_x = reinterpret_cast<const X_Type*>(device_jacobians);
-
   auto device_r = copy_data(r, serac::size(*r) * sizeof(double), "DEVICE");
 
   printCUDAMemUsage();
@@ -214,8 +206,6 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
   interpolate_out_type* interpolate_result =
       static_cast<interpolate_out_type*>(host_allocator.allocate(sizeof(interpolate_out_type) * num_elements));
 
-  auto                             device_J = J;
-  auto                             device_x = x;
   typename test_element::dof_type* device_r = r;
 #endif
   rm.memset(qf_inputs, 0);
@@ -238,7 +228,7 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(
             ctx, e_range,
-            [&ctx, t, device_J, device_x, u, qf, qpts_per_elem, rule, device_r, elements, qf_derivatives, qf_inputs,
+            [&ctx, t, J, x, u, qf, qpts_per_elem, rule, device_r, elements, qf_derivatives, qf_inputs,
              interpolate_result](uint32_t e) {
               static constexpr trial_element_type empty_trial_element{};
               // batch-calculate values / derivatives of each trial space, at each quadrature point
@@ -256,20 +246,19 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
               ctx.teamSync();
 
               // (batch) evalute the q-function at each quadrature point
-              auto qf_outputs =
-                  batch_apply_qf(qf, t, device_x[e], device_J[e], get<indices>(qf_inputs[elements[e]])...);
+              auto qf_outputs = batch_apply_qf(qf, t, x[e], J[e], get<indices>(qf_inputs[elements[e]])...);
 
               ctx.teamSync();
 
               // write out the q-function derivatives after applying the
               // physical_to_parent transformation, so that those transformations
               // won't need to be applied in the action_of_gradient and element_gradient kernels
-              if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
-                RAJA::RangeSegment x_range(0, leading_dimension(qf_outputs));
-                RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
-                  qf_derivatives[e * qpts_per_elem + uint32_t(q)] = get_gradient(qf_outputs[q]);
-                });
-              }
+              //if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
+              //  RAJA::RangeSegment x_range(0, leading_dimension(qf_outputs));
+              //  RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
+              //    qf_derivatives[e * qpts_per_elem + uint32_t(q)] = get_gradient(qf_outputs[q]);
+              //  });
+              //}
 
               ctx.teamSync();
 
@@ -279,10 +268,8 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
       });
 #ifdef USE_CUDA
   rm.copy(r, device_r);
-  deallocate(device_jacobians, "DEVICE");
   deallocate(qf_inputs, "DEVICE");
   deallocate(interpolate_result, "DEVICE");
-  deallocate(device_positions, "DEVICE");
   deallocate(device_r, "DEVICE");
   printCUDAMemUsage();
 #else
@@ -427,7 +414,7 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, d
   using padded_derivative_type [[maybe_unused]] =
       std::conditional_t<is_QOI, tuple<derivatives_type, zero>, derivatives_type>;
 
-  RAJA::RangeSegment                       elements_range(0, num_elements);
+  RAJA::TypedRangeSegment<size_t>          elements_range(0, num_elements);
   constexpr int                            nquad = num_quadrature_points(g, Q);
   constexpr TensorProductQuadratureRule<Q> rule{};
 #if defined(USE_CUDA)

@@ -41,7 +41,7 @@ public:
    *
    * @param p The current shape displacement field at the underlying quadrature point
    */
-  ShapeCorrection(Dimension<dim>, shape_type p)
+  SERAC_HOST_DEVICE ShapeCorrection(Dimension<dim>, shape_type p)
       : J_(Identity<dim>() + get<DERIVATIVE>(p)), detJ_(det(J_)), inv_J_(inv(J_)), inv_JT_(transpose(inv_J_))
   {
   }

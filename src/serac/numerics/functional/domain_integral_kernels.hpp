@@ -216,26 +216,18 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
   interpolate_out_type* interpolate_result =
       static_cast<interpolate_out_type*>(dest_allocator.allocate(sizeof(interpolate_out_type) * num_elements));
 
-  // It's safer to copy the raw POD type using umpire
-  auto device_jacobians = copy_data(const_cast<double*>(jacobians), sizeof(J_Type) * num_elements, "DEVICE");
-  auto device_positions = copy_data(const_cast<double*>(positions), sizeof(X_Type) * num_elements, "DEVICE");
-  // Reinterpret these pointers to enable simpler indexing etc.
-  auto device_J = reinterpret_cast<const J_Type*>(device_jacobians);
-  auto device_x = reinterpret_cast<const X_Type*>(device_jacobians);
-
   auto device_r = copy_data(r, serac::size(*r) * sizeof(double), "DEVICE");
 
   printCUDAMemUsage();
 #else
   auto&           rm               = umpire::ResourceManager::getInstance();
   auto            host_allocator   = rm.getAllocator("HOST");
+
   qf_inputs_type* qf_inputs =
       static_cast<qf_inputs_type*>(host_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
   interpolate_out_type* interpolate_result =
       static_cast<interpolate_out_type*>(host_allocator.allocate(sizeof(interpolate_out_type) * num_elements));
 
-  auto                                  device_J = J;
-  auto                                  device_x = x;
   typename test_element_type::dof_type* device_r = r;
 #endif
   rm.memset(qf_inputs, 0);
@@ -257,8 +249,8 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(
             ctx, e_range,
-            [&ctx, t, device_J, device_x, u, qf, qpts_per_elem, rule, device_r, qf_state, elements, qf_derivatives,
-             qf_inputs, interpolate_result, update_state](uint32_t e) {
+            [&ctx, t, J, x, u, qf, qpts_per_elem, rule, device_r, qf_state, elements, qf_derivatives, qf_inputs,
+             interpolate_result, update_state](uint32_t e) {
               static constexpr trial_element_tuple_type empty_trial_element{};
               // batch-calculate values / derivatives of each trial space, at each quadrature point
               (get<indices>(empty_trial_element)
@@ -274,8 +266,8 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
 
               // use J_e to transform values / derivatives on the parent element
               // to the to the corresponding values / derivatives on the physical element
-              (parent_to_physical<get<indices>(empty_trial_element).family>(get<indices>(qf_inputs[elements[e]]),
-                                                                            device_J, e, ctx),
+              (parent_to_physical<get<indices>(empty_trial_element).family>(get<indices>(qf_inputs[elements[e]]), J, e,
+                                                                            ctx),
                ...);
               ctx.teamSync();
 
@@ -287,9 +279,9 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
 
               auto qf_outputs = [&]() {
                 if constexpr (std::is_same_v<state_type, Nothing>) {
-                  return batch_apply_qf_no_qdata(qf, t, device_x[e], ctx, get<indices>(qf_inputs[elements[e]])...);
+                  return batch_apply_qf_no_qdata(qf, t, x[e], ctx, get<indices>(qf_inputs[elements[e]])...);
                 } else {
-                  return batch_apply_qf(qf, t, device_x[e], &qf_state(e, 0), update_state, ctx,
+                  return batch_apply_qf(qf, t, x[e], &qf_state(e, 0), update_state, ctx,
                                         get<indices>(qf_inputs[elements[e]])...);
                 }
               }();
@@ -297,17 +289,17 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
 
               // use J to transform sources / fluxes on the physical element
               // back to the corresponding sources / fluxes on the parent element
-              physical_to_parent<test_element_type::family>(qf_outputs, device_J, e, ctx);
+              //physical_to_parent<test_element_type::family>(qf_outputs, J, e, ctx);
 
               // write out the q-function derivatives after applying the
               // physical_to_parent transformation, so that those transformations
               // won't need to be applied in the action_of_gradient and element_gradient kernels
-              if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
-                RAJA::RangeSegment x_range(0, leading_dimension(qf_outputs));
-                RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
-                  qf_derivatives[e * uint32_t(qpts_per_elem) + uint32_t(q)] = get_gradient(qf_outputs[q]);
-                });
-              }
+              //if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
+              //  RAJA::RangeSegment x_range(0, leading_dimension(qf_outputs));
+              //  RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
+              //    qf_derivatives[e * uint32_t(qpts_per_elem) + uint32_t(q)] = get_gradient(qf_outputs[q]);
+              //  });
+              //}
               ctx.teamSync();
 
               // (batch) integrate the material response against the test-space basis functions
@@ -317,15 +309,19 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
 
 #ifdef USE_CUDA
   rm.copy(r, device_r);
-  dest_allocator.deallocate(device_jacobians);
   dest_allocator.deallocate(qf_inputs);
   dest_allocator.deallocate(interpolate_result);
-  dest_allocator.deallocate(device_positions);
   dest_allocator.deallocate(device_r);
   printCUDAMemUsage();
 #else
-  host_allocator.deallocate(interpolate_result);
-  host_allocator.deallocate(qf_inputs);
+  rm.memset(qf_inputs, 0);
+  rm.memset(interpolate_result, 0);
+  // for (int e = 0; e < num_elements; ++e) {
+  //  std::cout << qf_inputs[e] << std::endl;
+  //  std::cout << interpolate_result[e] << std::endl;
+  //}
+  // host_allocator.deallocate(qf_inputs);
+  // host_allocator.deallocate(interpolate_result);
 #endif
 }
 
@@ -401,7 +397,7 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
   auto                                     dr = reinterpret_cast<typename test_element::dof_type*>(dR);
   constexpr TensorProductQuadratureRule<Q> rule{};
 
-  auto          e_range = RAJA::RangeSegment(0, num_elements);
+  auto          e_range = RAJA::TypedRangeSegment<size_t>(0, num_elements);
   trial_element empty_trial_element{};
 
   using qf_inputs_type = decltype(trial_element::template interpolate_output_helper<Q>());
@@ -478,7 +474,7 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
 
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
-  RAJA::RangeSegment                       elements_range(0, num_elements);
+  RAJA::TypedRangeSegment<size_t>          elements_range(0, num_elements);
   constexpr int                            nquad = num_quadrature_points(g, Q);
   constexpr TensorProductQuadratureRule<Q> rule{};
 #if defined(USE_CUDA)
@@ -503,14 +499,14 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
               reinterpret_cast<typename test_element::dof_type*>(&dK(elements[e], 0, 0));
 
           tensor<padded_derivative_type, nquad> derivatives{};
-          RAJA::RangeSegment                    x_range(0, nquad);
-          RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
-            if constexpr (is_QOI_2) {
-              get<0>(derivatives(q)) = qf_derivatives[e * nquad + uint32_t(q)];
-            } else {
-              derivatives(q) = qf_derivatives[e * nquad + uint32_t(q)];
-            }
-          });
+          //RAJA::RangeSegment                    x_range(0, nquad);
+          //RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
+          //  if constexpr (is_QOI_2) {
+          //    get<0>(derivatives(q)) = qf_derivatives[e * nquad + uint32_t(q)];
+          //  } else {
+          //    derivatives(q) = qf_derivatives[e * nquad + uint32_t(q)];
+          //  }
+          //});
 
           ctx.teamSync();
 
