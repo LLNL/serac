@@ -22,3 +22,6 @@ if(PETSC_PKG_CONFIG)
 endif()
 
 pkg_search_module(PETSC REQUIRED IMPORTED_TARGET PETSc)
+
+# Serac installation seraches for PETSc_FOUND with a lowercase "c" to verify
+set(PETSc_FOUND ${PETSC_FOUND})

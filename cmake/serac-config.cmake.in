@@ -22,6 +22,8 @@ if(NOT SERAC_FOUND)
   set(SERAC_INSTALL_PREFIX "@SERAC_INSTALL_PREFIX@")
   set(SERAC_INCLUDE_DIRS "${SERAC_INSTALL_PREFIX}/include")
 
+  list(APPEND CMAKE_MODULE_PATH "${SERAC_INSTALL_PREFIX}/@SERAC_INSTALL_CMAKE_MODULE_DIR@")
+
   #----------------------------------------------------------------------------
   # Set user configuration options and features
   #----------------------------------------------------------------------------
@@ -139,7 +141,8 @@ if(NOT SERAC_FOUND)
 
   # Petsc
   if(SERAC_USE_PETSC)
-    # Note: Targets not currently imported
+    # Use the installed FindPETSc.cmake
+    find_dependency(PETSc)
   endif()
 
   # Umpire
