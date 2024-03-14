@@ -178,10 +178,7 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
   [[maybe_unused]] tuple u = {
       reinterpret_cast<const typename decltype(type<indices>(trial_elements))::dof_type*>(inputs[indices])...};
 
-  static constexpr trial_element_type empty_trial_element{};
-
-  using interpolate_out_type =
-      decltype(tuple{get<indices>(trial_elements).template interpolate_output_helper<Q>()...});
+  using interpolate_out_type = decltype(tuple{get<indices>(trial_elements).template interpolate_output_helper<Q>()...});
 
   using qf_inputs_type = decltype(tuple{promote_each_to_dual_when<indices == differentiation_index>(
       get<indices>(trial_elements).template interpolate_output_helper<Q>())...});
@@ -197,7 +194,6 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
   auto device_r = copy_data(r, serac::size(*r) * sizeof(double), "DEVICE");
 
   printCUDAMemUsage();
-  cudaSetDevice(0);
 #else
   auto&           rm             = umpire::ResourceManager::getInstance();
   auto            host_allocator = rm.getAllocator("HOST");
@@ -228,7 +224,7 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(
             ctx, e_range,
-            [&ctx, t, J, x, u, qf, qpts_per_elem, rule, device_r, elements, qf_derivatives, qf_inputs,
+            [&ctx, t, J, x, u, qf, trial_elements, qpts_per_elem, rule, device_r, elements, qf_derivatives, qf_inputs,
              interpolate_result](uint32_t e) {
               // batch-calculate values / derivatives of each trial space, at each quadrature point
               (get<indices>(trial_elements)
@@ -252,18 +248,18 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
               // write out the q-function derivatives after applying the
               // physical_to_parent transformation, so that those transformations
               // won't need to be applied in the action_of_gradient and element_gradient kernels
-              //if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
-              //  RAJA::RangeSegment x_range(0, leading_dimension(qf_outputs));
-              //  RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
-              //    qf_derivatives[e * qpts_per_elem + uint32_t(q)] = get_gradient(qf_outputs[q]);
-              //  });
-              //}
+              if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
+                RAJA::RangeSegment x_range(0, leading_dimension(qf_outputs));
+                RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
+                  qf_derivatives[e * qpts_per_elem + uint32_t(q)] = get_gradient(qf_outputs[q]);
+                });
+              }
 
               ctx.teamSync();
 
               // (batch) integrate the material response against the test-space basis functions
               test_element::integrate(get_value(qf_outputs), rule, &device_r[elements[e]], ctx);
-            });
+        });
       });
 #ifdef USE_CUDA
   rm.copy(r, device_r);

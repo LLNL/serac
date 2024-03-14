@@ -368,7 +368,7 @@ public:
     Integrand integrand_;
     template <typename PositionType, typename StateType, typename ShapeValueType, typename... QFuncArgs>
     SERAC_HOST_DEVICE auto operator()(double time, PositionType x, StateType& state, ShapeValueType shape_val,
-                    QFuncArgs... qfunc_args) const
+                                      QFuncArgs... qfunc_args) const
     {
       auto qfunc_tuple               = make_tuple(qfunc_args...);
       auto reduced_trial_space_tuple = make_tuple(get<args>(trial_spaces)...);
