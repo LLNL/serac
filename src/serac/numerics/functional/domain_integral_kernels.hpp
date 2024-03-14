@@ -264,7 +264,8 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
 
               // use J_e to transform values / derivatives on the parent element
               // to the to the corresponding values / derivatives on the physical element
-              (parent_to_physical<get<indices>(trial_elements).family>(get<indices>(qf_inputs[e]), J, e, ctx), ...);
+              (parent_to_physical<get<indices>(empty_trial_element).family>(get<indices>(qf_inputs[e]), J, e, ctx),
+               ...);
               ctx.teamSync();
 
               // (batch) evalute the q-function at each quadrature point
