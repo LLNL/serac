@@ -1162,7 +1162,7 @@ public:
   void zeroEssentials(FiniteElementVector& field) const
   {
     for (const auto& essential : bcs_.essentials()) {
-      field.SetSubVector(essential.getLocalDofList(), 0.0);
+      field.SetSubVector(essential.getTrueDofList(), 0.0);
     }
   }
 
