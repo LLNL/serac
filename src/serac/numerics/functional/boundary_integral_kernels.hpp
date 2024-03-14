@@ -228,20 +228,19 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
              interpolate_result](uint32_t e) {
               // batch-calculate values / derivatives of each trial space, at each quadrature point
               (get<indices>(trial_elements)
-                   .interpolate(get<indices>(u)[elements[e]], rule, &get<indices>(interpolate_result[elements[e]]),
-                                ctx),
+                   .interpolate(get<indices>(u)[elements[e]], rule, &get<indices>(interpolate_result[e]), ctx),
                ...);
 
               ctx.teamSync();
 
-              (promote_each_to_dual_when<indices == differentiation_index>(
-                   get<indices>(interpolate_result[elements[e]]), &get<indices>(qf_inputs[elements[e]]), ctx),
+              (promote_each_to_dual_when<indices == differentiation_index>(get<indices>(interpolate_result[e]),
+                                                                           &get<indices>(qf_inputs[e]), ctx),
                ...);
 
               ctx.teamSync();
 
               // (batch) evalute the q-function at each quadrature point
-              auto qf_outputs = batch_apply_qf(qf, t, x[e], J[e], get<indices>(qf_inputs[elements[e]])...);
+              auto qf_outputs = batch_apply_qf(qf, t, x[e], J[e], get<indices>(qf_inputs[e])...);
 
               ctx.teamSync();
 
@@ -259,7 +258,7 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
 
               // (batch) integrate the material response against the test-space basis functions
               test_element::integrate(get_value(qf_outputs), rule, &device_r[elements[e]], ctx);
-        });
+            });
       });
 #ifdef USE_CUDA
   rm.copy(r, device_r);

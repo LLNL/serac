@@ -248,26 +248,23 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(
             ctx, e_range,
-            [&ctx, t, J, x, u, trial_elements, qf, qpts_per_elem, rule, device_r, qf_state, elements, qf_derivatives, qf_inputs,
-             interpolate_result, update_state](uint32_t e) {
+            [&ctx, t, J, x, u, trial_elements, qf, qpts_per_elem, rule, device_r, qf_state, elements, qf_derivatives,
+             qf_inputs, interpolate_result, update_state](uint32_t e) {
               static constexpr trial_element_tuple_type empty_trial_element{};
               // batch-calculate values / derivatives of each trial space, at each quadrature point
               (get<indices>(trial_elements)
-                   .interpolate(get<indices>(u)[elements[e]], rule, &get<indices>(interpolate_result[elements[e]]),
-                                ctx),
+                   .interpolate(get<indices>(u)[elements[e]], rule, &get<indices>(interpolate_result[e]), ctx),
                ...);
               ctx.teamSync();
 
-              (promote_each_to_dual_when<indices == differentiation_index>(
-                   get<indices>(interpolate_result[elements[e]]), &get<indices>(qf_inputs[elements[e]]), ctx),
+              (promote_each_to_dual_when<indices == differentiation_index>(get<indices>(interpolate_result[e]),
+                                                                           &get<indices>(qf_inputs[e]), ctx),
                ...);
               ctx.teamSync();
 
               // use J_e to transform values / derivatives on the parent element
               // to the to the corresponding values / derivatives on the physical element
-              (parent_to_physical<get<indices>(trial_elements).family>(get<indices>(qf_inputs[elements[e]]), J, e,
-                                                                            ctx),
-               ...);
+              (parent_to_physical<get<indices>(trial_elements).family>(get<indices>(qf_inputs[e]), J, e, ctx), ...);
               ctx.teamSync();
 
               // (batch) evalute the q-function at each quadrature point
@@ -278,10 +275,9 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
 
               auto qf_outputs = [&]() {
                 if constexpr (std::is_same_v<state_type, Nothing>) {
-                  return batch_apply_qf_no_qdata(qf, t, x[e], ctx, get<indices>(qf_inputs[elements[e]])...);
+                  return batch_apply_qf_no_qdata(qf, t, x[e], ctx, get<indices>(qf_inputs[e])...);
                 } else {
-                  return batch_apply_qf(qf, t, x[e], &qf_state(e, 0), update_state, ctx,
-                                        get<indices>(qf_inputs[elements[e]])...);
+                  return batch_apply_qf(qf, t, x[e], &qf_state(e, 0), update_state, ctx, get<indices>(qf_inputs[e])...);
                 }
               }();
               ctx.teamSync();
@@ -313,7 +309,6 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
   dest_allocator.deallocate(device_r);
   printCUDAMemUsage();
 #else
-
 
   // for (int e = 0; e < num_elements; ++e) {
   //  std::cout << qf_inputs[e] << std::endl;
@@ -500,11 +495,11 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
           tensor<padded_derivative_type, nquad> derivatives{};
           RAJA::RangeSegment                    x_range(0, nquad);
           RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
-           if constexpr (is_QOI_2) {
-             get<0>(derivatives(q)) = qf_derivatives[e * nquad + uint32_t(q)];
-           } else {
-             derivatives(q) = qf_derivatives[e * nquad + uint32_t(q)];
-           }
+            if constexpr (is_QOI_2) {
+              get<0>(derivatives(q)) = qf_derivatives[e * nquad + uint32_t(q)];
+            } else {
+              derivatives(q) = qf_derivatives[e * nquad + uint32_t(q)];
+            }
           });
 
           ctx.teamSync();

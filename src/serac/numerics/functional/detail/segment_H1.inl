@@ -145,8 +145,6 @@ struct finite_element<mfem::Geometry::SEGMENT, H1<p, c> > {
     }
 
     // transpose the quadrature data into a tensor of tuples
-    tensor<qf_input_type, q> output;
-
     for (int qx = 0; qx < q; qx++) {
       if constexpr (c == 1) {
         get<VALUE>((*output_ptr)(qx))    = value(0, qx);
