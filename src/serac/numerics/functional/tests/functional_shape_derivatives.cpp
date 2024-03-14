@@ -202,11 +202,11 @@ SERAC_HOST_DEVICE auto grad_monomials([[maybe_unused]] tensor<T, dim> X)
 
 template <int dim, int p>
 struct TestFunctorOne {
-  static constexpr int dim2 = dim == 2 ? (p + 1) * (p + 2) / 2 : ((p + 1) * (p + 2) * (p + 3)) / 6;
 
   template <typename X>
   SERAC_HOST_DEVICE auto div_f(X x) const
   {
+    static constexpr int dim2 = dim == 2 ? (p + 1) * (p + 2) / 2 : ((p + 1) * (p + 2) * (p + 3)) / 6;
     static constexpr tensor c = make_tensor<dim, dim2>([](int i, int j) { return double(i + 1) / (j + 1); });
     return tr(dot(c, grad_monomials<p>(x)));
   }
@@ -220,11 +220,11 @@ struct TestFunctorOne {
 
 template <int dim, int p>
 struct TestFunctorTwo {
-  static constexpr int dim2 = dim == 2 ? (p + 1) * (p + 2) / 2 : ((p + 1) * (p + 2) * (p + 3)) / 6;
 
   template <typename X>
   SERAC_HOST_DEVICE auto f(X x) const
   {
+    static constexpr int dim2 = dim == 2 ? (p + 1) * (p + 2) / 2 : ((p + 1) * (p + 2) * (p + 3)) / 6;
     static constexpr tensor c = make_tensor<dim, dim2>([](int i, int j) { return double(i + 1) / (j + 1); });
     return dot(c, monomials<p>(x));
   };

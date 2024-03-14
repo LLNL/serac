@@ -66,6 +66,7 @@ void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobian
       }
     }
   }
+  host_allocator.deallocate(quadrature_values);
 }
 
 GeometricFactors::GeometricFactors(const Domain& d, int q, mfem::Geometry::Type g)

@@ -324,7 +324,7 @@ public:
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
     integrals_.push_back(
-        MakeDomainIntegral<signature, Q, dim>(domain, integrand, qdata, std::vector<uint32_t>{args...}));
+        MakeDomainIntegral<signature, Q, dim>(std::move(domain), integrand, qdata, std::vector<uint32_t>{args...}));
   }
 
   /**
@@ -673,6 +673,8 @@ private:
                 values[lookup_tables(row, col)] += sign * elem_matrices_host(e, i, j);
               }
             }
+            allocator.deallocate(test_vdofs);
+            allocator.deallocate(trial_vdofs);
           }
         }
       }

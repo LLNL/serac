@@ -203,10 +203,10 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
 
   trial_element_tuple_type empty_trial_element{};
   using interpolate_out_type =
-      decltype(tuple{get<indices>(empty_trial_element).template interpolate_output_helper<Q>()...});
+      decltype(tuple{get<indices>(trial_elements).template interpolate_output_helper<Q>()...});
 
   using qf_inputs_type = decltype(tuple{promote_each_to_dual_when<indices == differentiation_index>(
-      get<indices>(empty_trial_element).template interpolate_output_helper<Q>())...});
+      get<indices>(trial_elements).template interpolate_output_helper<Q>())...});
 
 #ifdef USE_CUDA
   auto&           rm             = umpire::ResourceManager::getInstance();
@@ -224,9 +224,9 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
   auto            host_allocator   = rm.getAllocator("HOST");
 
   qf_inputs_type* qf_inputs =
-      static_cast<qf_inputs_type*>(host_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
+      static_cast<qf_inputs_type*>(host_allocator.allocate(sizeof(qf_inputs_type) * num_elements*100));
   interpolate_out_type* interpolate_result =
-      static_cast<interpolate_out_type*>(host_allocator.allocate(sizeof(interpolate_out_type) * num_elements));
+      static_cast<interpolate_out_type*>(host_allocator.allocate(sizeof(interpolate_out_type) * num_elements*100));
 
   typename test_element_type::dof_type* device_r = r;
 #endif
@@ -253,7 +253,7 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
              interpolate_result, update_state](uint32_t e) {
               static constexpr trial_element_tuple_type empty_trial_element{};
               // batch-calculate values / derivatives of each trial space, at each quadrature point
-              (get<indices>(empty_trial_element)
+              (get<indices>(trial_elements)
                    .interpolate(get<indices>(u)[elements[e]], rule, &get<indices>(interpolate_result[elements[e]]),
                                 ctx),
                ...);
@@ -266,8 +266,16 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
 
               // use J_e to transform values / derivatives on the parent element
               // to the to the corresponding values / derivatives on the physical element
+<<<<<<< HEAD
               (parent_to_physical<get<indices>(empty_trial_element).family>(get<indices>(qf_inputs[elements[e]]), J, e,
                                                                             ctx),
+=======
+              tuple families = make_tuple(get<indices>(trial_elements)...);
+              (parent_to_physical<
+              /*get<indices>(families)*/get<indices>(empty_trial_element).family>(
+                get<indices>(qf_inputs[elements[e]]),
+                                                                            device_J, e, ctx),
+>>>>>>> 26fbf413 (Fix functional with domain heap overflow)
                ...);
               ctx.teamSync();
 

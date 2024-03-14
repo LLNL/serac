@@ -305,7 +305,7 @@ Integral MakeDomainIntegral(const Domain& domain, lambda_type&& qf,
 
   SLIC_ERROR_IF(domain.type_ != Domain::Type::Elements, "Error: trying to evaluate a domain integral over a boundary");
 
-  Integral integral(domain, argument_indices);
+  Integral integral(std::move(domain), argument_indices);
 
   if constexpr (dim == 2) {
     generate_kernels<mfem::Geometry::TRIANGLE, Q>(signature, integral, qf, qdata);

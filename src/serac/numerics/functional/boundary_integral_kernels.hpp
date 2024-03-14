@@ -181,10 +181,10 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
   static constexpr trial_element_type empty_trial_element{};
 
   using interpolate_out_type =
-      decltype(tuple{get<indices>(empty_trial_element).template interpolate_output_helper<Q>()...});
+      decltype(tuple{get<indices>(trial_elements).template interpolate_output_helper<Q>()...});
 
   using qf_inputs_type = decltype(tuple{promote_each_to_dual_when<indices == differentiation_index>(
-      get<indices>(empty_trial_element).template interpolate_output_helper<Q>())...});
+      get<indices>(trial_elements).template interpolate_output_helper<Q>())...});
 
 #ifdef USE_CUDA
   auto&           rm             = umpire::ResourceManager::getInstance();
@@ -230,9 +230,8 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
             ctx, e_range,
             [&ctx, t, J, x, u, qf, qpts_per_elem, rule, device_r, elements, qf_derivatives, qf_inputs,
              interpolate_result](uint32_t e) {
-              static constexpr trial_element_type empty_trial_element{};
               // batch-calculate values / derivatives of each trial space, at each quadrature point
-              (get<indices>(empty_trial_element)
+              (get<indices>(trial_elements)
                    .interpolate(get<indices>(u)[elements[e]], rule, &get<indices>(interpolate_result[elements[e]]),
                                 ctx),
                ...);

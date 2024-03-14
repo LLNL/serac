@@ -367,7 +367,7 @@ public:
     ShapeAwareIntegrandWrapperWithState(Integrand integrand) : integrand_(integrand) {}
     Integrand integrand_;
     template <typename PositionType, typename StateType, typename ShapeValueType, typename... QFuncArgs>
-    auto operator()(double time, PositionType x, StateType& state, ShapeValueType shape_val,
+    SERAC_HOST_DEVICE auto operator()(double time, PositionType x, StateType& state, ShapeValueType shape_val,
                     QFuncArgs... qfunc_args) const
     {
       auto qfunc_tuple               = make_tuple(qfunc_args...);
