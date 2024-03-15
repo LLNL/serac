@@ -355,7 +355,7 @@ FiniteElementState BasePhysics::loadCheckpointedState(const std::string& state_n
       checkpoint_states_.find(state_name) == checkpoint_states_.end(),
       axom::fmt::format("Requested state name {} does not exist in physics module {}.", state_name, name_));
 
-  return checkpoint_states_.at(state_name)[static_cast<int>(cycle)];
+  return checkpoint_states_.at(state_name)[static_cast<size_t>(cycle)];
 }
 
 std::unordered_map<std::string, FiniteElementState> BasePhysics::getCheckpointedStates(int /*cycle*/) const
