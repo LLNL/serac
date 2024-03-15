@@ -95,9 +95,9 @@ serac::var_thermal_material_t FromInlet<serac::var_thermal_material_t>::operator
       result = serac::heat_transfer::LinearConductor<2>(base["density"], base["cp"], cond);
     } else if (dim == 3) {
       std::vector<std::vector<double>> v    = {base["kappa_tensor"]["row1"], base["kappa_tensor"]["row2"],
-                                            base["kappa_tensor"]["row3"]};
+                                               base["kappa_tensor"]["row3"]};
       serac::tensor<double, 3, 3>      cond = {
-          {{v[0][0], v[0][1], v[0][2]}, {v[1][0], v[1][1], v[1][2]}, {v[2][0], v[2][1], v[2][2]}}};
+               {{v[0][0], v[0][1], v[0][2]}, {v[1][0], v[1][1], v[1][2]}, {v[2][0], v[2][1], v[2][2]}}};
       result = serac::heat_transfer::LinearConductor<3>(base["density"], base["cp"], cond);
     }
   }
