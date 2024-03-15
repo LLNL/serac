@@ -57,8 +57,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     variant("profiling", default=False, 
             description="Build with hooks for Adiak/Caliper performance analysis")
 
-    variant("petsc", default=False,
-            description="Enable PETSC")
+    variant("petsc", default=True,
+            description="Enable PETSc support")
     variant("netcdf", default=True,
            description="Enable Cubit/Genesis reader")
     variant("sundials", default=True,
