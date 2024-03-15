@@ -343,6 +343,7 @@ public:
    * checkpointed cycle index
    *
    * @param cycle The cycle to retrieve state from
+   * @param state_name The name of the state to retrieve (e.g. "temperature", "displacement")
    * @return The named primal Finite Element State
    */
   FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const;
