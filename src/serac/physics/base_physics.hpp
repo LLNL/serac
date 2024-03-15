@@ -339,13 +339,13 @@ public:
   virtual void outputStateToDisk(std::optional<std::string> paraview_output_dir = {}) const;
 
   /**
-   * @brief Accessor for getting named finite element state primal solution from the physics modules at a given
+   * @brief Accessor for getting a single named finite element state primal solution from the physics modules at a given
    * checkpointed cycle index
    *
    * @param cycle The cycle to retrieve state from
    * @return The named primal Finite Element State
    */
-  virtual std::unordered_map<std::string, FiniteElementState> getCheckpointedStates(int cycle) const;
+  FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const;
 
   /**
    * @brief Get a timestep increment which has been previously checkpointed at the give cycle
@@ -404,6 +404,15 @@ protected:
    * @param[in] time The simulation time to initialize the physics module to
    */
   void initializeBasePhysicsStates(int cycle, double time);
+
+  /**
+   * @brief Accessor for getting all of the primal solutions from the physics modules at a given
+   * checkpointed cycle index
+   *
+   * @param cycle The cycle to retrieve state from
+   * @return A map containing the primal field names and their associated FiniteElementStates at the requested cycle
+   */
+  virtual std::unordered_map<std::string, FiniteElementState> getCheckpointedStates(int cycle) const;
 
   /// @brief Name of the physics module
   std::string name_ = {};
@@ -484,7 +493,19 @@ protected:
   std::unique_ptr<FiniteElementDual> shape_displacement_sensitivity_;
 
   /// @brief A map containing optionally in-memory checkpointed primal states for transient adjoint solvers
-  std::unordered_map<std::string, std::vector<serac::FiniteElementState>> checkpointed_states_;
+  mutable std::unordered_map<std::string, std::vector<serac::FiniteElementState>> checkpoint_states_;
+
+  /**
+   * @brief A container relating a checkpointed cycle and the associated finite element state fields
+   *
+   * @note This is only used when the disk-based checkpointing is used. It avoids thrashing the disk IO
+   * by performing a file open/read/close for every separate retrieval of state checkpoint data for the
+   * various primal fields.
+   */
+  mutable std::unordered_map<std::string, serac::FiniteElementState> cached_checkpoint_states_;
+
+  /// @brief An optional int for disk-based checkpointing containing the cycle number of the last retrieved checkpoint
+  mutable std::optional<int> cached_checkpoint_cycle_;
 
   /**
    *@brief Whether the simulation is time-independent

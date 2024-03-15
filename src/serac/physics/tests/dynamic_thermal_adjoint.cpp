@@ -54,8 +54,10 @@ std::unique_ptr<HeatTransfer<p, dim>> createNonlinearHeatTransfer(
     const TimesteppingOptions&                                                  dyn_opts,
     const heat_transfer::IsotropicConductorWithLinearConductivityVsTemperature& mat)
 {
+  // Note that we are testing the non-default checkpoint to disk capability here
   auto thermal = std::make_unique<HeatTransfer<p, dim>>(nonlinear_opts, heat_transfer::direct_linear_options, dyn_opts,
-                                                        thermal_prefix + std::to_string(iter++), mesh_tag);
+                                                        thermal_prefix + std::to_string(iter++), mesh_tag,
+                                                        std::vector<std::string>{}, 0, 0.0, true);
   thermal->setMaterial(mat);
   thermal->setTemperature([](const mfem::Vector&, double) { return 0.0; });
   thermal->setTemperatureBCs({1}, [](const mfem::Vector&, double) { return 0.0; });
@@ -178,9 +180,9 @@ std::tuple<double, FiniteElementDual, FiniteElementDual> computeThermalQoiAndIni
   FiniteElementDual adjoint_load(solver.state("temperature").space(), "adjoint_load");
 
   for (int i = solver.cycle(); i > 0; --i) {
-    double dt              = solver.getCheckpointedTimestep(i - 1);
-    auto   previous_states = solver.getCheckpointedStates(solver.cycle());
-    computeStepAdjointLoad(previous_states.at("temperature"), adjoint_load, dt);
+    double dt            = solver.getCheckpointedTimestep(i - 1);
+    auto   previous_temp = solver.loadCheckpointedState("temperature", solver.cycle());
+    computeStepAdjointLoad(previous_temp, adjoint_load, dt);
     solver.setAdjointLoad({{"temperature", adjoint_load}});
     solver.reverseAdjointTimestep();
     shape_sensitivity += solver.computeTimestepShapeSensitivity();
@@ -207,9 +209,9 @@ std::tuple<double, FiniteElementDual> computeThermalConductivitySensitivity(Base
   FiniteElementDual adjoint_load(solver.state("temperature").space(), "adjoint_load");
 
   for (int i = solver.cycle(); i > 0; --i) {
-    double dt              = solver.getCheckpointedTimestep(i - 1);
-    auto   previous_states = solver.getCheckpointedStates(solver.cycle());
-    computeStepAdjointLoad(previous_states.at("temperature"), adjoint_load, dt);
+    double dt            = solver.getCheckpointedTimestep(i - 1);
+    auto   previous_temp = solver.loadCheckpointedState("temperature", solver.cycle());
+    computeStepAdjointLoad(previous_temp, adjoint_load, dt);
     solver.setAdjointLoad({{"temperature", adjoint_load}});
     solver.reverseAdjointTimestep();
     conductivity_sensitivity += solver.computeTimestepSensitivity(0);

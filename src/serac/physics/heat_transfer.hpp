@@ -290,10 +290,10 @@ public:
     temperature_rate_adjoint_load_                  = 0.0;
 
     if (!checkpoint_to_disk_) {
-      checkpointed_states_.clear();
+      checkpoint_states_.clear();
 
-      checkpointed_states_["temperature"].push_back(temperature_);
-      checkpointed_states_["temperature_rate"].push_back(temperature_rate_);
+      checkpoint_states_["temperature"].push_back(temperature_);
+      checkpoint_states_["temperature_rate"].push_back(temperature_rate_);
     }
   }
 
@@ -345,20 +345,23 @@ public:
         bc.setDofs(temperature_, time_);
       }
       nonlin_solver_->solve(temperature_);
+
+      cycle_ += 1;
+
     } else {
       // Step the time integrator
       // Note that the ODE solver handles the essential boundary condition application itself
       ode_.Step(temperature_, time_, dt);
 
+      cycle_ += 1;
+
       if (checkpoint_to_disk_) {
         outputStateToDisk();
       } else {
-        checkpointed_states_["temperature"].push_back(temperature_);
-        checkpointed_states_["temperature_rate"].push_back(temperature_rate_);
+        checkpoint_states_["temperature"].push_back(temperature_);
+        checkpoint_states_["temperature_rate"].push_back(temperature_rate_);
       }
     }
-
-    cycle_ += 1;
 
     if (cycle_ > max_cycle_) {
       timesteps_.push_back(dt);
@@ -629,7 +632,7 @@ public:
     if (state_name == "temperature") {
       temperature_ = state;
       if (!checkpoint_to_disk_) {
-        checkpointed_states_["temperature"][static_cast<size_t>(cycle_)] = temperature_;
+        checkpoint_states_["temperature"][static_cast<size_t>(cycle_)] = temperature_;
       }
       return;
     }
@@ -772,11 +775,13 @@ public:
           });
     }
 
-    if (!checkpoint_to_disk_) {
-      checkpointed_states_.clear();
+    if (checkpoint_to_disk_) {
+      outputStateToDisk();
+    } else {
+      checkpoint_states_.clear();
 
-      checkpointed_states_["temperature"].push_back(temperature_);
-      checkpointed_states_["temperature_rate"].push_back(temperature_rate_);
+      checkpoint_states_["temperature"].push_back(temperature_);
+      checkpoint_states_["temperature_rate"].push_back(temperature_rate_);
     }
   }
 
@@ -950,10 +955,9 @@ public:
                                            {previous_states.at("temperature"), previous_states.at("temperature_rate")});
       return previous_states;
     } else {
-      previous_states.emplace("temperature",
-                              checkpointed_states_.at("temperature")[static_cast<size_t>(cycle_to_load)]);
+      previous_states.emplace("temperature", checkpoint_states_.at("temperature")[static_cast<size_t>(cycle_to_load)]);
       previous_states.emplace("temperature_rate",
-                              checkpointed_states_.at("temperature_rate")[static_cast<size_t>(cycle_to_load)]);
+                              checkpoint_states_.at("temperature_rate")[static_cast<size_t>(cycle_to_load)]);
     }
 
     return previous_states;

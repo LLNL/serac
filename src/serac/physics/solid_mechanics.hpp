@@ -383,11 +383,11 @@ public:
     predicted_displacement_ = 0.0;
 
     if (!checkpoint_to_disk_) {
-      checkpointed_states_.clear();
+      checkpoint_states_.clear();
 
-      checkpointed_states_["displacement"].push_back(displacement_);
-      checkpointed_states_["velocity"].push_back(velocity_);
-      checkpointed_states_["acceleration"].push_back(acceleration_);
+      checkpoint_states_["displacement"].push_back(displacement_);
+      checkpoint_states_["velocity"].push_back(velocity_);
+      checkpoint_states_["acceleration"].push_back(acceleration_);
     }
   }
 
@@ -679,13 +679,13 @@ public:
     if (state_name == "displacement") {
       displacement_ = state;
       if (!checkpoint_to_disk_) {
-        checkpointed_states_["displacement"][static_cast<size_t>(cycle_)] = displacement_;
+        checkpoint_states_["displacement"][static_cast<size_t>(cycle_)] = displacement_;
       }
       return;
     } else if (state_name == "velocity") {
       velocity_ = state;
       if (!checkpoint_to_disk_) {
-        checkpointed_states_["velocity"][static_cast<size_t>(cycle_)] = velocity_;
+        checkpoint_states_["velocity"][static_cast<size_t>(cycle_)] = velocity_;
       }
       return;
     }
@@ -1150,11 +1150,11 @@ public:
     if (checkpoint_to_disk_) {
       outputStateToDisk();
     } else {
-      checkpointed_states_.clear();
+      checkpoint_states_.clear();
 
-      checkpointed_states_["displacement"].push_back(displacement_);
-      checkpointed_states_["velocity"].push_back(velocity_);
-      checkpointed_states_["acceleration"].push_back(acceleration_);
+      checkpoint_states_["displacement"].push_back(displacement_);
+      checkpoint_states_["velocity"].push_back(velocity_);
+      checkpoint_states_["acceleration"].push_back(acceleration_);
     }
   }
 
@@ -1179,6 +1179,8 @@ public:
     warmStartDisplacement();
 
     nonlin_solver_->solve(displacement_);
+
+    cycle_ += 1;
   }
 
   /**
@@ -1205,12 +1207,14 @@ public:
     } else {
       ode2_.Step(displacement_, velocity_, time_, dt);
 
+      cycle_ += 1;
+
       if (checkpoint_to_disk_) {
         outputStateToDisk();
       } else {
-        checkpointed_states_["displacement"].push_back(displacement_);
-        checkpointed_states_["velocity"].push_back(velocity_);
-        checkpointed_states_["acceleration"].push_back(acceleration_);
+        checkpoint_states_["displacement"].push_back(displacement_);
+        checkpoint_states_["velocity"].push_back(velocity_);
+        checkpoint_states_["acceleration"].push_back(acceleration_);
       }
     }
 
@@ -1225,8 +1229,6 @@ public:
 
       residual_->updateQdata(false);
     }
-
-    cycle_ += 1;
 
     if (cycle_ > max_cycle_) {
       timesteps_.push_back(dt);
@@ -1370,10 +1372,10 @@ public:
       return previous_states;
     } else {
       previous_states.emplace("displacement",
-                              checkpointed_states_.at("displacement")[static_cast<size_t>(cycle_to_load)]);
-      previous_states.emplace("velocity", checkpointed_states_.at("velocity")[static_cast<size_t>(cycle_to_load)]);
+                              checkpoint_states_.at("displacement")[static_cast<size_t>(cycle_to_load)]);
+      previous_states.emplace("velocity", checkpoint_states_.at("velocity")[static_cast<size_t>(cycle_to_load)]);
       previous_states.emplace("acceleration",
-                              checkpointed_states_.at("acceleration")[static_cast<size_t>(cycle_to_load)]);
+                              checkpoint_states_.at("acceleration")[static_cast<size_t>(cycle_to_load)]);
     }
 
     return previous_states;
