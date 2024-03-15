@@ -488,16 +488,17 @@ serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const
     elements[1] = elements_input["y"];
     if (z_present) elements[2] = elements_input["z"];
 
-    std::vector<double> overall_size(elements.size());
+    std::vector<double> overall_size;
     if (base.contains("size")) {
       auto size_input = base["size"];
-      overall_size    = {size_input["x"], size_input["y"]};
+      overall_size.push_back(size_input["x"]);
+      overall_size.push_back(size_input["y"]);
 
       if (size_input.contains("z")) {
         overall_size.push_back(size_input["z"]);
       }
     } else {
-      overall_size = std::vector<double>(overall_size.size(), 1.);
+      overall_size = std::vector<double>(elements.size(), 1.);
     }
 
     return {serac::mesh::BoxInputOptions{elements, overall_size}, ser_ref, par_ref};
