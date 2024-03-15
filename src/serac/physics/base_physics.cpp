@@ -18,13 +18,15 @@
 
 namespace serac {
 
-BasePhysics::BasePhysics(std::string physics_name, std::string mesh_tag, int cycle, double time)
+BasePhysics::BasePhysics(std::string physics_name, std::string mesh_tag, int cycle, double time,
+                         bool checkpoint_to_disk)
     : name_(physics_name),
       mesh_tag_(mesh_tag),
       mesh_(StateManager::mesh(mesh_tag_)),
       comm_(mesh_.GetComm()),
       shape_displacement_(StateManager::shapeDisplacement(mesh_tag_)),
-      bcs_(mesh_)
+      bcs_(mesh_),
+      checkpoint_to_disk_(checkpoint_to_disk)
 {
   std::tie(mpi_size_, mpi_rank_) = getMPIInfo(comm_);
 
@@ -331,13 +333,40 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
   }
 }
 
-FiniteElementState BasePhysics::loadCheckpointedState(const std::string& /*state_name*/, int /*cycle*/) const
+FiniteElementState BasePhysics::loadCheckpointedState(const std::string& state_name, int cycle) const
 {
-  SLIC_ERROR_ROOT(axom::fmt::format("loadCheckpointedState not implemented for physics module {}.", name_));
-  return *states_[0];
+  if (checkpoint_to_disk_) {
+    // See if the requested cycle has been checkpointed previously
+    if (!cached_checkpoint_cycle_ || *cached_checkpoint_cycle_ != cycle) {
+      // If not, get the checkpoint from disk
+      cached_checkpoint_states_ = getCheckpointedStates(cycle);
+      cached_checkpoint_cycle_  = cycle;
+    }
+
+    // Ensure that the state name exists in this physics module
+    SLIC_ERROR_ROOT_IF(
+        cached_checkpoint_states_.find(state_name) == cached_checkpoint_states_.end(),
+        axom::fmt::format("Requested state name {} does not exist in physics module {}.", state_name, name_));
+    return cached_checkpoint_states_.at(state_name);
+  }
+
+  // Ensure that the state name exists in this physics module
+  SLIC_ERROR_ROOT_IF(
+      checkpoint_states_.find(state_name) == checkpoint_states_.end(),
+      axom::fmt::format("Requested state name {} does not exist in physics module {}.", state_name, name_));
+
+  return checkpoint_states_.at(state_name)[static_cast<size_t>(cycle)];
 }
 
-double BasePhysics::loadCheckpointedTimestep(int cycle) const
+std::unordered_map<std::string, FiniteElementState> BasePhysics::getCheckpointedStates(int /*cycle*/) const
+{
+  SLIC_ERROR_ROOT(axom::fmt::format(
+      "loadCheckpointedState and getCheckpointedStates not implemented for physics module {}.", name_));
+  std::unordered_map<std::string, FiniteElementState> empty_container;
+  return empty_container;
+}
+
+double BasePhysics::getCheckpointedTimestep(int cycle) const
 {
   SLIC_ERROR_ROOT_IF(cycle < 0, axom::fmt::format("Negative cycle number requested for physics module {}.", name_));
   SLIC_ERROR_ROOT_IF(cycle > max_cycle_,
