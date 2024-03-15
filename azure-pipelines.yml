@@ -7,7 +7,7 @@
 
 variables:
   Clang_14_ImageName: 'seracllnl/tpls:clang-14_03-15-24_21h-56m'
-  GCC_13_ImageName: 'seracllnl/tpls:gcc-13_03-15-24_21h-56m
+  GCC_13_ImageName: 'seracllnl/tpls:gcc-13_03-15-24_21h-56m'
 
 jobs:
 - job: Build_and_Test
