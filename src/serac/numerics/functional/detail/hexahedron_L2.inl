@@ -134,8 +134,8 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
   }
 
   template <typename in_t, int q>
-  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q * q>                             input,
-                                                    const TensorProductQuadratureRule<q>&, RAJA::LaunchContext ctx)
+  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q * q> input,
+                                                    const TensorProductQuadratureRule<q>&, RAJA::LaunchContext)
   {
     static constexpr bool apply_weights = false;
     static constexpr auto B             = calculate_B<apply_weights, q>();
@@ -250,7 +250,7 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
   template <typename source_type, typename flux_type, int q>
   SERAC_HOST_DEVICE static void integrate(const tensor<tuple<source_type, flux_type>, q * q * q>& qf_output,
                                           const TensorProductQuadratureRule<q>&, dof_type* element_residual,
-                                          RAJA::LaunchContext ctx, int step = 1)
+                                          RAJA::LaunchContext, int                         step = 1)
   {
     if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) {
       return;

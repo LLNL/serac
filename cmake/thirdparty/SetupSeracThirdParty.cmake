@@ -509,7 +509,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         # This flag is empty due to us not enabling fortran but we need to strip it
         # so it doesn't propagate in our project
         if("${OpenMP_Fortran_FLAGS}" STREQUAL "")
-            set(OpenMP_Fortran_FLAGS "-fopenmp")#"$<$<NOT:$<COMPILE_LANGUAGE:Fortran>>:-fopenmp=libomp>;$<$<COMPILE_LANGUAGE:Fortran>:-fopenmp>")
+            set(OpenMP_Fortran_FLAGS "$<$<NOT:$<COMPILE_LANGUAGE:Fortran>>:-fopenmp=libomp>;$<$<COMPILE_LANGUAGE:Fortran>:-fopenmp>")
         endif()
 
         foreach(_target axom)

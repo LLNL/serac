@@ -6,6 +6,7 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 
 #include "serac/numerics/functional/quadrature_data.hpp"
 #include "serac/numerics/functional/differentiate_wrt.hpp"
@@ -109,8 +110,8 @@ auto get_derivative_type(lambda qf)
 };
 
 template <typename lambda, int n, typename... T>
-auto batch_apply_qf(lambda qf, double t, const tensor<double, 2, n>& positions,
-                    const tensor<double, 1, 2, n>& jacobians, const T&... inputs)
+SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, 2, n>& positions,
+                                      const tensor<double, 1, 2, n>& jacobians, const T&... inputs)
 {
   constexpr int dim = 2;
   using first_arg_t = serac::tuple<tensor<double, dim>, tensor<double, dim>>;
@@ -220,12 +221,21 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
 
   // for each element in the domain
   RAJA::launch<launch_policy>(
-      RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_SZ)),
+      RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_SZ)),
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(
             ctx, e_range,
             [&ctx, t, J, x, u, qf, trial_elements, qpts_per_elem, rule, device_r, elements, qf_derivatives, qf_inputs,
              interpolate_result](uint32_t e) {
+              // These casts are needed to suppres -Werror compilation errors caused by the explicit capture above.
+              //(void)qf_derivatives;
+              (void)qpts_per_elem;
+              //(void)trial_elements;
+              //(void)qf_inputs;
+              //(void)interpolate_result;
+              //(void)u;
+              detail::suppress_unused_capture_warnings(qf_derivatives, qpts_per_elem, trial_elements, qf_inputs,
+                                                       interpolate_result, u);
               // batch-calculate values / derivatives of each trial space, at each quadrature point
               (get<indices>(trial_elements)
                    .interpolate(get<indices>(u)[elements[e]], rule, &get<indices>(interpolate_result[e]), ctx),
@@ -287,9 +297,13 @@ SERAC_HOST_DEVICE auto batch_apply_chain_rule(derivative_type* qf_derivatives, c
 {
   using return_type = decltype(chain_rule(derivative_type{}, T{}));
   tensor<tuple<return_type, zero>, n> outputs{};
-  for (int i = 0; i < n; i++) {
-    get<0>(outputs[i]) = chain_rule(qf_derivatives[i], inputs[i]);
-  }
+  RAJA::RangeSegment                  i_range(0, n);
+#ifdef USE_CUDA
+  using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+#else
+  using threads_x                = RAJA::LoopPolicy<RAJA::seq_exec>;
+#endif
+  RAJA::loop<threads_x>(ctx, i_range, [&](int i) { get<0>(outputs[i]) = chain_rule(qf_derivatives[i], inputs[i]); });
   return outputs;
 }
 
@@ -332,8 +346,7 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
   auto                                     dr  = reinterpret_cast<typename test_element::dof_type*>(dR);
   constexpr TensorProductQuadratureRule<Q> rule{};
 
-  auto          e_range = RAJA::RangeSegment(0, num_elements);
-  trial_element empty_trial_element{};
+  auto e_range = RAJA::TypedRangeSegment<std::size_t>(0, num_elements);
 
   using qf_inputs_type = decltype(trial_element::template interpolate_output_helper<Q>());
 
@@ -360,7 +373,7 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
 
   // for each element in the domain
   RAJA::launch<launch_policy>(
-      RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_X, BLOCK_Y, BLOCK_Z)),
+      RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_X, BLOCK_Y, BLOCK_Z)),
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(ctx, e_range, [du, rule, &ctx, qf_inputs, elements, qf_derivatives, dr](int e) {
           // (batch) interpolate each quadrature point's value
@@ -426,9 +439,10 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, d
 
   // for each element in the domain
   RAJA::launch<launch_policy>(
-      RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_SZ)),
+      RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_SZ)),
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(ctx, elements_range, [&ctx, dK, elements, qf_derivatives, nquad, rule](uint32_t e) {
+          (void)nquad;
           auto* output_ptr = reinterpret_cast<typename test_element::dof_type*>(&dK(elements[e], 0, 0));
 
           tensor<derivatives_type, nquad> derivatives{};

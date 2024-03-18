@@ -331,7 +331,6 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
 #ifdef USE_CUDA
     using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
-
     using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
 #endif
 
@@ -377,7 +376,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
           int                                                                      qz = tid / (BLOCK_X * BLOCK_Y);
           constexpr auto                                                           B  = calculate_B<apply_weights, q>();
           constexpr auto                                                           G  = calculate_G<apply_weights, q>();
-          RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 0>(source, B))  A20, A20_tmp;
+          RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 0>(source, B))  A20;
           RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 0>(flux(1), B)) A21;
           RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 0>(flux(2), B)) A22;
           RAJA_TEAM_SHARED decltype(deduce_contract_return_type<1, 0>(A20, B))     A10;

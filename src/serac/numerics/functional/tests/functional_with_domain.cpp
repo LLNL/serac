@@ -216,11 +216,6 @@ void partial_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
   auto   on_top       = [](std::vector<tensor<double, dim>> X, int /* attr */) { return average(X)[1] >= 0.99; };
   Domain top_boundary = Domain::ofBoundaryElements(*mesh, on_top);
 
-  auto d00 = 1.0;
-  auto d01 = 1.0 * make_tensor<dim>([](int i) { return i; });
-  auto d10 = 1.0 * make_tensor<dim>([](int i) { return 2 * i * i; });
-  auto d11 = 1.0 * make_tensor<dim, dim>([](int i, int j) { return i + j * (j + 1) + 1; });
-
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, TestThermalIntegratorOne<dim, false>{}, left);
 
   residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, TestThermalIntegratorTwo<false>{}, top_boundary);

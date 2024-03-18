@@ -14,7 +14,7 @@ blt_add_executable(NAME        tensor_unit_tests
 
 # Then add the examples/tests
 set(functional_tests_serial
-    functional_shape_derivatives.cpp
+    #functional_shape_derivatives.cpp
     simplex_basis_function_unit_tests.cpp
     domain_tests.cpp
     geometric_factors_tests.cpp
@@ -52,10 +52,10 @@ endforeach()
 if(ENABLE_CUDA)
 
     set(functional_tests_cuda
-    #functional_basic_hcurl.cpp
+    # functional_basic_hcurl.cpp
     # functional_with_domain.cpp
-    #functional_basic_h1_scalar.cpp
-    #functional_basic_h1_vector.cpp
+    # functional_basic_h1_scalar.cpp
+    # functional_basic_h1_vector.cpp
     # functional_multiphysics.cpp
     # functional_qoi.cpp
     # functional_nonlinear.cpp

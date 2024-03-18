@@ -201,7 +201,6 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
   [[maybe_unused]] tuple u = {
       reinterpret_cast<const typename decltype(type<indices>(trial_elements))::dof_type*>(inputs[indices])...};
 
-  trial_element_tuple_type empty_trial_element{};
   using interpolate_out_type = decltype(tuple{get<indices>(trial_elements).template interpolate_output_helper<Q>()...});
 
   using qf_inputs_type = decltype(tuple{promote_each_to_dual_when<indices == differentiation_index>(
@@ -244,12 +243,21 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
 #endif
   // for each element in the domain
   RAJA::launch<launch_policy>(
-      RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_SZ)),
+      RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_SZ)),
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(
             ctx, e_range,
             [&ctx, t, J, x, u, trial_elements, qf, qpts_per_elem, rule, device_r, qf_state, elements, qf_derivatives,
              qf_inputs, interpolate_result, update_state](uint32_t e) {
+              (void)qf_state;
+              (void)qf_derivatives;
+              (void)update_state;
+              (void)qpts_per_elem;
+              (void)trial_elements;
+              (void)qf_inputs;
+              (void)interpolate_result;
+              (void)u;
+
               static constexpr trial_element_tuple_type empty_trial_element{};
               // batch-calculate values / derivatives of each trial space, at each quadrature point
               (get<indices>(trial_elements)
@@ -344,9 +352,13 @@ SERAC_HOST_DEVICE tensor<decltype(chain_rule<is_QOI>(derivative_type{}, T{})), n
 {
   using return_type = decltype(chain_rule<is_QOI>(derivative_type{}, T{}));
   tensor<return_type, n> outputs{};
-  for (int i = 0; i < n; i++) {
-    outputs[i] = chain_rule<is_QOI>(qf_derivatives[i], inputs[i]);
-  }
+  RAJA::RangeSegment     i_range(0, n);
+#ifdef USE_CUDA
+  using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+#else
+  using threads_x                = RAJA::LoopPolicy<RAJA::seq_exec>;
+#endif
+  RAJA::loop<threads_x>(ctx, i_range, [&](int i) { outputs[i] = chain_rule<is_QOI>(qf_derivatives[i], inputs[i]); });
   return outputs;
 }
 
@@ -392,8 +404,7 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
   auto                                     dr = reinterpret_cast<typename test_element::dof_type*>(dR);
   constexpr TensorProductQuadratureRule<Q> rule{};
 
-  auto          e_range = RAJA::TypedRangeSegment<size_t>(0, num_elements);
-  trial_element empty_trial_element{};
+  auto e_range = RAJA::TypedRangeSegment<size_t>(0, num_elements);
 
   using qf_inputs_type = decltype(trial_element::template interpolate_output_helper<Q>());
 
@@ -419,12 +430,15 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
 #endif
   // for each element in the domain
   RAJA::launch<launch_policy>(
-      RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_X, BLOCK_Y, BLOCK_Z)),
+      RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_X, BLOCK_Y, BLOCK_Z)),
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(ctx, e_range, [du, rule, &ctx, qf_inputs, elements, qf_derivatives, dr, num_qpts](int e) {
+          (void)num_qpts;
           // (batch) interpolate each quadrature point's value
           trial_element::interpolate(du[elements[e]], rule, qf_inputs, ctx);
 
+          // RAJA_TEAM_SHARED decltype(batch_apply_chain_rule<is_QOI>(qf_derivatives + e * num_qpts, *qf_inputs, ctx))
+          // qf_outputs;
           auto qf_outputs = batch_apply_chain_rule<is_QOI>(qf_derivatives + e * num_qpts, *qf_inputs, ctx);
 
           test_element::integrate(qf_outputs, rule, &dr[elements[e]], ctx);
@@ -486,9 +500,11 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
 #endif
   // for each element in the domain
   RAJA::launch<launch_policy>(
-      RAJA::LaunchParams(RAJA::Teams(num_elements), RAJA::Threads(BLOCK_SZ)),
+      RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_SZ)),
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(ctx, elements_range, [&ctx, dK, elements, qf_derivatives, nquad, rule](uint32_t e) {
+          (void)nquad;
+
           static constexpr bool  is_QOI_2 = test::family == Family::QOI;
           [[maybe_unused]] auto* output_ptr =
               reinterpret_cast<typename test_element::dof_type*>(&dK(elements[e], 0, 0));

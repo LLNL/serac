@@ -341,8 +341,8 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, L2<p, c> > {
   }
 
   template <typename in_t, int q>
-  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, nqpts(q)>                              input,
-                                                    const TensorProductQuadratureRule<q>&, RAJA::LaunchContext ctx)
+  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, nqpts(q)> input,
+                                                    const TensorProductQuadratureRule<q>&, RAJA::LaunchContext)
   {
     using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, dim>{}));
     using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, dim>{}));
@@ -408,8 +408,7 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, L2<p, c> > {
   template <typename source_type, typename flux_type, int q>
   SERAC_HOST_DEVICE static void integrate(const tensor<tuple<source_type, flux_type>, nqpts(q)>& qf_output,
                                           const TensorProductQuadratureRule<q>&,
-                                          tensor<double, c, ndof>* element_residual, RAJA::LaunchContext ctx,
-                                          int step = 1)
+                                          tensor<double, c, ndof>* element_residual, RAJA::LaunchContext, int step = 1)
   {
     if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) {
       return;

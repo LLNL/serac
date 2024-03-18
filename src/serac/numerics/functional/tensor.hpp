@@ -1378,7 +1378,7 @@ SERAC_HOST_DEVICE auto contract(const tensor<S, m, n...>& A, const tensor<T, p, 
 }
 
 template <int i1, int i2, typename S, int m, typename T, int p, int q, int... n>
-SERAC_DEVICE constexpr auto deduce_contract_return_type(const tensor<S, m, n...>& A, const tensor<T, p, q>& B)
+SERAC_DEVICE constexpr auto deduce_contract_return_type(const tensor<S, m, n...>&, const tensor<T, p, q>&)
 {
   constexpr int Adims[] = {m, n...};
   constexpr int Bdims[] = {p, q};
