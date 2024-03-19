@@ -194,7 +194,6 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
 
   auto device_r = copy_data(r, serac::size(*r) * sizeof(double), "DEVICE");
 
-  printCUDAMemUsage();
 #else
   auto&           rm             = umpire::ResourceManager::getInstance();
   auto            host_allocator = rm.getAllocator("HOST");
@@ -228,12 +227,8 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
             [&ctx, t, J, x, u, qf, trial_elements, qpts_per_elem, rule, device_r, elements, qf_derivatives, qf_inputs,
              interpolate_result](uint32_t e) {
               // These casts are needed to suppres -Werror compilation errors caused by the explicit capture above.
-              //(void)qf_derivatives;
               (void)qpts_per_elem;
-              //(void)trial_elements;
-              //(void)qf_inputs;
-              //(void)interpolate_result;
-              //(void)u;
+
               detail::suppress_unused_capture_warnings(qf_derivatives, qpts_per_elem, trial_elements, qf_inputs,
                                                        interpolate_result, u);
               // batch-calculate values / derivatives of each trial space, at each quadrature point
@@ -275,7 +270,6 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
   deallocate(qf_inputs, "DEVICE");
   deallocate(interpolate_result, "DEVICE");
   deallocate(device_r, "DEVICE");
-  printCUDAMemUsage();
 #else
   host_allocator.deallocate(interpolate_result);
   host_allocator.deallocate(qf_inputs);

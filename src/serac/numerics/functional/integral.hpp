@@ -128,7 +128,7 @@ struct Integral {
         rm.copy(output_E.GetBlock(geometry).ReadWrite(), device_output);
         deallocate(device_output, "DEVICE");
         std::cout << "L148" << std::endl;
-        printCUDAMemUsage();
+
 #endif
       }
     }

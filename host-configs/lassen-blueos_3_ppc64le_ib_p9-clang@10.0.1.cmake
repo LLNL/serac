@@ -30,15 +30,13 @@ if(DEFINED ENV{SPACK_CC})
 else()
 
   set(CMAKE_C_COMPILER "/usr/tce/packages/clang/clang-ibm-10.0.1-gcc-8.3.1/bin/clang" CACHE PATH "")
-  #set(CMAKE_C_COMPILER "/usr/tce/packages/clang/clang-13.0.1-gcc-8.3.1/bin/clang" CACHE PATH "")
 
   set(CMAKE_CXX_COMPILER "/usr/tce/packages/clang/clang-ibm-10.0.1-gcc-8.3.1/bin/clang++" CACHE PATH "")
-  #set(CMAKE_CXX_COMPILER "/usr/tce/packages/clang/clang-13.0.1-gcc-8.3.1/bin/clang++" CACHE PATH "")
 
   set(CMAKE_Fortran_COMPILER "/usr/tce/packages/gcc/gcc-8.3.1/bin/gfortran" CACHE PATH "")
 
 endif()
-#-fopenmp -gdwarf-4 -fgpu-rdc
+
 set(CMAKE_C_STANDARD_LIBRARIES "-lgfortran" CACHE STRING "")
 
 set(CMAKE_CXX_STANDARD_LIBRARIES "-lgfortran" CACHE STRING "")
@@ -71,15 +69,13 @@ set(BLT_MPI_COMMAND_APPEND "mpibind" CACHE STRING "")
 # Cuda
 #------------------------------------------------
 
-set(CUDAToolkit_ROOT "/usr/tce/packages/cuda/cuda-12.0.0" CACHE PATH "")
-#set(CUDAToolkit_ROOT "/usr/tce/packages/cuda/cuda-10.1.105" CACHE PATH "")
+set(CUDAToolkit_ROOT "/usr/tce/packages/cuda/cuda-11.2.0" CACHE PATH "")
 
 set(CMAKE_CUDA_COMPILER "${CUDAToolkit_ROOT}/bin/nvcc" CACHE PATH "")
 
 set(CMAKE_CUDA_HOST_COMPILER "${CMAKE_CXX_COMPILER}" CACHE PATH "")
 
-set(CUDA_TOOLKIT_ROOT_DIR "/usr/tce/packages/cuda/cuda-12.0.0" CACHE PATH "")
-#set(CUDA_TOOLKIT_ROOT_DIR "/usr/tce/packages/cuda/cuda-10.1.105" CACHE PATH "")
+set(CUDA_TOOLKIT_ROOT_DIR "/usr/tce/packages/cuda/cuda-11.2.0" CACHE PATH "")
 
 set(CMAKE_CUDA_ARCHITECTURES "70" CACHE STRING "")
 
@@ -87,18 +83,15 @@ set(ENABLE_OPENMP ON CACHE BOOL "")
 
 set(ENABLE_CUDA ON CACHE BOOL "")
 
-set(ENABLE_CLANG_CUDA OFF CACHE BOOL "")
+set(CMAKE_CUDA_SEPARABLE_COMPILATION ON CACHE BOOL "")
 
 set(CMAKE_CUDA_FLAGS " --expt-extended-lambda --expt-relaxed-constexpr " CACHE STRING "")
 
-set(CMAKE_CUDA_SEPARABLE_COMPILATION ON CACHE BOOL "")
-
-#set(CMAKE_CUDA_FLAGS " --expt-extended-lambda --expt-relaxed-constexpr " CACHE STRING "")
-#set(CMAKE_CUDA_FLAGS "-fopenmp" CACHE STRING "")
+set(CMAKE_CUDA_ARCHITECTURES "70" CACHE STRING "")
 
 # nvcc does not like gtest's 'pthreads' flag
 
-set(gtest_disable_pthreads OFF CACHE BOOL "")
+set(gtest_disable_pthreads ON CACHE BOOL "")
 
 set(BLT_CMAKE_IMPLICIT_LINK_DIRECTORIES_EXCLUDE "/usr/tce/packages/gcc/gcc-4.9.3/lib64;/usr/tce/packages/gcc/gcc-4.9.3/lib64/gcc/powerpc64le-unknown-linux-gnu/4.9.3;/usr/tce/packages/gcc/gcc-4.9.3/gnu/lib64;/usr/tce/packages/gcc/gcc-4.9.3/gnu/lib64/gcc/powerpc64le-unknown-linux-gnu/4.9.3" CACHE STRING "")
 

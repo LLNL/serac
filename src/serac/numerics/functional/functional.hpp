@@ -620,10 +620,7 @@ private:
 
         integral.ComputeElementGradients(K_elem, which_argument);
       }
-#ifdef USE_CUDA
-      std::cout << "Printing USAGE before assemble\n";
-      printCUDAMemUsage();
-#endif
+
       for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
         auto K_elem             = element_gradients[type];
         auto test_restrictions  = form_.G_test_[type].restrictions;

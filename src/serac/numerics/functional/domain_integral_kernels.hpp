@@ -215,8 +215,6 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
       static_cast<interpolate_out_type*>(dest_allocator.allocate(sizeof(interpolate_out_type) * num_elements));
 
   auto device_r = copy_data(r, serac::size(*r) * sizeof(double), "DEVICE");
-
-  printCUDAMemUsage();
 #else
   auto& rm                         = umpire::ResourceManager::getInstance();
   auto  host_allocator             = rm.getAllocator("HOST");
@@ -316,13 +314,7 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
   dest_allocator.deallocate(qf_inputs);
   dest_allocator.deallocate(interpolate_result);
   dest_allocator.deallocate(device_r);
-  printCUDAMemUsage();
 #else
-
-  // for (int e = 0; e < num_elements; ++e) {
-  //  std::cout << qf_inputs[e] << std::endl;
-  //  std::cout << interpolate_result[e] << std::endl;
-  //}
   host_allocator.deallocate(qf_inputs);
   host_allocator.deallocate(interpolate_result);
 #endif

@@ -187,18 +187,9 @@ int main(int argc, char* argv[])
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
   axom::slic::SimpleLogger logger;
-  // cudaSetDevice(0);
-  // cudaDeviceReset();
-  //#ifdef USE_CUDA
-  // printCUDAMemUsage();
-  //#endif
-  // cudaSetDevice(2);
 
   int result = RUN_ALL_TESTS();
 
-  //#ifdef USE_CUDA
-  // printCUDAMemUsage();
-  //#endif
   MPI_Finalize();
 
   return result;

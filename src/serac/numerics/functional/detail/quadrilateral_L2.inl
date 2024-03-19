@@ -368,8 +368,6 @@ struct finite_element<mfem::Geometry::SQUARE, L2<p, c> > {
     }
 
     get<1>(qf_input) = dot(get<1>(qf_input), inv(J));
-
-    return qf_input;
   }
 
   template <typename T1, typename T2, int q>
