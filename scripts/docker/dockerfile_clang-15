@@ -1,10 +1,10 @@
-FROM <IMAGE>
+FROM ghcr.io/llnl/radiuss:clang-15-ubuntu-22.04
 LABEL maintainer="bramwell1@llnl.gov"
 ARG branch=develop
 
 SHELL ["/bin/bash", "-c"]
 RUN sudo apt-get update -y
-RUN sudo apt-get install doxygen gettext gfortran-$(gcc -dumpversion) graphviz libomp-<MAJ_VER>-dev libopenblas-dev \
+RUN sudo apt-get install doxygen gettext gfortran-$(gcc -dumpversion) graphviz libomp-15-dev libopenblas-dev \
                          lsb-release lua5.2 lua5.2-dev mpich python3-sphinx ssh texlive-full -fy
 RUN sudo useradd -m -s /bin/bash -G sudo serac
 
@@ -26,7 +26,7 @@ RUN git clone --recursive --branch $branch --single-branch --depth 1 https://git
 # Build/install TPLs via spack and then remove the temporary build directory on success
 RUN cd serac_repo && python3 ./scripts/uberenv/uberenv.py --spack-env-file=./scripts/spack/configs/docker/ubuntu22/spack.yaml \
                                                           --project-json=.uberenv_config.json \
-                                                          --spec=%<NAME>@<VER> --prefix=/home/serac/serac_tpls -k \
+                                                          --spec=%clang@15.0.7 --prefix=/home/serac/serac_tpls -k \
                   && rm -rf /home/serac/serac_tpls/builds
 
 RUN mkdir -p /home/serac/export_hostconfig

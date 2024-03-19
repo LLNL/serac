@@ -125,14 +125,19 @@ public:
    * @param parameter_names A vector of the names of the requested parameter fields
    * @param cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param time The simulation time to initialize the physics module to
+   * @param checkpoint_to_disk A flag to save the transient states on disk instead of memory for the transient adjoint
+   * solves
+   *
+   * @note On parallel file systems (e.g. lustre), significant slowdowns and occasional errors were observed when
+   *       writing and reading the needed trainsient states to disk for adjoint solves
    */
   SolidMechanics(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
                  const serac::TimesteppingOptions timestepping_opts, const GeometricNonlinearities geom_nonlin,
                  const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {},
-                 int cycle = 0, double time = 0.0)
+                 int cycle = 0, double time = 0.0, bool checkpoint_to_disk = false)
       : SolidMechanics(
             std::make_unique<EquationSolver>(nonlinear_opts, lin_opts, StateManager::mesh(mesh_tag).GetComm()),
-            timestepping_opts, geom_nonlin, physics_name, mesh_tag, parameter_names, cycle, time)
+            timestepping_opts, geom_nonlin, physics_name, mesh_tag, parameter_names, cycle, time, checkpoint_to_disk)
   {
   }
 
@@ -147,11 +152,17 @@ public:
    * @param parameter_names A vector of the names of the requested parameter fields
    * @param cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param time The simulation time to initialize the physics module to
+   * @param checkpoint_to_disk A flag to save the transient states on disk instead of memory for the transient adjoint
+   * solves
+   *
+   * @note On parallel file systems (e.g. lustre), significant slowdowns and occasional errors were observed when
+   *       writing and reading the needed trainsient states to disk for adjoint solves
    */
   SolidMechanics(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
                  const GeometricNonlinearities geom_nonlin, const std::string& physics_name, std::string mesh_tag,
-                 std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0)
-      : BasePhysics(physics_name, mesh_tag, cycle, time),
+                 std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0,
+                 bool checkpoint_to_disk = false)
+      : BasePhysics(physics_name, mesh_tag, cycle, time, checkpoint_to_disk),
         displacement_(
             StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "displacement"), mesh_tag_)),
         velocity_(StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "velocity"), mesh_tag_)),
@@ -370,6 +381,14 @@ public:
     du_                     = 0.0;
     dr_                     = 0.0;
     predicted_displacement_ = 0.0;
+
+    if (!checkpoint_to_disk_) {
+      checkpoint_states_.clear();
+
+      checkpoint_states_["displacement"].push_back(displacement_);
+      checkpoint_states_["velocity"].push_back(velocity_);
+      checkpoint_states_["acceleration"].push_back(acceleration_);
+    }
   }
 
   /**
@@ -659,9 +678,15 @@ public:
   {
     if (state_name == "displacement") {
       displacement_ = state;
+      if (!checkpoint_to_disk_) {
+        checkpoint_states_["displacement"][static_cast<size_t>(cycle_)] = displacement_;
+      }
       return;
     } else if (state_name == "velocity") {
       velocity_ = state;
+      if (!checkpoint_to_disk_) {
+        checkpoint_states_["velocity"][static_cast<size_t>(cycle_)] = velocity_;
+      }
       return;
     }
 
@@ -1139,13 +1164,23 @@ public:
     }
 
     nonlin_solver_->setOperator(*residual_with_bcs_);
+
+    if (checkpoint_to_disk_) {
+      outputStateToDisk();
+    } else {
+      checkpoint_states_.clear();
+
+      checkpoint_states_["displacement"].push_back(displacement_);
+      checkpoint_states_["velocity"].push_back(velocity_);
+      checkpoint_states_["acceleration"].push_back(acceleration_);
+    }
   }
 
   /// @brief Set field to zero wherever their are essential boundary conditions applies
   void zeroEssentials(FiniteElementVector& field) const
   {
     for (const auto& essential : bcs_.essentials()) {
-      field.SetSubVector(essential.getLocalDofList(), 0.0);
+      field.SetSubVector(essential.getTrueDofList(), 0.0);
     }
   }
 
@@ -1162,6 +1197,8 @@ public:
     warmStartDisplacement();
 
     nonlin_solver_->solve(displacement_);
+
+    cycle_ += 1;
   }
 
   /**
@@ -1187,6 +1224,16 @@ public:
       quasiStaticSolve(dt);
     } else {
       ode2_.Step(displacement_, velocity_, time_, dt);
+
+      cycle_ += 1;
+
+      if (checkpoint_to_disk_) {
+        outputStateToDisk();
+      } else {
+        checkpoint_states_["displacement"].push_back(displacement_);
+        checkpoint_states_["velocity"].push_back(velocity_);
+        checkpoint_states_["acceleration"].push_back(acceleration_);
+      }
     }
 
     {
@@ -1200,8 +1247,6 @@ public:
 
       residual_->updateQdata(false);
     }
-
-    cycle_ += 1;
 
     if (cycle_ > max_cycle_) {
       timesteps_.push_back(dt);
@@ -1292,11 +1337,17 @@ public:
                        "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
                        "number of forward timesteps");
 
-    // Load the end of step disp, velo, accel from the previous cycle from disk
-    StateManager::loadCheckpointedStates(cycle_, {displacement_, velocity_, acceleration_});
+    // Load the end of step disp, velo, accel from the previous cycle
+    {
+      auto previous_states_n = getCheckpointedStates(cycle_);
 
-    double dt_np1 = loadCheckpointedTimestep(cycle_);
-    double dt_n   = loadCheckpointedTimestep(cycle_ - 1);
+      displacement_ = previous_states_n.at("displacement");
+      velocity_     = previous_states_n.at("velocity");
+      acceleration_ = previous_states_n.at("acceleration");
+    }
+
+    double dt_np1 = getCheckpointedTimestep(cycle_);
+    double dt_n   = getCheckpointedTimestep(cycle_ - 1);
 
     // K := dR/du
     auto K = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(displacement_),
@@ -1322,30 +1373,30 @@ public:
    * @brief Accessor for getting named finite element state primal solution from the physics modules at a given
    * checkpointed cycle index
    *
-   * @param state_name The name of the Finite Element State primal solution to retrieve
-   * @param cycle The previous timestep where the state solution is requested
+   * @param cycle_to_load The previous timestep where the state solution is requested
    * @return The named primal Finite Element State
    */
-  FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const override
+  std::unordered_map<std::string, FiniteElementState> getCheckpointedStates(int cycle_to_load) const override
   {
-    if (state_name == "displacement") {
-      FiniteElementState previous_state = displacement_;
-      StateManager::loadCheckpointedStates(cycle, {previous_state});
-      return previous_state;
-    } else if (state_name == "velocity") {
-      FiniteElementState previous_state = velocity_;
-      StateManager::loadCheckpointedStates(cycle, {previous_state});
-      return previous_state;
-    } else if (state_name == "acceleration") {
-      FiniteElementState previous_state = acceleration_;
-      StateManager::loadCheckpointedStates(cycle, {previous_state});
-      return previous_state;
+    std::unordered_map<std::string, FiniteElementState> previous_states;
+
+    if (checkpoint_to_disk_) {
+      previous_states.emplace("displacement", displacement_);
+      previous_states.emplace("velocity", velocity_);
+      previous_states.emplace("acceleration", acceleration_);
+      StateManager::loadCheckpointedStates(
+          cycle_to_load,
+          {previous_states.at("displacement"), previous_states.at("velocity"), previous_states.at("acceleration")});
+      return previous_states;
+    } else {
+      previous_states.emplace("displacement",
+                              checkpoint_states_.at("displacement")[static_cast<size_t>(cycle_to_load)]);
+      previous_states.emplace("velocity", checkpoint_states_.at("velocity")[static_cast<size_t>(cycle_to_load)]);
+      previous_states.emplace("acceleration",
+                              checkpoint_states_.at("acceleration")[static_cast<size_t>(cycle_to_load)]);
     }
 
-    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requested from solid mechanics module '{}', but it doesn't exist",
-                                      state_name, name_));
-
-    return displacement_;
+    return previous_states;
   }
 
   /**

@@ -15,18 +15,18 @@ If you haven't used Docker before, it is recommended that you check out the
 1. Clone a copy of the Serac repo to your computer: ``git clone --recursive https://github.com/LLNL/serac.git``
 
 #. Once you've installed ``docker``, navigate to our `Dockerhub page <https://hub.docker.com/r/seracllnl/tpls/tags?page=1&ordering=last_updated>`_
-   and select the most recent image corresponding to the compiler you'd like to use.  Clang 10 and GCC 8 images are currently offered.
-#. Copy the pull command corresponding to the image you've selected (in this case, it's ``docker pull seracllnl/tpls:clang-10_latest``):
+   and select the most recent image corresponding to the compiler you'd like to use.  Clang 15 and GCC 13 images are currently offered.
+#. Copy the pull command corresponding to the image you've selected (in this case, it's ``docker pull seracllnl/tpls:clang-15_latest``):
 
 .. image:: copy_pull_cmd.png
    :scale: 50 %
 
-4. Next, run the copied command.  Our images are around 2.5 GB, so it may take a while for the image to be downloaded to your machine.
+4. Next, run the copied command.  Our images are around 4 GB, so it may take a while for the image to be downloaded to your machine.
    When the download completes, you will see something like the following:
 
 .. image:: pull_complete.png
 
-5. You can now run the image.  Run ``docker run -it -u serac -v /your/serac/repo:/home/serac/serac seracllnl/tpls:clang-10_latest bash``,
+5. You can now run the image.  Run ``docker run -it -u serac -v /your/serac/repo:/home/serac/serac seracllnl/tpls:clang-15_latest /bin/bash``,
    replacing the tag (the compiler name following the ``tpls:``) with the tag you used in the ``docker pull`` command and
    replacing ``/your/serac/repo`` with the path to the Serac repo you cloned in the first step.  This will open a terminal into the image.
 
