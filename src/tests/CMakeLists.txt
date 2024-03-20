@@ -30,3 +30,9 @@ endif()
 
 serac_add_tests( SOURCES       axom_smoketest.cpp
                  DEPENDS_ON    axom::inlet)
+
+if(SERAC_USE_PETSC)
+    serac_add_tests(SOURCES       petsc_smoketest.cpp
+                    DEPENDS_ON    PkgConfig::PETSC gtest axom::inlet
+                    NUM_MPI_TASKS 4)
+endif()
