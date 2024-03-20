@@ -141,8 +141,7 @@ if(NOT SERAC_FOUND)
 
   # Petsc
   if(SERAC_USE_PETSC)
-    # Use the installed FindPETSc.cmake
-    find_dependency(PETSc)
+    include("${CMAKE_MODULE_PATH}/FindPETSc.cmake")
   endif()
 
   # Umpire
