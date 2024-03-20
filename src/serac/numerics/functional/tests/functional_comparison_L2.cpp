@@ -25,9 +25,6 @@ constexpr bool                 verbose = true;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
-static constexpr double a = 1.7;
-static constexpr double b = 0.0;
-
 template <int dim>
 struct hcurl_qfunction {
   template <typename UnusedType1, typename UnusedType2, typename Position>
@@ -43,6 +40,8 @@ struct test_qfunction {
   template <typename X, typename Temperature>
   SERAC_HOST_DEVICE auto operator()(double, X x, Temperature temperature) const
   {
+    static constexpr double a = 1.7;
+    static constexpr double b = 0.0;
     // get the value and the gradient from the input tuple
     auto [u, du_dx] = temperature;
     auto source     = a * u - (100 * x[0] * x[1]);

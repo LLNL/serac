@@ -822,13 +822,16 @@ public:
      * @tparam Displacement displacement
      * @tparam Acceleration acceleration
      * @tparam Params variadic parameters for call
-     * @param[in] temperature_gradient Temperature gradient
+     * @param[in] state state
+     * @param[in] displacement displacement
+     * @param[in] acceleration acceleration
+     * @param[in] params parameter pack
      * @return The calculated material response (tuple of volumetric heat capacity and thermal flux) for a linear
      * isotropic material
      */
     template <typename X, typename State, typename Displacement, typename Acceleration, typename... Params>
-    auto SERAC_HOST_DEVICE operator()(double /*t*/, X /*x*/, State& state, Displacement displacement,
-                                      Acceleration acceleration, Params... params) const
+    auto SERAC_HOST_DEVICE operator()(double, X, State& state, Displacement displacement, Acceleration acceleration,
+                                      Params... params) const
     {
       auto du_dX   = get<DERIVATIVE>(displacement);
       auto d2u_dt2 = get<VALUE>(acceleration);
@@ -928,11 +931,25 @@ public:
    */
   template <typename BodyForceType>
   struct AddBodyForceIntegrand {
+    // Body force model
     BodyForceType body_force_;
+    // Constructor for the functor
     AddBodyForceIntegrand(BodyForceType body_force) : body_force_(body_force) {}
+
     template <typename T, typename X, typename Displacement, typename Acceleration, typename... Params>
-    auto SERAC_HOST_DEVICE operator()(T t, X x, Displacement /* displacement */, Acceleration /* acceleration */,
-                                      Params... params) const
+    /**
+     * @brief Body force call
+     *
+     * @tparam T temperature
+     * @tparam X Spatial position type
+     * @tparam Displacement displacement
+     * @tparam Acceleration acceleration
+     * @tparam Params variadic parameters for call
+     * @param[in] params parameter pack
+     * @return The calculated material response (tuple of volumetric heat capacity and thermal flux) for a linear
+     * isotropic material
+     */
+    auto SERAC_HOST_DEVICE operator()(T t, X x, Displacement, Acceleration, Params... params) const
     {
       return serac::tuple{-1.0 * body_force_(x, t, params...), zero{}};
     }

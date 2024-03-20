@@ -428,8 +428,22 @@ public:
    */
   template <typename Integrand, int dim, int... args>
   struct ShapeAwareBoundaryIntegrandWrapper {
+    // Constructor for functor
     ShapeAwareBoundaryIntegrandWrapper(Integrand integrand) : integrand_(integrand) {}
     Integrand integrand_;
+    /**
+     * @brief integrand call
+     *
+     * @tparam PositionType position type
+     * @tparam ShapeValueType shape value type
+     * @tparam QFuncArgs type of variadic pack to forward to qfunc
+     * @param[in] time time
+     * @param[in] x position
+     * @param[in] shape_val shape
+     * @param[in] qfunc_args qfunc parameter pack
+     * @return The calculated material response (tuple of volumetric heat capacity and thermal flux) for a linear
+     * isotropic material
+     */
     template <typename PositionType, typename ShapeValueType, typename... QFuncArgs>
     SERAC_HOST_DEVICE auto operator()(double time, PositionType x, ShapeValueType shape_val,
                                       QFuncArgs... qfunc_args) const
@@ -440,7 +454,7 @@ public:
   };
 
   /**
-   * @brief Adds a boundary integral term to the weak formulation of the PDE
+   * @brief Adds a boundary integral term to the weak formulationx of the PDE
    *
    * @tparam dim The dimension of the element (2 for quad, 3 for hex, etc)
    * @tparam args The type of the trial function input arguments
