@@ -341,6 +341,10 @@ public:
     functional_ = std::make_unique<Functional<double(shape, trials...), exec>>(prepended_spaces);
   }
 
+  /**
+   * @brief Functor representing a shape-aware integrand.  Used instead of an extended generic
+   * lambda for compatibility with NVCC.
+   */
   template <typename Integrand, int dim, int... args>
   struct ShapeAwareIntegrandWrapper {
     ShapeAwareIntegrandWrapper(Integrand integrand) : integrand_(integrand) {}
@@ -362,6 +366,10 @@ public:
     }
   };
 
+  /**
+   * @brief Functor representing a shape-aware integrand with state.  Used instead of an extended generic
+   * lambda for compatibility with NVCC.
+   */
   template <typename Integrand, int dim, int... args>
   struct ShapeAwareIntegrandWrapperWithState {
     ShapeAwareIntegrandWrapperWithState(Integrand integrand) : integrand_(integrand) {}
@@ -414,6 +422,10 @@ public:
     }
   }
 
+  /**
+   * @brief Functor representing a shape-aware integrand.  Used instead of an extended generic
+   * lambda for compatibility with NVCC.
+   */
   template <typename Integrand, int dim, int... args>
   struct ShapeAwareBoundaryIntegrandWrapper {
     ShapeAwareBoundaryIntegrandWrapper(Integrand integrand) : integrand_(integrand) {}

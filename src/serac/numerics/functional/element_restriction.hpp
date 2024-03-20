@@ -173,7 +173,7 @@ struct ElementRestriction {
    * @brief Overload for device code.
    *
    * @param i the index of the element
-   * @param dofs (output) the DoFs associated with element `i`
+   * @param vdofs (output) the DoFs associated with element `i`
    */
 
   void GetElementVDofs(int i, DoF* vdofs) const;

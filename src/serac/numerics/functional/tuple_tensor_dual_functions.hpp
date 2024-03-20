@@ -213,15 +213,35 @@ SERAC_HOST_DEVICE auto promote_to_dual_when(const T& x)
 }
 
 /**
+ * @brief Deduce return type of promote_each_to_dual_when.  Useful for type deduction while
+ *        allocating memory
+ *
+ * @tparam dualify specify whether or not the input should be made into its dual type
+ * @tparam T the type of the values passed in
+ * @tparam n how many values were passed in
+ */
+template <bool dualify, typename T, int n>
+auto promote_each_to_dual_when_output_helper(const tensor<T, n>&)
+{
+  if constexpr (dualify) {
+    using return_type = decltype(make_dual(T{}));
+    return tensor<return_type, n>{};
+  } else {
+    return tensor<T, n>{};
+  }
+}
+
+/**
  * @brief a function that optionally (decided at compile time) converts a list of values to their dual types
  *
  * @tparam dualify specify whether or not the input should be made into its dual type
  * @tparam T the type of the values passed in
  * @tparam n how many values were passed in
  * @param x the values to be promoted
+ * @param ctx the RAJA launch context used to synchronize threads and required by the RAJA API.
  */
 template <bool dualify, typename T, int n>
-SERAC_HOST_DEVICE auto promote_each_to_dual_when(const tensor<T, n>& x, void* output_ptr = nullptr,
+SERAC_HOST_DEVICE void promote_each_to_dual_when(const tensor<T, n>& x, void* output_ptr,
                                                  RAJA::LaunchContext ctx = RAJA::LaunchContext{})
 {
   if constexpr (dualify) {
@@ -232,11 +252,9 @@ SERAC_HOST_DEVICE auto promote_each_to_dual_when(const tensor<T, n>& x, void* ou
 #endif
 
     RAJA::RangeSegment x_range(0, n);
-    using return_type = decltype(make_dual(T{}));
-    tensor<return_type, n> output;
-    auto                   casted_output_ptr = static_cast<tensor<return_type, n>*>(output_ptr);
+    using return_type      = decltype(make_dual(T{}));
+    auto casted_output_ptr = static_cast<tensor<return_type, n>*>(output_ptr);
     RAJA::loop<threads_x>(ctx, x_range, [&](int i) { (*casted_output_ptr)[i] = make_dual(x[i]); });
-    return output;
   }
   if constexpr (!dualify) {
 #ifdef USE_CUDA
@@ -247,7 +265,6 @@ SERAC_HOST_DEVICE auto promote_each_to_dual_when(const tensor<T, n>& x, void* ou
     RAJA::RangeSegment x_range(0, n);
     auto               casted_output_ptr = static_cast<tensor<T, n>*>(output_ptr);
     RAJA::loop<threads_x>(ctx, x_range, [&](int i) { (*casted_output_ptr)[i] = x[i]; });
-    return x;
   }
 }
 

@@ -132,8 +132,8 @@ SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, 
 }
 
 template <typename lambda, int n, typename... T>
-auto batch_apply_qf(lambda qf, double t, const tensor<double, 3, n>& positions,
-                    const tensor<double, 2, 3, n>& jacobians, const T&... inputs)
+SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, 3, n>& positions,
+                                      const tensor<double, 2, 3, n>& jacobians, const T&... inputs)
 {
   constexpr int dim = 3;
   using first_arg_t = serac::tuple<tensor<double, dim>, tensor<double, dim, dim - 1>>;
@@ -181,7 +181,7 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
 
   using interpolate_out_type = decltype(tuple{get<indices>(trial_elements).template interpolate_output_helper<Q>()...});
 
-  using qf_inputs_type = decltype(tuple{promote_each_to_dual_when<indices == differentiation_index>(
+  using qf_inputs_type = decltype(tuple{promote_each_to_dual_when_output_helper<indices == differentiation_index>(
       get<indices>(trial_elements).template interpolate_output_helper<Q>())...});
 
 #ifdef USE_CUDA

@@ -12,6 +12,7 @@
 
 #pragma once
 
+// Define thread block dimensions for CUDA/HIP implementations.
 #define BLOCK_SZ 128
 #define BLOCK_X 8
 #define BLOCK_Y 4
@@ -1377,8 +1378,14 @@ SERAC_HOST_DEVICE auto contract(const tensor<S, m, n...>& A, const tensor<T, p, 
   }
 }
 
+/**
+ * @brief This is a helper function for memory allocations and declarations in GPU implementations
+ * of serac.  For example, it can be used in declarations like
+ *   RAJA_TEAM_SHARED decltype(deduce_contract_return_type(A, B)) shared memory;
+ * or together with umpire in allocations.
+ */
 template <int i1, int i2, typename S, int m, typename T, int p, int q, int... n>
-SERAC_DEVICE constexpr auto deduce_contract_return_type(const tensor<S, m, n...>&, const tensor<T, p, q>&)
+SERAC_HOST_DEVICE constexpr auto deduce_contract_return_type(const tensor<S, m, n...>&, const tensor<T, p, q>&)
 {
   constexpr int Adims[] = {m, n...};
   constexpr int Bdims[] = {p, q};
@@ -1397,6 +1404,7 @@ SERAC_DEVICE constexpr auto deduce_contract_return_type(const tensor<S, m, n...>
   return tensor<U, d1, d2, d3>{};
 }
 
+/// @overload
 template <int i1, int i2, typename T, int p, int q>
 SERAC_HOST_DEVICE constexpr auto deduce_contract_return_type(const zero&, const tensor<T, p, q>&)
 {
@@ -2010,6 +2018,10 @@ bool isnan(const tensor<T, n...>& A)
 /// @overload
 inline bool isnan(const zero&) { return false; }
 
+/**
+ * @brief Helper function that uses umpire to move memory between HOST and DEVICE.
+ * destination must be either "HOST" or "DEVICE".
+ */
 template <typename DataType>
 DataType* copy_data(DataType* source_data, std::size_t size, const std::string& destination)
 {
@@ -2026,6 +2038,9 @@ DataType* copy_data(DataType* source_data, std::size_t size, const std::string& 
   return dest_data;
 }
 
+/**
+ * @brief Helper function to deallocate memory allocated with umpire.
+ */
 template <typename DataType>
 void deallocate(DataType* data, const std::string& destination)
 {

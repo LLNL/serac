@@ -200,39 +200,63 @@ SERAC_HOST_DEVICE auto grad_monomials([[maybe_unused]] tensor<T, dim> X)
   }
 }
 
-template <int dim, int p>
-struct TestFunctorOne {
-  template <typename X>
-  SERAC_HOST_DEVICE auto div_f(X x) const
-  {
-    static constexpr int    dim2 = dim == 2 ? (p + 1) * (p + 2) / 2 : ((p + 1) * (p + 2) * (p + 3)) / 6;
-    static constexpr tensor c    = make_tensor<dim, dim2>([](int i, int j) { return double(i + 1) / (j + 1); });
+template <int p, typename X>
+constexpr tensor<double, 2, (p + 1) * (p + 2) / 2> get_test_tensor_dim2()
+{
+  constexpr int dim  = 2;
+  constexpr int dim2 = (p + 1) * (p + 2) / 2;
+  return make_tensor<dim, dim2>([] SERAC_HOST_DEVICE(int i, int j) { return double(i + 1) / (j + 1); });
+}
+
+template <int p, typename X>
+constexpr tensor<double, 3, ((p + 1) * (p + 2) * (p + 3)) / 6> get_test_tensor_dim3()
+{
+  constexpr int dim  = 3;
+  constexpr int dim2 = ((p + 1) * (p + 2) * (p + 3)) / 6;
+  return make_tensor<dim, dim2>([] SERAC_HOST_DEVICE(int i, int j) { return double(i + 1) / (j + 1); });
+}
+
+template <int dim, int p, typename X>
+SERAC_HOST_DEVICE auto div_f(X x)
+{
+  if constexpr (dim == 2) {
+    auto c = get_test_tensor_dim2<p, X>();
+    return tr(dot(c, grad_monomials<p>(x)));
+  } else if constexpr (dim == 3) {
+    auto c = get_test_tensor_dim3<p, X>();
     return tr(dot(c, grad_monomials<p>(x)));
   }
+}
 
+template <int dim, int p, typename X>
+SERAC_HOST_DEVICE auto f(X x)
+{
+  if constexpr (dim == 2) {
+    auto c = get_test_tensor_dim2<p, X>();
+    return dot(c, monomials<p>(x));
+  } else if constexpr (dim == 3) {
+    auto c = get_test_tensor_dim3<p, X>();
+    return dot(c, monomials<p>(x));
+  }
+};
+
+template <int dim, int p>
+struct TestFunctorOne {
   template <typename Postition>
-  SERAC_HOST_DEVICE auto operator()(double /*t*/, Postition X) const
+  SERAC_HOST_DEVICE auto operator()(double, Postition X) const
   {
-    return serac::tuple{div_f(X), zero{}};
+    return serac::tuple{div_f<dim, p>(X), zero{}};
   }
 };
 
 template <int dim, int p>
 struct TestFunctorTwo {
-  template <typename X>
-  SERAC_HOST_DEVICE auto f(X x) const
-  {
-    static constexpr int    dim2 = dim == 2 ? (p + 1) * (p + 2) / 2 : ((p + 1) * (p + 2) * (p + 3)) / 6;
-    static constexpr tensor c    = make_tensor<dim, dim2>([](int i, int j) { return double(i + 1) / (j + 1); });
-    return dot(c, monomials<p>(x));
-  };
-
   template <typename Postition>
-  SERAC_HOST_DEVICE auto operator()(double /*t*/, Postition position) const
+  SERAC_HOST_DEVICE auto operator()(double, Postition position) const
   {
     auto [X, dX_dxi] = position;
     auto n           = normalize(cross(dX_dxi));
-    return -dot(f(X), n);
+    return -dot(f<dim, p>(X), n);
   }
 };
 

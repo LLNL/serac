@@ -242,6 +242,7 @@ struct QOI {
  * @tparam dim the spatial dimension
  * @param qf_input the values to be transformed from parent to physical space
  * @param jacobians the jacobians of the isoparametric map from parent to physical space of each quadrature point
+ * @param ctx the RAJA launch context used to synchronize threads and required by the RAJA API.
  */
 template <Family f, typename T, int q, int dim>
 SERAC_HOST_DEVICE void parent_to_physical(tensor<T, q>& qf_input, const tensor<double, dim, dim, q>* jacobians,
@@ -293,6 +294,7 @@ SERAC_HOST_DEVICE void parent_to_physical(tensor<T, q>& qf_input, const tensor<d
  * @tparam dim the spatial dimension
  * @param qf_output the values to be transformed from physical back to parent space
  * @param jacobians the jacobians of the isoparametric map from parent to physical space of each quadrature point
+ * @param ctx the RAJA launch context used to synchronize threads and required by the RAJA API.
  */
 template <Family f, typename T, int q, int dim>
 SERAC_HOST_DEVICE void physical_to_parent(tensor<T, q>& qf_output, const tensor<double, dim, dim, q>* jacobians,

@@ -801,11 +801,31 @@ public:
                                  mesh_, qdata);
   }
 
+  /**
+   * @brief Functor representing a material stress.  A functor is used here instead of an
+   * extended, generic lambda for compatibility with NVCC.
+   */
   template <typename Material>
   struct SetMaterialStressFunctor {
+    // Constructor for the functor
     SetMaterialStressFunctor(Material material, GeometricNonlinearities gn) : material_(material), geom_nonlin(gn) {}
-    Material                material_;
+    // Material model
+    Material material_;
+    // Enum value for geometric nonlinearities
     GeometricNonlinearities geom_nonlin;
+
+    /**
+     * @brief Material stress response call
+     *
+     * @tparam X Spatial position type
+     * @tparam State state
+     * @tparam Displacement displacement
+     * @tparam Acceleration acceleration
+     * @tparam Params variadic parameters for call
+     * @param[in] temperature_gradient Temperature gradient
+     * @return The calculated material response (tuple of volumetric heat capacity and thermal flux) for a linear
+     * isotropic material
+     */
     template <typename X, typename State, typename Displacement, typename Acceleration, typename... Params>
     auto SERAC_HOST_DEVICE operator()(double /*t*/, X /*x*/, State& state, Displacement displacement,
                                       Acceleration acceleration, Params... params) const
@@ -902,6 +922,10 @@ public:
   /// @overload
   void setVelocity(const FiniteElementState& temp) { velocity_ = temp; }
 
+  /**
+   * @brief Functor representing a body force integrand.  A functor is necessary instead
+   * of an extended, generic lambda for compatibility with NVCC.
+   */
   template <typename BodyForceType>
   struct AddBodyForceIntegrand {
     BodyForceType body_force_;
