@@ -113,9 +113,9 @@ set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/toss_4_x86_64_ib/2023_11_04_22_38_
 
 set(ATS_EXECUTABLE "${DEVTOOLS_ROOT}/python-3.10.12/bin/ats" CACHE PATH "")
 
-set(CLANGFORMAT_EXECUTABLE "${DEVTOOLS_ROOT}/python-3.10.12/bin/clang-format" CACHE PATH "")
+set(CLANGFORMAT_EXECUTABLE "/usr/tce/packages/clang/clang-14.0.6/bin/clang-format" CACHE PATH "")
 
-set(CLANGTIDY_EXECUTABLE "${DEVTOOLS_ROOT}/python-3.10.12/bin/clang-tidy" CACHE PATH "")
+set(CLANGTIDY_EXECUTABLE "/usr/tce/packages/clang/clang-14.0.6/bin/clang-tidy" CACHE PATH "")
 
 set(ENABLE_DOCS ON CACHE BOOL "")
 

@@ -114,9 +114,9 @@ mfem::Mesh buildBallMesh(int approx_number_of_elements)
   static constexpr double vertices[num_vertices][dim] = {{0, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, 0, -1},
                                                          {0, 0, 1}, {0, -1, 0}, {1, 0, 0}};
   static constexpr int    triangles[num_elems][3]     = {{4, 5, 6}, {4, 6, 2}, {4, 2, 1}, {4, 1, 5},
-                                                  {5, 1, 3}, {5, 3, 6}, {3, 1, 2}, {6, 3, 2}};
+                                                         {5, 1, 3}, {5, 3, 6}, {3, 1, 2}, {6, 3, 2}};
   static constexpr int    tetrahedra[num_elems][4]    = {{0, 4, 5, 6}, {0, 4, 6, 2}, {0, 4, 2, 1}, {0, 4, 1, 5},
-                                                   {0, 5, 1, 3}, {0, 5, 3, 6}, {0, 3, 1, 2}, {0, 6, 3, 2}};
+                                                         {0, 5, 1, 3}, {0, 5, 3, 6}, {0, 3, 1, 2}, {0, 6, 3, 2}};
 
   auto mesh = mfem::Mesh(dim, num_vertices, num_elems, num_boundary_elements);
 

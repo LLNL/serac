@@ -24,7 +24,7 @@ spack:
         cxx: /usr/bin/clang++
         f77: /usr/bin/gfortran-11
         fc: /usr/bin/gfortran-11
-      spec: clang@15.0.7
+      spec: clang@14.0.0
       target: x86_64
   - compiler:
       environment: {}
@@ -148,10 +148,10 @@ spack:
       - spec: doxygen@1.9.1
         prefix: /usr
     llvm:
-      version: [15.0.7]
+      version: [14.0.0]
       buildable: false
       externals:
-      - spec: llvm@15.0.7+clang
+      - spec: llvm@14.0.0+clang
         prefix: /usr
     py-sphinx:
       version: [4.3.2]

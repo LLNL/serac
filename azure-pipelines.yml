@@ -6,8 +6,8 @@
 #
 
 variables:
-  Clang_15_ImageName: 'seracllnl/tpls:clang-15_02-26-24_21h-58m'
-  GCC_13_ImageName: 'seracllnl/tpls:gcc-13_02-26-24_21h-58m'
+  Clang_14_ImageName: 'seracllnl/tpls:clang-14_03-15-24_21h-56m'
+  GCC_13_ImageName: 'seracllnl/tpls:gcc-13_03-15-24_21h-56m'
 
 jobs:
 - job: Build_and_Test
@@ -25,23 +25,23 @@ jobs:
           TEST_TARGET: 'linux_gcc13'
           HOST_CONFIG: 'gcc@13.1.0.cmake'
           BUILD_TYPE: 'Release'
-      linux_clang15_debug:
+      linux_clang14_debug:
           VM_ImageName: 'ubuntu-22.04'
-          Compiler_ImageName: $(Clang_15_ImageName)
-          TEST_TARGET: 'linux_clang15'
-          HOST_CONFIG: 'clang@15.0.7.cmake'
+          Compiler_ImageName: $(Clang_14_ImageName)
+          TEST_TARGET: 'linux_clang14'
+          HOST_CONFIG: 'clang@14.0.0.cmake'
           BUILD_TYPE: 'Debug'
-      linux_clang15_release:
+      linux_clang14_release:
           VM_ImageName: 'ubuntu-22.04'
-          Compiler_ImageName: $(Clang_15_ImageName)
-          TEST_TARGET: 'linux_clang15'
-          HOST_CONFIG: 'clang@15.0.7.cmake'
+          Compiler_ImageName: $(Clang_14_ImageName)
+          TEST_TARGET: 'linux_clang14'
+          HOST_CONFIG: 'clang@14.0.0.cmake'
           BUILD_TYPE: 'Release'
-      linux_clang15_codevelop:
+      linux_clang14_codevelop:
           VM_ImageName: 'ubuntu-22.04'
-          Compiler_ImageName: $(Clang_15_ImageName)
-          TEST_TARGET: 'linux_clang15'
-          HOST_CONFIG: 'clang@15.0.7.cmake'
+          Compiler_ImageName: $(Clang_14_ImageName)
+          TEST_TARGET: 'linux_clang14'
+          HOST_CONFIG: 'clang@14.0.0.cmake'
           BUILD_TYPE: 'Debug'
           CMAKE_OPTS: '-DSERAC_ENABLE_CODEVELOP=ON'
           BUILD_SRC_OPTS: '--skip-install'
@@ -68,9 +68,9 @@ jobs:
 - job: Check_Code
   variables:
     VM_ImageName: 'ubuntu-22.04'
-    Compiler_ImageName: $(Clang_15_ImageName)
-    TEST_TARGET: 'linux_clang15'
-    HOST_CONFIG: 'clang@15.0.7.cmake'
+    Compiler_ImageName: $(Clang_14_ImageName)
+    TEST_TARGET: 'linux_clang14'
+    HOST_CONFIG: 'clang@14.0.0.cmake'
 
   strategy:
     matrix:
