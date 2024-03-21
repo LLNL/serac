@@ -236,12 +236,12 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
     print("[starting configure of %s]" % host_config)
     print("[log file: %s]" % log_file)
     # Disable docs until we build our own doxygen/sphinx to stop the random failures on LC
-    cmd = "{0} config-build.py -DENABLE_DOCS=OFF -bp {1} -hc {2} -ip {3} {4} | tee {5}" % (sys.executable, 
-                                                                                           build_dir,
-                                                                                           host_config,
-                                                                                           install_dir,
-                                                                                           extra_cmake_options,
-                                                                                           log_file)
+    cmd = "{0} config-build.py -DENABLE_DOCS=OFF -bp {1} -hc {2} -ip {3} {4} | tee {5}".format(sys.executable, 
+                                                                                               build_dir,
+                                                                                               host_config,
+                                                                                               install_dir,
+                                                                                               extra_cmake_options,
+                                                                                               log_file)
     res = sexe(cmd, echo=True)
 
     if res != 0:
