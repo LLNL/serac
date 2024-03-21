@@ -614,7 +614,7 @@ TEST(Nonlinear, 2DQuadratic) { qoi_test(*mesh2D, H1<2>{}, Dimension<2>{}, WhichT
 //TEST(Variadic, 2DQuadratic) { qoi_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
 //TEST(Variadic, 3DLinear   ) { qoi_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
 //TEST(Variadic, 3DQuadratic) { qoi_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
-// clang-format on
+//  clang-format on
 
 // TODO Functional currently doesn't support HCurl. When it does, this test should work without other changes as
 // shape-aware functional already contains the appropriate Hcurl transformations

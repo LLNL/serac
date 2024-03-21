@@ -31,7 +31,7 @@ double StateManager::newDataCollection(const std::string& name, const std::optio
   // Needs to be configured to own the mesh data so all mesh data is saved to datastore/output file
   constexpr bool owns_mesh_data = true;
   auto [iter, _]                = datacolls_.emplace(std::piecewise_construct, std::forward_as_tuple(name),
-                                      std::forward_as_tuple(coll_name, bp_index_grp, domain_grp, owns_mesh_data));
+                                                     std::forward_as_tuple(coll_name, bp_index_grp, domain_grp, owns_mesh_data));
   auto& datacoll                = iter->second;
   datacoll.SetComm(MPI_COMM_WORLD);
 
