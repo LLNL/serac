@@ -266,13 +266,12 @@ spack:
       externals:
       - spec: doxygen@1.9.6
         prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/doxygen-1.9.6
-    # TODO: make installed clang 14.0.6 work
     llvm:
-      version: [10.0.0]
+      version: [14.0.6]
       buildable: false
       externals:
-      - spec: llvm+clang@10.0.0
-        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/python-3.10.12
+      - spec: llvm@14.0.6+clang+python
+        prefix: /usr/tce/packages/clang/clang-14.0.6
     py-ats:
       version: [7.0.105]
       buildable: false

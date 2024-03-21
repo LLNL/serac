@@ -387,8 +387,7 @@ public:
     // auto lambda = [] __host__ __device__ (auto) {}; ), MaterialType cannot be an extended
     // generic lambda.  The static asserts below check this.
   private:
-    class DummyArgumentType {
-    };
+    class DummyArgumentType {};
     static_assert(!std::is_invocable<MaterialType, DummyArgumentType&>::value);
     static_assert(!std::is_invocable<MaterialType, DummyArgumentType*>::value);
     static_assert(!std::is_invocable<MaterialType, DummyArgumentType>::value);

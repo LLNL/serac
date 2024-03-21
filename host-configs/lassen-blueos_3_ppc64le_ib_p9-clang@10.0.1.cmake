@@ -149,9 +149,9 @@ set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/2023_06_20_
 
 set(ATS_EXECUTABLE "${DEVTOOLS_ROOT}/python-3.10.10/bin/ats" CACHE PATH "")
 
-set(CLANGFORMAT_EXECUTABLE "/usr/tce/packages/clang/clang-10.0.0/bin/clang-format" CACHE PATH "")
+set(CLANGFORMAT_EXECUTABLE "/usr/tce/packages/clang/clang-14.0.5/bin/clang-format" CACHE PATH "")
 
-set(CLANGTIDY_EXECUTABLE "/usr/tce/packages/clang/clang-10.0.0/bin/clang-tidy" CACHE PATH "")
+set(CLANGTIDY_EXECUTABLE "/usr/tce/packages/clang/clang-14.0.5/bin/clang-tidy" CACHE PATH "")
 
 set(ENABLE_DOCS ON CACHE BOOL "")
 
