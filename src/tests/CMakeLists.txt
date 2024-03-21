@@ -33,6 +33,6 @@ serac_add_tests( SOURCES       axom_smoketest.cpp
 
 if(SERAC_USE_PETSC)
     serac_add_tests(SOURCES       petsc_smoketest.cpp
-                    DEPENDS_ON    PkgConfig::PETSC gtest axom::inlet
+                    DEPENDS_ON    PkgConfig::PETSC gtest axom::slic
                     NUM_MPI_TASKS 4)
 endif()
