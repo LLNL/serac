@@ -12,10 +12,21 @@
 
 #pragma once
 
-// Define thread block dimensions for CUDA/HIP implementations.
+/**
+ * @brief Macro defining block size for CUDA/HIP targets
+ */
 #define BLOCK_SZ 128
+/**
+ * @brief Macro defining block dimension for CUDA/HIP targets
+ */
 #define BLOCK_X 8
+/**
+ * @brief Macro defining block dimension for CUDA/HIP targets
+ */
 #define BLOCK_Y 4
+/**
+ * @brief Macro defining block dimension for CUDA/HIP targets
+ */
 #define BLOCK_Z 4
 
 #include "serac/infrastructure/accelerator.hpp"

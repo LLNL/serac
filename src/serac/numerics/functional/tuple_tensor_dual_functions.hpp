@@ -238,6 +238,7 @@ auto promote_each_to_dual_when_output_helper(const tensor<T, n>&)
  * @tparam T the type of the values passed in
  * @tparam n how many values were passed in
  * @param x the values to be promoted
+ * @param output_ptr pointer to output array
  * @param ctx the RAJA launch context used to synchronize threads and required by the RAJA API.
  */
 template <bool dualify, typename T, int n>
