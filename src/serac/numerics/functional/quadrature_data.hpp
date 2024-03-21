@@ -35,12 +35,17 @@ namespace serac {
  *        will also store no data, but it will still appear as an argument to the q-function
  *        (to make the material model interface consistent).
  */
-struct Nothing {};
+struct Nothing {
+};
 
 /**
  * @brief see `Nothing` for a complete description of this class and when to use it
  */
 struct Empty {
+  /**
+   * @brief operator= overload
+   * @tparam T anything can be set to Empty
+   */
   template <typename T>
   SERAC_HOST_DEVICE auto operator=(T) const
   {

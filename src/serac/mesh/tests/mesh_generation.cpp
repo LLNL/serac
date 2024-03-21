@@ -17,7 +17,8 @@
 #include "serac/serac_config.hpp"
 #include "serac/infrastructure/input.hpp"
 
-class SlicErrorException : public std::exception {};
+class SlicErrorException : public std::exception {
+};
 
 // Copied from src/serac/infrastructure/tests/serac_input.cpp
 class MeshTest : public ::testing::Test {

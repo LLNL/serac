@@ -10,7 +10,8 @@
 
 #include "serac/infrastructure/input.hpp"
 
-class SlicErrorException : public std::exception {};
+class SlicErrorException : public std::exception {
+};
 
 class InputTest : public ::testing::Test {
 protected:

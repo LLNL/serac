@@ -21,7 +21,8 @@
 
 namespace serac {
 
-class ContactTest : public testing::TestWithParam<std::pair<ContactEnforcement, std::string>> {};
+class ContactTest : public testing::TestWithParam<std::pair<ContactEnforcement, std::string>> {
+};
 
 TEST_P(ContactTest, patch)
 {

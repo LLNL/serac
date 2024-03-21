@@ -347,8 +347,22 @@ public:
    */
   template <typename Integrand, int dim, int... args>
   struct ShapeAwareIntegrandWrapper {
+    /// @brief Constructor for functor
     ShapeAwareIntegrandWrapper(Integrand integrand) : integrand_(integrand) {}
+    /// @brief Integrand
     Integrand integrand_;
+    /**
+     * @brief integrand call
+     *
+     * @tparam PositionType position type
+     * @tparam ShapeValueType shape value type
+     * @tparam QFuncArgs type of variadic pack to forward to qfunc
+     * @param[in] time time
+     * @param[in] x position
+     * @param[in] shape_val shape
+     * @param[in] qfunc_args qfunc parameter pack
+     * @return Shape aware qf value
+     */
     template <typename PositionType, typename ShapeValueType, typename... QFuncArgs>
     SERAC_HOST_DEVICE auto operator()(double time, PositionType x, ShapeValueType shape_val,
                                       QFuncArgs... qfunc_args) const
@@ -372,8 +386,24 @@ public:
    */
   template <typename Integrand, int dim, int... args>
   struct ShapeAwareIntegrandWrapperWithState {
+    /// @brief Constructor for functor
     ShapeAwareIntegrandWrapperWithState(Integrand integrand) : integrand_(integrand) {}
+    /// @brief integrand
     Integrand integrand_;
+    /**
+     * @brief integrand call
+     *
+     * @tparam PositionType position type
+     * @tparam StateType state type
+     * @tparam ShapeValueType shape value type
+     * @tparam QFuncArgs type of variadic pack to forward to qfunc
+     * @param[in] time time
+     * @param[in] x position
+     * @param[in] state reference to state
+     * @param[in] shape_val shape
+     * @param[in] qfunc_args qfunc parameter pack
+     * @return shape aware integrand value
+     */
     template <typename PositionType, typename StateType, typename ShapeValueType, typename... QFuncArgs>
     SERAC_HOST_DEVICE auto operator()(double time, PositionType x, StateType& state, ShapeValueType shape_val,
                                       QFuncArgs... qfunc_args) const
@@ -428,8 +458,9 @@ public:
    */
   template <typename Integrand, int dim, int... args>
   struct ShapeAwareBoundaryIntegrandWrapper {
-    // Constructor for functor
+    /// @brief Constructor for functor
     ShapeAwareBoundaryIntegrandWrapper(Integrand integrand) : integrand_(integrand) {}
+    /// @brief integrand
     Integrand integrand_;
     /**
      * @brief integrand call
@@ -441,8 +472,7 @@ public:
      * @param[in] x position
      * @param[in] shape_val shape
      * @param[in] qfunc_args qfunc parameter pack
-     * @return The calculated material response (tuple of volumetric heat capacity and thermal flux) for a linear
-     * isotropic material
+     * @return qf function corrected for boundary area
      */
     template <typename PositionType, typename ShapeValueType, typename... QFuncArgs>
     SERAC_HOST_DEVICE auto operator()(double time, PositionType x, ShapeValueType shape_val,

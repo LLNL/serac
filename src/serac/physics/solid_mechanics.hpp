@@ -807,11 +807,11 @@ public:
    */
   template <typename Material>
   struct SetMaterialStressFunctor {
-    // Constructor for the functor
+    /// @brief Constructor for the functor
     SetMaterialStressFunctor(Material material, GeometricNonlinearities gn) : material_(material), geom_nonlin(gn) {}
-    // Material model
+    /// @brief Material model
     Material material_;
-    // Enum value for geometric nonlinearities
+    /// @brief Enum value for geometric nonlinearities
     GeometricNonlinearities geom_nonlin;
 
     /**
@@ -931,12 +931,11 @@ public:
    */
   template <typename BodyForceType>
   struct AddBodyForceIntegrand {
-    // Body force model
+    /// @brief Body force model
     BodyForceType body_force_;
-    // Constructor for the functor
+    /// @brief Constructor for the functor
     AddBodyForceIntegrand(BodyForceType body_force) : body_force_(body_force) {}
 
-    template <typename T, typename X, typename Displacement, typename Acceleration, typename... Params>
     /**
      * @brief Body force call
      *
@@ -945,10 +944,13 @@ public:
      * @tparam Displacement displacement
      * @tparam Acceleration acceleration
      * @tparam Params variadic parameters for call
+     * @param[in] t temperature
+     * @param[in] x position
      * @param[in] params parameter pack
      * @return The calculated material response (tuple of volumetric heat capacity and thermal flux) for a linear
      * isotropic material
      */
+    template <typename T, typename X, typename Displacement, typename Acceleration, typename... Params>
     auto SERAC_HOST_DEVICE operator()(T t, X x, Displacement, Acceleration, Params... params) const
     {
       return serac::tuple{-1.0 * body_force_(x, t, params...), zero{}};

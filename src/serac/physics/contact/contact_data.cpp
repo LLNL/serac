@@ -215,7 +215,7 @@ std::unique_ptr<mfem::BlockOperator> ContactData::mergedJacobian() const
     inactive_diag.SetDataOwner(false);
     auto& block_1_0 = static_cast<mfem::HypreParMatrix&>(block_J->GetBlock(1, 0));
     auto  block_1_1 = new mfem::HypreParMatrix(block_1_0.GetComm(), block_1_0.GetGlobalNumRows(),
-                                               block_1_0.GetRowStarts(), &inactive_diag);
+                                              block_1_0.GetRowStarts(), &inactive_diag);
     block_1_1->SetOwnerFlags(3, 3, 1);
     block_J->SetBlock(1, 1, block_1_1);
     // end building I_(inactive)
