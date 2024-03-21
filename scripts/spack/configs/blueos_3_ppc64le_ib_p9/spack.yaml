@@ -207,11 +207,11 @@ spack:
           prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.9.6
       buildable: false
     llvm:
-      version: [10.0.0]
+      version: [14.0.5]
       buildable: false
       externals:
-      - spec: llvm+clang@10.0.0
-        prefix: /usr/tce/packages/clang/clang-10.0.0
+      - spec: llvm@14.0.5+clang+python
+        prefix: /usr/tce/packages/clang/clang-14.0.5
     py-ats:
       version: [7.0.105]
       externals:
