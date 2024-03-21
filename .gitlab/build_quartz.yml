@@ -39,8 +39,7 @@ quartz-clang_14_0_6-src:
   variables:
     COMPILER: "clang@14.0.6"
     HOST_CONFIG: "quartz-toss_4_x86_64_ib-${COMPILER}.cmake"
-    # TODO: Turn this  back on when input files are working for the Functional-based physics modules
-    #DO_INTEGRATION_TESTS: "yes"
+    DO_INTEGRATION_TESTS: "yes"
     ALLOC_NODES: "2"
     ALLOC_TIME: "30"
   extends: .src_build_on_quartz

@@ -98,7 +98,7 @@ thermal_solid = {
         },
 
         -- polynomial interpolation order
-        order = 2,
+        order = 1,
 
         -- material parameters
         materials = { { model = "LinearIsotropicConductor", kappa = 0.5, cp = 0.5, density = 0.5 }, },
