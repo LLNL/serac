@@ -16,8 +16,6 @@
 // note: mfem assumes the parent element domain is [0,1]x[0,1]x[0,1]
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
-#include <RAJA/index/RangeSegment.hpp>
-#include <RAJA/pattern/launch/launch_core.hpp>
 template <int p, int c>
 struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
   static constexpr auto geometry   = mfem::Geometry::CUBE;

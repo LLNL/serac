@@ -1,10 +1,6 @@
 #include "serac/numerics/functional/geometric_factors.hpp"
 #include "serac/numerics/functional/finite_element.hpp"
 
-#include <RAJA/index/RangeSegment.hpp>
-#include <RAJA/RAJA.hpp>
-#include <iostream>
-
 namespace serac {
 
 /**

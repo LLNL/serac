@@ -32,8 +32,6 @@
 #include "serac/infrastructure/accelerator.hpp"
 
 #include "detail/metaprogramming.hpp"
-#include <RAJA/RAJA.hpp>
-#include <umpire/ResourceManager.hpp>
 
 #include <cmath>
 
