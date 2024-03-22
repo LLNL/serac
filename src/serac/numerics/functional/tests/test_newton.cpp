@@ -11,8 +11,7 @@
 
 #include "serac/numerics/functional/tuple_tensor_dual_functions.hpp"
 
-class SlicErrorException : public std::exception {
-};
+class SlicErrorException : public std::exception {};
 
 using namespace serac;
 
