@@ -191,13 +191,8 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
     # Install
     log_file =  pjoin(build_dir,"output.log.make.install.txt")
     print("[log file: %s]" % log_file)
-    res = sexe("cd %s && make VERBOSE=1 install " % build_dir,
-                output_file = log_file,
-                echo=True)
-
-    if report_to_stdout:
-        with open(log_file, 'r') as ex_out:
-            print(ex_out.read())
+    cmd = "cd {0} && make VERBOSE=1 install | tee {1}".format(build_dir, log_file)
+    res = sexe(cmd, echo=True)
 
     if res != 0:
         print("[ERROR: error code={0}: Install for host-config: {1} failed]\n".format(res, host_config))
@@ -207,13 +202,8 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
     log_file =  pjoin(build_dir,"output.log.configure.examples.txt")
     print("[log file: %s]" % log_file)
     example_dir = pjoin(install_dir, "examples", get_project_name(), "using-with-cmake")
-    res = sexe("cd {0} && mkdir build && cd build && cmake -C {0}/host-config.cmake {0}".format(example_dir),
-                output_file = log_file,
-                echo=True)
-
-    if report_to_stdout:
-        with open(log_file, 'r') as ex_out:
-            print(ex_out.read())
+    cmd = "cd {0} && mkdir build && cd build && cmake -C {0}/host-config.cmake {0} | tee {1}".format(example_dir, log_file)
+    res = sexe(cmd, echo=True)
 
     if res != 0:
         print("[ERROR: error code={0}: Configure examples for host-config: {1} failed]\n".format(res, host_config))
@@ -223,13 +213,8 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
     log_file =  pjoin(build_dir,"output.log.make.examples.txt")
     print("[log file: %s]" % log_file)
     install_build_dir = pjoin(example_dir, "build")
-    res = sexe("cd {0} && make && ls -al && make test ".format(install_build_dir),
-                output_file = log_file,
-                echo=True)
-
-    if report_to_stdout:
-        with open(log_file, 'r') as ex_out:
-            print(ex_out.read())
+    cmd = "cd {0} && make && ls -al && make test | tee {1}".format(install_build_dir, log_file)
+    res = sexe(cmd, echo=True)
 
     if res != 0:
         print("[ERROR: error code={0}: Make and test examples for host-config: {1} failed]\n".format(res, host_config))
@@ -247,17 +232,17 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
     print("[ install dir: %s]"   % install_dir)
 
     # configure
-    cfg_output_file = pjoin(test_root,"output.log.%s.configure.txt" % host_config_root)
+    log_file = pjoin(test_root,"output.log.%s.configure.txt" % host_config_root)
     print("[starting configure of %s]" % host_config)
-    print("[log file: %s]" % cfg_output_file)
+    print("[log file: %s]" % log_file)
     # Disable docs until we build our own doxygen/sphinx to stop the random failures on LC
-    res = sexe("%s config-build.py -DENABLE_DOCS=OFF -bp %s -hc %s -ip %s %s" % (sys.executable, build_dir, host_config, install_dir, extra_cmake_options),
-               output_file = cfg_output_file,
-               echo=True)
-
-    if report_to_stdout:
-        with open(cfg_output_file, 'r') as build_out:
-            print(build_out.read())
+    cmd = "{0} config-build.py -DENABLE_DOCS=OFF -bp {1} -hc {2} -ip {3} {4} | tee {5}".format(sys.executable, 
+                                                                                               build_dir,
+                                                                                               host_config,
+                                                                                               install_dir,
+                                                                                               extra_cmake_options,
+                                                                                               log_file)
+    res = sexe(cmd, echo=True)
 
     if res != 0:
         print("[ERROR: Configure for host-config: %s failed]\n" % host_config)
@@ -268,35 +253,23 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
     ####
 
     # build the code
-    bld_output_file =  pjoin(build_dir,"output.log.make.txt")
+    log_file =  pjoin(build_dir,"output.log.make.txt")
     print("[starting build]")
-    print("[log file: %s]" % bld_output_file)
-    res = sexe("cd %s && make -j 8 VERBOSE=1 " % build_dir,
-                output_file = bld_output_file,
-                echo=True)
-
-    if report_to_stdout:
-        with open(bld_output_file, 'r') as build_out:
-            print(build_out.read())
+    print("[log file: %s]" % log_file)
+    cmd = "cd {0} && make -j 8 VERBOSE=1 | tee {1}".format(build_dir, log_file)
+    res = sexe(cmd, echo=True)
 
     if res != 0:
         print("[ERROR: Build for host-config: %s failed]\n" % host_config)
         return res
 
     # test the code
-    tst_output_file = pjoin(build_dir,"output.log.make.test.txt")
+    log_file = pjoin(build_dir,"output.log.make.test.txt")
     print("[starting unit tests]")
-    print("[log file: %s]" % tst_output_file)
+    print("[log file: %s]" % log_file)
 
-    tst_cmd = "cd %s && make CTEST_OUTPUT_ON_FAILURE=1 test ARGS=\"--no-compress-output -T Test -VV -j8\"" % build_dir
-
-    res = sexe(tst_cmd,
-               output_file = tst_output_file,
-               echo=True)
-
-    if report_to_stdout:
-        with open(tst_output_file, 'r') as test_out:
-            print(test_out.read())
+    cmd = "cd {0} && make CTEST_OUTPUT_ON_FAILURE=1 test ARGS=\"--no-compress-output -T Test -VV -j8\" | tee {1}".format(build_dir, log_file)
+    res = sexe(cmd, echo=True)
 
     # Convert CTest output to JUnit, do not overwrite previous res
     print("[Checking to see if xsltproc exists...]")
@@ -320,17 +293,11 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
 
     # Disable docs until we build our own doxygen/sphinx to stop the random failures on LC
     # build the docs
-    # docs_output_file = pjoin(build_dir,"output.log.make.docs.txt")
+    # log_file = pjoin(build_dir,"output.log.make.docs.txt")
     # print("[starting docs generation]")
-    # print("[log file: %s]" % docs_output_file)
-
-    # res = sexe("cd %s && make docs " % build_dir,
-    #            output_file = docs_output_file,
-    #            echo=True)
-
-    # if report_to_stdout:
-    #     with open(docs_output_file, 'r') as docs_out:
-    #         print(docs_out.read())
+    # print("[log file: %s]" % log_file)
+    # cmd = "cd {0} && make docs | tee {1}".format(build_dir, log_file)
+    # res = sexe(cmd, echo=True)
 
     # if res != 0:
     #     print("[ERROR: Docs generation for host-config: %s failed]\n\n" % host_config)
