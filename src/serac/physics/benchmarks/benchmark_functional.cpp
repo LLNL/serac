@@ -16,12 +16,12 @@
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/heat_transfer.hpp"
 
-template <int p, int dim>
-void pure_functional_test(int parallel_refinement)
+template <int p, int dim, int components>
+void functional_test(int parallel_refinement)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  int serial_refinement   = 1;
+  int serial_refinement = 1;
 
   static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for thermal functional test");
 
@@ -29,15 +29,14 @@ void pure_functional_test(int parallel_refinement)
   std::string filename =
       (dim == 2) ? SERAC_REPO_DIR "/data/meshes/star.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
 
-  auto mesh = serac::mesh::refineAndDistribute(serac::buildMeshFromFile(filename), serial_refinement, parallel_refinement);
+  auto mesh =
+      serac::mesh::refineAndDistribute(serac::buildMeshFromFile(filename), serial_refinement, parallel_refinement);
 
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace(mesh.get(), &fec);
+  mfem::ParFiniteElementSpace fespace(mesh.get(), &fec, components);
 
-  // Construct the new functional object using the known test and trial spaces
-
-  using space = serac::H1<p>;
+  using space = serac::H1<p, components>;
 
   serac::Functional<space(space)> residual(&fespace, {&fespace});
 
@@ -59,7 +58,7 @@ void pure_functional_test(int parallel_refinement)
   u_global.GetTrueDofs(U);
 
   // Compute the residual using functional
-  double       t  = 0.0;
+  double t = 0.0;
 
   SERAC_MARK_BEGIN("residual evaluation");
   mfem::Vector r1 = residual(t, U);
@@ -82,28 +81,52 @@ int main(int argc, char* argv[])
 {
   MPI_Init(&argc, &argv);
 
-  int parallel_refinement = 4;
+  int parallel_refinement = 3;
 
   axom::slic::SimpleLogger logger;
 
   // Initialize profiling
   serac::profiling::initialize();
 
+  SERAC_MARK_BEGIN("scalar H1");
+
   SERAC_MARK_BEGIN("dimension 2, order 1");
-  pure_functional_test<1, 2>(parallel_refinement);
+  functional_test<1, 2, 1>(parallel_refinement);
   SERAC_MARK_END("dimension 2, order 1");
 
   SERAC_MARK_BEGIN("dimension 2, order 2");
-  pure_functional_test<2, 2>(parallel_refinement);
+  functional_test<2, 2, 1>(parallel_refinement);
   SERAC_MARK_END("dimension 2, order 2");
 
   SERAC_MARK_BEGIN("dimension 3, order 1");
-  pure_functional_test<1, 3>(parallel_refinement);
+  functional_test<1, 3, 1>(parallel_refinement);
   SERAC_MARK_END("dimension 3, order 1");
 
   SERAC_MARK_BEGIN("dimension 3, order 2");
-  pure_functional_test<2, 3>(parallel_refinement);
+  functional_test<2, 3, 1>(parallel_refinement);
   SERAC_MARK_END("dimension 3, order 2");
+
+  SERAC_MARK_END("scalar H1");
+
+  SERAC_MARK_BEGIN("vector H1");
+
+  SERAC_MARK_BEGIN("dimension 2, order 1");
+  functional_test<1, 2, 2>(parallel_refinement);
+  SERAC_MARK_END("dimension 2, order 1");
+
+  SERAC_MARK_BEGIN("dimension 2, order 2");
+  functional_test<2, 2, 2>(parallel_refinement);
+  SERAC_MARK_END("dimension 2, order 2");
+
+  SERAC_MARK_BEGIN("dimension 3, order 1");
+  functional_test<1, 3, 3>(parallel_refinement);
+  SERAC_MARK_END("dimension 3, order 1");
+
+  SERAC_MARK_BEGIN("dimension 3, order 2");
+  functional_test<2, 3, 3>(parallel_refinement);
+  SERAC_MARK_END("dimension 3, order 2");
+
+  SERAC_MARK_END("vector H1");
 
   // Finalize profiling
   serac::profiling::finalize();

@@ -34,20 +34,23 @@ void functional_test_static()
   std::string filename =
       (dim == 2) ? SERAC_REPO_DIR "/data/meshes/star.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
 
-  auto mesh = serac::mesh::refineAndDistribute(serac::buildMeshFromFile(filename), serial_refinement, parallel_refinement);
+  auto mesh =
+      serac::mesh::refineAndDistribute(serac::buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh), "default_mesh");
 
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
   serac::LinearSolverOptions linear_options = {.linear_solver  = serac::LinearSolver::CG,
-                                                    .preconditioner = serac::Preconditioner::HypreAMG,
-                                                    .relative_tol   = 1.0e-6,
-                                                    .absolute_tol   = 1.0e-12,
-                                                    .max_iterations = 200};
+                                               .preconditioner = serac::Preconditioner::HypreAMG,
+                                               .relative_tol   = 1.0e-6,
+                                               .absolute_tol   = 1.0e-12,
+                                               .max_iterations = 200};
 
   // Construct a functional-based heat transfer solver
-  serac::HeatTransfer<p, dim> thermal_solver(serac::heat_transfer::default_nonlinear_options, linear_options, serac::heat_transfer::default_static_options, "thermal_functional", "default_mesh");
+  serac::HeatTransfer<p, dim> thermal_solver(serac::heat_transfer::default_nonlinear_options, linear_options,
+                                             serac::heat_transfer::default_static_options, "thermal_functional",
+                                             "default_mesh");
 
   serac::tensor<double, dim, dim> cond;
 
@@ -103,14 +106,17 @@ void functional_test_dynamic()
   std::string filename =
       (dim == 2) ? SERAC_REPO_DIR "/data/meshes/star.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
 
-  auto mesh = serac::mesh::refineAndDistribute(serac::buildMeshFromFile(filename), serial_refinement, parallel_refinement);
+  auto mesh =
+      serac::mesh::refineAndDistribute(serac::buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh), "default_mesh");
 
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
   // Construct a functional-based heat transfer solver
-  serac::HeatTransfer<p, dim> thermal_solver(serac::heat_transfer::default_nonlinear_options, serac::heat_transfer::default_linear_options, serac::heat_transfer::default_timestepping_options, "thermal_functional", "default_mesh");
+  serac::HeatTransfer<p, dim> thermal_solver(
+      serac::heat_transfer::default_nonlinear_options, serac::heat_transfer::default_linear_options,
+      serac::heat_transfer::default_timestepping_options, "thermal_functional", "default_mesh");
 
   // Define an isotropic conductor material model
   serac::heat_transfer::LinearIsotropicConductor mat(1.0, 1.0, 1.0);
