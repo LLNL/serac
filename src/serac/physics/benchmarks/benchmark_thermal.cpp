@@ -22,7 +22,7 @@ void functional_test_static()
   MPI_Barrier(MPI_COMM_WORLD);
 
   int serial_refinement   = 1;
-  int parallel_refinement = 0;
+  int parallel_refinement = 2;
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -40,8 +40,14 @@ void functional_test_static()
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
+  serac::LinearSolverOptions linear_options = {.linear_solver  = serac::LinearSolver::CG,
+                                                    .preconditioner = serac::Preconditioner::HypreAMG,
+                                                    .relative_tol   = 1.0e-6,
+                                                    .absolute_tol   = 1.0e-12,
+                                                    .max_iterations = 200};
+
   // Construct a functional-based heat transfer solver
-  serac::HeatTransfer<p, dim> thermal_solver(serac::heat_transfer::default_nonlinear_options, serac::heat_transfer::default_linear_options, serac::heat_transfer::default_static_options, "thermal_functional", "default_mesh");
+  serac::HeatTransfer<p, dim> thermal_solver(serac::heat_transfer::default_nonlinear_options, linear_options, serac::heat_transfer::default_static_options, "thermal_functional", "default_mesh");
 
   serac::tensor<double, dim, dim> cond;
 
@@ -85,7 +91,7 @@ void functional_test_dynamic()
   MPI_Barrier(MPI_COMM_WORLD);
 
   int serial_refinement   = 1;
-  int parallel_refinement = 0;
+  int parallel_refinement = 2;
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -153,9 +159,6 @@ int main(int argc, char* argv[])
 
   // Add metadata
   SERAC_SET_METADATA("test", "thermal_functional");
-
-  // Profile code
-  SERAC_MARK_BEGIN("Thermal Functional");
 
   SERAC_MARK_BEGIN("2D Linear Static");
   functional_test_static<1, 2>();
