@@ -6,7 +6,6 @@
 #pragma once
 
 #include <array>
-#include <cstddef>
 
 #include "serac/numerics/functional/quadrature_data.hpp"
 #include "serac/numerics/functional/differentiate_wrt.hpp"

@@ -5,19 +5,13 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 #pragma once
 
-#include <sys/types.h>
 #include "serac/infrastructure/accelerator.hpp"
 #include "serac/numerics/functional/quadrature_data.hpp"
 #include "serac/numerics/functional/function_signature.hpp"
 #include "serac/numerics/functional/differentiate_wrt.hpp"
 
-#include <RAJA/index/RangeSegment.hpp>
-#include <RAJA/RAJA.hpp>
-#include <RAJA/pattern/launch/launch_core.hpp>
-#include <RAJA/policy/sequential/policy.hpp>
 #include <array>
 #include <cstdint>
-#include <umpire/ResourceManager.hpp>
 
 namespace {
 #ifdef USE_CUDA

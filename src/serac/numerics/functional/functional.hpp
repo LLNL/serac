@@ -13,10 +13,6 @@
 #pragma once
 
 #include "mfem.hpp"
-#include <RAJA/RAJA.hpp>
-#include <RAJA/index/RangeSegment.hpp>
-#include "umpire/Allocator.hpp"
-#include "umpire/ResourceManager.hpp"
 #include "serac/infrastructure/logger.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/quadrature.hpp"
@@ -30,9 +26,6 @@
 #include "serac/numerics/functional/domain.hpp"
 
 #include <array>
-#include <axom/core/Types.hpp>
-#include <axom/core/memory_management.hpp>
-#include <mfem/fem/geom.hpp>
 #include <vector>
 
 namespace serac {

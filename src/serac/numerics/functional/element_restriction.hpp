@@ -1,6 +1,5 @@
 #pragma once
 
-#include <RAJA/util/macros.hpp>
 #include <vector>
 
 #include "mfem.hpp"
