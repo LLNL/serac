@@ -50,6 +50,11 @@ spack:
       externals:
       - spec: gettext@0.19.8.1
         prefix: /usr
+    elfutils:
+      buildable: false
+      externals:
+      - spec: elfutils@0.186
+        prefix: /usr
     perl:
       buildable: false
       externals:
