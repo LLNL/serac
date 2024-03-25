@@ -573,7 +573,6 @@ private:
       return df_;
     }
 
-  public:
     /// @brief assemble element matrices and form an mfem::HypreParMatrix
     std::unique_ptr<mfem::HypreParMatrix> assemble()
     {
@@ -612,56 +611,36 @@ private:
       }
 
       for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
-        auto K_elem             = element_gradients[type];
-        auto test_restrictions  = form_.G_test_[type].restrictions;
-        auto trial_restrictions = form_.G_trial_[type][which_argument].restrictions;
+        auto& K_elem             = element_gradients[type];
+        auto& test_restrictions  = form_.G_test_[type].restrictions;
+        auto& trial_restrictions = form_.G_trial_[type][which_argument].restrictions;
 
-        for (auto pair : K_elem) {
-          mfem::Geometry::Type geom              = pair.first;
-          auto                 elem_matrices     = pair.second;
-          auto                 test_restriction  = test_restrictions[geom];
-          auto                 trial_restriction = trial_restrictions[geom];
+        if (!K_elem.empty()) {
+          for (auto [geom, elem_matrices] : K_elem) {
+            std::vector<DoF> test_vdofs(test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components);
+            std::vector<DoF> trial_vdofs(trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components);
 
-          // for each element in the domain
-          for (axom::IndexType e = 0; e < elem_matrices.shape()[0]; e++) {
-            auto& rm        = umpire::ResourceManager::getInstance();
-            auto  allocator = rm.getAllocator("HOST");
-#ifdef USE_CUDA
+            for (axom::IndexType e = 0; e < elem_matrices.shape()[0]; e++) {
+              test_restrictions[geom].GetElementVDofs(e, test_vdofs);
+              trial_restrictions[geom].GetElementVDofs(e, trial_vdofs);
 
-            axom::Array<double, 3, axom::MemorySpace::Host> elem_matrices_host(
-                test_restriction.num_elements, trial_restriction.nodes_per_elem * trial_restriction.components,
-                test_restriction.nodes_per_elem * test_restriction.components);
-            elem_matrices_host = elem_matrices;
-#else
-            auto elem_matrices_host = elem_matrices;
-#endif
+              for (uint32_t i = 0; i < uint32_t(elem_matrices.shape()[1]); i++) {
+                int col = int(trial_vdofs[i].index());
 
-            size_t test_vdofs_sz  = test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components;
-            size_t trial_vdofs_sz = trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components;
-            DoF*   test_vdofs     = static_cast<DoF*>(allocator.allocate(test_vdofs_sz * sizeof(DoF)));
-            DoF*   trial_vdofs    = static_cast<DoF*>(allocator.allocate(trial_vdofs_sz * sizeof(DoF)));
-            test_restriction.GetElementVDofs(e, test_vdofs);
-            trial_restriction.GetElementVDofs(e, trial_vdofs);
+                for (uint32_t j = 0; j < uint32_t(elem_matrices.shape()[2]); j++) {
+                  int row = int(test_vdofs[j].index());
 
-            for (uint32_t i = 0; i < uint32_t(elem_matrices.shape()[1]); i++) {
-              int col = int(trial_vdofs[i].index());
+                  int sign = test_vdofs[j].sign() * trial_vdofs[i].sign();
 
-              for (uint32_t j = 0; j < uint32_t(elem_matrices.shape()[2]); j++) {
-                int row = int(test_vdofs[j].index());
-
-                int sign = test_vdofs[j].sign() * trial_vdofs[i].sign();
-
-                // note: col / row appear backwards here, because the element matrix kernel
-                //       is actually transposed, as a result of being row-major storage.
-                //
-                //       This is kind of confusing, and will be fixed in a future refactor
-                //       of the element gradient kernel implementation
-                [[maybe_unused]] auto nz = lookup_tables(row, col);
-                values[lookup_tables(row, col)] += sign * elem_matrices_host(e, i, j);
+                  // note: col / row appear backwards here, because the element matrix kernel
+                  //       is actually transposed, as a result of being row-major storage.
+                  //
+                  //       This is kind of confusing, and will be fixed in a future refactor
+                  //       of the element gradient kernel implementation
+                  values[lookup_tables(row, col)] += sign * elem_matrices(e, i, j);
+                }
               }
             }
-            allocator.deallocate(test_vdofs);
-            allocator.deallocate(trial_vdofs);
           }
         }
       }
