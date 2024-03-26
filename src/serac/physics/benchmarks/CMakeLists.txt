@@ -11,3 +11,9 @@ blt_add_executable(NAME benchmark_thermal
                    DEPENDS_ON ${benchmark_dependencies}
                    OUTPUT_DIR ${PROJECT_BINARY_DIR}/benchmarks
                    FOLDER serac/benchmarks)
+
+blt_add_executable(NAME benchmark_functional
+                   SOURCES benchmark_functional.cpp
+                   DEPENDS_ON ${benchmark_dependencies}
+                   OUTPUT_DIR ${PROJECT_BINARY_DIR}/benchmarks
+                   FOLDER serac/benchmarks)

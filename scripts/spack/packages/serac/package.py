@@ -57,8 +57,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     variant("profiling", default=False, 
             description="Build with hooks for Adiak/Caliper performance analysis")
 
-    variant("petsc", default=False,
-            description="Enable PETSC")
+    variant("petsc", default=True,
+            description="Enable PETSc support")
     variant("netcdf", default=True,
            description="Enable Cubit/Genesis reader")
     variant("sundials", default=True,
@@ -84,7 +84,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     # Devtool dependencies these need to match serac_devtools/package.py
     depends_on("cppcheck", when="+devtools")
     depends_on("doxygen", when="+devtools")
-    depends_on("llvm+clang@10.0.0", when="+devtools")
+    depends_on("llvm+clang@14", when="+devtools")
     depends_on("python", when="+devtools")
     depends_on("py-sphinx", when="+devtools")
     depends_on("py-ats", when="+devtools")

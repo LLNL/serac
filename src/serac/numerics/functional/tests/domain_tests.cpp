@@ -310,7 +310,7 @@ TEST(domain, of_elements)
     constexpr int dim  = 2;
     auto          mesh = import_mesh("patch2D_tris_and_quads.mesh");
     Domain        d0   = Domain::ofElements(
-        mesh, std::function([](std::vector<vec2> vertices, int /* attr */) { return average(vertices)[0] < 0.45; }));
+                 mesh, std::function([](std::vector<vec2> vertices, int /* attr */) { return average(vertices)[0] < 0.45; }));
     EXPECT_EQ(d0.tri_ids_.size(), 1);
     EXPECT_EQ(d0.quad_ids_.size(), 1);
     EXPECT_EQ(d0.dim_, 2);
