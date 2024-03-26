@@ -581,8 +581,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
     endforeach()
 
-    # When MFEM and Strumpack, MFEM adds the fortran mpi library
-    # but in some cases Spack cannot determine
+    # When both MFEM and Strumpack are on, MFEM adds the Fortran
+    # MPI library/directory but in some cases Spack cannot determine
     # the correct MPI lib directory. This guards against that.
     # https://github.com/spack/spack/issues/24685
     if(STRUMPACK_DIR)
