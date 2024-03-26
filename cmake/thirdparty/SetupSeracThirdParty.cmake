@@ -581,17 +581,23 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
     endforeach()
 
-    set(_mfem_targets
-        mfem
-        axom::mfem
-        tribol::mfem)
-    foreach(_target ${_mfem_targets})
-        if(TARGET ${_target})
-            message(STATUS "Adding mpi link directory to target [${_target}]")
-            list(GET MPI_C_LIBRARIES 0 _first_mpi_lib)
-            get_filename_component(_mpi_lib_dir ${_first_mpi_lib} DIRECTORY)
-            target_link_directories(${_target} INTERFACE ${_mpi_lib_dir})
-            target_link_libraries(${_target} INTERFACE mpi)
-        endif()
-    endforeach()
+    # When MFEM and Strumpack, MFEM adds the fortran mpi library
+    # but in some cases Spack cannot determine
+    # the correct MPI lib directory. This guards against that.
+    # https://github.com/spack/spack/issues/24685
+    if(STRUMPACK_DIR)
+        list(GET MPI_C_LIBRARIES 0 _first_mpi_lib)
+        get_filename_component(_mpi_lib_dir ${_first_mpi_lib} DIRECTORY)
+    
+        set(_mfem_targets
+            mfem
+            axom::mfem
+            tribol::mfem)
+        foreach(_target ${_mfem_targets})
+            if(TARGET ${_target})
+                message(STATUS "Adding MPI link directory to target [${_target}]")
+                target_link_directories(${_target} BEFORE INTERFACE ${_mpi_lib_dir})
+            endif()
+        endforeach()
+    endif()
 endif()
