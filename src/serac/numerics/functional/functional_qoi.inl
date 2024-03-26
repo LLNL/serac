@@ -379,6 +379,7 @@ public:
   template <typename... T>
   auto operator()(double t, const T&... args)
   {
+    // below we add 0 so the number of differentiated arguments defaults to 0 if trial spaces are not provided
     constexpr int num_differentiated_arguments = (std::is_same_v<T, differentiate_wrt_this> + ... + 0);
     static_assert(num_differentiated_arguments <= 1,
                   "Error: Functional::operator() can only differentiate w.r.t. 1 argument a time");
