@@ -7,6 +7,7 @@
 
 #include <array>
 
+#include "serac/serac_config.hpp"
 #include "serac/numerics/functional/quadrature_data.hpp"
 #include "serac/numerics/functional/differentiate_wrt.hpp"
 
@@ -207,7 +208,7 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
   rm.memset(interpolate_result, 0);
 
   auto e_range = RAJA::TypedRangeSegment<uint32_t>(0, num_elements);
-#if defined(USE_CUDA)
+#ifdef USE_CUDA
   using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
   using teams_e                    = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
   using launch_policy              = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
@@ -356,7 +357,7 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
 #endif
   rm.memset(qf_inputs, 0);
 
-#if defined(USE_CUDA)
+#ifdef USE_CUDA
   using teams_e       = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
   using launch_policy = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
 #else
@@ -417,7 +418,7 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, d
   RAJA::TypedRangeSegment<size_t>          elements_range(0, num_elements);
   constexpr int                            nquad = num_quadrature_points(g, Q);
   constexpr TensorProductQuadratureRule<Q> rule{};
-#if defined(USE_CUDA)
+#ifdef USE_CUDA
   using teams_e       = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
   using launch_policy = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
 #else

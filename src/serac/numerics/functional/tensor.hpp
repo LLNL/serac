@@ -29,6 +29,7 @@
  */
 #define BLOCK_Z 4
 
+#include "serac/serac_config.hpp"
 #include "serac/infrastructure/accelerator.hpp"
 
 #include "detail/metaprogramming.hpp"
@@ -1450,21 +1451,21 @@ SERAC_DEVICE void contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B
 }
 
 template <int l1, int l2, typename T, int p, int q>
-SERAC_DEVICE void contract(const zero&, const tensor<T, p, q>&, zero*, int, int, int, bool accumulate = false)
+SERAC_DEVICE void contract(const zero&, const tensor<T, p, q>&, zero*, int, int, int, [[maybe_unused]] bool accumulate = false)
 {
   return;
 }
 
 template <int l1, int l2, typename S, typename T, int p, int q, int n0, int n1, int n2>
 SERAC_DEVICE void contract(const zero&, const tensor<T, p, q>&, tensor<S, n0, n1, n2>*, int, int, int,
-                           bool accumulate = false)
+                           [[maybe_unused]] bool accumulate = false)
 {
   return;
 }
 
 template <int l1, int l2, typename S, int m, typename T, int p, int q, int... n>
 SERAC_DEVICE void contract(const tensor<S, m, n...>&, const tensor<T, p, q>&, zero*, int, int, int,
-                           bool accumulate = false)
+                           [[maybe_unused]] bool accumulate = false)
 {
   return;
 }

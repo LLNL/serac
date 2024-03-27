@@ -1,5 +1,3 @@
-#define USE_CUDA
-
 // Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
@@ -18,6 +16,10 @@
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
+
+#ifndef USE_CUDA
+  #error "This test requires CUDA support"
+#endif
 
 using namespace serac;
 
@@ -156,22 +158,22 @@ TEST(L2, 2DCubic) { functional_test(*mesh2D, L2<3>{}, L2<3>{}, Dimension<2>{}); 
 TEST(L2, 3DCubic) { functional_test(*mesh3D, L2<3>{}, L2<3>{}, Dimension<3>{}); }
 
 // TEST(L2, 2DMixed)
-{
-  constexpr int dim = 2;
-  using test_space  = L2<0>;
-  using trial_space = H1<1, dim>;
+// {
+//   constexpr int dim = 2;
+//   using test_space  = L2<0>;
+//   using trial_space = H1<1, dim>;
 
-  auto                        L2fec = mfem::L2_FECollection(0, dim, mfem::BasisType::GaussLobatto);
-  mfem::ParFiniteElementSpace L2fespace(mesh2D.get(), &L2fec);
+//   auto                        L2fec = mfem::L2_FECollection(0, dim, mfem::BasisType::GaussLobatto);
+//   mfem::ParFiniteElementSpace L2fespace(mesh2D.get(), &L2fec);
 
-  auto                        H1fec = mfem::H1_FECollection(1, dim);
-  mfem::ParFiniteElementSpace H1fespace(mesh2D.get(), &H1fec, dim);
+//   auto                        H1fec = mfem::H1_FECollection(1, dim);
+//   mfem::ParFiniteElementSpace H1fespace(mesh2D.get(), &H1fec, dim);
 
-  serac::Functional<test_space(trial_space)> f(&L2fespace, {&H1fespace});
+//   serac::Functional<test_space(trial_space)> f(&L2fespace, {&H1fespace});
 
-  TestThermalModelTwo test;
-  f.AddDomainIntegral(serac::Dimension<dim>{}, serac::DependsOn<0>{}, test, *mesh2D);
-}
+//   TestThermalModelTwo test;
+//   f.AddDomainIntegral(serac::Dimension<dim>{}, serac::DependsOn<0>{}, test, *mesh2D);
+// }
 
 int main(int argc, char* argv[])
 {

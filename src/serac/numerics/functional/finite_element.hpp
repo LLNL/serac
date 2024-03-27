@@ -12,6 +12,7 @@
  */
 #pragma once
 
+#include "serac/serac_config.hpp"
 #include "tuple.hpp"
 #include "tensor.hpp"
 #include "geometry.hpp"

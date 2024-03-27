@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 #pragma once
 
+#include "serac/serac_config.hpp"
 #include "serac/infrastructure/accelerator.hpp"
 #include "serac/numerics/functional/quadrature_data.hpp"
 #include "serac/numerics/functional/function_signature.hpp"
@@ -224,7 +225,7 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
   rm.memset(interpolate_result, 0);
 
   auto e_range = RAJA::TypedRangeSegment<uint32_t>(0, num_elements);
-#if defined(USE_CUDA)
+#ifdef USE_CUDA
   using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
   using teams_e                    = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
   using launch_policy              = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
@@ -407,7 +408,7 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
 #endif
   rm.memset(qf_inputs, 0);
 
-#if defined(USE_CUDA)
+#ifdef USE_CUDA
   using teams_e       = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
   using launch_policy = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
 #else
@@ -455,7 +456,7 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
  * @param[in] num_elements The number of elements in the mesh
  */
 template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type>
-#if defined(USE_CUDA)
+#ifdef USE_CUDA
 void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::GPU> dK,
 #else
 void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
@@ -472,18 +473,16 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
   RAJA::TypedRangeSegment<size_t>          elements_range(0, num_elements);
   constexpr int                            nquad = num_quadrature_points(g, Q);
   constexpr TensorProductQuadratureRule<Q> rule{};
-#if defined(USE_CUDA)
+#ifdef USE_CUDA
   using teams_e       = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
   using launch_policy = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
   using teams_e = RAJA::LoopPolicy<RAJA::seq_exec>;
   using launch_policy = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
-#endif
-#ifdef USE_CUDA
-  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
-#else
   using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
 #endif
+
   // for each element in the domain
   RAJA::launch<launch_policy>(
       RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_SZ)),
@@ -545,14 +544,14 @@ std::function<void(const double*, double*)> jacobian_vector_product_kernel(
 }
 
 template <int wrt, int Q, mfem::Geometry::Type geom, typename signature, typename derivative_type>
-#if defined(USE_CUDA)
+#ifdef USE_CUDA
 std::function<void(ExecArrayView<double, 3, ExecutionSpace::GPU>)> element_gradient_kernel(
 #else
 std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)> element_gradient_kernel(
 #endif
     signature, std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {
-#if defined(USE_CUDA)
+#ifdef USE_CUDA
   return [=](ExecArrayView<double, 3, ExecutionSpace::GPU> K_elem) {
 #else
   return [=](ExecArrayView<double, 3, ExecutionSpace::CPU> K_elem) {

@@ -13,6 +13,7 @@
 
 #include <utility>
 
+#include "serac/serac_config.hpp"
 #include "serac/infrastructure/accelerator.hpp"
 
 namespace serac {

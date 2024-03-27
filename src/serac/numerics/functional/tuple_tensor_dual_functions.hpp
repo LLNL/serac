@@ -1,5 +1,12 @@
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)
+
 #pragma once
 
+#include "serac/serac_config.hpp"
 #include "serac/numerics/functional/tuple.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/dual.hpp"
@@ -244,24 +251,19 @@ template <bool dualify, typename T, int n>
 SERAC_HOST_DEVICE void promote_each_to_dual_when(const tensor<T, n>& x, void* output_ptr,
                                                  RAJA::LaunchContext ctx = RAJA::LaunchContext{})
 {
-  if constexpr (dualify) {
 #ifdef USE_CUDA
-    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
-    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
 #endif
 
+  if constexpr (dualify) {
     RAJA::RangeSegment x_range(0, n);
     using return_type      = decltype(make_dual(T{}));
     auto casted_output_ptr = static_cast<tensor<return_type, n>*>(output_ptr);
     RAJA::loop<threads_x>(ctx, x_range, [&](int i) { (*casted_output_ptr)[i] = make_dual(x[i]); });
   }
   if constexpr (!dualify) {
-#ifdef USE_CUDA
-    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
-#else
-    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
-#endif
     RAJA::RangeSegment x_range(0, n);
     auto               casted_output_ptr = static_cast<tensor<T, n>*>(output_ptr);
     RAJA::loop<threads_x>(ctx, x_range, [&](int i) { (*casted_output_ptr)[i] = x[i]; });

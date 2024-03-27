@@ -102,7 +102,7 @@ void weird_mixed_test(std::unique_ptr<mfem::ParMesh>& mesh)
   // terms that have the appropriate shapes to ensure that all the differentiation
   // code works as intended
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, MixedModelOne<dim>{}, *mesh);
-#if not defined USE_CUDA
+#ifndef USE_CUDA
   residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, MixedModelTwo<dim>{}, *mesh);
 #endif
   double t = 0.0;
@@ -134,7 +134,7 @@ void elasticity_test(std::unique_ptr<mfem::ParMesh>& mesh)
   // terms that have the appropriate shapes to ensure that all the differentiation
   // code works as intended
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, ElasticityTestModelOne<dim>{}, *mesh);
-#if not defined USE_CUDA
+#ifndef USE_CUDA
   residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, ElasticityTestModelTwo<dim>{}, *mesh);
 #endif
   double t = 0.0;
@@ -164,7 +164,7 @@ void test_suite(std::string meshfile)
 
 TEST(VectorValuedH1, test_suite_hexes) { test_suite("/data/meshes/patch3D_hexes.mesh"); }
 
-#if not defined USE_CUDA
+#ifndef USE_CUDA
 TEST(VectorValuedH1, test_suite_tris) { test_suite("/data/meshes/patch2D_tris.mesh"); }
 TEST(VectorValuedH1, test_suite_quads) { test_suite("/data/meshes/patch2D_quads.mesh"); }
 TEST(VectorValuedH1, test_suite_tris_and_quads) { test_suite("/data/meshes/patch2D_tris_and_quads.mesh"); }
