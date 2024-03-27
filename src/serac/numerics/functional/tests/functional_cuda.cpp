@@ -18,7 +18,7 @@
 #include "serac/numerics/functional/tensor.hpp"
 
 #ifndef USE_CUDA
-  #error "This test requires CUDA support"
+#error "This test requires CUDA support"
 #endif
 
 using namespace serac;

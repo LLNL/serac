@@ -1451,7 +1451,8 @@ SERAC_DEVICE void contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B
 }
 
 template <int l1, int l2, typename T, int p, int q>
-SERAC_DEVICE void contract(const zero&, const tensor<T, p, q>&, zero*, int, int, int, [[maybe_unused]] bool accumulate = false)
+SERAC_DEVICE void contract(const zero&, const tensor<T, p, q>&, zero*, int, int, int,
+                           [[maybe_unused]] bool accumulate = false)
 {
   return;
 }

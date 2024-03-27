@@ -474,8 +474,8 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
   constexpr int                            nquad = num_quadrature_points(g, Q);
   constexpr TensorProductQuadratureRule<Q> rule{};
 #ifdef USE_CUDA
-  using teams_e       = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
-  using launch_policy = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
+  using teams_e                    = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
+  using launch_policy              = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
   using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 #else
   using teams_e = RAJA::LoopPolicy<RAJA::seq_exec>;
