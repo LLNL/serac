@@ -162,7 +162,6 @@ macro(serac_add_tests)
                            FOLDER      serac/tests )
 
         if (DEFINED arg_USE_CUDA)
-            target_compile_definitions(${test_name} PUBLIC ENABLE_CUDA)
             target_compile_definitions(${test_name} PUBLIC USE_CUDA)
         endif()
 
