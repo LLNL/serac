@@ -292,18 +292,16 @@ spack:
 
     # Globally lock version of third party libraries
     axom:
-      require: "@0.8.1.6"
-    blt:
-      require: "@0.5.3.1"
+      require: "@0.9.0.1"
     camp:
-      require: "@2023.06.0.1"
+      require: "@2024.02.0"
     conduit:
-      require: "@0.8.8~shared~test~examples~utilities"
+      require: "@0.9.1~shared~test~examples~utilities"
     hdf5:
       variants: ~shared~mpi
+    mfem:
+      require: "@4.6.2.1"
     raja:
-      require: "@2023.06.1.2~shared~examples~exercises"
-    tribol:
-      require: "@0.1.0.13"
+      require: "@2024.02.0~shared~examples~exercises"
     umpire:
-      require: "@2023.06.0.3~shared~examples"
+      require: "@2024.02.0~shared~examples"

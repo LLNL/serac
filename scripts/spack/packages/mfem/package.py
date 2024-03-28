@@ -8,7 +8,10 @@ from spack.pkg.builtin.mfem import Mfem as BuiltinMfem
 
 class Mfem(BuiltinMfem):
 
-    version("4.6.2-rc0", commit="79b609872ab4cef720adac2f820792fe09c87065")
+    # Note: Make sure this sha coincides with the git submodule
+    # Note: We add a number to the end of the real version number to indicate that we have
+    #  moved forward past the release. Increment the last number when updating the commit sha.
+    version("4.6.2.1", commit="bcdf7cc6483b04f4cca67fdce1df90bd61ae4ff2")
 
     variant('asan', default=False, description='Add Address Sanitizer flags')
 
