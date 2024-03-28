@@ -5,15 +5,37 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 #pragma once
 
+#include "serac/serac_config.hpp"
 #include "serac/infrastructure/accelerator.hpp"
 #include "serac/numerics/functional/quadrature_data.hpp"
 #include "serac/numerics/functional/function_signature.hpp"
 #include "serac/numerics/functional/differentiate_wrt.hpp"
 
-#include <RAJA/index/RangeSegment.hpp>
-#include <RAJA/RAJA.hpp>
 #include <array>
 #include <cstdint>
+
+namespace {
+#ifdef USE_CUDA
+#include <cuda_runtime.h>
+void printCUDAMemUsage()
+{
+  int deviceCount = 0;
+  cudaGetDeviceCount(&deviceCount);
+  int i = 0;
+  cudaSetDevice(i);
+
+  size_t freeBytes, totalBytes;
+  cudaMemGetInfo(&freeBytes, &totalBytes);
+  size_t usedBytes = totalBytes - freeBytes;
+
+  std::cout << "Device Number: " << i << std::endl;
+  std::cout << " Total Memory (MB): " << (totalBytes / 1024.0 / 1024.0) << std::endl;
+  std::cout << " Free Memory (MB): " << (freeBytes / 1024.0 / 1024.0) << std::endl;
+  std::cout << " Used Memory (MB): " << (usedBytes / 1024.0 / 1024.0) << std::endl;
+}
+#endif
+
+}  // namespace
 
 namespace serac {
 
@@ -27,41 +49,41 @@ namespace domain_integral {
  * trial space
  */
 template <typename space, typename dimension>
-SERAC_HOST_DEVICE struct QFunctionArgument;
+struct QFunctionArgument;
 
 /// @overload
 template <int p, int dim>
-SERAC_HOST_DEVICE struct QFunctionArgument<H1<p, 1>, Dimension<dim> > {
-  using type = tuple<double, tensor<double, dim> >;  ///< what will be passed to the q-function
+struct QFunctionArgument<H1<p, 1>, Dimension<dim>> {
+  using type = tuple<double, tensor<double, dim>>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p, int c, int dim>
-SERAC_HOST_DEVICE struct QFunctionArgument<H1<p, c>, Dimension<dim> > {
-  using type = tuple<tensor<double, c>, tensor<double, c, dim> >;  ///< what will be passed to the q-function
+struct QFunctionArgument<H1<p, c>, Dimension<dim>> {
+  using type = tuple<tensor<double, c>, tensor<double, c, dim>>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p, int dim>
-SERAC_HOST_DEVICE struct QFunctionArgument<L2<p, 1>, Dimension<dim> > {
-  using type = tuple<double, tensor<double, dim> >;  ///< what will be passed to the q-function
+struct QFunctionArgument<L2<p, 1>, Dimension<dim>> {
+  using type = tuple<double, tensor<double, dim>>;  ///< what will be passed to the q-function
 };
 /// @overload
 template <int p, int c, int dim>
-SERAC_HOST_DEVICE struct QFunctionArgument<L2<p, c>, Dimension<dim> > {
-  using type = tuple<tensor<double, c>, tensor<double, c, dim> >;  ///< what will be passed to the q-function
+struct QFunctionArgument<L2<p, c>, Dimension<dim>> {
+  using type = tuple<tensor<double, c>, tensor<double, c, dim>>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p>
-SERAC_HOST_DEVICE struct QFunctionArgument<Hcurl<p>, Dimension<2> > {
+struct QFunctionArgument<Hcurl<p>, Dimension<2>> {
   using type = tuple<tensor<double, 2>, double>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p>
-SERAC_HOST_DEVICE struct QFunctionArgument<Hcurl<p>, Dimension<3> > {
-  using type = tuple<tensor<double, 3>, tensor<double, 3> >;  ///< what will be passed to the q-function
+struct QFunctionArgument<Hcurl<p>, Dimension<3>> {
+  using type = tuple<tensor<double, 3>, tensor<double, 3>>;  ///< what will be passed to the q-function
 };
 
 /// @brief layer of indirection needed to unpack the entries of the argument tuple
@@ -97,32 +119,45 @@ SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, double t, coords_type&& x_q, qpt_da
 template <int i, int dim, typename... trials, typename lambda, typename qpt_data_type>
 auto get_derivative_type(lambda qf, qpt_data_type&& qpt_data)
 {
-  using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim> >::type...>;
+  using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim>>::type...>;
   return get_gradient(apply_qf(qf, double{}, tensor<double, dim>{}, qpt_data, make_dual_wrt<i>(qf_arguments{})));
 };
 
 template <typename lambda, int dim, int n, typename... T>
-SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(lambda qf, double t, const tensor<double, dim, n> x, const T&... inputs)
+SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(lambda qf, double t, const tensor<double, dim, n> x,
+                                               RAJA::LaunchContext ctx, const T&... inputs)
 {
   using return_type = decltype(qf(double{}, tensor<double, dim>{}, T{}[0]...));
+#ifdef USE_CUDA
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+#else
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
+#endif
+  RAJA::RangeSegment     x_range(0, n);
   tensor<return_type, n> outputs{};
-  for (int i = 0; i < n; i++) {
+  RAJA::loop<threads_x>(ctx, x_range, [&](int i) {
     tensor<double, dim> x_q;
     for (int j = 0; j < dim; j++) {
       x_q[j] = x(j, i);
     }
     outputs[i] = qf(t, x_q, inputs[i]...);
-  }
+  });
   return outputs;
 }
 
 template <typename lambda, int dim, int n, typename qpt_data_type, typename... T>
 SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, dim, n> x, qpt_data_type* qpt_data,
-                                      bool update_state, const T&... inputs)
+                                      bool update_state, RAJA::LaunchContext ctx, const T&... inputs)
 {
   using return_type = decltype(qf(double{}, tensor<double, dim>{}, qpt_data[0], T{}[0]...));
+#ifdef USE_CUDA
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+#else
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
+#endif
+  RAJA::RangeSegment     x_range(0, n);
   tensor<return_type, n> outputs{};
-  for (int i = 0; i < n; i++) {
+  RAJA::loop<threads_x>(ctx, x_range, [&](int i) {
     tensor<double, dim> x_q;
     for (int j = 0; j < dim; j++) {
       x_q[j] = x(j, i);
@@ -133,14 +168,14 @@ SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, 
     if (update_state) {
       qpt_data[i] = qdata;
     }
-  }
+  });
   return outputs;
 }
 
-template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, typename test_element,
-          typename trial_element_tuple, typename lambda_type, typename state_type, typename derivative_type,
+template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, typename test_element_type,
+          typename trial_element_tuple_type, typename lambda_type, typename state_type, typename derivative_type,
           int... indices>
-void evaluation_kernel_impl(trial_element_tuple trial_elements, test_element, double t,
+void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_element_type, double t,
                             const std::vector<const double*>& inputs, double* outputs, const double* positions,
                             const double* jacobians, lambda_type qf,
                             [[maybe_unused]] axom::ArrayView<state_type, 2> qf_state,
@@ -149,62 +184,135 @@ void evaluation_kernel_impl(trial_element_tuple trial_elements, test_element, do
 {
   // mfem provides this information as opaque arrays of doubles,
   // so we reinterpret the pointer with
-  auto                           r = reinterpret_cast<typename test_element::dof_type*>(outputs);
-  auto                           x = reinterpret_cast<const typename batched_position<geom, Q>::type*>(positions);
-  auto                           J = reinterpret_cast<const typename batched_jacobian<geom, Q>::type*>(jacobians);
+  using X_Type                     = typename batched_position<geom, Q>::type;
+  using J_Type                     = typename batched_jacobian<geom, Q>::type;
+  auto                           r = reinterpret_cast<typename test_element_type::dof_type*>(outputs);
+  auto                           x = const_cast<X_Type*>(reinterpret_cast<const X_Type*>(positions));
+  auto                           J = const_cast<J_Type*>(reinterpret_cast<const J_Type*>(jacobians));
   TensorProductQuadratureRule<Q> rule{};
 
-  [[maybe_unused]] auto qpts_per_elem = num_quadrature_points(geom, Q);
+  auto qpts_per_elem = num_quadrature_points(geom, Q);
 
   [[maybe_unused]] tuple u = {
       reinterpret_cast<const typename decltype(type<indices>(trial_elements))::dof_type*>(inputs[indices])...};
 
+  using interpolate_out_type = decltype(tuple{get<indices>(trial_elements).template interpolate_output_helper<Q>()...});
+
+  using qf_inputs_type = decltype(tuple{promote_each_to_dual_when_output_helper<indices == differentiation_index>(
+      get<indices>(trial_elements).template interpolate_output_helper<Q>())...});
+
+#ifdef USE_CUDA
+  auto&           rm             = umpire::ResourceManager::getInstance();
+  auto            dest_allocator = rm.getAllocator("DEVICE");
+  qf_inputs_type* qf_inputs =
+      static_cast<qf_inputs_type*>(dest_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
+  interpolate_out_type* interpolate_result =
+      static_cast<interpolate_out_type*>(dest_allocator.allocate(sizeof(interpolate_out_type) * num_elements));
+
+  auto device_r = copy_data(r, serac::size(*r) * sizeof(double), "DEVICE");
+#else
+  auto& rm                         = umpire::ResourceManager::getInstance();
+  auto  host_allocator             = rm.getAllocator("HOST");
+
+  qf_inputs_type* qf_inputs =
+      static_cast<qf_inputs_type*>(host_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
+  interpolate_out_type* interpolate_result =
+      static_cast<interpolate_out_type*>(host_allocator.allocate(sizeof(interpolate_out_type) * num_elements));
+
+  typename test_element_type::dof_type* device_r = r;
+#endif
+  rm.memset(qf_inputs, 0);
+  rm.memset(interpolate_result, 0);
+
+  auto e_range = RAJA::TypedRangeSegment<uint32_t>(0, num_elements);
+#ifdef USE_CUDA
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+  using teams_e                    = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
+  using launch_policy              = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
+#else
+  using threads_x [[maybe_unused]]               = RAJA::LoopPolicy<RAJA::seq_exec>;
+  using teams_e                                  = RAJA::LoopPolicy<RAJA::seq_exec>;
+  using launch_policy                            = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
+#endif
   // for each element in the domain
-  for (uint32_t e = 0; e < num_elements; ++e) {
-    // load the jacobians and positions for each quadrature point in this element
-    auto J_e = J[e];
-    auto x_e = x[e];
+  RAJA::launch<launch_policy>(
+      RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_SZ)),
+      [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
+        RAJA::loop<teams_e>(
+            ctx, e_range,
+            [&ctx, t, J, x, u, trial_elements, qf, qpts_per_elem, rule, device_r, qf_state, elements, qf_derivatives,
+             qf_inputs, interpolate_result, update_state](uint32_t e) {
+              (void)qf_state;
+              (void)qf_derivatives;
+              (void)update_state;
+              (void)qpts_per_elem;
+              (void)trial_elements;
+              (void)qf_inputs;
+              (void)interpolate_result;
+              (void)u;
 
-    //[[maybe_unused]] static constexpr trial_element_tuple trial_element_tuple{};
-    // batch-calculate values / derivatives of each trial space, at each quadrature point
-    [[maybe_unused]] tuple qf_inputs = {promote_each_to_dual_when<indices == differentiation_index>(
-        get<indices>(trial_elements).interpolate(get<indices>(u)[elements[e]], rule))...};
+              [[maybe_unused]] static constexpr trial_element_tuple_type empty_trial_element{};
+              // batch-calculate values / derivatives of each trial space, at each quadrature point
+              (get<indices>(trial_elements)
+                   .interpolate(get<indices>(u)[elements[e]], rule, &get<indices>(interpolate_result[e]), ctx),
+               ...);
+              ctx.teamSync();
 
-    // use J_e to transform values / derivatives on the parent element
-    // to the to the corresponding values / derivatives on the physical element
-    (parent_to_physical<get<indices>(trial_elements).family>(get<indices>(qf_inputs), J_e), ...);
+              (promote_each_to_dual_when<indices == differentiation_index>(get<indices>(interpolate_result[e]),
+                                                                           &get<indices>(qf_inputs[e]), ctx),
+               ...);
+              ctx.teamSync();
 
-    // (batch) evalute the q-function at each quadrature point
-    //
-    // note: the weird immediately-invoked lambda expression is
-    // a workaround for a bug in GCC(<12.0) where it fails to
-    // decide which function overload to use, and crashes
-    auto qf_outputs = [&]() {
-      if constexpr (std::is_same_v<state_type, Nothing>) {
-        return batch_apply_qf_no_qdata(qf, t, x_e, get<indices>(qf_inputs)...);
-      } else {
-        return batch_apply_qf(qf, t, x_e, &qf_state(e, 0), update_state, get<indices>(qf_inputs)...);
-      }
-    }();
+              // use J_e to transform values / derivatives on the parent element
+              // to the to the corresponding values / derivatives on the physical element
+              (parent_to_physical<get<indices>(empty_trial_element).family>(get<indices>(qf_inputs[e]), J, e, ctx),
+               ...);
+              ctx.teamSync();
 
-    // use J to transform sources / fluxes on the physical element
-    // back to the corresponding sources / fluxes on the parent element
-    physical_to_parent<test_element::family>(qf_outputs, J_e);
+              // (batch) evalute the q-function at each quadrature point
+              //
+              // note: the weird immediately-invoked lambda expression is
+              // a workaround for a bug in GCC(<12.0) where it fails to
+              // decide which function overload to use, and crashes
 
-    // write out the q-function derivatives after applying the
-    // physical_to_parent transformation, so that those transformations
-    // won't need to be applied in the action_of_gradient and element_gradient kernels
-    if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
-      for (int q = 0; q < leading_dimension(qf_outputs); q++) {
-        qf_derivatives[e * uint32_t(qpts_per_elem) + uint32_t(q)] = get_gradient(qf_outputs[q]);
-      }
-    }
+              auto qf_outputs = [&]() {
+                if constexpr (std::is_same_v<state_type, Nothing>) {
+                  return batch_apply_qf_no_qdata(qf, t, x[e], ctx, get<indices>(qf_inputs[e])...);
+                } else {
+                  return batch_apply_qf(qf, t, x[e], &qf_state(e, 0), update_state, ctx, get<indices>(qf_inputs[e])...);
+                }
+              }();
+              ctx.teamSync();
 
-    // (batch) integrate the material response against the test-space basis functions
-    test_element::integrate(get_value(qf_outputs), rule, &r[elements[e]]);
-  }
+              // use J to transform sources / fluxes on the physical element
+              // back to the corresponding sources / fluxes on the parent element
+              physical_to_parent<test_element_type::family>(qf_outputs, J, e, ctx);
 
-  return;
+              // write out the q-function derivatives after applying the
+              // physical_to_parent transformation, so that those transformations
+              // won't need to be applied in the action_of_gradient and element_gradient kernels
+              if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
+                RAJA::RangeSegment x_range(0, leading_dimension(qf_outputs));
+                RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
+                  qf_derivatives[e * uint32_t(qpts_per_elem) + uint32_t(q)] = get_gradient(qf_outputs[q]);
+                });
+              }
+              ctx.teamSync();
+
+              // (batch) integrate the material response against the test-space basis functions
+              test_element_type::integrate(get_value(qf_outputs), rule, &device_r[elements[e]], ctx);
+            });
+      });
+
+#ifdef USE_CUDA
+  rm.copy(r, device_r);
+  dest_allocator.deallocate(qf_inputs);
+  dest_allocator.deallocate(interpolate_result);
+  dest_allocator.deallocate(device_r);
+#else
+  host_allocator.deallocate(qf_inputs);
+  host_allocator.deallocate(interpolate_result);
+#endif
 }
 
 //clang-format off
@@ -226,13 +334,18 @@ SERAC_HOST_DEVICE auto chain_rule(const S& dfdx, const T& dx)
 //clang-format on
 
 template <bool is_QOI, typename derivative_type, int n, typename T>
-SERAC_HOST_DEVICE auto batch_apply_chain_rule(derivative_type* qf_derivatives, const tensor<T, n>& inputs)
+SERAC_HOST_DEVICE tensor<decltype(chain_rule<is_QOI>(derivative_type{}, T{})), n> batch_apply_chain_rule(
+    derivative_type* qf_derivatives, const tensor<T, n>& inputs, const RAJA::LaunchContext& ctx)
 {
   using return_type = decltype(chain_rule<is_QOI>(derivative_type{}, T{}));
   tensor<return_type, n> outputs{};
-  for (int i = 0; i < n; i++) {
-    outputs[i] = chain_rule<is_QOI>(qf_derivatives[i], inputs[i]);
-  }
+  RAJA::RangeSegment     i_range(0, n);
+#ifdef USE_CUDA
+  using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+#else
+  using threads_x                = RAJA::LoopPolicy<RAJA::seq_exec>;
+#endif
+  RAJA::loop<threads_x>(ctx, i_range, [&](int i) { outputs[i] = chain_rule<is_QOI>(qf_derivatives[i], inputs[i]); });
   return outputs;
 }
 
@@ -278,17 +391,47 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
   auto                                     dr = reinterpret_cast<typename test_element::dof_type*>(dR);
   constexpr TensorProductQuadratureRule<Q> rule{};
 
+  auto e_range = RAJA::TypedRangeSegment<size_t>(0, num_elements);
+
+  using qf_inputs_type = decltype(trial_element::template interpolate_output_helper<Q>());
+
+#ifdef USE_CUDA
+  auto&           rm             = umpire::ResourceManager::getInstance();
+  auto            dest_allocator = rm.getAllocator("DEVICE");
+  qf_inputs_type* qf_inputs =
+      static_cast<qf_inputs_type*>(dest_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
+#else
+  auto&           rm             = umpire::ResourceManager::getInstance();
+  auto            host_allocator = rm.getAllocator("HOST");
+  qf_inputs_type* qf_inputs =
+      static_cast<qf_inputs_type*>(host_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
+#endif
+  rm.memset(qf_inputs, 0);
+
+#ifdef USE_CUDA
+  using teams_e       = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
+  using launch_policy = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
+#else
+  using teams_e       = RAJA::LoopPolicy<RAJA::seq_exec>;
+  using launch_policy = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
+#endif
   // for each element in the domain
-  for (uint32_t e = 0; e < num_elements; e++) {
-    // (batch) interpolate each quadrature point's value
-    auto qf_inputs = trial_element::interpolate(du[elements[e]], rule);
+  RAJA::launch<launch_policy>(
+      RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_X, BLOCK_Y, BLOCK_Z)),
+      [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
+        RAJA::loop<teams_e>(ctx, e_range, [du, rule, &ctx, qf_inputs, elements, qf_derivatives, dr, num_qpts](int e) {
+          (void)num_qpts;
+          // (batch) interpolate each quadrature point's value
+          trial_element::interpolate(du[elements[e]], rule, qf_inputs, ctx);
 
-    // (batch) evalute the q-function at each quadrature point
-    auto qf_outputs = batch_apply_chain_rule<is_QOI>(qf_derivatives + e * num_qpts, qf_inputs);
+          // RAJA_TEAM_SHARED decltype(batch_apply_chain_rule<is_QOI>(qf_derivatives + e * num_qpts, *qf_inputs, ctx))
+          // qf_outputs;
+          auto qf_outputs = batch_apply_chain_rule<is_QOI>(qf_derivatives + e * num_qpts, *qf_inputs, ctx);
 
-    // (batch) integrate the material response against the test-space basis functions
-    test_element::integrate(qf_outputs, rule, &dr[elements[e]]);
-  }
+          test_element::integrate(qf_outputs, rule, &dr[elements[e]], ctx);
+        });
+      });
+  rm.deallocate(qf_inputs);
 }
 
 /**
@@ -313,8 +456,12 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
  * @param[in] num_elements The number of elements in the mesh
  */
 template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type>
-void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, derivatives_type* qf_derivatives,
-                             const int* elements, std::size_t num_elements)
+#ifdef USE_CUDA
+void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::GPU> dK,
+#else
+void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
+#endif
+                             derivatives_type* qf_derivatives, const int* elements, std::size_t num_elements)
 {
   // quantities of interest have no flux term, so we pad the derivative
   // tuple with a "zero" type in the second position to treat it like the standard case
@@ -323,42 +470,64 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, d
 
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
-
-  constexpr int nquad = num_quadrature_points(g, Q);
-
-  static constexpr TensorProductQuadratureRule<Q> rule{};
+  RAJA::TypedRangeSegment<size_t>          elements_range(0, num_elements);
+  constexpr int                            nquad = num_quadrature_points(g, Q);
+  constexpr TensorProductQuadratureRule<Q> rule{};
+#ifdef USE_CUDA
+  using teams_e                    = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
+  using launch_policy              = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+#else
+  using teams_e = RAJA::LoopPolicy<RAJA::seq_exec>;
+  using launch_policy = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
+#endif
 
   // for each element in the domain
-  for (uint32_t e = 0; e < num_elements; e++) {
-    auto* output_ptr = reinterpret_cast<typename test_element::dof_type*>(&dK(elements[e], 0, 0));
+  RAJA::launch<launch_policy>(
+      RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_SZ)),
+      [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
+        RAJA::loop<teams_e>(ctx, elements_range, [&ctx, dK, elements, qf_derivatives, nquad, rule](uint32_t e) {
+          (void)nquad;
 
-    tensor<padded_derivative_type, nquad> derivatives{};
-    for (int q = 0; q < nquad; q++) {
-      if constexpr (is_QOI) {
-        get<0>(derivatives(q)) = qf_derivatives[e * nquad + uint32_t(q)];
-      } else {
-        derivatives(q) = qf_derivatives[e * nquad + uint32_t(q)];
-      }
-    }
+          static constexpr bool  is_QOI_2 = test::family == Family::QOI;
+          [[maybe_unused]] auto* output_ptr =
+              reinterpret_cast<typename test_element::dof_type*>(&dK(elements[e], 0, 0));
 
-    for (int J = 0; J < trial_element::ndof; J++) {
-      auto source_and_flux = trial_element::batch_apply_shape_fn(J, derivatives, rule);
-      test_element::integrate(source_and_flux, rule, output_ptr + J, trial_element::ndof);
-    }
-  }
+          tensor<padded_derivative_type, nquad> derivatives{};
+          RAJA::RangeSegment                    x_range(0, nquad);
+          RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
+            if constexpr (is_QOI_2) {
+              get<0>(derivatives(q)) = qf_derivatives[e * nquad + uint32_t(q)];
+            } else {
+              derivatives(q) = qf_derivatives[e * nquad + uint32_t(q)];
+            }
+          });
+
+          ctx.teamSync();
+
+          for (int J = 0; J < trial_element::ndof; ++J) {
+            RAJA_TEAM_SHARED decltype(trial_element::batch_apply_shape_fn(J, derivatives, rule, ctx)) source_and_flux;
+            source_and_flux = trial_element::batch_apply_shape_fn(J, derivatives, rule, ctx);
+            test_element::integrate(source_and_flux, rule, output_ptr + J, ctx, trial_element::ndof);
+          }
+
+          ctx.teamSync();
+        });
+      });
 }
 
 template <uint32_t wrt, int Q, mfem::Geometry::Type geom, typename signature, typename lambda_type, typename state_type,
           typename derivative_type>
 auto evaluation_kernel(signature s, lambda_type qf, const double* positions, const double* jacobians,
-                       std::shared_ptr<QuadratureData<state_type> > qf_state,
+                       std::shared_ptr<QuadratureData<state_type>> qf_state,
                        std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {
-  auto trial_elements = trial_elements_tuple<geom>(s);
-  auto test_element   = get_test_element<geom>(s);
+  auto trial_element_tuple = trial_elements_tuple<geom>(s);
+  auto test_element        = get_test_element<geom>(s);
   return [=](double time, const std::vector<const double*>& inputs, double* outputs, bool update_state) {
     domain_integral::evaluation_kernel_impl<wrt, Q, geom>(
-        trial_elements, test_element, time, inputs, outputs, positions, jacobians, qf, (*qf_state)[geom],
+        trial_element_tuple, test_element, time, inputs, outputs, positions, jacobians, qf, (*qf_state)[geom],
         qf_derivatives.get(), elements, num_elements, update_state, s.index_seq);
   };
 }
@@ -375,10 +544,18 @@ std::function<void(const double*, double*)> jacobian_vector_product_kernel(
 }
 
 template <int wrt, int Q, mfem::Geometry::Type geom, typename signature, typename derivative_type>
+#ifdef USE_CUDA
+std::function<void(ExecArrayView<double, 3, ExecutionSpace::GPU>)> element_gradient_kernel(
+#else
 std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)> element_gradient_kernel(
+#endif
     signature, std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {
+#ifdef USE_CUDA
+  return [=](ExecArrayView<double, 3, ExecutionSpace::GPU> K_elem) {
+#else
   return [=](ExecArrayView<double, 3, ExecutionSpace::CPU> K_elem) {
+#endif
     using test_space  = typename signature::return_type;
     using trial_space = typename std::tuple_element<wrt, typename signature::parameter_types>::type;
     element_gradient_kernel<geom, test_space, trial_space, Q>(K_elem, qf_derivatives.get(), elements, num_elements);

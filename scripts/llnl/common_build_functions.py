@@ -256,7 +256,7 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
     log_file =  pjoin(build_dir,"output.log.make.txt")
     print("[starting build]")
     print("[log file: %s]" % log_file)
-    cmd = "cd {0} && make -j 8 VERBOSE=1 | tee {1}".format(build_dir, log_file)
+    cmd = "cd {0} && make -j 2 VERBOSE=1 | tee {1}".format(build_dir, log_file)
     res = sexe(cmd, echo=True)
 
     if res != 0:

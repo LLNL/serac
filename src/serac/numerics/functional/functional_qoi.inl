@@ -65,7 +65,7 @@ class Functional<double(trials...), exec> {
   class Gradient;
 
   // clang-format off
-  template <uint32_t i> 
+  template <uint32_t i>
   struct operator_paren_return {
     using type = typename std::conditional<
         i == NO_DIFFERENTIATION,          // if `i` is greater than or equal to zero,

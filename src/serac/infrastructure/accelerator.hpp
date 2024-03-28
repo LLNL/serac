@@ -88,6 +88,13 @@ struct execution_to_memory {
   static constexpr axom::MemorySpace value = axom::MemorySpace::Dynamic;
 };
 
+/// @brief This helper is needed to suppress -Werror compilation errors caused by the
+/// explicit captures in the main execution lambdas.
+template <typename... T>
+SERAC_HOST_DEVICE void suppress_unused_capture_warnings(T...)
+{
+}
+
 #ifdef SERAC_USE_UMPIRE
 /// @overload
 template <>

@@ -1,3 +1,10 @@
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)
+
+#include "serac/serac_config.hpp"
 #include "serac/numerics/functional/element_restriction.hpp"
 
 #include "mfem.hpp"
@@ -213,8 +220,12 @@ std::vector<Array2D<int> > geom_local_face_dofs(int p)
   return output;
 }
 
+#ifdef USE_CUDA
+axom::Array<DoF, 2, axom::MemorySpace::Device> GetElementRestriction(const mfem::FiniteElementSpace* fes,
+#else
 axom::Array<DoF, 2, axom::MemorySpace::Host> GetElementRestriction(const mfem::FiniteElementSpace* fes,
-                                                                   mfem::Geometry::Type            geom)
+#endif
+                                                                     mfem::Geometry::Type geom)
 {
   std::vector<DoF> elem_dofs{};
   mfem::Mesh*      mesh = fes->GetMesh();
@@ -432,6 +443,15 @@ DoF ElementRestriction::GetVDof(DoF node, uint64_t component) const
 }
 
 void ElementRestriction::GetElementVDofs(int i, std::vector<DoF>& vdofs) const
+{
+  for (uint64_t c = 0; c < components; c++) {
+    for (uint64_t j = 0; j < nodes_per_elem; j++) {
+      vdofs[c * nodes_per_elem + j] = GetVDof(dof_info(i, j), c);
+    }
+  }
+}
+
+void ElementRestriction::GetElementVDofs(int i, DoF* vdofs) const
 {
   for (uint64_t c = 0; c < components; c++) {
     for (uint64_t j = 0; j < nodes_per_elem; j++) {

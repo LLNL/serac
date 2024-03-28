@@ -76,6 +76,7 @@ struct DoF {
   uint64_t orientation() const { return ((bits & orientation_mask) >> orientation_shift); }
 
   /// get the index field of this `DoF`
+
   uint64_t index() const { return (bits & index_mask); }
 };
 
@@ -167,7 +168,17 @@ struct ElementRestriction {
    */
   void GetElementVDofs(int i, std::vector<DoF>& dofs) const;
 
+  /**
+   * @brief Overload for device code.
+   *
+   * @param i the index of the element
+   * @param vdofs (output) the DoFs associated with element `i`
+   */
+
+  void GetElementVDofs(int i, DoF* vdofs) const;
+
   /// get the dof information for a given node / component
+
   DoF GetVDof(DoF node, uint64_t component) const;
 
   /// "L->E" in mfem parlance, each element gathers the values that belong to it, and stores them in the "E-vector"
@@ -194,8 +205,12 @@ struct ElementRestriction {
   /// the number of nodes in each element
   uint64_t nodes_per_elem;
 
-  /// a 2D array (num_elements-by-nodes_per_elem) holding the dof info extracted from the finite element space
+/// a 2D array (num_elements-by-nodes_per_elem) holding the dof info extracted from the finite element space
+#ifdef USE_CUDA
+  axom::Array<DoF, 2, axom::MemorySpace::Device> dof_info;
+#else
   axom::Array<DoF, 2, axom::MemorySpace::Host> dof_info;
+#endif
 
   /// whether the underlying dofs are arranged "byNodes" or "byVDim"
   mfem::Ordering::Type ordering;

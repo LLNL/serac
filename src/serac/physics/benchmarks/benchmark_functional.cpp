@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
 {
   MPI_Init(&argc, &argv);
 
-  int parallel_refinement = 3;
+  int parallel_refinement = 2;
 
   axom::slic::SimpleLogger logger;
 

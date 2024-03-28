@@ -13,7 +13,6 @@
 #pragma once
 
 #include "mfem.hpp"
-
 #include "serac/infrastructure/logger.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/quadrature.hpp"
@@ -75,8 +74,8 @@ inline void check_for_missing_nodal_gridfunc(const mfem::Mesh& mesh)
   if (mesh.GetNodes() == nullptr) {
     SLIC_ERROR_ROOT(
         R"errmsg(
-      the provided mesh does not have a nodal gridfunction. 
-      If you created an mfem::Mesh manually, make sure that the 
+      the provided mesh does not have a nodal gridfunction.
+      If you created an mfem::Mesh manually, make sure that the
       following member functions are invoked before use
 
       > mfem::Mesh::EnsureNodes();
@@ -199,7 +198,7 @@ class Functional<test(trials...), exec> {
   class Gradient;
 
   // clang-format off
-  template <uint32_t i> 
+  template <uint32_t i>
   struct operator_paren_return {
     using type = typename std::conditional<
         i == NO_DIFFERENTIATION,               // if `i` indicates that we want to skip differentiation
@@ -280,11 +279,17 @@ public:
    * and @a spatial_dim template parameter
    * @param[inout] qdata The data for each quadrature point
    */
-  template <int dim, int... args, typename lambda, typename qpt_data_type = Nothing>
-  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain,
+  template <int dim, int... args, typename Integrand, typename qpt_data_type = Nothing>
+  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, Integrand&& integrand, mfem::Mesh& domain,
                          std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
   {
     if (domain.GetNE() == 0) return;
+
+    // Check that Integrand is not a generic lambda.
+    class DummyArgumentType {};
+    static_assert(!std::is_invocable<Integrand, DummyArgumentType&>::value);
+    static_assert(!std::is_invocable<Integrand, DummyArgumentType*>::value);
+    static_assert(!std::is_invocable<Integrand, DummyArgumentType>::value);
 
     SLIC_ERROR_ROOT_IF(dim != domain.Dimension(), "invalid mesh dimension for domain integral");
 
@@ -310,7 +315,7 @@ public:
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
     integrals_.push_back(
-        MakeDomainIntegral<signature, Q, dim>(domain, integrand, qdata, std::vector<uint32_t>{args...}));
+        MakeDomainIntegral<signature, Q, dim>(std::move(domain), integrand, qdata, std::vector<uint32_t>{args...}));
   }
 
   /**
@@ -322,11 +327,17 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
    */
-  template <int dim, int... args, typename lambda>
-  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
+  template <int dim, int... args, typename Integrand>
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, Integrand&& integrand, mfem::Mesh& domain)
   {
     auto num_bdr_elements = domain.GetNBE();
     if (num_bdr_elements == 0) return;
+
+    // Check that Integrand is not a generic lambda.
+    class DummyArgumentType {};
+    static_assert(!std::is_invocable<Integrand, DummyArgumentType&>::value);
+    static_assert(!std::is_invocable<Integrand, DummyArgumentType*>::value);
+    static_assert(!std::is_invocable<Integrand, DummyArgumentType>::value);
 
     check_for_missing_nodal_gridfunc(domain);
 
@@ -626,7 +637,6 @@ private:
                   //
                   //       This is kind of confusing, and will be fixed in a future refactor
                   //       of the element gradient kernel implementation
-                  [[maybe_unused]] auto nz = lookup_tables(row, col);
                   values[lookup_tables(row, col)] += sign * elem_matrices(e, i, j);
                 }
               }

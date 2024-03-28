@@ -23,7 +23,7 @@ project(serac LANGUAGES CXX C)
 set(ENABLE_MPI ON CACHE BOOL "")
 
 if (NOT MPI_C_COMPILER OR NOT MPI_CXX_COMPILER)
-    message(FATAL_ERROR 
+    message(FATAL_ERROR
             "Serac requires MPI.  It is required to provide the MPI C/C++ "
             "compiler wrappers via the CMake variables, "
             "MPI_C_COMPILER and MPI_CXX_COMPILER.")
@@ -196,7 +196,7 @@ if (SERAC_ENABLE_CODEVELOP)
             )
 endif()
 
-install(EXPORT serac-targets 
+install(EXPORT serac-targets
         NAMESPACE serac::
         DESTINATION lib/cmake
         )

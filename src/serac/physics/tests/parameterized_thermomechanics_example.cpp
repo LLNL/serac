@@ -37,12 +37,13 @@ struct ParameterizedThermoelasticMaterial {
   double theta_ref;  ///< datum temperature for thermal expansion
 
   template <typename T1, typename T2, typename T3>
-  auto operator()(State& /*state*/, const tensor<T1, 3, 3>& grad_u, T2 temperature,
+  auto operator()(const State& /*state*/, const tensor<T1, 3, 3>& grad_u, T2 temperature,
                   T3 coefficient_of_thermal_expansion) const
   {
     auto theta = get<VALUE>(temperature);
     auto alpha = get<VALUE>(coefficient_of_thermal_expansion);
 
+    // std::cout<<"print e" << E << "print nu " << nu <<std::endl;
     const double          K    = E / (3.0 * (1.0 - 2.0 * nu));
     const double          G    = 0.5 * E / (1.0 + nu);
     static constexpr auto I    = Identity<3>();
@@ -78,11 +79,11 @@ TEST(Thermomechanics, ParameterizedMaterial)
   double height       = 2.0;
 
   // clang-format off
-    auto mesh = mesh::refineAndDistribute(build_hollow_quarter_cylinder(radial_divisions, 
-                                                                        angular_divisions, 
+    auto mesh = mesh::refineAndDistribute(build_hollow_quarter_cylinder(radial_divisions,
+                                                                        angular_divisions,
                                                                         vertical_divisions,
-                                                                        inner_radius, 
-                                                                        outer_radius, 
+                                                                        inner_radius,
+                                                                        outer_radius,
                                                                         height), serial_refinement, parallel_refinement);
 
   // clang-format on

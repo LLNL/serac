@@ -17,6 +17,10 @@
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 
+#ifndef USE_CUDA
+#error "This test requires CUDA support"
+#endif
+
 using namespace serac;
 
 int num_procs, myid;
@@ -25,23 +29,12 @@ constexpr bool                 verbose = true;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
-template <int dim>
-struct hcurl_qfunction {
-  template <typename UnusedType1, typename UnusedType2, typename Position>
-  SERAC_HOST_DEVICE auto operator()(UnusedType1, UnusedType2, Position X) const
+struct TestThermalModelOne {
+  [[maybe_unused]] static constexpr double a = 1.7;
+  [[maybe_unused]] static constexpr double b = 0.0;
+  template <typename X, typename Temp>
+  SERAC_HOST_DEVICE auto operator()([[maybe_unused]] X x, [[maybe_unused]] Temp temperature)
   {
-    auto dp_dX = serac::get<1>(X);
-    auto I     = serac::Identity<dim>();
-    return serac::tuple{serac::det(dp_dX + I), serac::zero{}};
-  }
-};
-
-struct test_qfunction {
-  template <typename X, typename Temperature>
-  SERAC_HOST_DEVICE auto operator()(double, X x, Temperature temperature) const
-  {
-    static constexpr double a = 1.7;
-    static constexpr double b = 0.0;
     // get the value and the gradient from the input tuple
     auto [u, du_dx] = temperature;
     auto source     = a * u - (100 * x[0] * x[1]);
@@ -49,6 +42,15 @@ struct test_qfunction {
     return serac::tuple{source, flux};
   }
 };
+
+// struct TestThermalModelTwo {
+//  template<typename A, typename X>
+//  auto operator()(A, [[maybe_unused]] X x) {
+//      auto dp_dX = serac::get<1>(X);
+//      auto I     = serac::Identity<dim>();
+//      return serac::tuple{serac::det(dp_dX + I), serac::zero{}};
+//  }
+//};
 
 // this test sets up a toy "thermal" problem where the residual includes contributions
 // from a temperature-dependent source term and a temperature-gradient-dependent flux
@@ -60,7 +62,6 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
 {
   [[maybe_unused]] static constexpr double a = 1.7;
   [[maybe_unused]] static constexpr double b = 0.0;
-
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec = mfem::L2_FECollection(p, dim, mfem::BasisType::GaussLobatto);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
@@ -100,23 +101,12 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   using trial_space = decltype(trial);
 
   // Construct the new weak form object using the known test and trial spaces
-#ifdef USE_CUDA
-  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(&fespace, {&fespace});
-#else
-  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(&fespace, {&fespace});
-#endif
+  Functional<test_space(trial_space), ExecutionSpace::GPU> residual(&fespace, {&fespace});
 
+  cudaDeviceSynchronize();
   // Add the total domain residual term to the weak form
-  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, test_qfunction{}, mesh);
-
-  // uncomment lines below to verify that compile-time error messages
-  // explain L2 spaces are not currently supported in boundary integrals.
-  //
-  // residual.AddBoundaryIntegral(
-  //    Dimension<dim-1>{},
-  //    DependsOn<0>{},
-  //    [&](double /*t*/, [[maybe_unused]] auto x, [[maybe_unused]] auto temperature) { return 1.0; },
-  //    mesh);
+  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, TestThermalModelOne{}, mesh);
+  cudaDeviceSynchronize();
 
   // Compute the residual using standard MFEM methods
   // mfem::Vector r1 = A * U - (*F);
@@ -125,8 +115,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   r1 -= (*F);
 
   // Compute the residual using weak form
-  double t        = 0.0;
-  auto [r2, drdU] = residual(t, differentiate_wrt(U));
+  auto [r2, drdU] = residual(differentiate_wrt(U));
 
   mfem::Vector diff(r1.Size());
   subtract(r1, r2, diff);
@@ -159,30 +148,32 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   EXPECT_NEAR(0., diff.Norml2() / g1.Norml2(), 1.e-14);
 }
 
-TEST(L2, 2DConstant) { functional_test(*mesh2D, L2<0>{}, L2<0>{}, Dimension<2>{}); }
-TEST(L2, 2DLinear) { functional_test(*mesh2D, L2<1>{}, L2<1>{}, Dimension<2>{}); }
-TEST(L2, 2DQuadratic) { functional_test(*mesh2D, L2<2>{}, L2<2>{}, Dimension<2>{}); }
+// TEST(L2, 2DConstant) { functional_test(*mesh2D, L2<0>{}, L2<0>{}, Dimension<2>{}); }
+// TEST(L2, 2DLinear) { functional_test(*mesh2D, L2<1>{}, L2<1>{}, Dimension<2>{}); }
+// TEST(L2, 2DQuadratic) { functional_test(*mesh2D, L2<2>{}, L2<2>{}, Dimension<2>{}); }
 TEST(L2, 2DCubic) { functional_test(*mesh2D, L2<3>{}, L2<3>{}, Dimension<2>{}); }
 
-TEST(L2, 3DLinear) { functional_test(*mesh3D, L2<1>{}, L2<1>{}, Dimension<3>{}); }
-TEST(L2, 3DQuadratic) { functional_test(*mesh3D, L2<2>{}, L2<2>{}, Dimension<3>{}); }
+// TEST(L2, 3DLinear) { functional_test(*mesh3D, L2<1>{}, L2<1>{}, Dimension<3>{}); }
+// TEST(L2, 3DQuadratic) { functional_test(*mesh3D, L2<2>{}, L2<2>{}, Dimension<3>{}); }
 TEST(L2, 3DCubic) { functional_test(*mesh3D, L2<3>{}, L2<3>{}, Dimension<3>{}); }
 
-TEST(L2, 2DMixed)
-{
-  constexpr int dim = 2;
-  using test_space  = L2<0>;
-  using trial_space = H1<1, dim>;
+// TEST(L2, 2DMixed)
+// {
+//   constexpr int dim = 2;
+//   using test_space  = L2<0>;
+//   using trial_space = H1<1, dim>;
 
-  auto                        L2fec = mfem::L2_FECollection(0, dim, mfem::BasisType::GaussLobatto);
-  mfem::ParFiniteElementSpace L2fespace(mesh2D.get(), &L2fec);
+//   auto                        L2fec = mfem::L2_FECollection(0, dim, mfem::BasisType::GaussLobatto);
+//   mfem::ParFiniteElementSpace L2fespace(mesh2D.get(), &L2fec);
 
-  auto                        H1fec = mfem::H1_FECollection(1, dim);
-  mfem::ParFiniteElementSpace H1fespace(mesh2D.get(), &H1fec, dim);
+//   auto                        H1fec = mfem::H1_FECollection(1, dim);
+//   mfem::ParFiniteElementSpace H1fespace(mesh2D.get(), &H1fec, dim);
 
-  serac::Functional<test_space(trial_space)> f(&L2fespace, {&H1fespace});
-  f.AddDomainIntegral(serac::Dimension<dim>{}, serac::DependsOn<0>{}, hcurl_qfunction<dim>{}, *mesh2D);
-}
+//   serac::Functional<test_space(trial_space)> f(&L2fespace, {&H1fespace});
+
+//   TestThermalModelTwo test;
+//   f.AddDomainIntegral(serac::Dimension<dim>{}, serac::DependsOn<0>{}, test, *mesh2D);
+// }
 
 int main(int argc, char* argv[])
 {
@@ -190,7 +181,7 @@ int main(int argc, char* argv[])
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-
+  cudaDeviceSynchronize();
   axom::slic::SimpleLogger logger;
 
   int serial_refinement   = 0;

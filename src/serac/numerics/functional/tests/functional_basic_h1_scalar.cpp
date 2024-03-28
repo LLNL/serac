@@ -6,9 +6,8 @@
 
 #include <fstream>
 #include <iostream>
-
+#include "serac/infrastructure/accelerator.hpp"
 #include "mfem.hpp"
-
 #include <gtest/gtest.h>
 
 #include "axom/slic/core/SimpleLogger.hpp"
@@ -23,6 +22,32 @@
 
 using namespace serac;
 using namespace serac::profiling;
+
+template <int dim>
+struct TestThermalModelOne {
+  template <typename X, typename Temp>
+  SERAC_HOST_DEVICE auto operator()(double, [[maybe_unused]] X x, [[maybe_unused]] Temp temperature)
+  {
+    double                d00 = 1.0;
+    constexpr static auto d01 = 1.0 * make_tensor<dim>([](int i) { return i; });
+    constexpr static auto d10 = 1.0 * make_tensor<dim>([](int i) { return 2 * i * i; });
+    constexpr static auto d11 = 1.0 * make_tensor<dim, dim>([](int i, int j) { return i + j * (j + 1) + 1; });
+    auto [u, du_dx]           = temperature;
+    auto source               = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
+    auto flux                 = d10 * u + dot(d11, du_dx);
+    return serac::tuple{source, flux};
+  }
+};
+
+struct TestThermalModelTwo {
+  template <typename PositionType, typename TempType>
+  SERAC_HOST_DEVICE auto operator()(double, PositionType position, TempType temperature)
+  {
+    auto [X, dX_dxi] = position;
+    auto [u, du_dxi] = temperature;
+    return X[0] + X[1] - cos(u);
+  }
+};
 
 template <int ptest, int ptrial, int dim>
 void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
@@ -46,33 +71,20 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
   using trial_space = H1<ptrial>;
 
   // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space)> residual(&test_fespace, {&trial_fespace});
 
-  auto d00 = 1.0;
-  auto d01 = 1.0 * make_tensor<dim>([](int i) { return i; });
-  auto d10 = 1.0 * make_tensor<dim>([](int i) { return 2 * i * i; });
-  auto d11 = 1.0 * make_tensor<dim, dim>([](int i, int j) { return i + j * (j + 1) + 1; });
+#ifdef USE_CUDA
+  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(&test_fespace, {&trial_fespace});
+#else
+  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(&test_fespace, {&trial_fespace});
+#endif
 
-  residual.AddDomainIntegral(
-      Dimension<dim>{}, DependsOn<0>{},
-      [=](double /*t*/, auto x, auto temperature) {
-        auto [u, du_dx] = temperature;
-        auto source     = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
-        auto flux       = d10 * u + dot(d11, du_dx);
-        return serac::tuple{source, flux};
-      },
-      *mesh);
+  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, TestThermalModelOne<dim>{}, *mesh);
 
-  residual.AddBoundaryIntegral(
-      Dimension<dim - 1>{}, DependsOn<0>{},
-      [=](double /*t*/, auto position, auto temperature) {
-        auto [X, dX_dxi] = position;
-        auto [u, du_dxi] = temperature;
-        return X[0] + X[1] - cos(u);
-      },
-      *mesh);
-
+#ifndef USE_CUDA
+  residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, TestThermalModelTwo{}, *mesh);
+#endif
   double t = 0.0;
+
   check_gradient(residual, t, U);
 }
 
@@ -90,16 +102,17 @@ void thermal_test(std::string meshfile)
   }
 }
 
+TEST(basic, thermal_hexes) { thermal_test<1, 1>("/data/meshes/patch3D_hexes.mesh"); }
+#ifndef USE_CUDA
 TEST(basic, thermal_tris) { thermal_test<1, 1>("/data/meshes/patch2D_tris.mesh"); }
+TEST(basic, thermal_tets) { thermal_test<1, 1>("/data/meshes/patch3D_tets.mesh"); }
 TEST(basic, thermal_quads) { thermal_test<1, 1>("/data/meshes/patch2D_quads.mesh"); }
 TEST(basic, thermal_tris_and_quads) { thermal_test<1, 1>("/data/meshes/patch2D_tris_and_quads.mesh"); }
 
-TEST(basic, thermal_tets) { thermal_test<1, 1>("/data/meshes/patch3D_tets.mesh"); }
-TEST(basic, thermal_hexes) { thermal_test<1, 1>("/data/meshes/patch3D_hexes.mesh"); }
 TEST(basic, thermal_tets_and_hexes) { thermal_test<1, 1>("/data/meshes/patch3D_tets_and_hexes.mesh"); }
-
 TEST(mixed, thermal_tris_and_quads) { thermal_test<2, 1>("/data/meshes/patch2D_tris_and_quads.mesh"); }
 TEST(mixed, thermal_tets_and_hexes) { thermal_test<2, 1>("/data/meshes/patch3D_tets_and_hexes.mesh"); }
+#endif
 
 int main(int argc, char* argv[])
 {

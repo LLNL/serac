@@ -15,7 +15,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         # Manually set includes as system includes
         foreach(_target cuda_runtime cuda)
             get_target_property(_dirs ${_target} INTERFACE_INCLUDE_DIRECTORIES)
-            set_property(TARGET ${_target} 
+            set_property(TARGET ${_target}
                          APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
                          "${_dirs}")
         endforeach()
@@ -59,7 +59,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #------------------------------------------------------------------------------
     if(UMPIRE_DIR)
         serac_assert_is_directory(VARIABLE_NAME UMPIRE_DIR)
-        find_package(umpire REQUIRED NO_DEFAULT_PATH 
+        find_package(umpire REQUIRED NO_DEFAULT_PATH
                      PATHS ${UMPIRE_DIR})
         message(STATUS "Umpire support is ON")
         set(UMPIRE_FOUND TRUE)
@@ -73,7 +73,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #------------------------------------------------------------------------------
     if(RAJA_DIR)
         serac_assert_is_directory(VARIABLE_NAME RAJA_DIR)
-        find_package(RAJA REQUIRED NO_DEFAULT_PATH 
+        find_package(RAJA REQUIRED NO_DEFAULT_PATH
                      PATHS ${RAJA_DIR})
         message(STATUS "RAJA support is ON")
         set(RAJA_FOUND TRUE)
@@ -100,7 +100,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
 
     # Manually set includes as system includes
     get_target_property(_dirs conduit::conduit INTERFACE_INCLUDE_DIRECTORIES)
-    set_property(TARGET conduit::conduit 
+    set_property(TARGET conduit::conduit
                  APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
                  "${_dirs}")
 
@@ -154,10 +154,10 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
                 message(FATAL_ERROR "Serac+Caliper+CUDA requires CMake > 3.17.")
             else()
                 find_package(CUDAToolkit REQUIRED)
-            endif() 
+            endif()
         endif()
 
-        find_package(caliper REQUIRED NO_DEFAULT_PATH 
+        find_package(caliper REQUIRED NO_DEFAULT_PATH
                      PATHS ${CALIPER_DIR})
         message(STATUS "Caliper support is ON")
         set(CALIPER_FOUND TRUE)
@@ -173,7 +173,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         # Note: Sundials is currently only used via MFEM and MFEM's target contains it's information
         serac_assert_is_directory(VARIABLE_NAME SUNDIALS_DIR)
         set(SERAC_USE_SUNDIALS ON CACHE BOOL "")
-        
+
         # Note: MFEM sets SUNDIALS_FOUND itself
         if (NOT SERAC_ENABLE_CODEVELOP)
             set(SUNDIALS_FOUND TRUE)
@@ -195,7 +195,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
 
         #### Store Data that MFEM clears
         set(tpls_to_save AMGX AXOM CALIPER CAMP CONDUIT HDF5
-                         HYPRE LUA METIS MFEM NETCDF PARMETIS PETSC RAJA 
+                         HYPRE LUA METIS MFEM NETCDF PARMETIS PETSC RAJA
                          SUPERLU_DIST STRUMPACK SUNDIALS TRIBOL UMPIRE)
         foreach(_tpl ${tpls_to_save})
             set(${_tpl}_DIR_SAVE "${${_tpl}_DIR}")
@@ -285,7 +285,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         else()
             add_subdirectory(${PROJECT_SOURCE_DIR}/mfem  ${CMAKE_BINARY_DIR}/mfem)
         endif()
- 
+
         set(MFEM_FOUND TRUE CACHE BOOL "" FORCE)
 
         # Patch the mfem target with the correct include directories
@@ -310,7 +310,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         serac_assert_is_directory(VARIABLE_NAME AXOM_DIR)
 
         find_package(axom REQUIRED
-                        NO_DEFAULT_PATH 
+                        NO_DEFAULT_PATH
                         PATHS ${AXOM_DIR}/lib/cmake)
 
         message(STATUS "Axom support is ON")
@@ -431,7 +431,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             serac_assert_is_directory(VARIABLE_NAME TRIBOL_DIR)
 
             find_package(tribol REQUIRED
-                                NO_DEFAULT_PATH 
+                                NO_DEFAULT_PATH
                                 PATHS ${TRIBOL_DIR}/lib/cmake)
 
             if(TARGET tribol)
@@ -449,7 +449,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         else()
             set(TRIBOL_FOUND OFF)
         endif()
-        
+
         message(STATUS "Tribol support is " ${TRIBOL_FOUND})
     else()
         set(ENABLE_FORTRAN OFF CACHE BOOL "" FORCE)
@@ -468,7 +468,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
 
         add_subdirectory(${tribol_repo_dir}  ${CMAKE_BINARY_DIR}/tribol)
-        
+
         target_include_directories(redecomp PUBLIC
             $<BUILD_INTERFACE:${tribol_repo_dir}/src>
         )
@@ -477,7 +477,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/tribol/include>
             $<INSTALL_INTERFACE:include>
         )
-        
+
         set(TRIBOL_FOUND TRUE CACHE BOOL "" FORCE)
         set(ENABLE_FORTRAN ON CACHE BOOL "" FORCE)
     endif()

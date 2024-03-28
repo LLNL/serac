@@ -9,24 +9,34 @@
 
 #include "mfem.hpp"
 
+#include "serac/infrastructure/accelerator.hpp"
 #include "serac/serac_config.hpp"
 #include "serac/numerics/functional/functional.hpp"
 
-template <typename T>
-void check_gradient(serac::Functional<T>& f, double t, const mfem::Vector& U, double epsilon = 1.0e-4)
+template <typename T, serac::ExecutionSpace exec = serac::ExecutionSpace::CPU>
+void check_gradient(serac::Functional<T, exec>& f, double t, mfem::Vector& U, double epsilon = 1.0e-4)
 {
   int seed = 42;
 
   mfem::Vector dU(U.Size());
+  // Set memory backend to device if using GPU execution.
+  if constexpr (exec == serac::ExecutionSpace::GPU) {
+    dU.UseDevice(true);
+  }
   dU.Randomize(seed);
 
   auto [value, dfdU]                                = f(t, serac::differentiate_wrt(U));
   std::unique_ptr<mfem::HypreParMatrix> dfdU_matrix = assemble(dfdU);
 
   // jacobian vector products
-  mfem::Vector df_jvp1 = dfdU(dU);  // matrix-free
+  mfem::Vector df_jvp1;
+  df_jvp1.UseDevice(true);
+  df_jvp1 = dfdU(dU);  // matrix-free
 
   mfem::Vector df_jvp2(df_jvp1.Size());
+  if constexpr (exec == serac::ExecutionSpace::GPU) {
+    df_jvp2.UseDevice(true);
+  }
   dfdU_matrix->Mult(dU, df_jvp2);  // sparse matvec
 
   if (df_jvp1.Norml2() != 0) {
@@ -214,8 +224,8 @@ void check_gradient(serac::Functional<T>& f, double t, const mfem::Vector& U, co
 // qoi overloads //
 ///////////////////
 
-template <typename T>
-void check_gradient(serac::Functional<double(T)>& f, double t, const mfem::HypreParVector& U)
+template <typename T, serac::ExecutionSpace execution_space = serac::ExecutionSpace::CPU>
+void check_gradient(serac::Functional<double(T), execution_space>& f, double t, const mfem::HypreParVector& U)
 {
   int seed = 42;
 

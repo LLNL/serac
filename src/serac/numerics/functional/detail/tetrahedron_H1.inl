@@ -336,7 +336,8 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
   }
 
   template <typename in_t, int q>
-  static auto batch_apply_shape_fn(int j, tensor<in_t, nqpts(q)> input, const TensorProductQuadratureRule<q>&)
+  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, nqpts(q)> input,
+                                                    const TensorProductQuadratureRule<q>&, RAJA::LaunchContext)
   {
     using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, dim>{}));
     using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, dim>{}));
@@ -361,7 +362,14 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
   }
 
   template <int q>
-  SERAC_HOST_DEVICE static auto interpolate(const tensor<double, c, ndof>& X, const TensorProductQuadratureRule<q>&)
+  static auto interpolate_output_helper()
+  {
+    return tensor<qf_input_type, nqpts(q)>{};
+  }
+
+  template <int q>
+  SERAC_HOST_DEVICE static void interpolate(const tensor<double, c, ndof>&   X, const TensorProductQuadratureRule<q>&,
+                                            tensor<qf_input_type, nqpts(q)>* output_ptr, RAJA::LaunchContext ctx)
   {
     constexpr auto xi = GaussLegendreNodes<q, mfem::Geometry::TETRAHEDRON>();
 
@@ -380,13 +388,21 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
       }
     }
 
-    return output.flattened;
+    RAJA::TypedRangeSegment<int> x_range(0, BLOCK_SZ);
+    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
+    if (output_ptr) {
+      RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
+        if (tid < serac::size(output.flattened)) {
+          (*output_ptr)[tid] = output.flattened[tid];
+        }
+      });
+    }
   }
 
   template <typename source_type, typename flux_type, int q>
   SERAC_HOST_DEVICE static void integrate(const tensor<tuple<source_type, flux_type>, nqpts(q)>& qf_output,
                                           const TensorProductQuadratureRule<q>&,
-                                          tensor<double, c, ndof>* element_residual, int step = 1)
+                                          tensor<double, c, ndof>* element_residual, RAJA::LaunchContext, int step = 1)
   {
     if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) {
       return;

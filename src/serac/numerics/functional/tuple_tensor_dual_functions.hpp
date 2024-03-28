@@ -1,5 +1,12 @@
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)
+
 #pragma once
 
+#include "serac/serac_config.hpp"
 #include "serac/numerics/functional/tuple.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/dual.hpp"
@@ -212,26 +219,54 @@ SERAC_HOST_DEVICE auto promote_to_dual_when(const T& x)
 }
 
 /**
+ * @brief Deduce return type of promote_each_to_dual_when.  Useful for type deduction while
+ *        allocating memory
+ *
+ * @tparam dualify specify whether or not the input should be made into its dual type
+ * @tparam T the type of the values passed in
+ * @tparam n how many values were passed in
+ */
+template <bool dualify, typename T, int n>
+auto promote_each_to_dual_when_output_helper(const tensor<T, n>&)
+{
+  if constexpr (dualify) {
+    using return_type = decltype(make_dual(T{}));
+    return tensor<return_type, n>{};
+  } else {
+    return tensor<T, n>{};
+  }
+}
+
+/**
  * @brief a function that optionally (decided at compile time) converts a list of values to their dual types
  *
  * @tparam dualify specify whether or not the input should be made into its dual type
  * @tparam T the type of the values passed in
  * @tparam n how many values were passed in
  * @param x the values to be promoted
+ * @param output_ptr pointer to output array
+ * @param ctx the RAJA launch context used to synchronize threads and required by the RAJA API.
  */
 template <bool dualify, typename T, int n>
-SERAC_HOST_DEVICE auto promote_each_to_dual_when(const tensor<T, n>& x)
+SERAC_HOST_DEVICE void promote_each_to_dual_when(const tensor<T, n>& x, void* output_ptr,
+                                                 RAJA::LaunchContext ctx = RAJA::LaunchContext{})
 {
+#ifdef USE_CUDA
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+#else
+  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
+#endif
+
   if constexpr (dualify) {
-    using return_type = decltype(make_dual(T{}));
-    tensor<return_type, n> output;
-    for (int i = 0; i < n; i++) {
-      output[i] = make_dual(x[i]);
-    }
-    return output;
+    RAJA::RangeSegment x_range(0, n);
+    using return_type      = decltype(make_dual(T{}));
+    auto casted_output_ptr = static_cast<tensor<return_type, n>*>(output_ptr);
+    RAJA::loop<threads_x>(ctx, x_range, [&](int i) { (*casted_output_ptr)[i] = make_dual(x[i]); });
   }
   if constexpr (!dualify) {
-    return x;
+    RAJA::RangeSegment x_range(0, n);
+    auto               casted_output_ptr = static_cast<tensor<T, n>*>(output_ptr);
+    RAJA::loop<threads_x>(ctx, x_range, [&](int i) { (*casted_output_ptr)[i] = x[i]; });
   }
 }
 
@@ -503,7 +538,7 @@ SERAC_HOST_DEVICE auto get_value(const tensor<dual<T>, n...>& arg)
  * @param[in] arg The tensor of dual numbers
  */
 template <int... n>
-SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<dual<double>, n...>& arg)
+SERAC_HOST_DEVICE /*constexpr*/ auto get_gradient(const tensor<dual<double>, n...>& arg)
 {
   tensor<double, n...> g{};
   for_constexpr<n...>([&](auto... i) { g(i...) = arg(i...).gradient; });
@@ -512,7 +547,7 @@ SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<dual<double>, n...>& 
 
 /// @overload
 template <int... n, int... m>
-SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<dual<tensor<double, m...>>, n...>& arg)
+SERAC_HOST_DEVICE /*constexpr*/ auto get_gradient(const tensor<dual<tensor<double, m...>>, n...>& arg)
 {
   tensor<double, n..., m...> g{};
   for_constexpr<n...>([&](auto... i) { g(i...) = arg(i...).gradient; });
