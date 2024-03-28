@@ -1,4 +1,4 @@
-.. ## Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+.. ## Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 .. ## other Serac Project Developers. See the top-level COPYRIGHT file for details.
 .. ##
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
@@ -15,8 +15,8 @@ If you haven't used Docker before, it is recommended that you check out the
 1. Clone a copy of the Serac repo to your computer: ``git clone --recursive https://github.com/LLNL/serac.git``
 
 #. Once you've installed ``docker``, navigate to our `Dockerhub page <https://hub.docker.com/r/seracllnl/tpls/tags?page=1&ordering=last_updated>`_
-   and select the most recent image corresponding to the compiler you'd like to use.  Clang 15 and GCC 13 images are currently offered.
-#. Copy the pull command corresponding to the image you've selected (in this case, it's ``docker pull seracllnl/tpls:clang-15_latest``):
+   and select the most recent image corresponding to the compiler you'd like to use.  Clang 14 and GCC 13 images are currently offered.
+#. Copy the pull command corresponding to the image you've selected (in this case, it's ``docker pull seracllnl/tpls:clang-14_latest``):
 
 .. image:: copy_pull_cmd.png
    :scale: 50 %
@@ -26,7 +26,7 @@ If you haven't used Docker before, it is recommended that you check out the
 
 .. image:: pull_complete.png
 
-5. You can now run the image.  Run ``docker run -it -u serac -v /your/serac/repo:/home/serac/serac seracllnl/tpls:clang-15_latest /bin/bash``,
+5. You can now run the image.  Run ``docker run -it -u serac -v /your/serac/repo:/home/serac/serac seracllnl/tpls:clang-14_latest /bin/bash``,
    replacing the tag (the compiler name following the ``tpls:``) with the tag you used in the ``docker pull`` command and
    replacing ``/your/serac/repo`` with the path to the Serac repo you cloned in the first step.  This will open a terminal into the image.
 
