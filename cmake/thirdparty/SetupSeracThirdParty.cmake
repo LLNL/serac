@@ -159,6 +159,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
 
         find_package(caliper REQUIRED NO_DEFAULT_PATH 
                      PATHS ${CALIPER_DIR})
+        list(APPEND CALIPER_INCLUDE_DIRS ${CALIPER_DIR}/include)
         message(STATUS "Caliper support is ON")
         set(CALIPER_FOUND TRUE)
     else()
