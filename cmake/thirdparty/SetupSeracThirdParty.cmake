@@ -159,7 +159,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
 
         find_package(caliper REQUIRED NO_DEFAULT_PATH 
                      PATHS ${CALIPER_DIR})
-        list(APPEND CALIPER_INCLUDE_DIRS ${CALIPER_DIR}/include)
         message(STATUS "Caliper support is ON")
         set(CALIPER_FOUND TRUE)
     else()
@@ -275,6 +274,11 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
 
         set(HDF5_IMPORT_CONFIG "RELEASE" CACHE STRING "")
+
+        # Add missing include dir to var that MFEM uses
+        if (CALIPER_FOUND)
+            get_target_property(CALIPER_INCLUDE_DIRS caliper INTERFACE_INCLUDE_DIRECTORIES)
+        endif()
 
         # Disable tests + examples
         set(MFEM_ENABLE_TESTING  OFF CACHE BOOL "")
