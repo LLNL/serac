@@ -1,10 +1,16 @@
+// SERAC_EDIT_START
+// clang-format off
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+// SERAC_EDIT_END
+
 /*   DMDA/KSP solving a system of linear equations.
      Poisson equation in 2D:
 
      div(grad p) = f,  0 < x,y < 1
      with
        forcing function f = -cos(m*pi*x)*cos(n*pi*y),
-       Neuman boundary conditions
+       Neumann boundary conditions
         dp/dx = 0 for x = 0, x = 1.
         dp/dy = 0 for y = 0, y = 1.
 
@@ -15,11 +21,9 @@
 
      Example of Usage:
           ./ex50 -da_grid_x 3 -da_grid_y 3 -pc_type mg -da_refine 3 -ksp_monitor -ksp_view -dm_view draw -draw_pause -1
-          ./ex50 -da_grid_x 100 -da_grid_y 100 -pc_type mg  -pc_mg_levels 1 -mg_levels_0_pc_type ilu
-   -mg_levels_0_pc_factor_levels 1 -ksp_monitor -ksp_view
-          ./ex50 -da_grid_x 100 -da_grid_y 100 -pc_type mg -pc_mg_levels 1 -mg_levels_0_pc_type lu
-   -mg_levels_0_pc_factor_shift_type NONZERO -ksp_monitor mpiexec -n 4 ./ex50 -da_grid_x 3 -da_grid_y 3 -pc_type mg
-   -da_refine 10 -ksp_monitor -ksp_view -log_view
+          ./ex50 -da_grid_x 100 -da_grid_y 100 -pc_type mg  -pc_mg_levels 1 -mg_levels_0_pc_type ilu -mg_levels_0_pc_factor_levels 1 -ksp_monitor -ksp_view
+          ./ex50 -da_grid_x 100 -da_grid_y 100 -pc_type mg -pc_mg_levels 1 -mg_levels_0_pc_type lu -mg_levels_0_pc_factor_shift_type NONZERO -ksp_monitor
+          mpiexec -n 4 ./ex50 -da_grid_x 3 -da_grid_y 3 -pc_type mg -da_refine 10 -ksp_monitor -ksp_view -log_view
 */
 
 static char help[] = "Solves 2D Poisson equation using multigrid.\n\n";
@@ -30,134 +34,104 @@ static char help[] = "Solves 2D Poisson equation using multigrid.\n\n";
 #include <petscsys.h>
 #include <petscvec.h>
 
-extern PetscErrorCode ComputeJacobian(KSP, Mat, Mat, void*);
-extern PetscErrorCode ComputeRHS(KSP, Vec, void*);
+extern PetscErrorCode ComputeJacobian(KSP, Mat, Mat, void *);
+extern PetscErrorCode ComputeRHS(KSP, Vec, void *);
 
 typedef struct {
   PetscScalar uu, tt;
 } UserContext;
 
-// SERAC EDIT BEGIN
+// SERAC_EDIT_START
+
+// Source: https://github.com/petsc/petsc/blob/main/src/ksp/ksp/tutorials/ex50.c
 
 #include "axom/slic/core/SimpleLogger.hpp"
 
 // int main(int argc,char **argv)
 int ex50_main(int argc, char** argv)
-// SERAC EDIT END
+// SERAC_EDIT_END
 {
-  KSP            ksp;
-  DM             da;
-  UserContext    user;
-  PetscErrorCode ierr;
+  KSP         ksp;
+  DM          da;
+  UserContext user;
 
-  ierr = PetscInitialize(&argc, &argv, (char*)0, help);
-  if (ierr) return ierr;
-  ierr = KSPCreate(PETSC_COMM_WORLD, &ksp);
-  CHKERRQ(ierr);
-  ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR, 11, 11, PETSC_DECIDE,
-                      PETSC_DECIDE, 1, 1, NULL, NULL, &da);
-  CHKERRQ(ierr);
-  ierr = DMSetFromOptions(da);
-  CHKERRQ(ierr);
-  ierr = DMSetUp(da);
-  CHKERRQ(ierr);
-  ierr = KSPSetDM(ksp, (DM)da);
-  CHKERRQ(ierr);
-  ierr = DMSetApplicationContext(da, &user);
-  CHKERRQ(ierr);
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
+  PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
+  PetscCall(DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_STAR, 11, 11, PETSC_DECIDE, PETSC_DECIDE, 1, 1, NULL, NULL, &da));
+  PetscCall(DMSetFromOptions(da));
+  PetscCall(DMSetUp(da));
+  PetscCall(KSPSetDM(ksp, (DM)da));
+  PetscCall(DMSetApplicationContext(da, &user));
 
   user.uu = 1.0;
   user.tt = 1.0;
 
-  ierr = KSPSetComputeRHS(ksp, ComputeRHS, &user);
-  CHKERRQ(ierr);
-  ierr = KSPSetComputeOperators(ksp, ComputeJacobian, &user);
-  CHKERRQ(ierr);
-  ierr = KSPSetFromOptions(ksp);
-  CHKERRQ(ierr);
-  ierr = KSPSolve(ksp, NULL, NULL);
-  CHKERRQ(ierr);
+  PetscCall(KSPSetComputeRHS(ksp, ComputeRHS, &user));
+  PetscCall(KSPSetComputeOperators(ksp, ComputeJacobian, &user));
+  PetscCall(KSPSetFromOptions(ksp));
+  PetscCall(KSPSolve(ksp, NULL, NULL));
 
-  ierr = DMDestroy(&da);
-  CHKERRQ(ierr);
-  ierr = KSPDestroy(&ksp);
-  CHKERRQ(ierr);
-  ierr = PetscFinalize();
-  return ierr;
+  PetscCall(DMDestroy(&da));
+  PetscCall(KSPDestroy(&ksp));
+  PetscCall(PetscFinalize());
+  return 0;
 }
 
-PetscErrorCode ComputeRHS(KSP ksp, Vec b, void* ctx)
+PetscErrorCode ComputeRHS(KSP ksp, Vec b, void *ctx)
 {
-  UserContext*   user = (UserContext*)ctx;
-  PetscErrorCode ierr;
-  PetscInt       i, j, M, N, xm, ym, xs, ys;
-  PetscScalar    Hx, Hy, pi, uu, tt;
-  PetscScalar**  array;
-  DM             da;
-  MatNullSpace   nullspace;
+  UserContext  *user = (UserContext *)ctx;
+  PetscInt      i, j, M, N, xm, ym, xs, ys;
+  PetscScalar   Hx, Hy, pi, uu, tt;
+  PetscScalar **array;
+  DM            da;
+  MatNullSpace  nullspace;
 
   PetscFunctionBeginUser;
-  ierr = KSPGetDM(ksp, &da);
-  CHKERRQ(ierr);
-  ierr = DMDAGetInfo(da, 0, &M, &N, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-  CHKERRQ(ierr);
+  PetscCall(KSPGetDM(ksp, &da));
+  PetscCall(DMDAGetInfo(da, 0, &M, &N, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
   uu = user->uu;
   tt = user->tt;
   pi = 4 * atan(1.0);
   Hx = 1.0 / (PetscReal)(M);
   Hy = 1.0 / (PetscReal)(N);
 
-  ierr = DMDAGetCorners(da, &xs, &ys, 0, &xm, &ym, 0);
-  CHKERRQ(ierr); /* Fine grid */
-  ierr = DMDAVecGetArray(da, b, &array);
-  CHKERRQ(ierr);
+  PetscCall(DMDAGetCorners(da, &xs, &ys, 0, &xm, &ym, 0)); /* Fine grid */
+  PetscCall(DMDAVecGetArray(da, b, &array));
   for (j = ys; j < ys + ym; j++) {
-    for (i = xs; i < xs + xm; i++) {
-      array[j][i] = -PetscCosScalar(uu * pi * ((PetscReal)i + 0.5) * Hx) *
-                    PetscCosScalar(tt * pi * ((PetscReal)j + 0.5) * Hy) * Hx * Hy;
-    }
+    for (i = xs; i < xs + xm; i++) array[j][i] = -PetscCosScalar(uu * pi * ((PetscReal)i + 0.5) * Hx) * PetscCosScalar(tt * pi * ((PetscReal)j + 0.5) * Hy) * Hx * Hy;
   }
-  ierr = DMDAVecRestoreArray(da, b, &array);
-  CHKERRQ(ierr);
-  ierr = VecAssemblyBegin(b);
-  CHKERRQ(ierr);
-  ierr = VecAssemblyEnd(b);
-  CHKERRQ(ierr);
+  PetscCall(DMDAVecRestoreArray(da, b, &array));
+  PetscCall(VecAssemblyBegin(b));
+  PetscCall(VecAssemblyEnd(b));
 
   /* force right hand side to be consistent for singular matrix */
   /* note this is really a hack, normally the model would provide you with a consistent right handside */
-  ierr = MatNullSpaceCreate(PETSC_COMM_WORLD, PETSC_TRUE, 0, 0, &nullspace);
-  CHKERRQ(ierr);
-  ierr = MatNullSpaceRemove(nullspace, b);
-  CHKERRQ(ierr);
-  ierr = MatNullSpaceDestroy(&nullspace);
-  CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatNullSpaceCreate(PETSC_COMM_WORLD, PETSC_TRUE, 0, 0, &nullspace));
+  PetscCall(MatNullSpaceRemove(nullspace, b));
+  PetscCall(MatNullSpaceDestroy(&nullspace));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// SERAC EDIT BEGIN
-// PetscErrorCode ComputeJacobian(KSP ksp,Mat J, Mat jac,void *ctx)
-PetscErrorCode ComputeJacobian(KSP ksp, Mat J, Mat jac, void*)
-// SERAC EDIT END
+// SERAC_EDIT_START
+// PetscErrorCode ComputeJacobian(KSP ksp, Mat J, Mat jac, void *ctx)
+PetscErrorCode ComputeJacobian(KSP ksp, Mat J, Mat jac, [[maybe_unused]] void *ctx)
+// SERAC_EDIT_END
 {
-  PetscErrorCode ierr;
-  PetscInt       i, j, M, N, xm, ym, xs, ys, num, numi, numj;
-  PetscScalar    v[5], Hx, Hy, HydHx, HxdHy;
-  MatStencil     row, col[5];
-  DM             da;
-  MatNullSpace   nullspace;
+  PetscInt     i, j, M, N, xm, ym, xs, ys, num, numi, numj;
+  PetscScalar  v[5], Hx, Hy, HydHx, HxdHy;
+  MatStencil   row, col[5];
+  DM           da;
+  MatNullSpace nullspace;
 
   PetscFunctionBeginUser;
-  ierr = KSPGetDM(ksp, &da);
-  CHKERRQ(ierr);
-  ierr = DMDAGetInfo(da, 0, &M, &N, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-  CHKERRQ(ierr);
+  PetscCall(KSPGetDM(ksp, &da));
+  PetscCall(DMDAGetInfo(da, 0, &M, &N, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
   Hx    = 1.0 / (PetscReal)(M);
   Hy    = 1.0 / (PetscReal)(N);
   HxdHy = Hx / Hy;
   HydHx = Hy / Hx;
-  ierr  = DMDAGetCorners(da, &xs, &ys, 0, &xm, &ym, 0);
-  CHKERRQ(ierr);
+  PetscCall(DMDAGetCorners(da, &xs, &ys, 0, &xm, &ym, 0));
   for (j = ys; j < ys + ym; j++) {
     for (i = xs; i < xs + xm; i++) {
       row.i = i;
@@ -199,8 +173,7 @@ PetscErrorCode ComputeJacobian(KSP ksp, Mat J, Mat jac, void*)
         col[num].i = i;
         col[num].j = j;
         num++;
-        ierr = MatSetValuesStencil(jac, 1, &row, num, col, v, INSERT_VALUES);
-        CHKERRQ(ierr);
+        PetscCall(MatSetValuesStencil(jac, 1, &row, num, col, v, INSERT_VALUES));
       } else {
         v[0]     = -HxdHy;
         col[0].i = i;
@@ -217,23 +190,17 @@ PetscErrorCode ComputeJacobian(KSP ksp, Mat J, Mat jac, void*)
         v[4]     = -HxdHy;
         col[4].i = i;
         col[4].j = j + 1;
-        ierr     = MatSetValuesStencil(jac, 1, &row, 5, col, v, INSERT_VALUES);
-        CHKERRQ(ierr);
+        PetscCall(MatSetValuesStencil(jac, 1, &row, 5, col, v, INSERT_VALUES));
       }
     }
   }
-  ierr = MatAssemblyBegin(jac, MAT_FINAL_ASSEMBLY);
-  CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(jac, MAT_FINAL_ASSEMBLY);
-  CHKERRQ(ierr);
+  PetscCall(MatAssemblyBegin(jac, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(jac, MAT_FINAL_ASSEMBLY));
 
-  ierr = MatNullSpaceCreate(PETSC_COMM_WORLD, PETSC_TRUE, 0, 0, &nullspace);
-  CHKERRQ(ierr);
-  ierr = MatSetNullSpace(J, nullspace);
-  CHKERRQ(ierr);
-  ierr = MatNullSpaceDestroy(&nullspace);
-  CHKERRQ(ierr);
-  PetscFunctionReturn(0);
+  PetscCall(MatNullSpaceCreate(PETSC_COMM_WORLD, PETSC_TRUE, 0, 0, &nullspace));
+  PetscCall(MatSetNullSpace(J, nullspace));
+  PetscCall(MatNullSpaceDestroy(&nullspace));
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*TEST
@@ -247,15 +214,12 @@ PetscErrorCode ComputeJacobian(KSP ksp, Mat J, Mat jac, void*)
    test:
       suffix: 2
       nsize: 4
-      args: -pc_type mg -pc_mg_type full -ksp_type cg -ksp_monitor_short -da_refine 3 -mg_coarse_pc_type redundant
--mg_coarse_redundant_pc_type svd -ksp_view
+      args: -pc_type mg -pc_mg_type full -ksp_type cg -ksp_monitor_short -da_refine 3 -mg_coarse_pc_type redundant -mg_coarse_redundant_pc_type svd -ksp_view
 
    test:
       suffix: 3
       nsize: 2
-      args: -pc_type mg -pc_mg_type full -ksp_monitor_short -da_refine 5 -mg_coarse_ksp_type cg
--mg_coarse_ksp_converged_reason -mg_coarse_ksp_rtol 1e-2 -mg_coarse_ksp_max_it 5 -mg_coarse_pc_type none -pc_mg_levels 2
--ksp_type pipefgmres -ksp_pipefgmres_shift 1.5
+      args: -pc_type mg -pc_mg_type full -ksp_monitor_short -da_refine 5 -mg_coarse_ksp_type cg -mg_coarse_ksp_converged_reason -mg_coarse_ksp_rtol 1e-2 -mg_coarse_ksp_max_it 5 -mg_coarse_pc_type none -pc_mg_levels 2 -ksp_type pipefgmres -ksp_pipefgmres_shift 1.5
 
    test:
       suffix: tut_1
@@ -275,50 +239,52 @@ PetscErrorCode ComputeJacobian(KSP ksp, Mat J, Mat jac, void*)
 
 TEST*/
 
-// SERAC_EDIT_BEGIN
+// SERAC_EDIT_START
 
 #include <gtest/gtest.h>
 
 #include <iostream>
 
-// https://www.mcs.anl.gov/petsc/petsc-current/src/ksp/ksp/tutorials/output/ex50_tut_1.out
+// https://github.com/petsc/petsc/blob/main/src/ksp/ksp/tutorials/output/ex50_tut_1.out
+// clang-format off
 constexpr char correct_serial_output[] =
-    "Mat Object: 1 MPI processes\n"
-    "  type: seqaij\n"
-    "row 0: (0, 0.)  (1, 0.)  (4, 0.) \n"
-    "row 1: (0, 0.)  (1, 0.)  (2, 0.)  (5, 0.) \n"
-    "row 2: (1, 0.)  (2, 0.)  (3, 0.)  (6, 0.) \n"
-    "row 3: (2, 0.)  (3, 0.)  (7, 0.) \n"
-    "row 4: (0, 0.)  (4, 0.)  (5, 0.)  (8, 0.) \n"
-    "row 5: (1, 0.)  (4, 0.)  (5, 0.)  (6, 0.)  (9, 0.) \n"
-    "row 6: (2, 0.)  (5, 0.)  (6, 0.)  (7, 0.)  (10, 0.) \n"
-    "row 7: (3, 0.)  (6, 0.)  (7, 0.)  (11, 0.) \n"
-    "row 8: (4, 0.)  (8, 0.)  (9, 0.)  (12, 0.) \n"
-    "row 9: (5, 0.)  (8, 0.)  (9, 0.)  (10, 0.)  (13, 0.) \n"
-    "row 10: (6, 0.)  (9, 0.)  (10, 0.)  (11, 0.)  (14, 0.) \n"
-    "row 11: (7, 0.)  (10, 0.)  (11, 0.)  (15, 0.) \n"
-    "row 12: (8, 0.)  (12, 0.)  (13, 0.) \n"
-    "row 13: (9, 0.)  (12, 0.)  (13, 0.)  (14, 0.) \n"
-    "row 14: (10, 0.)  (13, 0.)  (14, 0.)  (15, 0.) \n"
-    "row 15: (11, 0.)  (14, 0.)  (15, 0.) \n"
-    "Mat Object: 1 MPI processes\n"
-    "  type: seqaij\n"
-    "row 0: (0, 2.)  (1, -1.)  (4, -1.) \n"
-    "row 1: (0, -1.)  (1, 3.)  (2, -1.)  (5, -1.) \n"
-    "row 2: (1, -1.)  (2, 3.)  (3, -1.)  (6, -1.) \n"
-    "row 3: (2, -1.)  (3, 2.)  (7, -1.) \n"
-    "row 4: (0, -1.)  (4, 3.)  (5, -1.)  (8, -1.) \n"
-    "row 5: (1, -1.)  (4, -1.)  (5, 4.)  (6, -1.)  (9, -1.) \n"
-    "row 6: (2, -1.)  (5, -1.)  (6, 4.)  (7, -1.)  (10, -1.) \n"
-    "row 7: (3, -1.)  (6, -1.)  (7, 3.)  (11, -1.) \n"
-    "row 8: (4, -1.)  (8, 3.)  (9, -1.)  (12, -1.) \n"
-    "row 9: (5, -1.)  (8, -1.)  (9, 4.)  (10, -1.)  (13, -1.) \n"
-    "row 10: (6, -1.)  (9, -1.)  (10, 4.)  (11, -1.)  (14, -1.) \n"
-    "row 11: (7, -1.)  (10, -1.)  (11, 3.)  (15, -1.) \n"
-    "row 12: (8, -1.)  (12, 2.)  (13, -1.) \n"
-    "row 13: (9, -1.)  (12, -1.)  (13, 3.)  (14, -1.) \n"
-    "row 14: (10, -1.)  (13, -1.)  (14, 3.)  (15, -1.) \n"
-    "row 15: (11, -1.)  (14, -1.)  (15, 2.) \n";
+  "Mat Object: 1 MPI process\n"
+  "  type: seqaij\n"
+  "row 0: (0, 0.)  (1, 0.)  (4, 0.) \n"
+  "row 1: (0, 0.)  (1, 0.)  (2, 0.)  (5, 0.) \n"
+  "row 2: (1, 0.)  (2, 0.)  (3, 0.)  (6, 0.) \n"
+  "row 3: (2, 0.)  (3, 0.)  (7, 0.) \n"
+  "row 4: (0, 0.)  (4, 0.)  (5, 0.)  (8, 0.) \n"
+  "row 5: (1, 0.)  (4, 0.)  (5, 0.)  (6, 0.)  (9, 0.) \n"
+  "row 6: (2, 0.)  (5, 0.)  (6, 0.)  (7, 0.)  (10, 0.) \n"
+  "row 7: (3, 0.)  (6, 0.)  (7, 0.)  (11, 0.) \n"
+  "row 8: (4, 0.)  (8, 0.)  (9, 0.)  (12, 0.) \n"
+  "row 9: (5, 0.)  (8, 0.)  (9, 0.)  (10, 0.)  (13, 0.) \n"
+  "row 10: (6, 0.)  (9, 0.)  (10, 0.)  (11, 0.)  (14, 0.) \n"
+  "row 11: (7, 0.)  (10, 0.)  (11, 0.)  (15, 0.) \n"
+  "row 12: (8, 0.)  (12, 0.)  (13, 0.) \n"
+  "row 13: (9, 0.)  (12, 0.)  (13, 0.)  (14, 0.) \n"
+  "row 14: (10, 0.)  (13, 0.)  (14, 0.)  (15, 0.) \n"
+  "row 15: (11, 0.)  (14, 0.)  (15, 0.) \n"
+  "Mat Object: 1 MPI process\n"
+  "  type: seqaij\n"
+  "row 0: (0, 2.)  (1, -1.)  (4, -1.) \n"
+  "row 1: (0, -1.)  (1, 3.)  (2, -1.)  (5, -1.) \n"
+  "row 2: (1, -1.)  (2, 3.)  (3, -1.)  (6, -1.) \n"
+  "row 3: (2, -1.)  (3, 2.)  (7, -1.) \n"
+  "row 4: (0, -1.)  (4, 3.)  (5, -1.)  (8, -1.) \n"
+  "row 5: (1, -1.)  (4, -1.)  (5, 4.)  (6, -1.)  (9, -1.) \n"
+  "row 6: (2, -1.)  (5, -1.)  (6, 4.)  (7, -1.)  (10, -1.) \n"
+  "row 7: (3, -1.)  (6, -1.)  (7, 3.)  (11, -1.) \n"
+  "row 8: (4, -1.)  (8, 3.)  (9, -1.)  (12, -1.) \n"
+  "row 9: (5, -1.)  (8, -1.)  (9, 4.)  (10, -1.)  (13, -1.) \n"
+  "row 10: (6, -1.)  (9, -1.)  (10, 4.)  (11, -1.)  (14, -1.) \n"
+  "row 11: (7, -1.)  (10, -1.)  (11, 3.)  (15, -1.) \n"
+  "row 12: (8, -1.)  (12, 2.)  (13, -1.) \n"
+  "row 13: (9, -1.)  (12, -1.)  (13, 3.)  (14, -1.) \n"
+  "row 14: (10, -1.)  (13, -1.)  (14, 3.)  (15, -1.) \n"
+  "row 15: (11, -1.)  (14, -1.)  (15, 2.) \n";
+// clang-format on
 
 TEST(PetscSmoketest, PetscEx50)
 {
@@ -361,4 +327,5 @@ int main(int argc, char* argv[])
   return result;
 }
 
+#pragma GCC diagnostic pop
 // SERAC_EDIT_END
