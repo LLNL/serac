@@ -264,6 +264,11 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
 
         set(HDF5_IMPORT_CONFIG "RELEASE" CACHE STRING "")
 
+        # Add missing include dir to var that MFEM uses
+        if (CALIPER_FOUND)
+            get_target_property(CALIPER_INCLUDE_DIRS caliper INTERFACE_INCLUDE_DIRECTORIES)
+        endif()
+
         # Disable tests + examples
         set(MFEM_ENABLE_TESTING  OFF CACHE BOOL "")
         set(MFEM_ENABLE_EXAMPLES OFF CACHE BOOL "")
