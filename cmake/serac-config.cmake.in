@@ -22,8 +22,6 @@ if(NOT SERAC_FOUND)
   set(SERAC_INSTALL_PREFIX "@SERAC_INSTALL_PREFIX@")
   set(SERAC_INCLUDE_DIRS "${SERAC_INSTALL_PREFIX}/include")
 
-  list(APPEND CMAKE_MODULE_PATH "${SERAC_INSTALL_PREFIX}/@SERAC_INSTALL_CMAKE_MODULE_DIR@")
-
   #----------------------------------------------------------------------------
   # Set user configuration options and features
   #----------------------------------------------------------------------------
@@ -141,7 +139,7 @@ if(NOT SERAC_FOUND)
 
   # Petsc
   if(SERAC_USE_PETSC)
-    include("${CMAKE_MODULE_PATH}/FindPETSc.cmake")
+    include("${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake")
   endif()
 
   # Umpire
