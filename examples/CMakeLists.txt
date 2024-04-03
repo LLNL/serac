@@ -27,3 +27,16 @@ install(
     DESTINATION
         examples/serac/simple_conduction
 )
+
+# Add the contact examples
+add_subdirectory(contact)
+
+install(
+    FILES
+        contact/beam_bending.cpp
+        contact/ironing.cpp
+        contact/sphere.cpp
+        contact/twist.cpp
+    DESTINATION
+        examples/serac/contact
+)

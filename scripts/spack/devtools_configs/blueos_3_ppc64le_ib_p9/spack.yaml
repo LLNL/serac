@@ -76,10 +76,20 @@ spack:
       externals:
       - spec: bzip2@1.0.6
         prefix: /usr
+    curl:
+      buildable: false
+      externals:
+      - spec: curl@7.29.0
+        prefix: /usr
     diffutils:
       buildable: false
       externals:
       - spec: diffutils@3.3
+        prefix: /usr
+    elfutils:
+      buildable: false
+      externals:
+      - spec: elfutils@0.176
         prefix: /usr
     findutils:
       buildable: false
@@ -111,6 +121,11 @@ spack:
       externals:
       - spec: libtool@2.4.2
         prefix: /usr
+    libunwind:
+      buildable: false
+      externals:
+      - spec: libunwind@8.0.1
+        prefix: /usr
     m4:
       buildable: false
       externals:
@@ -136,6 +151,16 @@ spack:
         - spec: tar@1.26
           prefix: /usr
       buildable: false
+    unzip:
+      buildable: false
+      externals:
+      - spec: unzip@6.0
+        prefix: /usr
+    zlib:
+      buildable: false
+      externals:
+      - spec: zlib@1.2.7
+        prefix: /usr
 
     # Lock in versions of Devtools
     cmake:
@@ -145,8 +170,8 @@ spack:
       - spec: cmake@3.23.1
         prefix: /usr/tce/packages/cmake/cmake-3.23.1
     llvm:
-      version: [10.0.0]
+      version: [14.0.5]
       buildable: false
       externals:
-      - spec: llvm@10.0.0+clang
-        prefix: /usr/tce/packages/clang/clang-10.0.0
+      - spec: llvm@14.0.5+clang+python
+        prefix: /usr/tce/packages/clang/clang-14.0.5

@@ -41,8 +41,7 @@ solid = {
     order = 2,
 
     -- neo-Hookean material parameters
-    mu = 0.25,
-    K  = 10.0,
+    materials = { { model = "NeoHookean", mu = 0.25, K = 10.0, density = 1.0 }, },
 
     -- boundary condition parameters
     boundary_conds = {

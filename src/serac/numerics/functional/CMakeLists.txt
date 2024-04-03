@@ -27,6 +27,7 @@ set(functional_headers
     polynomials.hpp
     quadrature.hpp
     quadrature_data.hpp
+    shape_aware_functional.hpp
     tensor.hpp
     tuple.hpp
     tuple_tensor_dual_functions.hpp

@@ -312,6 +312,7 @@ public:
   /**
    * @brief this function lets the user evaluate the serac::Functional with the given trial space values
    *
+   * @param t the time
    * @param args the input T-vectors
    *
    * note: it accepts exactly `num_trial_spaces` arguments of type mfem::Vector. Additionally, one of those
@@ -319,7 +320,7 @@ public:
    * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
    */
   template <uint32_t wrt, typename... T>
-  typename operator_paren_return<wrt>::type operator()(DifferentiateWRT<wrt>, const T&... args)
+  typename operator_paren_return<wrt>::type operator()(DifferentiateWRT<wrt>, double t, const T&... args)
   {
     const mfem::Vector* input_T[] = {&static_cast<const mfem::Vector&>(args)...};
 
@@ -345,7 +346,7 @@ public:
       }
 
       const bool update_state = false;
-      integral.Mult(input_E_[type], output_E_[type], wrt, update_state);
+      integral.Mult(t, input_E_[type], output_E_[type], wrt, update_state);
 
       // scatter-add to compute residuals on the local processor
       G_test_.ScatterAdd(output_E_[type], output_L_);
@@ -376,9 +377,10 @@ public:
 
   /// @overload
   template <typename... T>
-  auto operator()(const T&... args)
+  auto operator()(double t, const T&... args)
   {
-    constexpr int num_differentiated_arguments = (std::is_same_v<T, differentiate_wrt_this> + ...);
+    // below we add 0 so the number of differentiated arguments defaults to 0 if trial spaces are not provided
+    constexpr int num_differentiated_arguments = (std::is_same_v<T, differentiate_wrt_this> + ... + 0);
     static_assert(num_differentiated_arguments <= 1,
                   "Error: Functional::operator() can only differentiate w.r.t. 1 argument a time");
     static_assert(sizeof...(T) == num_trial_spaces,
@@ -386,7 +388,7 @@ public:
 
     [[maybe_unused]] constexpr uint32_t i = index_of_differentiation<T...>();
 
-    return (*this)(DifferentiateWRT<i>{}, args...);
+    return (*this)(DifferentiateWRT<i>{}, t, args...);
   }
 
 private:

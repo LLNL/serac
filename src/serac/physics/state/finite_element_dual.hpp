@@ -36,14 +36,35 @@ public:
    *
    * @param[in] rhs The input Dual used for construction
    */
-  FiniteElementDual(const FiniteElementDual& rhs) : FiniteElementVector(rhs) {}
+  FiniteElementDual(const FiniteElementDual& rhs) : FiniteElementVector(rhs)
+  {
+    if (rhs.linear_form_) {
+      linearForm();
+      *linear_form_ = *rhs.linear_form_;
+    }
+  }
 
   /**
    * @brief Move construct a new Finite Element Dual object
    *
    * @param[in] rhs The input vector used for construction
    */
-  FiniteElementDual(FiniteElementDual&& rhs) : FiniteElementVector(std::move(rhs)) {}
+  FiniteElementDual(FiniteElementDual&& rhs) : FiniteElementVector(rhs)
+  {
+    this->linear_form_ = std::move(rhs.linear_form_);
+  }
+
+  /**
+   * @brief Move assignment
+   *
+   * @param rhs The right hand side input Dual
+   * @return The assigned FiniteElementDual
+   */
+  FiniteElementDual& operator=(FiniteElementDual&& rhs)
+  {
+    this->linear_form_ = std::move(rhs.linear_form_);
+    return *this;
+  }
 
   /**
    * @brief Copy assignment
@@ -54,6 +75,10 @@ public:
   FiniteElementDual& operator=(const FiniteElementDual& rhs)
   {
     FiniteElementVector::operator=(rhs);
+    if (rhs.linear_form_) {
+      linearForm();
+      *linear_form_ = *rhs.linear_form_;
+    }
     return *this;
   }
 

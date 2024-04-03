@@ -18,20 +18,15 @@
 
 namespace serac {
 
-BasePhysics::BasePhysics(std::string physics_name, std::string mesh_tag, int cycle, double time)
+BasePhysics::BasePhysics(std::string physics_name, std::string mesh_tag, int cycle, double time,
+                         bool checkpoint_to_disk)
     : name_(physics_name),
       mesh_tag_(mesh_tag),
       mesh_(StateManager::mesh(mesh_tag_)),
       comm_(mesh_.GetComm()),
       shape_displacement_(StateManager::shapeDisplacement(mesh_tag_)),
-      time_(time),
-      max_time_(time),
-      min_time_(time),
-      cycle_(cycle),
-      max_cycle_(cycle),
-      min_cycle_(cycle),
-      ode_time_point_(time),
-      bcs_(mesh_)
+      bcs_(mesh_),
+      checkpoint_to_disk_(checkpoint_to_disk)
 {
   std::tie(mpi_size_, mpi_rank_) = getMPIInfo(comm_);
 
@@ -46,6 +41,8 @@ BasePhysics::BasePhysics(std::string physics_name, std::string mesh_tag, int cyc
                                       mesh_.Dimension()));
   }
   StateManager::storeDual(*shape_displacement_sensitivity_);
+
+  initializeBasePhysicsStates(cycle, time);
 }
 
 double BasePhysics::time() const { return time_; }
@@ -61,6 +58,25 @@ double BasePhysics::minTime() const { return min_time_; }
 int BasePhysics::minCycle() const { return min_cycle_; }
 
 std::vector<double> BasePhysics::timesteps() const { return timesteps_; }
+
+void BasePhysics::initializeBasePhysicsStates(int cycle, double time)
+{
+  timesteps_.clear();
+
+  time_           = time;
+  max_time_       = time;
+  min_time_       = time;
+  cycle_          = cycle;
+  max_cycle_      = cycle;
+  min_cycle_      = cycle;
+  ode_time_point_ = time;
+
+  *shape_displacement_sensitivity_ = 0.0;
+
+  for (auto& p : parameters_) {
+    *p.sensitivity = 0.0;
+  }
+}
 
 void BasePhysics::setParameter(const size_t parameter_index, const FiniteElementState& parameter_state)
 {
@@ -96,6 +112,74 @@ void BasePhysics::setShapeDisplacement(const FiniteElementState& shape_displacem
   shape_displacement_ = shape_displacement;
 }
 
+void BasePhysics::CreateParaviewDataCollection() const
+{
+  std::string output_name = name_;
+  if (output_name == "") {
+    output_name = "default";
+  }
+
+  paraview_dc_ =
+      std::make_unique<mfem::ParaViewDataCollection>(output_name, const_cast<mfem::ParMesh*>(&states_.front()->mesh()));
+  int max_order_in_fields = 0;
+
+  // Find the maximum polynomial order in the physics module's states
+  for (const FiniteElementState* state : states_) {
+    paraview_dc_->RegisterField(state->name(), &state->gridFunction());
+    max_order_in_fields = std::max(max_order_in_fields, state->space().GetOrder(0));
+  }
+
+  for (const FiniteElementDual* dual : duals_) {
+    paraview_dual_grid_functions_[dual->name()] =
+        std::make_unique<mfem::ParGridFunction>(const_cast<mfem::ParFiniteElementSpace*>(&dual->space()));
+    max_order_in_fields = std::max(max_order_in_fields, dual->space().GetOrder(0));
+    paraview_dc_->RegisterField(dual->name(), paraview_dual_grid_functions_[dual->name()].get());
+  }
+
+  for (auto& parameter : parameters_) {
+    paraview_dc_->RegisterField(parameter.state->name(), &parameter.state->gridFunction());
+    max_order_in_fields = std::max(max_order_in_fields, parameter.state->space().GetOrder(0));
+  }
+
+  paraview_dc_->RegisterField(shape_displacement_.name(), &shape_displacement_.gridFunction());
+  max_order_in_fields = std::max(max_order_in_fields, shape_displacement_.space().GetOrder(0));
+
+  shape_sensitivity_grid_function_ = std::make_unique<mfem::ParGridFunction>(&shape_displacement_sensitivity_->space());
+  shape_displacement_sensitivity_->space().GetRestrictionMatrix()->MultTranspose(*shape_displacement_sensitivity_,
+                                                                                 *shape_sensitivity_grid_function_);
+  max_order_in_fields = std::max(max_order_in_fields, shape_displacement_sensitivity_->space().GetOrder(0));
+  paraview_dc_->RegisterField(shape_displacement_sensitivity_->name(), shape_sensitivity_grid_function_.get());
+
+  // Set the options for the paraview output files
+  paraview_dc_->SetLevelsOfDetail(max_order_in_fields);
+  paraview_dc_->SetHighOrderOutput(true);
+  paraview_dc_->SetDataFormat(mfem::VTKFormat::BINARY);
+  paraview_dc_->SetCompression(true);
+}
+
+void BasePhysics::UpdateParaviewDataCollection(const std::string& paraview_output_dir) const
+{
+  for (const FiniteElementState* state : states_) {
+    state->gridFunction();  // update grid function values
+  }
+  for (const FiniteElementDual* dual : duals_) {
+    // These are really const calls, but MFEM doesn't label them as such
+    serac::FiniteElementDual* non_const_dual = const_cast<serac::FiniteElementDual*>(dual);
+    non_const_dual->space().GetRestrictionMatrix()->MultTranspose(*dual, *paraview_dual_grid_functions_[dual->name()]);
+  }
+  for (auto& parameter : parameters_) {
+    parameter.state->gridFunction();
+  }
+  shape_displacement_.gridFunction();
+  shape_displacement_sensitivity_->space().GetRestrictionMatrix()->MultTranspose(*shape_displacement_sensitivity_,
+                                                                                 *shape_sensitivity_grid_function_);
+
+  // Set the current time, cycle, and requested paraview directory
+  paraview_dc_->SetCycle(cycle_);
+  paraview_dc_->SetTime(time_);
+  paraview_dc_->SetPrefixPath(paraview_output_dir);
+}
+
 void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_dir) const
 {
   // Update the states and duals in the state manager
@@ -122,75 +206,10 @@ void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_d
   if (paraview_output_dir) {
     // Check to see if the paraview data collection exists. If not, create it.
     if (!paraview_dc_) {
-      std::string output_name = name_;
-      if (output_name == "") {
-        output_name = "default";
-      }
-
-      paraview_dc_ = std::make_unique<mfem::ParaViewDataCollection>(
-          output_name, const_cast<mfem::ParMesh*>(&states_.front()->mesh()));
-      int max_order_in_fields = 0;
-
-      // Find the maximum polynomial order in the physics module's states
-      for (const FiniteElementState* state : states_) {
-        paraview_dc_->RegisterField(state->name(), &state->gridFunction());
-        max_order_in_fields = std::max(max_order_in_fields, state->space().GetOrder(0));
-      }
-
-      for (const FiniteElementDual* dual : duals_) {
-        // These are really const calls, but MFEM doesn't label them as such
-        serac::FiniteElementDual* non_const_dual = const_cast<serac::FiniteElementDual*>(dual);
-
-        paraview_dual_grid_functions_[dual->name()] =
-            std::make_unique<mfem::ParGridFunction>(const_cast<mfem::ParFiniteElementSpace*>(&dual->space()));
-        non_const_dual->space().GetRestrictionMatrix()->MultTranspose(*dual,
-                                                                      *paraview_dual_grid_functions_[dual->name()]);
-        max_order_in_fields = std::max(max_order_in_fields, dual->space().GetOrder(0));
-        paraview_dc_->RegisterField(dual->name(), paraview_dual_grid_functions_[dual->name()].get());
-      }
-
-      for (auto& parameter : parameters_) {
-        paraview_dc_->RegisterField(parameter.state->name(), &parameter.state->gridFunction());
-        max_order_in_fields = std::max(max_order_in_fields, parameter.state->space().GetOrder(0));
-      }
-
-      paraview_dc_->RegisterField(shape_displacement_.name(), &shape_displacement_.gridFunction());
-      max_order_in_fields = std::max(max_order_in_fields, shape_displacement_.space().GetOrder(0));
-
-      shape_sensitivity_grid_function_ =
-          std::make_unique<mfem::ParGridFunction>(&shape_displacement_sensitivity_->space());
-      shape_displacement_sensitivity_->space().GetRestrictionMatrix()->MultTranspose(*shape_displacement_sensitivity_,
-                                                                                     *shape_sensitivity_grid_function_);
-      max_order_in_fields = std::max(max_order_in_fields, shape_displacement_sensitivity_->space().GetOrder(0));
-      paraview_dc_->RegisterField(shape_displacement_sensitivity_->name(), shape_sensitivity_grid_function_.get());
-
-      // Set the options for the paraview output files
-      paraview_dc_->SetLevelsOfDetail(max_order_in_fields);
-      paraview_dc_->SetHighOrderOutput(true);
-      paraview_dc_->SetDataFormat(mfem::VTKFormat::BINARY);
-      paraview_dc_->SetCompression(true);
-    } else {
-      for (const FiniteElementState* state : states_) {
-        state->gridFunction();  // update grid function values
-      }
-      for (const FiniteElementDual* dual : duals_) {
-        // These are really const calls, but MFEM doesn't label them as such
-        serac::FiniteElementDual* non_const_dual = const_cast<serac::FiniteElementDual*>(dual);
-        non_const_dual->space().GetRestrictionMatrix()->MultTranspose(*dual,
-                                                                      *paraview_dual_grid_functions_[dual->name()]);
-      }
-      for (auto& parameter : parameters_) {
-        parameter.state->gridFunction();
-      }
-      shape_displacement_.gridFunction();
-      shape_displacement_sensitivity_->space().GetRestrictionMatrix()->MultTranspose(*shape_displacement_sensitivity_,
-                                                                                     *shape_sensitivity_grid_function_);
+      CreateParaviewDataCollection();
     }
 
-    // Set the current time, cycle, and requested paraview directory
-    paraview_dc_->SetCycle(cycle_);
-    paraview_dc_->SetTime(time_);
-    paraview_dc_->SetPrefixPath(*paraview_output_dir);
+    UpdateParaviewDataCollection(*paraview_output_dir);
 
     // Write the paraview file
     paraview_dc_->Save();
@@ -314,13 +333,40 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
   }
 }
 
-FiniteElementState BasePhysics::loadCheckpointedState(const std::string& /*state_name*/, int /*cycle*/) const
+FiniteElementState BasePhysics::loadCheckpointedState(const std::string& state_name, int cycle) const
 {
-  SLIC_ERROR_ROOT(axom::fmt::format("loadCheckpointedState not implemented for physics module {}.", name_));
-  return *states_[0];
+  if (checkpoint_to_disk_) {
+    // See if the requested cycle has been checkpointed previously
+    if (!cached_checkpoint_cycle_ || *cached_checkpoint_cycle_ != cycle) {
+      // If not, get the checkpoint from disk
+      cached_checkpoint_states_ = getCheckpointedStates(cycle);
+      cached_checkpoint_cycle_  = cycle;
+    }
+
+    // Ensure that the state name exists in this physics module
+    SLIC_ERROR_ROOT_IF(
+        cached_checkpoint_states_.find(state_name) == cached_checkpoint_states_.end(),
+        axom::fmt::format("Requested state name {} does not exist in physics module {}.", state_name, name_));
+    return cached_checkpoint_states_.at(state_name);
+  }
+
+  // Ensure that the state name exists in this physics module
+  SLIC_ERROR_ROOT_IF(
+      checkpoint_states_.find(state_name) == checkpoint_states_.end(),
+      axom::fmt::format("Requested state name {} does not exist in physics module {}.", state_name, name_));
+
+  return checkpoint_states_.at(state_name)[static_cast<size_t>(cycle)];
 }
 
-double BasePhysics::loadCheckpointedTimestep(int cycle) const
+std::unordered_map<std::string, FiniteElementState> BasePhysics::getCheckpointedStates(int /*cycle*/) const
+{
+  SLIC_ERROR_ROOT(axom::fmt::format(
+      "loadCheckpointedState and getCheckpointedStates not implemented for physics module {}.", name_));
+  std::unordered_map<std::string, FiniteElementState> empty_container;
+  return empty_container;
+}
+
+double BasePhysics::getCheckpointedTimestep(int cycle) const
 {
   SLIC_ERROR_ROOT_IF(cycle < 0, axom::fmt::format("Negative cycle number requested for physics module {}.", name_));
   SLIC_ERROR_ROOT_IF(cycle > max_cycle_,
@@ -337,6 +383,22 @@ std::string addPrefix(const std::string& prefix, const std::string& target)
   }
   return prefix + "_" + target;
 }
+
+std::string removePrefix(const std::string& prefix, const std::string& target)
+{
+  std::string modified_target{target};
+  // Ensure the prefix isn't an empty string
+  if (!prefix.empty()) {
+    // Ensure the prefix is at the beginning of the string
+    auto index = modified_target.find(prefix + "_");
+    if (index == 0) {
+      // Remove the prefix
+      modified_target.erase(0, prefix.size() + 1);
+    }
+  }
+  return modified_target;
+}
+
 }  // namespace detail
 
 }  // namespace serac

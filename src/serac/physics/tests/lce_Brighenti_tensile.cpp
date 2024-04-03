@@ -61,8 +61,8 @@ TEST(LiquidCrystalElastomer, Brighenti)
               std::pow(x[0] - 1.0, 2) + std::pow(x[1] - 3.0, 2) - std::pow(rad, 2) < 0.0 ||
               std::pow(x[0] - 3.0, 2) + std::pow(x[1] - 1.0, 2) - std::pow(rad, 2) < 0.0 ||
               std::pow(x[0] - 1.0, 2) + std::pow(x[1] - 1.0, 2) - std::pow(rad, 2) < 0.0)
-                 ? 0.333 * M_PI_2
-                 : 0.667 * M_PI_2;
+                        ? 0.333 * M_PI_2
+                        : 0.667 * M_PI_2;
     }
   };
 
@@ -79,7 +79,7 @@ TEST(LiquidCrystalElastomer, Brighenti)
       .print_level    = 0,
   };
 
-#ifdef MFEM_USE_SUNDIALS
+#ifdef SERAC_USE_SUNDIALS
   NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::KINBacktrackingLineSearch,
                                               .relative_tol   = 1.0e-4,
                                               .absolute_tol   = 1.0e-7,
@@ -132,9 +132,11 @@ TEST(LiquidCrystalElastomer, Brighenti)
   double iniLoadVal = 1.0e0;
   double maxLoadVal = 4 * 1.3e0 / lx / lz;
   double loadVal    = iniLoadVal + 0.0 * maxLoadVal;
-  solid_solver.setTraction([&loadVal, ly](auto x, auto /*n*/, auto /*t*/) {
-    return tensor<double, 3>{0, loadVal * (x[1] > 0.99 * ly), 0};
-  });
+  solid_solver.setTraction(
+      [&loadVal, ly](auto x, auto /*n*/, auto /*t*/) {
+        return tensor<double, 3>{0, loadVal * (x[1] > 0.99 * ly), 0};
+      },
+      EntireBoundary(pmesh));
 
   solid_solver.setDisplacement(ini_displacement);
 
@@ -149,7 +151,7 @@ TEST(LiquidCrystalElastomer, Brighenti)
   Functional<double(H1<p, dim>)> avgYDispQoI({&solid_solver.displacement().space()});
   avgYDispQoI.AddSurfaceIntegral(
       DependsOn<0>{},
-      [=](auto position, auto displacement) {
+      [=](double /*t*/, auto position, auto displacement) {
         auto [X, dX_dxi] = position;
         auto [u, du_dxi] = displacement;
         auto n           = normalize(cross(dX_dxi));
@@ -160,18 +162,18 @@ TEST(LiquidCrystalElastomer, Brighenti)
   Functional<double(H1<p, dim>)> area({&solid_solver.displacement().space()});
   area.AddSurfaceIntegral(
       DependsOn<>{},
-      [=](auto position) {
+      [=](double /*t*/, auto position) {
         auto X = get<0>(position);
         return (X[1] > 0.99 * ly) ? 1.0 : 0.0;
       },
       pmesh);
 
-  double initial_area = area(solid_solver.displacement());
+  double t            = 0.0;
+  double initial_area = area(t, solid_solver.displacement());
   SLIC_INFO_ROOT("... Initial Area of the top surface: " << initial_area);
 
   // initializations for quasi-static problem
   int    num_steps = 3;
-  double t         = 0.0;
   double tmax      = 1.0;
   double dt        = tmax / num_steps;
   double gblDispYmax;
@@ -192,8 +194,8 @@ TEST(LiquidCrystalElastomer, Brighenti)
     solid_solver.outputStateToDisk(output_filename);
 
     // get QoI
-    double current_qoi  = avgYDispQoI(solid_solver.displacement());
-    double current_area = area(solid_solver.displacement());
+    double current_qoi  = avgYDispQoI(t, solid_solver.displacement());
+    double current_area = area(t, solid_solver.displacement());
 
     // get displacement info
     if (outputDispInfo) {

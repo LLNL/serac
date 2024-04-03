@@ -6,42 +6,42 @@
 #
 
 variables:
-  Clang_10_ImageName: 'seracllnl/tpls:clang-10_11-04-23_07h-20m'
-  GCC_11_ImageName: 'seracllnl/tpls:gcc-11_11-04-23_07h-20m'
+  Clang_14_ImageName: 'seracllnl/tpls:clang-14_03-15-24_21h-56m'
+  GCC_13_ImageName: 'seracllnl/tpls:gcc-13_03-15-24_21h-56m'
 
 jobs:
 - job: Build_and_Test
   strategy:
     matrix:
-      linux_gcc11_debug:
-          VM_ImageName: 'ubuntu-20.04'
-          Compiler_ImageName: $(GCC_11_ImageName)
-          TEST_TARGET: 'linux_gcc11'
-          HOST_CONFIG: 'gcc@11.1.0.cmake'
+      linux_gcc13_debug:
+          VM_ImageName: 'ubuntu-22.04'
+          Compiler_ImageName: $(GCC_13_ImageName)
+          TEST_TARGET: 'linux_gcc13'
+          HOST_CONFIG: 'gcc@13.1.0.cmake'
           BUILD_TYPE: 'Debug'
-      linux_gcc11_release:
-          VM_ImageName: 'ubuntu-20.04'
-          Compiler_ImageName: $(GCC_11_ImageName)
-          TEST_TARGET: 'linux_gcc11'
-          HOST_CONFIG: 'gcc@11.1.0.cmake'
+      linux_gcc13_release:
+          VM_ImageName: 'ubuntu-22.04'
+          Compiler_ImageName: $(GCC_13_ImageName)
+          TEST_TARGET: 'linux_gcc13'
+          HOST_CONFIG: 'gcc@13.1.0.cmake'
           BUILD_TYPE: 'Release'
-      linux_clang10_debug:
-          VM_ImageName: 'ubuntu-20.04'
-          Compiler_ImageName: $(Clang_10_ImageName)
-          TEST_TARGET: 'linux_clang10'
-          HOST_CONFIG: 'clang@10.0.0.cmake'
+      linux_clang14_debug:
+          VM_ImageName: 'ubuntu-22.04'
+          Compiler_ImageName: $(Clang_14_ImageName)
+          TEST_TARGET: 'linux_clang14'
+          HOST_CONFIG: 'clang@14.0.0.cmake'
           BUILD_TYPE: 'Debug'
-      linux_clang10_release:
-          VM_ImageName: 'ubuntu-20.04'
-          Compiler_ImageName: $(Clang_10_ImageName)
-          TEST_TARGET: 'linux_clang10'
-          HOST_CONFIG: 'clang@10.0.0.cmake'
+      linux_clang14_release:
+          VM_ImageName: 'ubuntu-22.04'
+          Compiler_ImageName: $(Clang_14_ImageName)
+          TEST_TARGET: 'linux_clang14'
+          HOST_CONFIG: 'clang@14.0.0.cmake'
           BUILD_TYPE: 'Release'
-      linux_clang10_codevelop:
-          VM_ImageName: 'ubuntu-20.04'
-          Compiler_ImageName: $(Clang_10_ImageName)
-          TEST_TARGET: 'linux_clang10'
-          HOST_CONFIG: 'clang@10.0.0.cmake'
+      linux_clang14_codevelop:
+          VM_ImageName: 'ubuntu-22.04'
+          Compiler_ImageName: $(Clang_14_ImageName)
+          TEST_TARGET: 'linux_clang14'
+          HOST_CONFIG: 'clang@14.0.0.cmake'
           BUILD_TYPE: 'Debug'
           CMAKE_OPTS: '-DSERAC_ENABLE_CODEVELOP=ON'
           BUILD_SRC_OPTS: '--skip-install'
@@ -67,10 +67,10 @@ jobs:
 
 - job: Check_Code
   variables:
-    VM_ImageName: 'ubuntu-20.04'
-    Compiler_ImageName: $(Clang_10_ImageName)
-    TEST_TARGET: 'linux_clang10'
-    HOST_CONFIG: 'clang@10.0.0.cmake'
+    VM_ImageName: 'ubuntu-22.04'
+    Compiler_ImageName: $(Clang_14_ImageName)
+    TEST_TARGET: 'linux_clang14'
+    HOST_CONFIG: 'clang@14.0.0.cmake'
 
   strategy:
     matrix:

@@ -101,7 +101,7 @@ foreach(_tool ${_used_blt_tools})
     endif()
 endforeach()
 
-set(BLT_REQUIRED_CLANGFORMAT_VERSION  "10" CACHE STRING "")
+set(BLT_REQUIRED_CLANGFORMAT_VERSION  "14" CACHE STRING "")
 
 set(ENABLE_BENCHMARKS  OFF CACHE BOOL "")
 
@@ -190,7 +190,7 @@ if (SERAC_ENABLE_CODEVELOP)
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/axom/src>
     )
 
-    install(TARGETS              mfem ${axom_exported_targets}
+    install(TARGETS              mfem ${axom_exported_targets} ${tribol_exported_targets}
             EXPORT               serac-targets
             DESTINATION          lib
             )

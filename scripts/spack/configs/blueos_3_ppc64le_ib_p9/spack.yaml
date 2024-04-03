@@ -54,6 +54,7 @@ spack:
         szip: [libszip, libaec]
         tbb: [intel-tbb]
         jpeg: [libjpeg-turbo, libjpeg]
+        zlib-api: [zlib]
     py-numpy:
       variants: ~blas~lapack
 
@@ -206,11 +207,11 @@ spack:
           prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.9.6
       buildable: false
     llvm:
-      version: [10.0.0]
+      version: [14.0.5]
       buildable: false
       externals:
-      - spec: llvm+clang@10.0.0
-        prefix: /usr/tce/packages/clang/clang-10.0.0
+      - spec: llvm@14.0.5+clang+python
+        prefix: /usr/tce/packages/clang/clang-14.0.5
     py-ats:
       version: [7.0.105]
       externals:
@@ -232,12 +233,12 @@ spack:
 
     # Globally lock version of third party libraries
     camp:
-      require: "@2022.10.1"
+      require: "@2023.06.0"
     conduit:
       require: "@0.8.8~shared~test~examples~utilities"
     hdf5:
       variants: ~shared~mpi
     raja:
-      require: "@2022.10.5~shared~examples~exercises"
+      require: "@2023.06.1~shared~examples~exercises"
     umpire:
-      require: "@2022.10.0~shared~examples"
+      require: "@2023.06.0~shared~examples"

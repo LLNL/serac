@@ -36,7 +36,7 @@ message(STATUS "Configuring Serac version ${SERAC_VERSION_FULL}")
 #------------------------------------------------------------------------------
 # Create variable for every TPL
 #------------------------------------------------------------------------------
-set(TPL_DEPS ADIAK AXOM CAMP CONDUIT CUDA FMT HDF5 LUA MFEM MPI TRIBOL CALIPER PETSC RAJA STRUMPACK UMPIRE)
+set(TPL_DEPS ADIAK AXOM CAMP CONDUIT CUDA FMT HDF5 LUA MFEM MPI TRIBOL CALIPER PETSC RAJA STRUMPACK SUNDIALS UMPIRE)
 foreach(dep ${TPL_DEPS})
     if( ${dep}_FOUND OR ENABLE_${dep} )
         set(SERAC_USE_${dep} TRUE)
@@ -114,6 +114,7 @@ install(
   FILES 
     ${CMAKE_CURRENT_BINARY_DIR}/serac-config.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/serac-config-version.cmake
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/thirdparty/FindPETSc.cmake
   DESTINATION 
     ${SERAC_INSTALL_CMAKE_MODULE_DIR}
 )

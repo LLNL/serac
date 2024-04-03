@@ -33,7 +33,7 @@ static constexpr double b = 2.1;
 template <int dim>
 struct hcurl_qfunction {
   template <typename x_t, typename vector_potential_t>
-  SERAC_HOST_DEVICE auto operator()(x_t x, vector_potential_t vector_potential) const
+  SERAC_HOST_DEVICE auto operator()(double /*t*/, x_t x, vector_potential_t vector_potential) const
   {
     auto [A, curl_A] = vector_potential;
     auto J_term      = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
@@ -109,7 +109,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   // Add the total domain residual term to the functional
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](auto x, auto temperature) {
+      [=](double /*t*/, auto x, auto temperature) {
         // get the value and the gradient from the input tuple
         auto [u, du_dx] = temperature;
         auto source     = a * u - (100 * x[0] * x[1]);
@@ -125,7 +125,8 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   r1 -= (*F);
 
   // Compute the residual using functional
-  mfem::Vector r2 = residual(U);
+  double       t  = 0.0;
+  mfem::Vector r2 = residual(t, U);
 
   mfem::Vector diff(r1.Size());
   subtract(r1, r2, diff);
@@ -140,7 +141,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   EXPECT_NEAR(0.0, diff.Norml2() / r1.Norml2(), 1.e-14);
 
   // Compute the gradient using functional
-  auto [r, drdU] = residual(differentiate_wrt(U));
+  auto [r, drdU] = residual(t, differentiate_wrt(U));
 
   std::unique_ptr<mfem::HypreParMatrix> J_func = assemble(drdU);
 
@@ -233,7 +234,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](auto /*x*/, auto displacement) {
+      [=](double /*t*/, auto /*x*/, auto displacement) {
         auto [u, du_dx] = displacement;
         auto body_force = a * u + I[0];
         auto strain     = 0.5 * (du_dx + transpose(du_dx));
@@ -246,7 +247,8 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   mfem::Vector r1(U.Size());
   J_mfem->Mult(U, r1);
   r1 -= (*F);
-  mfem::Vector r2 = residual(U);
+  double       t  = 0.0;
+  mfem::Vector r2 = residual(t, U);
 
   mfem::Vector diff(r1.Size());
   subtract(r1, r2, diff);
@@ -258,7 +260,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   }
   EXPECT_NEAR(0., diff.Norml2() / r1.Norml2(), 1.e-14);
 
-  auto [r, drdU] = residual(differentiate_wrt(U));
+  auto [r, drdU] = residual(t, differentiate_wrt(U));
 
   std::unique_ptr<mfem::HypreParMatrix> J_func = assemble(drdU);
 

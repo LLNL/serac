@@ -143,6 +143,19 @@ public:
   }
 
   /**
+   * @brief Method to reset physics states to zero.  This does not reset design parameters or shape.
+   *
+   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
+   * @param[in] time The simulation time to initialize the physics module to
+   */
+  void resetStates(int cycle = 0, double time = 0.0) override
+  {
+    BasePhysics::initializeBasePhysicsStates(cycle, time);
+    thermal_.resetStates(cycle, time);
+    solid_.resetStates(cycle, time);
+  }
+
+  /**
    * @brief Accessor for getting named finite element state primal fields from the physics modules
    *
    * @param state_name The name of the Finite Element State to retrieve
@@ -198,7 +211,7 @@ public:
    */
   virtual std::vector<std::string> stateNames() const override
   {
-    return std::vector<std::string>{{"displacement"}, {"velocity"}, {"temperature"}};
+    return std::vector<std::string>{"displacement", "velocity", "temperature"};
   }
 
   /**
@@ -517,7 +530,7 @@ protected:
   using displacement_field = H1<order, dim>;  ///< the function space for the displacement field
   using temperature_field  = H1<order>;       ///< the function space for the temperature field
 
-  /// Submodule to compute the thermal conduction physics
+  /// Submodule to compute the heat transfer physics
   HeatTransfer<order, dim, Parameters<displacement_field, parameter_space...>> thermal_;
 
   /// Submodule to compute the mechanics

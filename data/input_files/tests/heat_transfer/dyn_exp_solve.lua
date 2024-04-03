@@ -1,32 +1,10 @@
 -- Comparison information
-exact_function = function (v)
-  return v.x^2 * v.y
-end
-
-minus_laplacian_temp = function (v)
-  return -2.0 * v.y
-end
-
-reaction = function (temp)
-  return temp^2 + 5.0
-end
-
-d_reaction = function (temp)
-  return 2.0 * temp
-end
-
-scale_function = function (v)
-    return math.sin(v.x) + math.cos(v.y)
-end
-
-exact_solution = {
-  scalar_function = exact_function
-}
-
+expected_temperature_l2norm = 2.6493029
 epsilon = 0.00001
 
 -- Simulation time parameters
-dt      = 1.0
+dt      = 0.0001
+t_final = 0.001
 
 main_mesh = {
     type = "file",
@@ -37,8 +15,12 @@ main_mesh = {
     par_ref_levels = 1,
 }
 
+temp_func = function (v)
+    if v:norm() < 0.5 then return 2.0 else return 1.0 end
+end
+
 -- Solver parameters
-thermal_conduction = {
+heat_transfer = {
     equation_solver = {
         linear = {
             type = "iterative",
@@ -53,39 +35,34 @@ thermal_conduction = {
         },
 
         nonlinear = {
-            rel_tol     = 1.0e-8,
-            abs_tol     = 1.0e-12,
+            rel_tol     = 1.0e-4,
+            abs_tol     = 1.0e-8,
             max_iter    = 500,
             print_level = 1,
         },
     },
 
-    -- polynomial interpolation order
-    order = 3,
-
-    -- material parameters
-    kappa = 1.0,
-
-    -- add a nonlinear reaction
-    nonlinear_reaction = {
-        reaction_function = reaction,
-        d_reaction_function = d_reaction,
-        scale = {
-            scalar_function = scale_function
-        }
+    dynamics = {
+        timestepper = "ForwardEuler",
+        enforcement_method = "RateControl",
     },
 
-    source = {
-        scalar_function = function (v)
-            return scale_function(v) * reaction(exact_function(v)) + minus_laplacian_temp(v)
-        end
+    -- polynomial interpolation order
+    order = 2,
+
+    -- material parameters
+    materials = { { model = "LinearIsotropicConductor", kappa = 0.5, cp = 0.5, density = 0.5 }, },
+
+    -- initial conditions
+    initial_temperature = {
+        scalar_function = temp_func
     },
 
     -- boundary condition parameters
     boundary_conds = {
         ['temperature'] = {
             attrs = {1},
-            scalar_function = exact_function
+            scalar_function = temp_func
         },
     },
 }

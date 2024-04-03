@@ -20,7 +20,7 @@ temp_func = function (v)
 end
 
 -- Solver parameters
-thermal_conduction = {
+heat_transfer = {
     equation_solver = {
         linear = {
             type = "iterative",
@@ -51,9 +51,7 @@ thermal_conduction = {
     order = 2,
 
     -- material parameters
-    kappa = 0.5,
-    rho = 0.5,
-    cp = 0.5,
+    materials = { { model = "LinearIsotropicConductor", kappa = 0.5, cp = 0.5, density = 0.5 }, },
 
     -- initial conditions
     initial_temperature = {

@@ -1,9 +1,13 @@
 -- Comparison information
-expected_temperature_l2norm = 2.56980679
-epsilon = 0.00001
+-- Running the initial simulation for an extra 5s produced this result,
+-- so we would expect it to be the exact same
+expected_temperature_l2norm = 2.1806604032633987
+epsilon = 0.000001
 
 -- Simulation time parameters
 dt      = 1.0
+-- Run for 10s, since the restart is at 5s
+t_final = 10.0
 
 main_mesh = {
     type = "file",
@@ -15,11 +19,11 @@ main_mesh = {
 }
 
 temp_func = function (v)
-    return v:norm()
+    if v:norm() < 0.5 then return 2.0 else return 1.0 end
 end
 
 -- Solver parameters
-thermal_conduction = {
+heat_transfer = {
     equation_solver = {
         linear = {
             type = "iterative",
@@ -41,23 +45,27 @@ thermal_conduction = {
         },
     },
 
+    dynamics = {
+        timestepper = "BackwardEuler",
+        enforcement_method = "RateControl",
+    },
+
     -- polynomial interpolation order
     order = 2,
 
     -- material parameters
-    kappa = 0.5,
+    materials = { { model = "LinearIsotropicConductor", kappa = 0.5, cp = 0.5, density = 0.5 }, },
+
+    -- initial conditions
+    initial_temperature = {
+        scalar_function = temp_func
+    },
 
     -- boundary condition parameters
     boundary_conds = {
-        ['temperature_1'] = {
+        ['temperature'] = {
             attrs = {1},
             scalar_function = temp_func
-        },
-        ['temperature_2'] = {
-            attrs = {1},
-            scalar_function = function (v)
-                return 2 * temp_func(v)
-            end
         },
     },
 }

@@ -46,7 +46,7 @@ TEST(Thermal, ParameterizedMaterial)
   std::set<int> ess_bdr = {1};
 
   // Construct and initialize the user-defined conductivity to be used as a differentiable parameter in
-  // the thermal conduction physics module.
+  // the heat transfer physics module.
   FiniteElementState user_defined_conductivity(pmesh, H1<1>{}, "parameterized_conductivity");
 
   user_defined_conductivity = 1.0;
@@ -55,7 +55,7 @@ TEST(Thermal, ParameterizedMaterial)
   // As we only have one parameter in this example, the index is zero.
   constexpr int conductivity_parameter_index = 0;
 
-  // Construct a functional-based thermal conduction solver
+  // Construct a functional-based heat transfer solver
   //
   // Note that we now include an extra template parameter indicating the finite element space for the parameterized
   // field, in this case the thermal conductivity. We also pass an array of finite element states for each of the
@@ -84,7 +84,7 @@ TEST(Thermal, ParameterizedMaterial)
 
   // Define a constant source term
   heat_transfer::ConstantSource source{-1.0};
-  thermal_solver.setSource(source);
+  thermal_solver.setSource(source, EntireDomain(pmesh));
 
   // Set the flux term to zero for testing code paths
   heat_transfer::ConstantFlux flux_bc{0.0};

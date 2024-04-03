@@ -192,7 +192,7 @@ class Functional<test(trials...), exec> {
   static constexpr auto             Q                = std::max({test::order, trials::order...}) + 1;
 
   static constexpr mfem::Geometry::Type elem_geom[4]    = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT,
-                                                        mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
+                                                           mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
   static constexpr mfem::Geometry::Type simplex_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT,
                                                            mfem::Geometry::TRIANGLE, mfem::Geometry::TETRAHEDRON};
 
@@ -217,7 +217,7 @@ public:
    */
   Functional(const mfem::ParFiniteElementSpace*                               test_fes,
              std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
-      : update_qdata(false), test_space_(test_fes), trial_space_(trial_fes)
+      : update_qdata_(false), test_space_(test_fes), trial_space_(trial_fes)
   {
     auto mem_type = mfem::Device::GetMemoryType();
 
@@ -436,11 +436,12 @@ public:
    * element calculations, but also differentiate them w.r.t. the specified dual_vector argument
    *
    * @tparam T the types of the arguments passed in
+   * @param t the time
    * @param args the trial space dofs used to carry out the calculation,
    *  at most one of which may be of the type `differentiate_wrt_this(mfem::Vector)`
    */
   template <uint32_t wrt, typename... T>
-  typename operator_paren_return<wrt>::type operator()(DifferentiateWRT<wrt>, const T&... args)
+  typename operator_paren_return<wrt>::type operator()(DifferentiateWRT<wrt>, double t, const T&... args)
   {
     const mfem::Vector* input_T[] = {&static_cast<const mfem::Vector&>(args)...};
 
@@ -465,7 +466,7 @@ public:
         }
       }
 
-      integral.Mult(input_E_[type], output_E_[type], wrt, update_qdata);
+      integral.Mult(t, input_E_[type], output_E_[type], wrt, update_qdata_);
 
       // scatter-add to compute residuals on the local processor
       G_test_[type].ScatterAdd(output_E_[type], output_L_);
@@ -495,7 +496,7 @@ public:
 
   /// @overload
   template <typename... T>
-  auto operator()(const T&... args)
+  auto operator()(double t, const T&... args)
   {
     constexpr int num_differentiated_arguments = (std::is_same_v<T, differentiate_wrt_this> + ...);
     static_assert(num_differentiated_arguments <= 1,
@@ -505,14 +506,23 @@ public:
 
     [[maybe_unused]] constexpr uint32_t i = index_of_differentiation<T...>();
 
-    return (*this)(DifferentiateWRT<i>{}, args...);
+    return (*this)(DifferentiateWRT<i>{}, t, args...);
   }
 
-  // TODO: expose this feature a better way
-  /// @brief flag for denoting when a residual evaluation should update the material state buffers
-  bool update_qdata;
+  /**
+   * @brief A flag to update the quadrature data for this operator following the computation
+   *
+   * Typically this is set to false during nonlinear solution iterations and is set to true for the
+   * final pass once equilibrium is found.
+   *
+   * @param update_flag A flag to update the related quadrature data
+   */
+  void updateQdata(bool update_flag) { update_qdata_ = update_flag; }
 
 private:
+  /// @brief flag for denoting when a residual evaluation should update the material state buffers
+  bool update_qdata_;
+
   /**
    * @brief mfem::Operator representing the gradient matrix that
    * can compute the action of the gradient (with operator()),

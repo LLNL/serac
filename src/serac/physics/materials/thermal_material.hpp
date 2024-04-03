@@ -16,7 +16,7 @@
 
 namespace serac::heat_transfer {
 
-/// Linear isotropic thermal conduction material model
+/// Linear isotropic heat transfer material model
 struct LinearIsotropicConductor {
   /**
    * @brief Construct a new Linear Isotropic Conductor object
@@ -65,7 +65,7 @@ private:
   double conductivity_;
 };
 
-/// Nonlinear isotropic thermal conduction material model
+/// Nonlinear isotropic heat transfer material model
 struct IsotropicConductorWithLinearConductivityVsTemperature {
   /**
    * @brief Construct a Isotropic Conductor with Conductivity linear with Temparture object

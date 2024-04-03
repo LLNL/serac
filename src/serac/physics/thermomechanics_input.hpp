@@ -38,7 +38,7 @@ struct ThermomechanicsInputOptions {
   SolidMechanicsInputOptions solid_options;
 
   /**
-   * @brief Thermal conduction input options
+   * @brief Heat transfer input options
    *
    */
   HeatTransferInputOptions thermal_options;

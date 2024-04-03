@@ -162,7 +162,14 @@ public:
    * @return true if contact interactions have been added
    * @return false if there are no contact interactions
    */
-  bool haveContactInteractions() const { return !interactions_.empty(); }
+  bool haveContactInteractions() const
+  {
+#ifdef SERAC_USE_TRIBOL
+    return !interactions_.empty();
+#else
+    return false;
+#endif
+  }
 
   /**
    * @brief Are any contact interactions enforced using Lagrange multipliers?

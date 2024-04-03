@@ -41,6 +41,7 @@ if(NOT SERAC_FOUND)
   set(SERAC_USE_PETSC          @SERAC_USE_PETSC@)
   set(SERAC_USE_RAJA           @SERAC_USE_RAJA@)
   set(SERAC_USE_STRUMPACK      @SERAC_USE_STRUMPACK@)
+  set(SERAC_USE_SUNDIALS       @SERAC_USE_SUNDIALS@)
   set(SERAC_USE_TRIBOL         @SERAC_USE_TRIBOL@)
   set(SERAC_USE_UMPIRE         @SERAC_USE_UMPIRE@)
 
@@ -55,6 +56,7 @@ if(NOT SERAC_FOUND)
   set(SERAC_PETSC_DIR          "@PETSC_DIR@")
   set(SERAC_RAJA_DIR           "@RAJA_DIR@")
   set(SERAC_STRUMPACK_DIR      "@STRUMPACK_DIR@")
+  set(SERAC_SUNDIALS_DIR       "@SUNDIALS_DIR@")
   set(SERAC_TRIBOL_DIR         "@TRIBOL_DIR@")
   set(SERAC_UMPIRE_DIR         "@UMPIRE_DIR@")
 
@@ -65,7 +67,7 @@ if(NOT SERAC_FOUND)
   endif()
 
   # Set to real variable unless user overrode it
-  foreach(dep ADIAK AXOM CAMP CALIPER CHAI CONDUIT HDF5 MFEM PETSC RAJA STRUMPACK TRIBOL UMPIRE)
+  foreach(dep ADIAK AXOM CAMP CALIPER CHAI CONDUIT HDF5 MFEM PETSC RAJA STRUMPACK SUNDIALS TRIBOL UMPIRE)
     if (NOT ${dep}_DIR)
       set(${dep}_DIR "${SERAC_${dep}_DIR}")
     endif()
@@ -137,7 +139,7 @@ if(NOT SERAC_FOUND)
 
   # Petsc
   if(SERAC_USE_PETSC)
-    # Note: Targets not currently imported
+    include("${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake")
   endif()
 
   # Umpire
@@ -153,6 +155,11 @@ if(NOT SERAC_FOUND)
   # CHAI
   if(SERAC_USE_CHAI)
     find_dependency(CHAI REQUIRED NO_DEFAULT_PATH PATHS "${CHAI_DIR}")
+  endif()
+
+  # SUNDIALS
+  if(SERAC_USE_SUNDIALS)
+    find_dependency(SUNDIALS REQUIRED NO_DEFAULT_PATH PATHS "${SUNDIALS_DIR}")
   endif()
 
   #----------------------------------------------------------------------------

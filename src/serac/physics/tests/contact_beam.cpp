@@ -21,8 +21,7 @@
 
 namespace serac {
 
-class ContactTest : public testing::TestWithParam<std::tuple<ContactEnforcement, ContactType, std::string>> {
-};
+class ContactTest : public testing::TestWithParam<std::tuple<ContactEnforcement, ContactType, std::string>> {};
 
 TEST_P(ContactTest, beam)
 {
@@ -54,7 +53,7 @@ TEST_P(ContactTest, beam)
                                            .absolute_tol   = 1.0e-12,
                                            .max_iterations = 200,
                                            .print_level    = 1};
-#ifdef MFEM_USE_SUNDIALS
+#ifdef SERAC_USE_SUNDIALS
   // KINFullStep is preferred, but has issues when active set is enabled
   if (std::get<1>(GetParam()) == ContactType::TiedNormal) {
     nonlinear_options.nonlin_solver = NonlinearSolver::KINFullStep;

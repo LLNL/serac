@@ -1,29 +1,30 @@
+-- by construction, f(x, y, t) satisfies df_dt == d2f_dx2 + d2f_dy2
+temp_func = function (v, t)
+    return 1.0 + 6.0 * v.x * t - 2.0 * v.y * t + (v.x - v.y) * v.x * v.x
+end
+
 -- Comparison information
--- Running the initial simulation for an extra 5s produced this result,
--- so we would expect it to be the exact same
-expected_temperature_l2norm = 2.1806604032633987
-epsilon = 0.000001
+epsilon = 0.00005
+
+exact_solution = {
+    scalar_function = temp_func
+}
 
 -- Simulation time parameters
-dt      = 1.0
--- Run for 10s, since the restart is at 5s
-t_final = 10.0
+dt      = 0.5
+t_final = 5.0
 
 main_mesh = {
     type = "file",
     -- mesh file
     mesh = "../../../meshes/star.mesh",
     -- serial and parallel refinement levels
-    ser_ref_levels = 1,
+    ser_ref_levels = 2,
     par_ref_levels = 1,
 }
 
-temp_func = function (v)
-    if v:norm() < 0.5 then return 2.0 else return 1.0 end
-end
-
 -- Solver parameters
-thermal_conduction = {
+heat_transfer = {
     equation_solver = {
         linear = {
             type = "iterative",
@@ -54,9 +55,7 @@ thermal_conduction = {
     order = 2,
 
     -- material parameters
-    kappa = 0.5,
-    rho = 0.5,
-    cp = 0.5,
+    materials = { { model = "LinearIsotropicConductor", kappa = 1.0, cp = 1.0, density = 1.0 }, },
 
     -- initial conditions
     initial_temperature = {

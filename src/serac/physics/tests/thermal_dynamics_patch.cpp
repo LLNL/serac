@@ -205,13 +205,13 @@ public:
 
       return dot(flux, n0);
     };
-    thermal.setFluxBCs(flux_function);
+    thermal.setFluxBCs(flux_function, EntireBoundary(thermal.mesh()));
 
     // volumetric source
     auto source_function = [temp_rate_grad](auto X, auto /* time */, auto /* u */, auto /* du_dx */) {
       return dot(X, temp_rate_grad);
     };
-    thermal.setSource(source_function);
+    thermal.setSource(source_function, EntireDomain(thermal.mesh()));
   }
 
 private:
