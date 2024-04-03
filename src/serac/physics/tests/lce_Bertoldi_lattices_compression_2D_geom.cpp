@@ -48,7 +48,8 @@ int main(int argc, char* argv[])
   switch (problemID) {
     case 0:
       // inputFilename = SERAC_REPO_DIR "/data/meshes/dbgLogPileNoSymm.g";
-      inputFilename = SERAC_REPO_DIR "/data/meshes/dbgLogPileNoSymm_thicker.g";
+      // inputFilename = SERAC_REPO_DIR "/data/meshes/dbgLogPileNoSymm_thicker.g";
+      inputFilename = SERAC_REPO_DIR "/data/meshes/dbgLogPileNoSymm_thickest.g";
       break;
     case 1:
       inputFilename = SERAC_REPO_DIR "/data/meshes/dbgLogPileNoSymm.g";
@@ -168,7 +169,7 @@ int main(int argc, char* argv[])
   std::string outputFilename;
   switch (problemID) {
     case 0:
-      outputFilename = "sol_log_pile_rect_dbg";
+      outputFilename = "sol_log_pile_rect_dbg_thin";
       break;
     case 1:
       outputFilename = "sol_log_pile_rect_3D";
@@ -277,15 +278,7 @@ int main(int argc, char* argv[])
 /////////////////////////////////////////////////////////////////////////////////////
     // QoI for output:
     mfem::ParFiniteElementSpace reactions_fes(solid_solver.reactions().space());
-    mfem::ParGridFunction       reactionsAtTop(&reactions_fes);
-    // auto topTag = [=](const mfem::Vector& x, mfem::Vector& output) {
-    //   output= 0.0;
-    //   if (x(1) > topBoundaryYCoord) {
-    //     output = 1.0;
-    //   }
-    // };
-    // // mfem::FunctionCoefficient topTagCoeff(topTag);
-    // StdFunctionVectorCoefficient topTagCoeff(3, topTag);
+    mfem::ParGridFunction reactionsAtTop(&reactions_fes);
     mfem::VectorFunctionCoefficient topTagCoeff(dim, [=](const mfem::Vector& x, mfem::Vector& f) {
       f = 0.0;
       if (x(1) > topBoundaryYCoord) {
@@ -303,55 +296,9 @@ int main(int argc, char* argv[])
     if (rank == 0) {
       // std::cout << "... Initial Area of the top surface: " << initial_area << std::endl;
       std::cout << "... Total reaction foce along the top boundary: " << totalReaction << std::endl;
-      std::cout << "... Max reactionLF value: " << reactionLF.Max() << std::endl;
+      std::cout << "... Min (max negative) reactionLF value: " << reactionLF.Min() << std::endl;
       // std::cout << "... Total reaction force along the top boundary: " << totalReaction*initial_area << std::endl;
     }
-
-/////////////////////////////////////////////////////////////////////////////////////
-
-    // auto temp_mesh = buildMeshFromFile(inputFilename);
-    // mfem::ParMesh *temp_pmesh = new mfem::ParMesh(MPI_COMM_WORLD, temp_mesh);
-    // // auto temp_pmesh = mesh::refineAndDistribute(std::move(temp_mesh), serial_refinement, parallel_refinement);
-    
-    // auto h1_fec = mfem::H1_FECollection(1, 3);
-    // mfem::ParFiniteElementSpace h1_fes(temp_pmesh, &h1_fec, 1);
-    // mfem::ParGridFunction tempGF(&h1_fes);
-    // // mfem::FunctionCoefficient tempTopTagCoeff(
-    // //   [=](const mfem::Vector& x) {
-    // //   double output= 0.0;
-    // //   if (x(1) > topBoundaryYCoord) {
-    // //     output = 1.0;
-    // //   }
-    // //   return output;
-    // // });
-    // mfem::VectorFunctionCoefficient tempTopTagCoeff(3, 
-    //   [=](const mfem::Vector& x, mfem::Vector& f) {
-    //   f(0) = 0.0;
-    //   f(2) = 0.0;
-    //   if (x(1) > topBoundaryYCoord) {
-    //     f(1) = 1.0;
-    //   }
-    // });
-    // tempGF.ProjectCoefficient(tempTopTagCoeff);
-
-    // // mfem::HypreParVector* assembledVector(const_cast<mfem::ParLinearForm &> (reactionLF.ParallelAssemble()));
-    // // mfem::ParGridFunction tempReactionGF(reactionLF.ParFESpace(), assembledVector);
-
-    // mfem::Vector tempReactionGF(reactions_fes.GetTrueVSize());
-    // const_cast<mfem::ParLinearForm &> (reactionLF).ParallelAssemble(tempReactionGF);
-    
-    // mfem::ParGridFunction tempReactions(&h1_fes);
-    // for (int k = 0; k < 3*numDofs; k++) {
-    //   tempReactions(k) = tempReactionGF(k);
-    // }
-
-    // mfem::ParaViewDataCollection vis("tempCheckMesh", temp_pmesh);
-    // vis.RegisterField("tempGF", &tempGF);
-    // vis.RegisterField("reactions", &tempReactions);
-    // vis.SetCycle(1);
-    // vis.SetTime(1);
-    // vis.Save();
-    // exit(0);
 /////////////////////////////////////////////////////////////////////////////////////
 
     t += dt;

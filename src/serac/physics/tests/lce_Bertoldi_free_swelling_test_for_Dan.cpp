@@ -41,16 +41,17 @@ int main(int argc, char* argv[])
   serac::StateManager::initialize(datastore, "LCE_free_swelling_bertoldi");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  int nElem = 4;
+  int nElem = 5;
   // double lx = 2.5e-3, ly = 0.25e-3, lz = 12.5e-3;
   // ::mfem::Mesh cuboid = mfem::Mesh(mfem::Mesh::MakeCartesian3D(5*nElem, nElem, 25*nElem, mfem::Element::HEXAHEDRON,
   // lx, ly, lz)); double ly = 2.5, lz = 0.25, lx = 12.5;
   // double   lx = (10.0e-3)/2, ly = (5.0e-3)/2, lz = (0.425e-3)/2;
   // log pile material strips: 30 mm x 3 mm x 0.45 mm 
-  double   lx = (30.0e-3)/2, ly = (3.0e-3)/2, lz = (0.45e-3)/2;
+  double   lx = (10.0e-3)/2, ly = (0.2e-3)/2, lz = (0.2e-3);
+  // double   lx = (10.0e-3)/2, ly = (0.2e-3)/2, lz = (0.2e-3);
   ::mfem::Mesh cuboid =
       // mfem::Mesh(mfem::Mesh::MakeCartesian3D(20 * nElem, 10 * nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
-      mfem::Mesh(mfem::Mesh::MakeCartesian3D(70 * nElem, 7 * nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+      mfem::Mesh(mfem::Mesh::MakeCartesian3D(50 * nElem, 2 * nElem, 2 *nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
   auto mesh = mesh::refineAndDistribute(std::move(cuboid), serial_refinement, parallel_refinement);
   std::string mesh_tag{"mesh"}; 
   auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
@@ -108,10 +109,10 @@ int main(int argc, char* argv[])
   // -------------------
 
   double density         = 1.0;    // [Kg / mm3]
-  double young_modulus   = 9.34e6;  // 3.0e2;  // [Kg /s2 / mm]
-  double possion_ratio   = 0.48;
+  double young_modulus   = 9.34e5;  // 3.0e2;  // [Kg /s2 / mm]
+  double possion_ratio   = 0.45;
   double beta_param      = 5.75e5; // 2.9e5; // 5.0e5; // 5.2e5;  // 2.31e5; // [Kg /s2 / mm] 0.041 //
-  double max_order_param = 0.45; // 0.2; // 0.45
+  double max_order_param = 0.40; // 0.2; // 0.45
   double min_order_param = 0.001;
   // -------------------
 
@@ -216,24 +217,37 @@ int main(int argc, char* argv[])
   };
   solid_solver.setDisplacement(ini_displacement);
 
+  double loadVal = 1.0e4;
+  solid_solver.setTraction([&loadVal, lx](auto x, auto /*n*/, auto /*t*/) {
+    return tensor<double, 3>{loadVal * (x[0] > 0.975 * lx), 0.0, 0.0};
+  });
+
   // Finalize the data structures
   solid_solver.completeSetup();
 
   // Perform the quasi-static solve
-  int num_steps = 8;
+  int num_steps = 10;
   double t    = 0.0;
   double tmax = 1.0;
   double dt   = tmax / num_steps;
 
+  if (rank == 0) {
+    std::cout << "\n\n............................"
+              << "\n... Entering time step: 0 "
+              << "\n............................\n"
+              << "\n... Using order parameter: " << max_order_param
+              << "\n... Using two gamma angles" << std::endl;
+  }
   solid_solver.advanceTimestep(dt);
-  std::string outputFilename = "sol_lce_bertoldi_free_swelling_log_pile_mat";
+  std::string outputFilename = "sol_Dans_test";
   solid_solver.outputStateToDisk(outputFilename);
 
+  for (int i = 0; i < num_steps; i++) {    
 
-  for (int i = 0; i < num_steps; i++) {
-    
     t += dt;
-    
+    orderParam = min_order_param + (max_order_param - min_order_param) * (tmax - t) / tmax;
+    solid_solver.setParameter(ORDER_INDEX, orderParam);
+
     if (rank == 0) {
       std::cout << "\n\n............................"
                 << "\n... Entering time step: " << i + 1 << " (/" << num_steps << ")"
@@ -291,8 +305,6 @@ int main(int argc, char* argv[])
       }
       exit(1);
     }
-
-    orderParam = min_order_param + (max_order_param - min_order_param) * (tmax - t) / tmax;
   }
 
   serac::exitGracefully();

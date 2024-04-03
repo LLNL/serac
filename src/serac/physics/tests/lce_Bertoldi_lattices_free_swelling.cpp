@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
   double possion_ratio   = 0.45;   // 0.49;   // 0.48 // 
   double beta_param      = 5.75e5; // 2.31e5; // 2.31e5; // [Kg /s2 / mm] 
   double max_order_param = 0.40;   // 0.20;   // 0.45; //
-  double min_order_param = 0.05;   // 0.20;   // 0.45; //
+  double min_order_param = 0.00;   // 0.20;   // 0.45; //
   double gamma_angle     = M_PI_2;
   double eta_angle       = 0.0;
 
@@ -317,6 +317,7 @@ int main(int argc, char* argv[])
     // orderParam = max_order_param * (tmax - t) / tmax;
     orderParam = min_order_param + (max_order_param - min_order_param) * std::pow((tmax - t) / tmax, 1.0);
     // orderParam = 0.75*max_order_param + 0.25*std::pow((tmax - t) / tmax, 1.0);
+    solid_solver.setParameter(ORDER_INDEX, orderParam);
 
     if (rank == 0) {
       std::cout << "\n\n............................"

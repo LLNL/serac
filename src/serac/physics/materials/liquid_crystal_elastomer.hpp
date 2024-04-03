@@ -284,7 +284,19 @@ struct LiquidCrystalElastomerBertoldi {
     auto S_stress_1 = lambda * tr(E) * I;
     auto S_stress_2 = 2 * mu * E;
     auto S_stress_3 = -0.5 * beta_parameter_ * (St - S0) * (3 * outer(normal, normal) - I);
-
+// std::cout<< ".... young_modulus_ = "<< young_modulus_ << std::endl;
+// std::cout<< ".... poisson_ratio_ = "<< poisson_ratio_ << std::endl;
+// std::cout<< ".... beta_parameter_ = "<< beta_parameter_ << std::endl;
+// std::cout<< ".... normal = "<< normal[0] << std::endl;
+// std::cout<< ".... St = "<< St << " .... S0 = "<< S0 << std::endl;
+// std::cout<< ".... S_stress_1 = " << std::endl;
+// std::cout<<S_stress_1;
+// std::cout<< ".... S_stress_2 = " << std::endl;
+// std::cout<<S_stress_2;
+// std::cout<< ".... S_stress_3 = " << std::endl;
+// std::cout<<S_stress_3;
+// std::cout<< std::endl;
+// exit(0);
     // transform from second Piola-Lichhoff to Cauchy stress
     auto stress = 1.0 / J * F * (S_stress_1 + S_stress_2 + S_stress_3) * transpose(F);
 
@@ -339,6 +351,230 @@ struct LiquidCrystalElastomerBertoldi {
     auto strain_energy_3 = -0.5 * beta_parameter_ * (St - S0) * inner(3 * outer(normal, normal) - I, E);
 
     auto strain_energy = strain_energy_1 + strain_energy_2 + strain_energy_3;
+
+    return strain_energy;
+  }
+
+  double density;                   ///<  mass density
+  double young_modulus_;            ///< Young's modulus in stress-free configuration
+  double poisson_ratio_;            ///< poisson's ratio
+  double initial_order_parameter_;  ///< initial value of order parameter
+  double beta_parameter_;           ///< Degree of coupling between elastic and nematic energies
+};
+
+/// -----------------------------------------------------------------------------
+/// -----------------------------------------------------------------------------
+/// -----------------------------------------------------------------------------
+
+/**
+ * @brief Zhang's liquid crystal elastomer model
+ * Paper: Li, W., & Zhang, X. S. (2023). Arbitrary curvature programming of thermo-active liquid 
+ * crystal elastomer via topology optimization. Computer Methods in Applied Mechanics and 
+ * Engineering, 417, 116393..
+ */
+struct LiquidCrystalElastomerZhang {
+  using State = Empty;  ///< this material has no internal variables
+
+  /// this model is only intended to be used in 3D
+  static constexpr int dim = 3;
+
+  /**
+   * @brief Constructor
+   *
+   * @param rho mass density of the material (in reference configuration)
+   * @param young_modulus Bulk modulus of the material
+   * @param poisson_ratio Poisson ratio of the material
+   * @param initial_order_parameter Initial value of the order parameter
+   * @param beta_parameter Parameter for degree of coupling between elastic and nematic energies
+   */
+  LiquidCrystalElastomerZhang(double rho, double young_modulus, double poisson_ratio, double initial_order_parameter,
+                                 double beta_parameter)
+      : density(rho),
+        young_modulus_(young_modulus),
+        poisson_ratio_(poisson_ratio),
+        initial_order_parameter_(initial_order_parameter),
+        beta_parameter_(beta_parameter)
+  {
+    SLIC_ERROR_ROOT_IF(density <= 0.0, "Density must be positive in the LCE material model.");
+    SLIC_ERROR_ROOT_IF(young_modulus_ <= 0.0, "Bulk modulus must be positive in the LCE material model.");
+    SLIC_ERROR_ROOT_IF(poisson_ratio_ <= 0.0, "Poisson ratio must be positive in the LCE material model.");
+    SLIC_ERROR_ROOT_IF(initial_order_parameter_ <= 0.0,
+                       "Initial order parameter must be positive in the LCE material model.");
+    SLIC_ERROR_ROOT_IF(beta_parameter_ <= 0.0, "The beta parameter must be positive in the LCE material model.");
+  }
+
+  /// -------------------------------------------------------
+
+  /**
+   * @brief Material response
+   *
+   * @tparam DispGradType number-like type for the displacement gradient tensor
+   * @tparam OrderParamType number-like type for the order parameter
+   * @tparam GammaAngleType number-like type for the orientation angle gamma
+   * @tparam EtaAngleType number-like type for the orientation angle eta
+   *
+   * @param[in] displacement_grad displacement gradient with respect to the reference configuration
+   * @param[in] inst_order_param_tuple the current order parameter
+   * @param[in] gamma_tuple the first polar angle used to define the liquid crystal orientation vector
+   * @param[in] eta_tuple the second polar angle used to define the liquid crystal orientation vector
+   * @return The calculated material response (Cauchy stress) for the material
+   */
+  template <typename DispGradType, typename OrderParamType, typename GammaAngleType, typename EtaAngleType>
+  SERAC_HOST_DEVICE auto operator()(State& /*state*/, const tensor<DispGradType, dim, dim>& displacement_grad,
+                                    OrderParamType inst_order_param_tuple, GammaAngleType gamma_tuple,
+                                    EtaAngleType eta_tuple) const
+  {
+    using std::cos, std::sin, std::pow, std::log;
+
+    // Compute the normal
+    auto   gamma = get<0>(gamma_tuple);
+    auto   eta   = get<0>(eta_tuple);
+    tensor normal{{cos(gamma) * cos(eta), sin(gamma) * cos(eta), 0.0 * gamma + sin(eta)}};
+
+    // Get order parameters
+    auto   St = get<0>(inst_order_param_tuple);
+    double S0 = initial_order_parameter_;
+
+    // const double lambda = poisson_ratio_ * young_modulus_ / (1.0 + poisson_ratio_) / (1.0 - 2.0 * poisson_ratio_);
+    const double mu     = young_modulus_ / 2.0 / (1.0 + poisson_ratio_);
+    const double bulk   = 100.0 * mu;
+
+    // kinematics
+    auto I    = Identity<dim>();
+    auto F    = displacement_grad + I;
+//////////////////////////
+auto temp2 = 0.0*F;
+F = temp2;
+double maxLambda1 = 0.1*0.55; 
+F(0,0)=maxLambda1;
+using std::sqrt;
+F(1,1)=1.0/sqrt(maxLambda1);
+F(2,2)=1.0/sqrt(maxLambda1);
+auto mul_alt=9.0e-1 + 0.0*mu;
+auto bulk_alt=0.0 + 0.0*bulk;
+auto beta_parameter_alt=100.25 + 0.0*beta_parameter_;
+S0=0.4;
+St=S0;
+//////////////////////////
+    auto Finv = inv(F);
+    auto J    = det(F);
+    auto Fbar = pow(J, -1.0/3.0) * F;
+    auto Cbar = dot(transpose(Fbar), Fbar);
+
+    auto dW1dCbar_1 = mul_alt/2.0*(1.0-S0)/(1.0-St) * I;
+    auto dW1dCbar_2 = mul_alt/2.0*((3.0*S0)/(1.0+2.0*St) - beta_parameter_alt) * outer(normal, normal);
+    auto dW1dCbar_3 = -mul_alt/2.0*((3.0*S0)*(1.0-S0)/(1.0-St)/(1.0+2.0*St) - beta_parameter_alt) / dot(normal, dot(Cbar,normal)) * 
+                    ( outer(normal, dot(Cbar,normal)) + 
+                      outer(dot(transpose(Cbar),normal), normal) + 
+                      outer(normal, normal)/dot(normal, dot(Cbar,normal)) 
+                    );
+
+    auto dW1dCbar = dW1dCbar_1 + dW1dCbar_2 + dW1dCbar_3;
+
+std::cout<<"\n\n... normal ..."<<std::endl;
+print(normal);
+std::cout<<"\n\n... F ..."<<std::endl;
+print(F);
+std::cout<<"\n\n... Fbar ..."<<std::endl;
+print(Fbar);
+std::cout<<"\n\n... dW1dCbar_1 value ...\n"<<dW1dCbar_1.value<<std::endl;
+// print(dW1dCbar_1.value);
+std::cout<<"\n\n... dW1dCbar_2 ..."<<std::endl;
+print(dW1dCbar_2);
+std::cout<<"\n\n... dW1dCbar_3 ..."<<std::endl;
+print(dW1dCbar_3);
+std::cout<<"\n\n... dW1dCbar ..."<<std::endl;
+print(dW1dCbar);
+exit(0);
+
+    auto dCbardF = make_tensor<3, 3, 3, 3>([&](auto r, auto s, auto m, auto n) {
+        auto temp = 0.0 * F(0,0);
+        for ( int i=0; i<3; i++)
+          for ( int j=0; j<3; j++) {
+            temp = temp + (F(i,s)*I(r,j) + F(i,r)*I(s,j)) * (-1.0/3.0*Finv(n,m)*F(i,j) + I(j,n)*I(i,m));
+          }
+        return pow(J, -1.0/3.0) * temp;
+      });
+
+    // auto dCbardFbar = make_tensor<3, 3, 3, 3>([&](auto r, auto s, auto m, auto n) {
+    //     return pow(J, -1.0/3.0) * (F(i,s)*I(r,j) + F(i,r)*I(s,j)) * (-1.0/3.0*Finv(n,m)*F(i,j) + I(j,n)*I(i,m));
+    //   });
+
+    auto dFbardF = make_tensor<3, 3, 3, 3>([&](auto r, auto s, auto i, auto j) {
+        return pow(J, -1.0/3.0) * (-1.0/3.0*Finv(s,r)*F(i,j) + I(j,s)*I(i,r));
+      });
+
+    auto dW1dF = make_tensor<3, 3>([&](auto m, auto n) {
+        auto temp = 0.0 * dW1dCbar(0,0) * dCbardF(0,0,0,0);
+        for ( int i=0; i<3; i++)
+          for ( int j=0; j<3; j++) {
+            temp = temp + dW1dCbar(i,j) * dFbardF(i,j,m,n) + 0.0*dW1dCbar(i,j) * dCbardF(i,j,m,n); 
+          }
+        return temp;
+      });
+
+    auto dW2dF = bulk_alt*log(J)*transpose(Finv) + 0.0*dW1dF ;
+    auto dWdF  = mul_alt/2.0*(transpose(F) + F) + 0.0 *dW1dF + 0.0*dW2dF;
+
+    // transform from first Piola-Kirchhoff (dWdF) to Cauchy stress
+    auto stress = 1.0 / J * dWdF* transpose(F);
+    // auto stress = dWdF;
+
+    return stress;
+  }
+
+  /// -------------------------------------------------------
+
+  /**
+   * @brief Compute the strain energy
+   *
+   * @tparam DispGradType Type of the displacement gradient
+   * @tparam orderParamType Type of order parameter (level of alignment)
+   * @tparam GammaAngleType Type of the in-plane angle
+   * @tparam EtaAngleType Type of the out-of-plane angle
+   *
+   * @param[in] displacement_grad Displacement gradient
+   * @param[in] inst_order_param_tuple Instantaneous order parameter
+   * @param[in] gamma_tuple In-plane angle of alignment of liquid crystal in elastomer matrix
+   * @param[in] eta_tuple Out-of-plane angle of alignment of liquid crystal in elastomer matrix
+   *
+   * @return strain energy
+   */
+  template <typename DispGradType, typename orderParamType, typename GammaAngleType, typename EtaAngleType>
+  auto calculateStrainEnergy(const State& /*state*/, const tensor<DispGradType, dim, dim>& displacement_grad,
+                             orderParamType inst_order_param_tuple, GammaAngleType gamma_tuple,
+                             EtaAngleType eta_tuple) const
+  {
+    using std::cos, std::sin;
+
+    // Compute the normal
+    auto   gamma = get<0>(gamma_tuple);
+    auto   eta   = get<0>(eta_tuple);
+    tensor normal{{cos(gamma) * cos(eta), sin(gamma) * cos(eta), 0.0 * gamma + sin(eta)}};
+
+    // Get order parameters
+    auto   St = get<0>(inst_order_param_tuple);
+    double S0 = initial_order_parameter_;
+
+    const double mu     = young_modulus_ / 2.0 / (1.0 + poisson_ratio_);
+    const double bulk   = 100.0 * mu;
+
+    // kinematics
+    auto I    = Identity<dim>();
+    auto F    = displacement_grad + I;
+    auto J    = det(F);
+    auto Fbar = pow(J, -1.0/3.0) * F;
+    auto Cbar = dot(transpose(Fbar), Fbar);
+
+    // Compute the strain_energy
+    auto strain_energy_1 = tr(dot(F,F)) + 0.0 *(1.0-S0)/(1.0-St) * tr(Cbar) + 0.0*inner(normal, dot(Cbar,normal));
+    auto strain_energy_2 = 0.0*((3*S0)/(1.0+2.0*St) - beta_parameter_) * inner(normal, dot(Cbar,normal));
+    auto strain_energy_3 = 0.0*((3*S0)*(1-S0)/(1.0-St)/(1.0+2.0*St) - beta_parameter_) / dot(normal, dot(Cbar,normal)) * 
+                    (inner(normal, dot(dot(Cbar,Cbar), normal))/inner(normal, dot(Cbar,normal)) 
+                    );
+    auto strain_energy_4 = 0.0*bulk/2.0*log(J)*log(J) + 0.0*strain_energy_2 ;
+
+    auto strain_energy = mu/2.0*(strain_energy_1 + strain_energy_2 + strain_energy_3) + strain_energy_4;
 
     return strain_energy;
   }

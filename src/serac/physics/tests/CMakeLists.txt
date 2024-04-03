@@ -29,6 +29,7 @@ set(solver_tests
     # lce_Brighenti_compression.cpp
     # lce_Brighenti.cpp
     lce_Bertoldi_free_swelling.cpp
+    lce_Bertoldi_free_swelling_test_for_Dan.cpp
     # lce_Bertoldi_tension.cpp
     # lce_Bertoldi_tension_new_data.cpp
     # lce_Bertoldi_rectLattice.cpp
