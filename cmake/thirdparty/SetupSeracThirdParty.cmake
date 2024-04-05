@@ -310,6 +310,19 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
 
     #------------------------------------------------------------------------------
+    # SLEPC
+    #------------------------------------------------------------------------------
+    if(SLEPC_DIR)
+        serac_assert_is_directory(VARIABLE_NAME SLEPC_DIR)
+        include(${CMAKE_CURRENT_LIST_DIR}/FindSLEPc.cmake)
+        message(STATUS "SLEPc support is ON")
+        set(SLEPC_FOUND TRUE)
+    else()
+        message(STATUS "SLEPc support is OFF")
+        set(SLEPC_FOUND FALSE)
+    endif()
+
+    #------------------------------------------------------------------------------
     # Axom
     #------------------------------------------------------------------------------
     if(NOT SERAC_ENABLE_CODEVELOP)

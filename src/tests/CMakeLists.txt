@@ -36,3 +36,9 @@ if(SERAC_USE_PETSC)
                     DEPENDS_ON    PkgConfig::PETSC gtest axom::slic
                     NUM_MPI_TASKS 4)
 endif()
+
+if(SERAC_USE_SLEPC)
+    serac_add_tests(SOURCES       slepc_smoketest.cpp
+                    DEPENDS_ON    PkgConfig::SLEPC gtest axom::slic
+                    NUM_MPI_TASKS 4)
+endif()

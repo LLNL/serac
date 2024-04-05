@@ -40,6 +40,7 @@
 #cmakedefine SERAC_USE_MPI
 #cmakedefine SERAC_USE_PETSC
 #cmakedefine SERAC_USE_RAJA
+#cmakedefine SERAC_USE_SLEPC
 #cmakedefine SERAC_USE_SUNDIALS
 #cmakedefine SERAC_USE_TRIBOL
 #cmakedefine SERAC_USE_UMPIRE

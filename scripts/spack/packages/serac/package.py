@@ -59,6 +59,7 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     variant("petsc", default=True,
             description="Enable PETSc support")
+    variant("slepc", default=True, description="Enable SLEPc integration") 
     variant("netcdf", default=True,
            description="Enable Cubit/Genesis reader")
     variant("sundials", default=True,
@@ -97,6 +98,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("mfem+metis+superlu-dist+lapack+mpi")
     depends_on("mfem+netcdf", when="+netcdf")
     depends_on("mfem+petsc", when="+petsc")
+    depends_on("mfem+slepc", when="+slepc")
     depends_on("mfem+sundials", when="+sundials")
     depends_on("mfem+amgx", when="+cuda")
     depends_on("mfem+asan", when="+asan")
@@ -107,6 +109,11 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("hypre@2.26.0~superlu-dist+mpi")
 
     depends_on("petsc", when="+petsc")
+    depends_on("petsc+strumpack", when="+petsc+strumpack")
+    depends_on("petsc~strumpack", when="+petsc~strumpack")
+    depends_on("petsc+openmp", when="+petsc+openmp")
+    depends_on("petsc~openmp", when="+petsc~openmp")
+    depends_on("slepc+arpack", when="+slepc")
 
     depends_on("tribol~minbuild", when="+tribol")
 
