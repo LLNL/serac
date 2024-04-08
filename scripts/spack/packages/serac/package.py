@@ -78,7 +78,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     # -----------------------------------------------------------------------
     # Basic dependencies
     depends_on("mpi")
-    depends_on("cmake@3.8:")
+    depends_on("cmake@3.14:")
 
     depends_on("lua")
 
@@ -151,12 +151,11 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     # The optional slate dependency is not handled in the MFEM spack package
     depends_on("strumpack~slate~butterflypack~zfp", when="+strumpack")
-
     depends_on("strumpack~openmp", when="+strumpack~openmp")
 
     #
     # Forward variants
-    # NOTE: propogating variants to dependencies should be removed when pushing this recipe up to Spack
+    # NOTE: propagating variants to dependencies should be removed when pushing this recipe up to Spack
     #
 
     # CMake packages "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
@@ -243,7 +242,7 @@ class Serac(CachedCMakePackage, CudaPackage):
                     when="cuda_arch={0}".format(sm_))
     
     # Check if these variants are true and +cuda before adding
-    cuda_deps_with_variants = ["raja", "sundials", "tribol", "umpire"]
+    cuda_deps_with_variants = ["raja", "sundials", "tribol", "umpire", "petsc", "slepc"]
     for dep in cuda_deps_with_variants:
         depends_on("{0}+cuda".format(dep), when="+{0}+cuda".format(dep))
         for sm_ in CudaPackage.cuda_arch_values:
@@ -386,8 +385,13 @@ class Serac(CachedCMakePackage, CudaPackage):
         dep_dir = get_spec_path(spec, "superlu-dist", path_replacements)
         entries.append(cmake_cache_path("SUPERLUDIST_DIR", dep_dir))
 
+        if spec.satisfies("^arpack-ng"):
+            dep_dir = get_spec_path(spec, "arpack-ng", path_replacements)
+            entries.append(cmake_cache_path("ARPACK_DIR", dep_dir))
+
         # optional tpls
-        for dep in ("adiak", "amgx", "caliper", "petsc", "raja", "strumpack", "sundials", "umpire", "tribol"):
+        for dep in ("adiak", "amgx", "caliper", "petsc", "raja", "slepc", "strumpack", "sundials", "umpire",
+                    "tribol"):
             if spec.satisfies("^{0}".format(dep)):
                 dep_dir = get_spec_path(spec, dep, path_replacements)
                 entries.append(cmake_cache_path("%s_DIR" % dep.upper(),
