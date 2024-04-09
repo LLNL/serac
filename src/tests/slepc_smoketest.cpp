@@ -354,13 +354,13 @@ constexpr char correct_serial_output[] =
 TEST(SlepcSmoketest, SlepcEx1)
 {
   ::testing::internal::CaptureStdout();
-  const char *fake_argv[] = {"ex1", "-n", "18", "-eps_nev", "4", "-eps_max_it", "1500"};
+  const char* fake_argv[] = {"ex1", "-n", "18", "-eps_nev", "4", "-eps_max_it", "1500"};
 
-  ex1_main(7, const_cast<char **>(fake_argv));
+  ex1_main(7, const_cast<char**>(fake_argv));
   std::string output = ::testing::internal::GetCapturedStdout();
 
   int num_procs = 0;
-  int rank = 0;
+  int rank      = 0;
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if (rank == 0) {
@@ -369,14 +369,13 @@ TEST(SlepcSmoketest, SlepcEx1)
       EXPECT_NE(output.find("type: mpiaij"), std::string::npos);
       EXPECT_NE(output.find("Mat Object: " + std::to_string(num_procs) + " MPI processes"), std::string::npos);
       EXPECT_NE(output.find("Level of orthogonality below the tolerance"), std::string::npos);
-    }
-    else {
+    } else {
       EXPECT_EQ(output, correct_serial_output);
     }
   }
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
   int result = 0;
 

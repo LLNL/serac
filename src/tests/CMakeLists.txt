@@ -12,8 +12,15 @@ set(language_tests
     copy_elision.cpp
     mfem_array_std_algo.cpp)
 
+set(language_dependencies
+    gtest
+    mfem
+    mpi)
+
+blt_list_append(TO language_dependencies ELEMENTS openmp IF ENABLE_OPENMP)
+
 serac_add_tests( SOURCES ${language_tests}
-                 DEPENDS_ON gtest mfem mpi)
+                 DEPENDS_ON ${language_dependencies})
 
 if(ENABLE_CUDA)
     blt_add_library( NAME       cuda_smoketest_kernel
