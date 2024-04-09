@@ -13,8 +13,6 @@
 #include <iomanip>
 #include <vector>
 
-//#include "serac/numerics/functional/dof_numbering.hpp"
-
 /**
  * @brief write an array of values out to file, in a space-separated format
  * @tparam T the type of each value in the array
@@ -121,3 +119,28 @@ void write_to_file(axom::Array<T, 3, axom::MemorySpace::Host> arr, std::string f
 
   outfile.close();
 }
+
+#ifdef __CUDACC__
+#include <cuda_runtime.h>
+/**
+ * @brief Helper function that prints usage of global device memory.  Useful for debugging potential
+ *        memory or register leaks
+ */
+#include <iostream>
+void printCUDAMemUsage()
+{
+  int deviceCount = 0;
+  cudaGetDeviceCount(&deviceCount);
+  int i = 0;
+  cudaSetDevice(i);
+
+  size_t freeBytes, totalBytes;
+  cudaMemGetInfo(&freeBytes, &totalBytes);
+  size_t usedBytes = totalBytes - freeBytes;
+
+  std::cout << "Device Number: " << i << std::endl;
+  std::cout << " Total Memory (MB): " << (totalBytes / 1024.0 / 1024.0) << std::endl;
+  std::cout << " Free Memory (MB): " << (freeBytes / 1024.0 / 1024.0) << std::endl;
+  std::cout << " Used Memory (MB): " << (usedBytes / 1024.0 / 1024.0) << std::endl;
+}
+#endif

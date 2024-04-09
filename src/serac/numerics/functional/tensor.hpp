@@ -1365,7 +1365,8 @@ SERAC_HOST_DEVICE auto contract(const tensor<S, m, n...>& A, const tensor<T, p, 
     }
 
     return C;
-  } else {
+  }
+  if constexpr (d3 != 0) {
     auto C = tensor<U, d1, d2, d3>{};
     for (int i = 0; i < d1; i++) {
       for (int j = 0; j < d2; j++) {

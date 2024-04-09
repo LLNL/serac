@@ -208,15 +208,6 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
   rm.memset(interpolate_result, 0);
 
   auto e_range = RAJA::TypedRangeSegment<uint32_t>(0, num_elements);
-#ifdef USE_CUDA
-  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
-  using teams_e                    = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
-  using launch_policy              = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
-#else
-  using threads_x [[maybe_unused]]          = RAJA::LoopPolicy<RAJA::seq_exec>;
-  using teams_e                             = RAJA::LoopPolicy<RAJA::seq_exec>;
-  using launch_policy                       = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
-#endif
 
   // for each element in the domain
   RAJA::launch<launch_policy>(
@@ -293,10 +284,8 @@ SERAC_HOST_DEVICE auto batch_apply_chain_rule(derivative_type* qf_derivatives, c
   tensor<tuple<return_type, zero>, n> outputs{};
   RAJA::RangeSegment                  i_range(0, n);
 #ifdef USE_CUDA
-  using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
-#else
-  using threads_x                = RAJA::LoopPolicy<RAJA::seq_exec>;
-#endif
+  #else
+  #endif
   RAJA::loop<threads_x>(ctx, i_range, [&](int i) { get<0>(outputs[i]) = chain_rule(qf_derivatives[i], inputs[i]); });
   return outputs;
 }
@@ -357,14 +346,6 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
 #endif
   rm.memset(qf_inputs, 0);
 
-#ifdef USE_CUDA
-  using teams_e       = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
-  using launch_policy = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
-#else
-  using teams_e                    = RAJA::LoopPolicy<RAJA::seq_exec>;
-  using launch_policy              = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
-#endif
-
   // for each element in the domain
   RAJA::launch<launch_policy>(
       RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_X, BLOCK_Y, BLOCK_Z)),
@@ -418,18 +399,6 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, d
   RAJA::TypedRangeSegment<size_t>          elements_range(0, num_elements);
   constexpr int                            nquad = num_quadrature_points(g, Q);
   constexpr TensorProductQuadratureRule<Q> rule{};
-#ifdef USE_CUDA
-  using teams_e       = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
-  using launch_policy = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
-#else
-  using teams_e                    = RAJA::LoopPolicy<RAJA::seq_exec>;
-  using launch_policy              = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
-#endif
-#ifdef USE_CUDA
-  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
-#else
-  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
-#endif
 
   // for each element in the domain
   RAJA::launch<launch_policy>(

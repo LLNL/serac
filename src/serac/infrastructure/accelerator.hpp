@@ -12,7 +12,7 @@
  */
 
 #pragma once
-
+#include "RAJA/RAJA.hpp"
 #if defined(__CUDACC__)
 #define SERAC_HOST_DEVICE __host__ __device__
 #define SERAC_HOST __host__
@@ -71,6 +71,24 @@ enum class ExecutionSpace
   GPU,
   Dynamic  // Corresponds to execution that can "legally" happen on either the host or device
 };
+
+
+
+#ifdef __CUDACC__
+
+/// @brief Alias for parallel threads policy on GPU
+using threads_x = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+using teams_e                    = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
+using launch_policy              = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
+
+#else
+
+/// @brief Alias for parallel threads policy on GPU
+using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
+using teams_e                             = RAJA::LoopPolicy<RAJA::seq_exec>;
+using launch_policy                       = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
+
+#endif
 
 /**
  * @brief The default execution space for serac builds

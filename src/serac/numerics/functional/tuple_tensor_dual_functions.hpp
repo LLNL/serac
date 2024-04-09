@@ -252,10 +252,8 @@ SERAC_HOST_DEVICE void promote_each_to_dual_when(const tensor<T, n>& x, void* ou
                                                  RAJA::LaunchContext ctx = RAJA::LaunchContext{})
 {
 #ifdef USE_CUDA
-  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
-#else
-  using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
-#endif
+  #else
+  #endif
 
   if constexpr (dualify) {
     RAJA::RangeSegment x_range(0, n);
@@ -473,7 +471,7 @@ SERAC_HOST_DEVICE constexpr auto linear_solve(const tensor<S, n, n>& A, const te
 
   if constexpr (is_zero<decltype(dx)>{}) {
     return x;
-  } else {
+  } if constexpr (!is_zero<decltype(dx)>{}) {
     return make_dual(x, dx);
   }
 }
