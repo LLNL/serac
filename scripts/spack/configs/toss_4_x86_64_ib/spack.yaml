@@ -160,6 +160,11 @@ spack:
       externals:
       - spec: ghostscript@9.27
         prefix: /usr
+    gmake:
+      buildable: false
+      externals:
+      - spec: gmake@4.2.1
+        prefix: /usr
     graphviz:
       buildable: false
       externals:

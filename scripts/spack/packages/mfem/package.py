@@ -8,9 +8,7 @@ from spack.pkg.builtin.mfem import Mfem as BuiltinMfem
 
 class Mfem(BuiltinMfem):
 
-    # NOTE: Adding number at the end of real version to indicate we have moved past release. Also note version 4.6.2 was
-    # only a release candidate before this change.
-    version("4.6.2.1", commit="18334a69fb8023feb76bca8bc065c66fc32f07c3")
+    version("4.6.2-rc0", commit="79b609872ab4cef720adac2f820792fe09c87065")
 
     variant('asan', default=False, description='Add Address Sanitizer flags')
 
