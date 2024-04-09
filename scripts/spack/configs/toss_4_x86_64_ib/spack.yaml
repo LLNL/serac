@@ -300,7 +300,7 @@ spack:
     hdf5:
       variants: ~shared~mpi
     mfem:
-      require: "@4.6.2.1"
+      require: "@4.6.2.2"
     raja:
       require: "@2024.02.0~shared~examples~exercises"
     umpire:
