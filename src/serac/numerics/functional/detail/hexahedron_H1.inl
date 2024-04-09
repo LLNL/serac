@@ -145,11 +145,6 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
     using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, dim>{}));
 
     tensor<tuple<source_t, flux_t>, q * q * q> output;
-#ifdef USE_CUDA
-    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
-#else
-    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
-#endif
     auto x_range = RAJA::RangeSegment(0, q * q * q);
     RAJA::loop<threads_x>(ctx, x_range, [&](int Q) {
       int qx = Q % q;
@@ -198,11 +193,6 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
     // X_q(qz, qy, qx) := B(qz, dz) * A2(dz, qy, qx)
     static constexpr bool apply_weights = false;
 
-#ifdef USE_CUDA
-    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
-#else
-    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
-#endif
 
     RAJA::RangeSegment x_range(0, BLOCK_SZ);
 
@@ -326,11 +316,6 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
 
     RAJA::RangeSegment x_range(0, BLOCK_SZ);
 
-#ifdef USE_CUDA
-    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
-#else
-    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
-#endif
 
     for (int j = 0; j < ntrial; j++) {
       for (int i = 0; i < c; i++) {

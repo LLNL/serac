@@ -246,9 +246,8 @@ struct finite_element<mfem::Geometry::SQUARE, L2<p, c> > {
     }
 
     RAJA::TypedRangeSegment<int> x_range(0, BLOCK_SZ);
-    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
     if (output_ptr) {
-      RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
+      RAJA::loop<RAJA::LoopPolicy<RAJA::seq_exec>>(ctx, x_range, [&](int tid) {
         if (tid < serac::size(output.one_dimensional)) {
           ((*output_ptr))[tid] = output.one_dimensional[tid];
         }

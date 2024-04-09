@@ -304,9 +304,8 @@ struct finite_element<mfem::Geometry::TRIANGLE, L2<p, c> > {
     }
 
     RAJA::TypedRangeSegment<int> x_range(0, BLOCK_SZ);
-    using threads_x [[maybe_unused]] = RAJA::LoopPolicy<RAJA::seq_exec>;
     if (output_ptr) {
-      RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
+      RAJA::loop<RAJA::LoopPolicy<RAJA::seq_exec>>(ctx, x_range, [&](int tid) {
         if (tid < serac::size(output.flattened)) {
           get<VALUE>(((*output_ptr))[tid])    = get<VALUE>(output.flattened[tid]);
           get<GRADIENT>(((*output_ptr))[tid]) = get<GRADIENT>(output.flattened[tid]);
