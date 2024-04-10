@@ -17,7 +17,7 @@
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
 template <int p, int c>
-struct finite_element<mfem::Geometry::SQUARE, L2<p, c> > {
+struct finite_element<mfem::Geometry::SQUARE, L2<p, c>> {
   static constexpr auto geometry   = mfem::Geometry::SQUARE;
   static constexpr auto family     = Family::L2;
   static constexpr int  components = c;
@@ -29,13 +29,13 @@ struct finite_element<mfem::Geometry::SQUARE, L2<p, c> > {
   static constexpr int SOURCE = 0, FLUX = 1;
 
   using residual_type =
-      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
+      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components>>::type;
 
   using dof_type = tensor<double, c, p + 1, p + 1>;
 
-  using value_type = typename std::conditional<components == 1, double, tensor<double, components> >::type;
+  using value_type = typename std::conditional<components == 1, double, tensor<double, components>>::type;
   using derivative_type =
-      typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim> >::type;
+      typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim>>::type;
   using qf_input_type = tuple<value_type, derivative_type>;
 
   /*
@@ -230,8 +230,8 @@ struct finite_element<mfem::Geometry::SQUARE, L2<p, c> > {
 
     // transpose the quadrature data into a flat tensor of tuples
     union {
-      tensor<qf_input_type, q * q>                                    one_dimensional;
-      tensor<tuple<tensor<double, c>, tensor<double, c, dim> >, q, q> two_dimensional;
+      tensor<qf_input_type, q * q>                                   one_dimensional;
+      tensor<tuple<tensor<double, c>, tensor<double, c, dim>>, q, q> two_dimensional;
     } output;
 
     for (int qy = 0; qy < q; qy++) {
@@ -269,8 +269,8 @@ struct finite_element<mfem::Geometry::SQUARE, L2<p, c> > {
 
     constexpr int ntrial = std::max(size(source_type{}), size(flux_type{}) / dim) / c;
 
-    using s_buffer_type = std::conditional_t<is_zero<source_type>{}, zero, tensor<double, q, q> >;
-    using f_buffer_type = std::conditional_t<is_zero<flux_type>{}, zero, tensor<double, dim, q, q> >;
+    using s_buffer_type = std::conditional_t<is_zero<source_type>{}, zero, tensor<double, q, q>>;
+    using f_buffer_type = std::conditional_t<is_zero<flux_type>{}, zero, tensor<double, dim, q, q>>;
 
     static constexpr bool apply_weights = true;
     static constexpr auto B             = calculate_B<apply_weights, q>();

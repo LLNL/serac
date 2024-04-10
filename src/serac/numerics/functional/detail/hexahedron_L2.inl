@@ -17,7 +17,7 @@
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
 template <int p, int c>
-struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
+struct finite_element<mfem::Geometry::CUBE, L2<p, c>> {
   static constexpr auto geometry   = mfem::Geometry::CUBE;
   static constexpr auto family     = Family::L2;
   static constexpr int  components = c;
@@ -31,13 +31,13 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
 
   // TODO: remove this
   using residual_type =
-      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
+      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components>>::type;
 
   using dof_type = tensor<double, c, p + 1, p + 1, p + 1>;
 
-  using value_type = typename std::conditional<components == 1, double, tensor<double, components> >::type;
+  using value_type = typename std::conditional<components == 1, double, tensor<double, components>>::type;
   using derivative_type =
-      typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim> >::type;
+      typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim>>::type;
   using qf_input_type = tuple<value_type, derivative_type>;
 
   SERAC_HOST_DEVICE static constexpr tensor<double, ndof> shape_functions(tensor<double, dim> xi)
@@ -219,8 +219,8 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
 
     // transpose the quadrature data into a flat tensor of tuples
     union {
-      tensor<qf_input_type, q * q * q>                                   one_dimensional;
-      tensor<tuple<tensor<double, c>, tensor<double, c, dim> >, q, q, q> three_dimensional;
+      tensor<qf_input_type, q * q * q>                                  one_dimensional;
+      tensor<tuple<tensor<double, c>, tensor<double, c, dim>>, q, q, q> three_dimensional;
     } output;
 
     for (int qz = 0; qz < q; qz++) {
@@ -257,8 +257,8 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
 
     constexpr int ntrial = std::max(size(source_type{}), size(flux_type{}) / dim) / c;
 
-    using s_buffer_type = std::conditional_t<is_zero<source_type>{}, zero, tensor<double, q, q, q> >;
-    using f_buffer_type = std::conditional_t<is_zero<flux_type>{}, zero, tensor<double, dim, q, q, q> >;
+    using s_buffer_type = std::conditional_t<is_zero<source_type>{}, zero, tensor<double, q, q, q>>;
+    using f_buffer_type = std::conditional_t<is_zero<flux_type>{}, zero, tensor<double, dim, q, q, q>>;
 
     static constexpr bool apply_weights = true;
     static constexpr auto B             = calculate_B<apply_weights, q>();

@@ -145,7 +145,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
     using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, dim>{}));
 
     tensor<tuple<source_t, flux_t>, q * q * q> output;
-    auto x_range = RAJA::RangeSegment(0, q * q * q);
+    auto                                       x_range = RAJA::RangeSegment(0, q * q * q);
     RAJA::loop<threads_x>(ctx, x_range, [&](int Q) {
       int qx = Q % q;
       int qy = (Q / q) % q;

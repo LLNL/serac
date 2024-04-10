@@ -20,7 +20,7 @@
 // simplex_basis_function_unit_tests.cpp
 /// @cond
 template <int p, int c>
-struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
+struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c>> {
   static constexpr auto geometry   = mfem::Geometry::TETRAHEDRON;
   static constexpr auto family     = Family::H1;
   static constexpr int  components = c;
@@ -34,13 +34,13 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
   static constexpr int SOURCE = 0, FLUX = 1;
 
   using residual_type =
-      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
+      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components>>::type;
 
   using dof_type = tensor<double, c, ndof>;
 
-  using value_type = typename std::conditional<components == 1, double, tensor<double, components> >::type;
+  using value_type = typename std::conditional<components == 1, double, tensor<double, components>>::type;
   using derivative_type =
-      typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim> >::type;
+      typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim>>::type;
   using qf_input_type = tuple<value_type, derivative_type>;
 
   SERAC_HOST_DEVICE static constexpr double shape_function([[maybe_unused]] tensor<double, dim> xi, int i)
@@ -375,8 +375,8 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
 
     // transpose the quadrature data into a flat tensor of tuples
     union {
-      tensor<tuple<tensor<double, c>, tensor<double, c, dim> >, nqpts(q)> unflattened;
-      tensor<qf_input_type, nqpts(q)>                                     flattened;
+      tensor<tuple<tensor<double, c>, tensor<double, c, dim>>, nqpts(q)> unflattened;
+      tensor<qf_input_type, nqpts(q)>                                    flattened;
     } output{};
 
     for (int i = 0; i < c; i++) {
@@ -408,7 +408,7 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
     }
 
     using source_component_type = std::conditional_t<is_zero<source_type>{}, zero, double>;
-    using flux_component_type   = std::conditional_t<is_zero<flux_type>{}, zero, tensor<double, dim> >;
+    using flux_component_type   = std::conditional_t<is_zero<flux_type>{}, zero, tensor<double, dim>>;
 
     constexpr int  ntrial              = std::max(size(source_type{}), size(flux_type{}) / dim) / c;
     constexpr auto integration_points  = GaussLegendreNodes<q, mfem::Geometry::TETRAHEDRON>();
