@@ -139,7 +139,7 @@ if(NOT SERAC_FOUND)
 
   # Petsc
   if(SERAC_USE_PETSC)
-    # Note: Targets not currently imported
+    include("${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake")
   endif()
 
   # Umpire
