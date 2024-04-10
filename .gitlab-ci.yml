@@ -3,11 +3,6 @@
 # project contributors. See the LICENSE file for details.
 ##############################################################################
 
-# Enable use of id tokens for LC Jacamar runners
-include:
-  - project: 'lc-templates/id_tokens'
-    file: 'id_tokens.yml'
-
 variables:
   #TODO: uncomment this when everyone has service user access across all the machines
   #LLNL_SERVICE_USER: asmith
@@ -74,3 +69,5 @@ variables:
 include:
   - local: .gitlab/build_lassen.yml
   - local: .gitlab/build_quartz.yml
+  - project: 'lc-templates/id_tokens'
+    file: 'id_tokens.yml'
