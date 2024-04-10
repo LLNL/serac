@@ -113,7 +113,6 @@ if (BLT_EXPORT_THIRDPARTY)
     message(FATAL_ERROR "Serac does not use BLT's exporting of TPLs, it conflicts with the new blt_install_tpl_setups macro.")
 endif()
 
-
 include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
 
 #------------------------------------------------------------------------------
