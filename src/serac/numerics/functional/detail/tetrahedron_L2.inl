@@ -19,7 +19,7 @@
 // for exact positions of nodes for different polynomial orders, see simplex_basis_function_unit_tests.cpp
 /// @cond
 template <int p, int c>
-struct finite_element<mfem::Geometry::TETRAHEDRON, L2<p, c> > {
+struct finite_element<mfem::Geometry::TETRAHEDRON, L2<p, c>> {
   static constexpr auto geometry   = mfem::Geometry::TETRAHEDRON;
   static constexpr auto family     = Family::L2;
   static constexpr int  components = c;
@@ -32,13 +32,13 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, L2<p, c> > {
   static constexpr int SOURCE = 0, FLUX = 1;
 
   using residual_type =
-      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
+      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components>>::type;
 
   using dof_type = tensor<double, c, ndof>;
 
-  using value_type = typename std::conditional<components == 1, double, tensor<double, components> >::type;
+  using value_type = typename std::conditional<components == 1, double, tensor<double, components>>::type;
   using derivative_type =
-      typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim> >::type;
+      typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim>>::type;
   using qf_input_type = tuple<value_type, derivative_type>;
 
   SERAC_HOST_DEVICE static constexpr double shape_function([[maybe_unused]] tensor<double, dim> xi,
@@ -380,8 +380,8 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, L2<p, c> > {
 
     // transpose the quadrature data into a flat tensor of tuples
     union {
-      tensor<tuple<tensor<double, c>, tensor<double, c, dim> >, nqpts(q)> unflattened;
-      tensor<qf_input_type, nqpts(q)>                                     flattened;
+      tensor<tuple<tensor<double, c>, tensor<double, c, dim>>, nqpts(q)> unflattened;
+      tensor<qf_input_type, nqpts(q)>                                    flattened;
     } output{};
 
     for (int i = 0; i < c; i++) {
@@ -395,7 +395,7 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, L2<p, c> > {
 
     RAJA::TypedRangeSegment<int> x_range(0, BLOCK_SZ);
     if (output_ptr) {
-      RAJA::loop< RAJA::LoopPolicy<RAJA::seq_exec>>(ctx, x_range, [&](int tid) {
+      RAJA::loop<RAJA::LoopPolicy<RAJA::seq_exec>>(ctx, x_range, [&](int tid) {
         if (tid < serac::size(output.flattened)) {
           get<VALUE>(((*output_ptr))[tid])    = get<VALUE>(output.flattened[tid]);
           get<GRADIENT>(((*output_ptr))[tid]) = get<GRADIENT>(output.flattened[tid]);
@@ -414,7 +414,7 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, L2<p, c> > {
     }
 
     using source_component_type = std::conditional_t<is_zero<source_type>{}, zero, double>;
-    using flux_component_type   = std::conditional_t<is_zero<flux_type>{}, zero, tensor<double, dim> >;
+    using flux_component_type   = std::conditional_t<is_zero<flux_type>{}, zero, tensor<double, dim>>;
 
     constexpr int  ntrial              = std::max(size(source_type{}), size(flux_type{}) / dim) / c;
     constexpr auto integration_points  = GaussLegendreNodes<q, mfem::Geometry::TETRAHEDRON>();

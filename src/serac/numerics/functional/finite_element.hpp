@@ -253,9 +253,7 @@ SERAC_HOST_DEVICE void parent_to_physical(tensor<T, q>& qf_input, const tensor<d
 {
   [[maybe_unused]] constexpr int VALUE      = 0;
   [[maybe_unused]] constexpr int DERIVATIVE = 1;
-#ifdef USE_CUDA
-  #else
-  #endif
+
   RAJA::RangeSegment k_range(0, BLOCK_SZ);
 
   RAJA::loop<threads_x>(ctx, k_range, [&](int k) {
@@ -306,8 +304,8 @@ SERAC_HOST_DEVICE void physical_to_parent(tensor<T, q>& qf_output, const tensor<
   [[maybe_unused]] constexpr int SOURCE = 0;
   [[maybe_unused]] constexpr int FLUX   = 1;
 #ifdef USE_CUDA
-  #else
-  #endif
+#else
+#endif
   RAJA::RangeSegment k_range(0, BLOCK_SZ);
   RAJA::loop<threads_x>(ctx, k_range, [&](int k) {
     if (k >= q) {

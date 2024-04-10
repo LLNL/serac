@@ -123,9 +123,7 @@ SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, 
                                       bool update_state, RAJA::LaunchContext ctx, const T&... inputs)
 {
   using return_type = decltype(qf(double{}, tensor<double, dim>{}, qpt_data[0], T{}[0]...));
-#ifdef USE_CUDA
-  #else
-  #endif
+
   RAJA::RangeSegment     x_range(0, n);
   tensor<return_type, n> outputs{};
   RAJA::loop<threads_x>(ctx, x_range, [&](int i) {
@@ -173,25 +171,19 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
       get<indices>(trial_elements).template interpolate_output_helper<Q>())...});
 
 #ifdef USE_CUDA
-  auto&           rm             = umpire::ResourceManager::getInstance();
-  auto            dest_allocator = rm.getAllocator("DEVICE");
-  qf_inputs_type* qf_inputs =
-      static_cast<qf_inputs_type*>(dest_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
-  interpolate_out_type* interpolate_result =
-      static_cast<interpolate_out_type*>(dest_allocator.allocate(sizeof(interpolate_out_type) * num_elements));
-
-  auto device_r = copy_data(r, serac::size(*r) * sizeof(double), "DEVICE");
+  std::string device_name = "DEVICE";
+  auto        device_r    = copy_data(r, serac::size(*r) * sizeof(double), device_name);
 #else
-  auto& rm                         = umpire::ResourceManager::getInstance();
-  auto  host_allocator             = rm.getAllocator("HOST");
-
-  qf_inputs_type* qf_inputs =
-      static_cast<qf_inputs_type*>(host_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
-  interpolate_out_type* interpolate_result =
-      static_cast<interpolate_out_type*>(host_allocator.allocate(sizeof(interpolate_out_type) * num_elements));
-
-  typename test_element_type::dof_type* device_r = r;
+  std::string                           device_name = "HOST";
+  typename test_element_type::dof_type* device_r    = r;
 #endif
+
+  auto&           rm        = umpire::ResourceManager::getInstance();
+  auto            allocator = rm.getAllocator(device_name);
+  qf_inputs_type* qf_inputs = static_cast<qf_inputs_type*>(allocator.allocate(sizeof(qf_inputs_type) * num_elements));
+  interpolate_out_type* interpolate_result =
+      static_cast<interpolate_out_type*>(allocator.allocate(sizeof(interpolate_out_type) * num_elements));
+
   rm.memset(qf_inputs, 0);
   rm.memset(interpolate_result, 0);
 
@@ -268,13 +260,10 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
 
 #ifdef USE_CUDA
   rm.copy(r, device_r);
-  dest_allocator.deallocate(qf_inputs);
-  dest_allocator.deallocate(interpolate_result);
-  dest_allocator.deallocate(device_r);
-#else
-  host_allocator.deallocate(qf_inputs);
-  host_allocator.deallocate(interpolate_result);
+  allocator.deallocate(device_r);
 #endif
+  allocator.deallocate(qf_inputs);
+  allocator.deallocate(interpolate_result);
 }
 
 //clang-format off
@@ -302,9 +291,6 @@ SERAC_HOST_DEVICE tensor<decltype(chain_rule<is_QOI>(derivative_type{}, T{})), n
   using return_type = decltype(chain_rule<is_QOI>(derivative_type{}, T{}));
   tensor<return_type, n> outputs{};
   RAJA::RangeSegment     i_range(0, n);
-#ifdef USE_CUDA
-  #else
-  #endif
   RAJA::loop<threads_x>(ctx, i_range, [&](int i) { outputs[i] = chain_rule<is_QOI>(qf_derivatives[i], inputs[i]); });
   return outputs;
 }
@@ -356,29 +342,25 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
   using qf_inputs_type = decltype(trial_element::template interpolate_output_helper<Q>());
 
 #ifdef USE_CUDA
-  auto&           rm             = umpire::ResourceManager::getInstance();
-  auto            dest_allocator = rm.getAllocator("DEVICE");
-  qf_inputs_type* qf_inputs =
-      static_cast<qf_inputs_type*>(dest_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
+  std::string device_name = "DEVICE";
 #else
-  auto&           rm             = umpire::ResourceManager::getInstance();
-  auto            host_allocator = rm.getAllocator("HOST");
-  qf_inputs_type* qf_inputs =
-      static_cast<qf_inputs_type*>(host_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
+  std::string                           device_name = "HOST";
 #endif
+
+  auto&           rm        = umpire::ResourceManager::getInstance();
+  auto            allocator = rm.getAllocator(device_name);
+  qf_inputs_type* qf_inputs = static_cast<qf_inputs_type*>(allocator.allocate(sizeof(qf_inputs_type) * num_elements));
   rm.memset(qf_inputs, 0);
 
   // for each element in the domain
   RAJA::launch<launch_policy>(
       RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_X, BLOCK_Y, BLOCK_Z)),
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
-        RAJA::loop<teams_e>(ctx, e_range, [du, rule, &ctx, qf_inputs, elements, qf_derivatives, dr, num_qpts](int e) {
+        RAJA::loop<teams_e>(ctx, e_range, [=](int e) {
           (void)num_qpts;
           // (batch) interpolate each quadrature point's value
           trial_element::interpolate(du[elements[e]], rule, qf_inputs, ctx);
 
-          // RAJA_TEAM_SHARED decltype(batch_apply_chain_rule<is_QOI>(qf_derivatives + e * num_qpts, *qf_inputs, ctx))
-          // qf_outputs;
           auto qf_outputs = batch_apply_chain_rule<is_QOI>(qf_derivatives + e * num_qpts, *qf_inputs, ctx);
 
           test_element::integrate(qf_outputs, rule, &dr[elements[e]], ctx);

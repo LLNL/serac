@@ -193,7 +193,6 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
     // X_q(qz, qy, qx) := B(qz, dz) * A2(dz, qy, qx)
     static constexpr bool apply_weights = false;
 
-
     RAJA::RangeSegment x_range(0, BLOCK_SZ);
 
 #ifndef USE_CUDA
@@ -315,7 +314,6 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
     /*static*/ constexpr bool apply_weights = true;
 
     RAJA::RangeSegment x_range(0, BLOCK_SZ);
-
 
     for (int j = 0; j < ntrial; j++) {
       for (int i = 0; i < c; i++) {

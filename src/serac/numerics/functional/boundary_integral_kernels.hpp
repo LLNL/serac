@@ -185,25 +185,19 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
       get<indices>(trial_elements).template interpolate_output_helper<Q>())...});
 
 #ifdef USE_CUDA
-  auto&           rm             = umpire::ResourceManager::getInstance();
-  auto            dest_allocator = rm.getAllocator("DEVICE");
-  qf_inputs_type* qf_inputs =
-      static_cast<qf_inputs_type*>(dest_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
-  interpolate_out_type* interpolate_result =
-      static_cast<interpolate_out_type*>(dest_allocator.allocate(sizeof(interpolate_out_type) * num_elements));
-
-  auto device_r = copy_data(r, serac::size(*r) * sizeof(double), "DEVICE");
-
+  std::string device_name = "DEVICE";
+  auto        device_r    = copy_data(r, serac::size(*r) * sizeof(double), device_name);
 #else
-  auto&           rm             = umpire::ResourceManager::getInstance();
-  auto            host_allocator = rm.getAllocator("HOST");
-  qf_inputs_type* qf_inputs =
-      static_cast<qf_inputs_type*>(host_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
-  interpolate_out_type* interpolate_result =
-      static_cast<interpolate_out_type*>(host_allocator.allocate(sizeof(interpolate_out_type) * num_elements));
-
-  typename test_element::dof_type* device_r = r;
+  std::string                      device_name = "HOST";
+  typename test_element::dof_type* device_r    = r;
 #endif
+
+  auto&           rm        = umpire::ResourceManager::getInstance();
+  auto            allocator = rm.getAllocator(device_name);
+  qf_inputs_type* qf_inputs = static_cast<qf_inputs_type*>(allocator.allocate(sizeof(qf_inputs_type) * num_elements));
+  interpolate_out_type* interpolate_result =
+      static_cast<interpolate_out_type*>(allocator.allocate(sizeof(interpolate_out_type) * num_elements));
+
   rm.memset(qf_inputs, 0);
   rm.memset(interpolate_result, 0);
 
@@ -258,13 +252,10 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
       });
 #ifdef USE_CUDA
   rm.copy(r, device_r);
-  deallocate(qf_inputs, "DEVICE");
-  deallocate(interpolate_result, "DEVICE");
-  deallocate(device_r, "DEVICE");
-#else
-  host_allocator.deallocate(interpolate_result);
-  host_allocator.deallocate(qf_inputs);
+  allocator.deallocate(device_r);
 #endif
+  allocator.deallocate(qf_inputs);
+  allocator.deallocate(interpolate_result);
 }
 
 //clang-format off
@@ -283,9 +274,7 @@ SERAC_HOST_DEVICE auto batch_apply_chain_rule(derivative_type* qf_derivatives, c
   using return_type = decltype(chain_rule(derivative_type{}, T{}));
   tensor<tuple<return_type, zero>, n> outputs{};
   RAJA::RangeSegment                  i_range(0, n);
-#ifdef USE_CUDA
-  #else
-  #endif
+
   RAJA::loop<threads_x>(ctx, i_range, [&](int i) { get<0>(outputs[i]) = chain_rule(qf_derivatives[i], inputs[i]); });
   return outputs;
 }
@@ -334,16 +323,15 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
   using qf_inputs_type = decltype(trial_element::template interpolate_output_helper<Q>());
 
 #ifdef USE_CUDA
-  auto&           rm             = umpire::ResourceManager::getInstance();
-  auto            dest_allocator = rm.getAllocator("DEVICE");
-  qf_inputs_type* qf_inputs =
-      static_cast<qf_inputs_type*>(dest_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
+  std::string device_name = "DEVICE";
 #else
-  auto&           rm             = umpire::ResourceManager::getInstance();
-  auto            host_allocator = rm.getAllocator("HOST");
-  qf_inputs_type* qf_inputs =
-      static_cast<qf_inputs_type*>(host_allocator.allocate(sizeof(qf_inputs_type) * num_elements));
+  std::string                      device_name = "HOST";
 #endif
+
+  auto&           rm        = umpire::ResourceManager::getInstance();
+  auto            allocator = rm.getAllocator(device_name);
+  qf_inputs_type* qf_inputs = static_cast<qf_inputs_type*>(allocator.allocate(sizeof(qf_inputs_type) * num_elements));
+
   rm.memset(qf_inputs, 0);
 
   // for each element in the domain
