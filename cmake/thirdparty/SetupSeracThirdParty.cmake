@@ -44,7 +44,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
                                 TARGET       camp
                                 DIR_VARIABLE CAMP_DIR)
     message(STATUS "Camp support is ON")
-    set(CAMP_DIR TRUE)
+    set(CAMP_FOUND TRUE)
 
     #------------------------------------------------------------------------------
     # Umpire
