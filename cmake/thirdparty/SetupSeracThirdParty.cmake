@@ -212,9 +212,21 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             set(ParMETIS_DIR ${PARMETIS_DIR} CACHE PATH "")
         endif()
         set(MFEM_USE_OPENMP ${ENABLE_OPENMP} CACHE BOOL "")
-        # Disabling mfem using petsc in codevelop due to https://github.com/LLNL/serac/issues/1082
-        set(MFEM_USE_PETSC OFF CACHE BOOL "")
-        set(MFEM_USE_SLEPC OFF CACHE BOOL "")
+        if(PETSC_DIR)
+            set(MFEM_USE_PETSC ON CACHE BOOL "")
+            set(PETSC_ARCH "" CACHE STRING "")
+            # Skip build checks
+            set(PETSC_EXECUTABLE_RUNS "ON" CACHE BOOL "")
+            if(SLEPC_DIR)
+                set(MFEM_USE_SLEPC ON CACHE BOOL "")
+                set(SLEPC_ARCH "" CACHE STRING "")
+                # Skip build checks
+                set(SLEPC_VERSION_OK "TRUE" CACHE BOOL "")
+            endif()
+        else()
+            set(MFEM_USE_PETSC OFF CACHE BOOL "")
+            set(MFEM_USE_SLEPC OFF CACHE BOOL "")
+        endif()
         set(MFEM_USE_RAJA OFF CACHE BOOL "")
         set(MFEM_USE_SUNDIALS ${SERAC_USE_SUNDIALS} CACHE BOOL "")
         if(SUPERLUDIST_DIR)
@@ -299,7 +311,9 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #------------------------------------------------------------------------------
     # PETSC
     #------------------------------------------------------------------------------
-    if(PETSC_DIR)
+    if(MFEM_USE_PETSC)
+        message(STATUS "PETSc support via MFEM is ON")
+    elseif(PETSC_DIR)
         serac_assert_is_directory(VARIABLE_NAME PETSC_DIR)
         include(${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake)
         message(STATUS "PETSc support is ON")
@@ -312,7 +326,9 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #------------------------------------------------------------------------------
     # SLEPC
     #------------------------------------------------------------------------------
-    if(SLEPC_DIR)
+    if(MFEM_USE_SLEPC)
+        message(STATUS "SLEPc support via MFEM is ON")
+    elseif(SLEPC_DIR)
         serac_assert_is_directory(VARIABLE_NAME SLEPC_DIR)
         include(${CMAKE_CURRENT_LIST_DIR}/FindSLEPc.cmake)
         message(STATUS "SLEPc support is ON")
@@ -592,7 +608,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     # MPI library/directory but in some cases Spack cannot determine
     # the correct MPI lib directory. This guards against that.
     # https://github.com/spack/spack/issues/24685
-    if(STRUMPACK_DIR)
+    if(STRUMPACK_DIR AND MPI_C_LIBRARIES)
         list(GET MPI_C_LIBRARIES 0 _first_mpi_lib)
         get_filename_component(_mpi_lib_dir ${_first_mpi_lib} DIRECTORY)
     
