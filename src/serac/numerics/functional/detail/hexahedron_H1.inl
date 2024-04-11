@@ -10,6 +10,8 @@
  * @brief Specialization of finite_element for H1 on hexahedron geometry
  */
 
+#include "RAJA/RAJA.hpp"
+
 // this specialization defines shape functions (and their gradients) that
 // interpolate at Gauss-Lobatto nodes for the appropriate polynomial order
 //

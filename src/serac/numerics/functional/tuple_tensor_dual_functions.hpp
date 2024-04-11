@@ -10,6 +10,7 @@
 #include "serac/numerics/functional/tuple.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/dual.hpp"
+#include "RAJA/RAJA.hpp"
 
 #include "mfem.hpp"
 

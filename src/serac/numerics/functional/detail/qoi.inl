@@ -9,6 +9,9 @@
  *
  * @brief Specialization of finite_element for expressing quantities of interest on any geometry
  */
+
+#include "RAJA/RAJA.hpp"
+
 /// @cond
 template <mfem::Geometry::Type g>
 struct finite_element<g, QOI> {

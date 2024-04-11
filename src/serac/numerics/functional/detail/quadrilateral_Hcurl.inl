@@ -10,6 +10,8 @@
  * @brief Specialization of finite_element for Hcurl on quadrilateral geometry
  */
 
+#include "RAJA/RAJA.hpp"
+
 // this specialization defines shape functions (and their curls) that
 // interpolate at Gauss-Lobatto nodes for closed intervals, and Gauss-Legendre
 // nodes for open intervals.

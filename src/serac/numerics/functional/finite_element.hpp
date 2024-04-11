@@ -17,6 +17,7 @@
 #include "tensor.hpp"
 #include "geometry.hpp"
 #include "polynomials.hpp"
+#include "RAJA/RAJA.hpp"
 
 namespace serac {
 

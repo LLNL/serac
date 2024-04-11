@@ -11,6 +11,8 @@
 #include "serac/numerics/functional/quadrature_data.hpp"
 #include "serac/numerics/functional/differentiate_wrt.hpp"
 
+#include "RAJA/RAJA.hpp"
+
 namespace serac {
 
 namespace boundary_integral {
