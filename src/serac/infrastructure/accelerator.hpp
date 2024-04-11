@@ -72,7 +72,7 @@ enum class ExecutionSpace
   Dynamic  // Corresponds to execution that can "legally" happen on either the host or device
 };
 
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
 
 /// @brief Alias for parallel threads policy on GPU
 using threads_x     = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
@@ -81,9 +81,11 @@ using launch_policy = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
 
 #else
 
-/// @brief Alias for parallel threads policy on GPU
-using threads_x     = RAJA::LoopPolicy<RAJA::seq_exec>;
-using teams_e       = RAJA::LoopPolicy<RAJA::seq_exec>;
+/// @brief Alias for parallel threads policy on GPU.
+using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
+/// @brief Alias for number of teams for GPU kernel launches.
+using teams_e = RAJA::LoopPolicy<RAJA::seq_exec>;
+/// @brief Alias for GPU kernel launch policy.
 using launch_policy = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
 
 #endif

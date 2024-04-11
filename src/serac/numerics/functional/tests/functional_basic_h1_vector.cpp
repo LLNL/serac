@@ -90,7 +90,7 @@ void weird_mixed_test(std::unique_ptr<mfem::ParMesh>& mesh)
 
   mfem::Vector U(trial_fes->TrueVSize());
 
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   U.UseDevice(true);
   Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(test_fes.get(), {trial_fes.get()});
 #else
@@ -102,7 +102,7 @@ void weird_mixed_test(std::unique_ptr<mfem::ParMesh>& mesh)
   // terms that have the appropriate shapes to ensure that all the differentiation
   // code works as intended
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, MixedModelOne<dim>{}, *mesh);
-#ifndef USE_CUDA
+#ifndef SERAC_USE_CUDA_KERNEL_EVALUATION
   residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, MixedModelTwo<dim>{}, *mesh);
 #endif
   double t = 0.0;
@@ -121,7 +121,7 @@ void elasticity_test(std::unique_ptr<mfem::ParMesh>& mesh)
 
   mfem::Vector U(trial_fes->TrueVSize());
 
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   U.UseDevice(true);
   Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(test_fes.get(), {trial_fes.get()});
 #else
@@ -134,7 +134,7 @@ void elasticity_test(std::unique_ptr<mfem::ParMesh>& mesh)
   // terms that have the appropriate shapes to ensure that all the differentiation
   // code works as intended
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, ElasticityTestModelOne<dim>{}, *mesh);
-#ifndef USE_CUDA
+#ifndef SERAC_USE_CUDA_KERNEL_EVALUATION
   residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, ElasticityTestModelTwo<dim>{}, *mesh);
 #endif
   double t = 0.0;
@@ -164,7 +164,7 @@ void test_suite(std::string meshfile)
 
 TEST(VectorValuedH1, test_suite_hexes) { test_suite("/data/meshes/patch3D_hexes.mesh"); }
 
-#ifndef USE_CUDA
+#ifndef SERAC_USE_CUDA_KERNEL_EVALUATION
 TEST(VectorValuedH1, test_suite_tris) { test_suite("/data/meshes/patch2D_tris.mesh"); }
 TEST(VectorValuedH1, test_suite_quads) { test_suite("/data/meshes/patch2D_quads.mesh"); }
 TEST(VectorValuedH1, test_suite_tris_and_quads) { test_suite("/data/meshes/patch2D_tris_and_quads.mesh"); }
@@ -178,7 +178,7 @@ int main(int argc, char* argv[])
 
   ::testing::InitGoogleTest(&argc, argv);
 
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   serac::accelerator::initializeDevice();
 #endif
 

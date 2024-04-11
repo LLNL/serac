@@ -100,7 +100,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   using trial_space = decltype(trial);
 
   // Construct the new weak form object using the known test and trial spaces
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(&fespace, {&fespace});
 #else
   Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(&fespace, {&fespace});

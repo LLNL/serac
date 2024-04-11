@@ -162,7 +162,7 @@ macro(serac_add_tests)
                            FOLDER      serac/tests )
 
         if (DEFINED arg_USE_CUDA)
-            target_compile_definitions(${test_name} PUBLIC USE_CUDA)
+            target_compile_definitions(${test_name} PUBLIC SERAC_USE_CUDA_KERNEL_EVALUATION)
         endif()
 
         blt_add_test(NAME            ${test_name}

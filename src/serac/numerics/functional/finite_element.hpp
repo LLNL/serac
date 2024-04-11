@@ -304,7 +304,7 @@ SERAC_HOST_DEVICE void physical_to_parent(tensor<T, q>& qf_output, const tensor<
 {
   [[maybe_unused]] constexpr int SOURCE = 0;
   [[maybe_unused]] constexpr int FLUX   = 1;
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
 #else
 #endif
   RAJA::RangeSegment k_range(0, BLOCK_SZ);

@@ -220,7 +220,7 @@ std::vector<Array2D<int> > geom_local_face_dofs(int p)
   return output;
 }
 
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
 axom::Array<DoF, 2, axom::MemorySpace::Device> GetElementRestriction(const mfem::FiniteElementSpace* fes,
 #else
 axom::Array<DoF, 2, axom::MemorySpace::Host> GetElementRestriction(const mfem::FiniteElementSpace* fes,

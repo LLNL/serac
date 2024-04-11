@@ -186,7 +186,7 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
   using qf_inputs_type = decltype(tuple{promote_each_to_dual_when_output_helper<indices == differentiation_index>(
       get<indices>(trial_elements).template interpolate_output_helper<Q>())...});
 
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   std::string device_name = "DEVICE";
   auto        device_r    = copy_data(r, serac::size(*r) * sizeof(double), device_name);
 #else
@@ -211,6 +211,8 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(
             ctx, e_range,
+            // The explicit capture list is needed here because the capture occurs in a function template with a
+            // variadic non-type parameter.
             [&ctx, t, J, x, u, qf, trial_elements, qpts_per_elem, rule, device_r, elements, qf_derivatives, qf_inputs,
              interpolate_result](uint32_t e) {
               // These casts are needed to suppres -Werror compilation errors caused by the explicit capture above.
@@ -252,7 +254,7 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
               test_element::integrate(get_value(qf_outputs), rule, &device_r[elements[e]], ctx);
             });
       });
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   rm.copy(r, device_r);
   allocator.deallocate(device_r);
 #endif
@@ -324,7 +326,7 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
 
   using qf_inputs_type = decltype(trial_element::template interpolate_output_helper<Q>());
 
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   std::string device_name = "DEVICE";
 #else
   std::string                      device_name = "HOST";
@@ -340,7 +342,7 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
   RAJA::launch<launch_policy>(
       RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_X, BLOCK_Y, BLOCK_Z)),
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
-        RAJA::loop<teams_e>(ctx, e_range, [du, rule, &ctx, qf_inputs, elements, qf_derivatives, dr](int e) {
+        RAJA::loop<teams_e>(ctx, e_range, [&](int e) {
           // (batch) interpolate each quadrature point's value
           trial_element::interpolate(du[elements[e]], rule, qf_inputs, ctx);
 

@@ -197,7 +197,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
 
     RAJA::RangeSegment x_range(0, BLOCK_SZ);
 
-#ifndef USE_CUDA
+#ifndef SERAC_USE_CUDA_KERNEL_EVALUATION
     tensor<double, c, q, q, q>      value{};
     tensor<double, c, dim, q, q, q> gradient{};
     static constexpr auto           B = calculate_B<apply_weights, q>();
@@ -341,7 +341,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
           }
         });
 
-#ifndef USE_CUDA
+#ifndef SERAC_USE_CUDA_KERNEL_EVALUATION
         constexpr auto B   = calculate_B<apply_weights, q>();
         constexpr auto G   = calculate_G<apply_weights, q>();
         auto           A20 = contract<2, 0>(source, B) + contract<2, 0>(flux(0), G);

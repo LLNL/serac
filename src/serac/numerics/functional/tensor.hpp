@@ -1422,7 +1422,7 @@ SERAC_HOST_DEVICE constexpr auto deduce_contract_return_type(const zero&, const 
   return zero{};
 }
 
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
 template <int l1, int l2, typename S, int m, typename T, int p, int q, int n0, int n1, int n2, int... n>
 SERAC_DEVICE void contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B, tensor<S, n0, n1, n2>* C, int qx,
                            int qy, int qz, bool accumulate = false)

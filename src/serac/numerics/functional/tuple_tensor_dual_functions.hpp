@@ -233,7 +233,8 @@ auto promote_each_to_dual_when_output_helper(const tensor<T, n>&)
   if constexpr (dualify) {
     using return_type = decltype(make_dual(T{}));
     return tensor<return_type, n>{};
-  } else {
+  }
+  if constexpr (!dualify) {
     return tensor<T, n>{};
   }
 }

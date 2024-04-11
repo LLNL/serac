@@ -206,7 +206,7 @@ struct ElementRestriction {
   uint64_t nodes_per_elem;
 
 /// a 2D array (num_elements-by-nodes_per_elem) holding the dof info extracted from the finite element space
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   axom::Array<DoF, 2, axom::MemorySpace::Device> dof_info;
 #else
   axom::Array<DoF, 2, axom::MemorySpace::Host> dof_info;

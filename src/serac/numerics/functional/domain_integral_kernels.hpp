@@ -171,7 +171,7 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
   using qf_inputs_type = decltype(tuple{promote_each_to_dual_when_output_helper<indices == differentiation_index>(
       get<indices>(trial_elements).template interpolate_output_helper<Q>())...});
 
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   std::string device_name = "DEVICE";
   auto        device_r    = copy_data(r, serac::size(*r) * sizeof(double), device_name);
 #else
@@ -195,6 +195,8 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(
             ctx, e_range,
+            // The explicit capture list is needed here because the capture occurs in a function template with a
+            // variadic non-type parameter.
             [&ctx, t, J, x, u, trial_elements, qf, qpts_per_elem, rule, device_r, qf_state, elements, qf_derivatives,
              qf_inputs, interpolate_result, update_state](uint32_t e) {
               (void)qf_state;
@@ -259,7 +261,7 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
             });
       });
 
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   rm.copy(r, device_r);
   allocator.deallocate(device_r);
 #endif
@@ -342,7 +344,7 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
 
   using qf_inputs_type = decltype(trial_element::template interpolate_output_helper<Q>());
 
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   std::string device_name = "DEVICE";
 #else
   std::string                           device_name = "HOST";
@@ -392,7 +394,7 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
  * @param[in] num_elements The number of elements in the mesh
  */
 template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type>
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
 void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::GPU> dK,
 #else
 void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
@@ -414,7 +416,7 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
   RAJA::launch<launch_policy>(
       RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_SZ)),
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
-        RAJA::loop<teams_e>(ctx, elements_range, [&ctx, dK, elements, qf_derivatives, nquad, rule](uint32_t e) {
+        RAJA::loop<teams_e>(ctx, elements_range, [&](uint32_t e) {
           (void)nquad;
 
           static constexpr bool  is_QOI_2 = test::family == Family::QOI;
@@ -471,14 +473,14 @@ std::function<void(const double*, double*)> jacobian_vector_product_kernel(
 }
 
 template <int wrt, int Q, mfem::Geometry::Type geom, typename signature, typename derivative_type>
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
 std::function<void(ExecArrayView<double, 3, ExecutionSpace::GPU>)> element_gradient_kernel(
 #else
 std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)> element_gradient_kernel(
 #endif
     signature, std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   return [=](ExecArrayView<double, 3, ExecutionSpace::GPU> K_elem) {
 #else
   return [=](ExecArrayView<double, 3, ExecutionSpace::CPU> K_elem) {

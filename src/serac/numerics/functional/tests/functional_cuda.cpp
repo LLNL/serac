@@ -17,7 +17,7 @@
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 
-#ifndef USE_CUDA
+#ifndef SERAC_USE_CUDA_KERNEL_EVALUATION
 #error "This test requires CUDA support"
 #endif
 

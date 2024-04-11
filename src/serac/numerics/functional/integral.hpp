@@ -76,7 +76,7 @@ struct Integral {
       std::vector<const double*> inputs(active_trial_spaces_.size());
       for (std::size_t i = 0; i < active_trial_spaces_.size(); i++) {
         input_E[uint32_t(active_trial_spaces_[i])].GetBlock(geometry).UseDevice(true);
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
         const auto& mfem_vec = input_E[uint32_t(active_trial_spaces_[i])].GetBlock(geometry);
         inputs[i]            = const_cast<const double*>(
             copy_data(const_cast<double*>(mfem_vec.Read()), mfem_vec.Size() * sizeof(double), "DEVICE"));
@@ -87,7 +87,7 @@ struct Integral {
 
       func(t, inputs, output_E.GetBlock(geometry).ReadWrite(), update_state);
 // Deallocate
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
       for (auto input : inputs) {
         deallocate(const_cast<double*>(input), "DEVICE");
       }
@@ -113,7 +113,7 @@ struct Integral {
     if (functional_to_integral_index_.count(differentiation_index) > 0) {
       for (auto& [geometry, func] : jvp_[functional_to_integral_index_.at(differentiation_index)]) {
         const auto& mfem_vec = input_E.GetBlock(geometry);
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
         auto device_input = const_cast<const double*>(
             copy_data(const_cast<double*>(mfem_vec.Read()), mfem_vec.Size() * sizeof(double), "DEVICE"));
         auto device_output = copy_data(const_cast<double*>(output_E.GetBlock(geometry).ReadWrite()),
@@ -123,7 +123,7 @@ struct Integral {
         auto device_output = output_E.GetBlock(geometry).ReadWrite();
 #endif
         func(device_input, device_output);
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
         auto& rm = umpire::ResourceManager::getInstance();
         deallocate(const_cast<double*>(device_input), "DEVICE");
         rm.copy(output_E.GetBlock(geometry).ReadWrite(), device_output);
@@ -142,7 +142,7 @@ struct Integral {
  * test_dofs_per_elem)
  * @param differentiation_index the index of the trial space being differentiated
  */
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   void ComputeElementGradients(std::map<mfem::Geometry::Type, ExecArray<double, 3, ExecutionSpace::GPU> >& K_e,
                                uint32_t differentiation_index) const
 #else
@@ -177,7 +177,7 @@ struct Integral {
   std::vector<std::map<mfem::Geometry::Type, jacobian_vector_product_func> > jvp_;
 
 /// @brief signature of element gradient kernel
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   using grad_func = std::function<void(ExecArrayView<double, 3, ExecutionSpace::GPU>)>;
 #else
   using grad_func = std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)>;
@@ -242,7 +242,7 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
 
   std::shared_ptr<zero> dummy_derivatives;
 // Copy elements to device if using CUDA
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   int* device_elements =
       copy_data(const_cast<int*>(elements), sizeof(int) * integral.domain_.get(geom).size(), "DEVICE");
   integral.evaluation_[geom] = domain_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom>(
@@ -261,7 +261,7 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
     // action_of_gradient functor below to augment the reference count, and extend its lifetime to match
     // that of the DomainIntegral that allocated it.
     using derivative_type = decltype(domain_integral::get_derivative_type<index, dim, trials...>(qf, qpt_data_type{}));
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
     auto ptr = accelerator::make_shared_array<ExecutionSpace::GPU, derivative_type>(num_elements * qpts_per_element);
     integral.evaluation_with_AD_[index][geom] = domain_integral::evaluation_kernel<index, Q, geom>(
         s, qf, positions, jacobians, qdata, ptr, device_elements, num_elements);
@@ -360,7 +360,7 @@ void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integr
     // action_of_gradient functor below to augment the reference count, and extend its lifetime to match
     // that of the boundaryIntegral that allocated it.
     using derivative_type = decltype(boundary_integral::get_derivative_type<index, dim, trials...>(qf));
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
     auto ptr = accelerator::make_shared_array<ExecutionSpace::GPU, derivative_type>(num_elements * qpts_per_element);
 #else
     auto ptr = accelerator::make_shared_array<ExecutionSpace::CPU, derivative_type>(num_elements * qpts_per_element);

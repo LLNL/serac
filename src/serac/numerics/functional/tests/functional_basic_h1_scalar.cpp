@@ -72,7 +72,7 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 
   // Construct the new functional object using the known test and trial spaces
 
-#ifdef USE_CUDA
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(&test_fespace, {&trial_fespace});
 #else
   Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(&test_fespace, {&trial_fespace});
@@ -80,7 +80,7 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, TestThermalModelOne<dim>{}, *mesh);
 
-#ifndef USE_CUDA
+#ifndef SERAC_USE_CUDA_KERNEL_EVALUATION
   residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, TestThermalModelTwo{}, *mesh);
 #endif
   double t = 0.0;
@@ -103,7 +103,7 @@ void thermal_test(std::string meshfile)
 }
 
 TEST(basic, thermal_hexes) { thermal_test<1, 1>("/data/meshes/patch3D_hexes.mesh"); }
-#ifndef USE_CUDA
+#ifndef SERAC_USE_CUDA_KERNEL_EVALUATION
 TEST(basic, thermal_tris) { thermal_test<1, 1>("/data/meshes/patch2D_tris.mesh"); }
 TEST(basic, thermal_tets) { thermal_test<1, 1>("/data/meshes/patch3D_tets.mesh"); }
 TEST(basic, thermal_quads) { thermal_test<1, 1>("/data/meshes/patch2D_quads.mesh"); }
