@@ -75,23 +75,9 @@ struct Integral {
     for (auto& [geometry, func] : kernels) {
       std::vector<const double*> inputs(active_trial_spaces_.size());
       for (std::size_t i = 0; i < active_trial_spaces_.size(); i++) {
-        input_E[uint32_t(active_trial_spaces_[i])].GetBlock(geometry).UseDevice(true);
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-        const auto& mfem_vec = input_E[uint32_t(active_trial_spaces_[i])].GetBlock(geometry);
-        inputs[i]            = const_cast<const double*>(
-            copy_data(const_cast<double*>(mfem_vec.Read()), mfem_vec.Size() * sizeof(double), "DEVICE"));
-#else
-        inputs[i]          = input_E[uint32_t(active_trial_spaces_[i])].GetBlock(geometry).Read();
-#endif
+        inputs[i] = input_E[uint32_t(active_trial_spaces_[i])].GetBlock(geometry).Read();
       }
-
       func(t, inputs, output_E.GetBlock(geometry).ReadWrite(), update_state);
-// Deallocate
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-      for (auto input : inputs) {
-        deallocate(const_cast<double*>(input), "DEVICE");
-      }
-#endif
     }
   }
 
@@ -112,25 +98,7 @@ struct Integral {
     // if this integral actually depends on the specified variable
     if (functional_to_integral_index_.count(differentiation_index) > 0) {
       for (auto& [geometry, func] : jvp_[functional_to_integral_index_.at(differentiation_index)]) {
-        const auto& mfem_vec = input_E.GetBlock(geometry);
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-        auto device_input = const_cast<const double*>(
-            copy_data(const_cast<double*>(mfem_vec.Read()), mfem_vec.Size() * sizeof(double), "DEVICE"));
-        auto device_output = copy_data(const_cast<double*>(output_E.GetBlock(geometry).ReadWrite()),
-                                       output_E.GetBlock(geometry).Size() * sizeof(double), "DEVICE");
-#else
-        auto device_input  = mfem_vec.Read();
-        auto device_output = output_E.GetBlock(geometry).ReadWrite();
-#endif
-        func(device_input, device_output);
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-        auto& rm = umpire::ResourceManager::getInstance();
-        deallocate(const_cast<double*>(device_input), "DEVICE");
-        rm.copy(output_E.GetBlock(geometry).ReadWrite(), device_output);
-        deallocate(device_output, "DEVICE");
-        std::cout << "L148" << std::endl;
-
-#endif
+        func(input_E.GetBlock(geometry).Read(), output_E.GetBlock(geometry).ReadWrite());
       }
     }
   }

@@ -235,7 +235,8 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
               auto qf_outputs = [&]() {
                 if constexpr (std::is_same_v<state_type, Nothing>) {
                   return batch_apply_qf_no_qdata(qf, t, x[e], ctx, get<indices>(qf_inputs[e])...);
-                } else {
+                }
+                if constexpr (!std::is_same_v<state_type, Nothing>) {
                   return batch_apply_qf(qf, t, x[e], &qf_state(e, 0), update_state, ctx, get<indices>(qf_inputs[e])...);
                 }
               }();
@@ -428,7 +429,8 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
           RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
             if constexpr (is_QOI_2) {
               get<0>(derivatives(q)) = qf_derivatives[e * nquad + uint32_t(q)];
-            } else {
+            }
+            if constexpr (!is_QOI_2) {
               derivatives(q) = qf_derivatives[e * nquad + uint32_t(q)];
             }
           });

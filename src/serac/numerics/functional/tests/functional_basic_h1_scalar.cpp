@@ -116,6 +116,9 @@ TEST(mixed, thermal_tets_and_hexes) { thermal_test<2, 1>("/data/meshes/patch3D_t
 
 int main(int argc, char* argv[])
 {
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+  serac::accelerator::initializeDevice();
+#endif
   ::testing::InitGoogleTest(&argc, argv);
 
   int num_procs, myid;
@@ -128,6 +131,8 @@ int main(int argc, char* argv[])
   int result = RUN_ALL_TESTS();
 
   MPI_Finalize();
-
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+  serac::accelerator::terminateDevice();
+#endif
   return result;
 }

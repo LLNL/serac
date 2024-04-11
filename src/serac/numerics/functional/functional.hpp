@@ -623,7 +623,14 @@ private:
             for (axom::IndexType e = 0; e < elem_matrices.shape()[0]; e++) {
               test_restrictions[geom].GetElementVDofs(e, test_vdofs);
               trial_restrictions[geom].GetElementVDofs(e, trial_vdofs);
-
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+              axom::Array<double, 3, axom::MemorySpace::Host> elem_matrices_host(
+                  test_restrictions[geom].num_elements, test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components,
+                  test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components);
+              elem_matrices_host = elem_matrices;
+#else
+              auto elem_matrices_host = elem_matrices;
+#endif
               for (uint32_t i = 0; i < uint32_t(elem_matrices.shape()[1]); i++) {
                 int col = int(trial_vdofs[i].index());
 
@@ -637,7 +644,7 @@ private:
                   //
                   //       This is kind of confusing, and will be fixed in a future refactor
                   //       of the element gradient kernel implementation
-                  values[lookup_tables(row, col)] += sign * elem_matrices(e, i, j);
+                  values[lookup_tables(row, col)] += sign * elem_matrices_host(e, i, j);
                 }
               }
             }
