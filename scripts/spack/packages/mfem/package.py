@@ -15,7 +15,7 @@ class Mfem(BuiltinMfem):
     # BIG NOTE: We have strayed from master due to needing a change in a one-off-branch.
     # This commit resides in serac/master_04_08_2024_plus_mesh-partitioner-dev
     # which is master as of 04/08/2024 merged with mesh-partitioner-dev
-    version("4.6.2.2", commit="d24d9d51d4bdd736b5ed52f7dda61e9f7575893f")
+    version("4.6.2.4", commit="fc4057955e017d41db78ebd19b0c6af71f947eb0")
 
     variant('asan', default=False, description='Add Address Sanitizer flags')
 
