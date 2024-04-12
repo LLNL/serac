@@ -176,4 +176,4 @@ spack:
     tribol:
       require: "@0.1.0.15~examples~tests"
     umpire:
-      require: "@2024.02.0~examples"
+      require: "@2024.02.0~examples~werror"
