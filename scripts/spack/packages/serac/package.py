@@ -116,17 +116,17 @@ class Serac(CachedCMakePackage, CudaPackage):
     #  (includes, libs, etc) instead of hdf5 info
     depends_on("hdf5@1.8.21:+hl~mpi")
 
-    depends_on("camp@2022.03.2:")
+    depends_on("camp@2024.02.0:")
 
-    depends_on("raja~examples~exercises", when="+raja")
+    depends_on("raja@2024.02.0:~examples~exercises", when="+raja")
     depends_on("raja~openmp", when="+raja~openmp")
     depends_on("raja+openmp", when="+raja+openmp")
 
-    depends_on("umpire@2022.03.1:~examples~device_alloc", when="+umpire")
+    depends_on("umpire@2024.02.0:~examples~device_alloc", when="+umpire")
     depends_on("umpire~openmp", when="+umpire~openmp")
     depends_on("umpire+openmp", when="+umpire+openmp")
 
-    depends_on("axom~fortran~tools~examples+mfem+lua")
+    depends_on("axom@0.9:~fortran~tools~examples+mfem+lua")
     depends_on("axom~raja", when="~raja")
     depends_on("axom~umpire", when="~umpire")
     depends_on("axom~openmp", when="~openmp")
@@ -292,13 +292,9 @@ class Serac(CachedCMakePackage, CudaPackage):
                 # CXX flags will be propagated to the host compiler
                 cxxflags = " ".join(spec.compiler_flags["cxxflags"])
                 cuda_flags = cxxflags
-                cuda_flags += " --expt-extended-lambda --expt-relaxed-constexpr "
+                cuda_flags += "${CMAKE_CUDA_FLAGS} --expt-extended-lambda --expt-relaxed-constexpr "
                 entries.append(cmake_cache_string("CMAKE_CUDA_FLAGS",
-                                                  cuda_flags))
-
-                cuda_arch = spec.variants["cuda_arch"].value[0]
-                entries.append(cmake_cache_string("CMAKE_CUDA_ARCHITECTURES",
-                                                  cuda_arch))
+                                                  cuda_flags, force=True))
 
                 entries.append(
                     "# nvcc does not like gtest's 'pthreads' flag\n")
