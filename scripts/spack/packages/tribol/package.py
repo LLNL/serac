@@ -90,14 +90,14 @@ class Tribol(CachedCMakePackage, CudaPackage, ROCmPackage):
         ext_cuda_dep = f"+cuda cuda_arch={val}"
         depends_on(f"mfem{ext_cuda_dep}", when=f"{ext_cuda_dep}")
         depends_on(f"axom{ext_cuda_dep}", when=f"{ext_cuda_dep}")
-        depends_on(f"raja{ext_cuda_dep}", when=f"+raja{ext_cuda_dep}"))
+        depends_on(f"raja{ext_cuda_dep}", when=f"+raja{ext_cuda_dep}")
         depends_on(f"umpire{ext_cuda_dep}", when=f"+umpire{ext_cuda_dep}")
 
     for val in ROCmPackage.amdgpu_targets:
         ext_rocm_dep = f"+rocm amdgpu_target={val}"
         depends_on(f"mfem{ext_rocm_dep}", when=f"{ext_rocm_dep}")
         depends_on(f"axom{ext_rocm_dep}", when=f"{ext_rocm_dep}")
-        depends_on(f"raja{ext_rocm_dep}", when=f"+raja{ext_rocm_dep}"))
+        depends_on(f"raja{ext_rocm_dep}", when=f"+raja{ext_rocm_dep}")
         depends_on(f"umpire{ext_rocm_dep}", when=f"+umpire{ext_rocm_dep}")
 
     depends_on("rocprim", when="+rocm")
