@@ -108,7 +108,7 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     depends_on("petsc", when="+petsc")
 
-    depends_on("tribol~minbuild", when="+tribol")
+    depends_on("tribol", when="+tribol")
 
     # Needs to be first due to a bug with the Spack concretizer
     # Note: Certain combinations of CMake and Conduit do not like +mpi
@@ -187,7 +187,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("netcdf-c~shared", when="+netcdf~shared")
 
     # Tribol does not have shared variant
-    depends_on("tribol+debug".format(dep), when="+tribol build_type=Debug".format(dep))
+    depends_on("tribol build_type=Debug", when="+tribol build_type=Debug")
 
     # Required but not CMake
     for dep in ["hypre", "mfem"]:
