@@ -292,7 +292,7 @@ spack:
 
     # Globally lock version of third party libraries
     axom:
-      require: "@0.9.1.1"
+      require: "@0.9.0.1"
     camp:
       require: "@2024.02.0"
     conduit:
