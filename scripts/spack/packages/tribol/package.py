@@ -71,6 +71,7 @@ class Tribol(CachedCMakePackage, CudaPackage):
     # Basic dependencies
     depends_on("mpi")
     depends_on("cmake@3.14:", type="build")
+    depends_on("blt@0.6.2:", type="build")
 
     # Devtool dependencies these need to match tribol_devtools/package.py
     depends_on("doxygen", when="+devtools")
@@ -88,13 +89,13 @@ class Tribol(CachedCMakePackage, CudaPackage):
     depends_on("mfem~umpire", when="~umpire+minbuild")
     depends_on("mfem~zlib", when="+minbuild")
 
-    depends_on("raja", when="+raja")
+    depends_on("raja@2024.02.0:", when="+raja")
     depends_on("raja~openmp~shared~examples~exercises", when="+raja+minbuild")
 
-    depends_on("umpire@2022.03.1:", when="+umpire")
+    depends_on("umpire@2024.02.0::", when="+umpire")
     depends_on("umpire~shared~examples", when="+umpire+minbuild")
 
-    depends_on("axom+mpi")
+    depends_on("axom@0.9:+mpi")
     depends_on("axom build_type=Debug", when="+debug")
     depends_on("axom+raja", when="+raja")
     depends_on("axom+umpire", when="+umpire")
@@ -164,28 +165,20 @@ class Tribol(CachedCMakePackage, CudaPackage):
 
         if spec.satisfies('^cuda'):
             entries.append(cmake_cache_option("ENABLE_CUDA", True))
+            entries.append(cmake_cache_option("CMAKE_CUDA_SEPARABLE_COMPILATION", True))
 
-            if spec.satisfies('cuda_arch=none'):
-                msg = ("# No cuda_arch specified in Spack spec, "
-                       "this is likely to fail\n\n")
-                entries.append(msg)
-            else:
-                cuda_arch = spec.variants['cuda_arch'].value
-                arch_flag = '-arch sm_{0} '.format(cuda_arch[0])
-                # CXX flags will be propagated to the host compiler
-                cxxflags = ' '.join(spec.compiler_flags['cxxflags'])
-                cuda_flags = arch_flag + cxxflags
-                cuda_flags += ' --expt-extended-lambda --expt-relaxed-constexpr '
-                cuda_flags += " -std=c++14"
-                entries.append(cmake_cache_string("CMAKE_CUDA_FLAGS",
-                                                  cuda_flags))
-                entries.append(cmake_cache_string("CMAKE_CUDA_ARCHITECTURES",
-                                                  ' '.join(cuda_arch)))
+            # CUDA_FLAGS
+            cuda_flags += "${CMAKE_CUDA_FLAGS} --expt-extended-lambda --expt-relaxed-constexpr "
 
-                entries.append(
-                    "# nvcc does not like gtest's 'pthreads' flag\n")
-                entries.append(
-                    cmake_cache_option("gtest_disable_pthreads", True))
+            # Pass through any cxxflags to the host compiler via nvcc's Xcompiler flag
+            host_cxx_flags = spec.compiler_flags["cxxflags"]
+            cudaflags += " ".join(["-Xcompiler=%s " % flag for flag in host_cxx_flags])
+            entries.append(cmake_cache_string("CMAKE_CUDA_FLAGS", cudaflags, force=True))
+
+            entries.append(
+                "# nvcc does not like gtest's 'pthreads' flag\n")
+            entries.append(
+                cmake_cache_option("gtest_disable_pthreads", True))
 
         if spec.satisfies('target=ppc64le:'):
             # Fix for working around CMake adding implicit link directories
@@ -288,8 +281,9 @@ class Tribol(CachedCMakePackage, CudaPackage):
 
 
     def cmake_args(self):
-
         options = []
+
+        options.append("-DBLT_SOURCE_DIR:PATH={0}".format(self.spec["blt"].prefix))
 
         options.append(self.define_from_variant(
             'TRIBOL_ENABLE_EXAMPLES', 'examples'))
