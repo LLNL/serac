@@ -38,14 +38,10 @@ endif()
 serac_add_tests( SOURCES       axom_smoketest.cpp
                  DEPENDS_ON    axom::inlet)
 
-if(SERAC_USE_PETSC)
-    serac_add_tests(SOURCES       petsc_smoketest.cpp
-                    DEPENDS_ON    PkgConfig::PETSC gtest axom::slic
-                    NUM_MPI_TASKS 4)
-endif()
+serac_add_tests(SOURCES       petsc_smoketest.cpp
+                DEPENDS_ON    PkgConfig::PETSC gtest axom::slic
+                NUM_MPI_TASKS 4)
 
-if(SERAC_USE_SLEPC)
-    serac_add_tests(SOURCES       slepc_smoketest.cpp
-                    DEPENDS_ON    PkgConfig::SLEPC gtest axom::slic
-                    NUM_MPI_TASKS 4)
-endif()
+serac_add_tests(SOURCES       slepc_smoketest.cpp
+                DEPENDS_ON    PkgConfig::SLEPC gtest axom::slic
+                NUM_MPI_TASKS 4)

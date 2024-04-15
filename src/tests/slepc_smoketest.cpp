@@ -1,5 +1,7 @@
 // SERAC_EDIT_START
 // clang-format off
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 // SERAC_EDIT_END
 
 /*

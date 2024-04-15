@@ -27,10 +27,16 @@ if(NOT ARPACK_DIR)
 endif()
 
 # Add missing arpack include dir and link libs
-set_property(
-  TARGET PkgConfig::SLEPC PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-                                   ${SLEPC_INCLUDE_DIRS};${ARPACK_DIR}/include)
-set_property(
-  TARGET PkgConfig::SLEPC
-  PROPERTY INTERFACE_LINK_LIBRARIES
-           ${SLEPC_LINK_LIBRARIES};${ARPACK_DIR}/lib64/libparpack.so)
+target_include_directories(PkgConfig::SLEPC INTERFACE ${ARPACK_DIR}/include)
+target_link_libraries(PkgConfig::SLEPC INTERFACE ${ARPACK_DIR}/lib64/libparpack.so)
+
+# Give slepc petsc's link libs and dirs
+get_target_property(_petsc_link_libs PkgConfig::PETSC INTERFACE_LINK_LIBRARIES)
+get_target_property(_petsc_link_dirs PkgConfig::PETSC INTERFACE_LINK_DIRECTORIES)
+target_link_libraries(PkgConfig::SLEPC INTERFACE ${_petsc_link_libs})
+target_link_directories(PkgConfig::SLEPC INTERFACE ${_petsc_link_dirs})
+
+# Remove duplicates from INTERFACE_LINK_LIBRARIES
+get_target_property(_slepc_link_libs PkgConfig::SLEPC INTERFACE_LINK_LIBRARIES)
+blt_list_remove_duplicates(TO _slepc_link_libs)
+set_target_properties(PkgConfig::SLEPC PROPERTIES INTERFACE_LINK_LIBRARIES "${_slepc_link_libs}")
