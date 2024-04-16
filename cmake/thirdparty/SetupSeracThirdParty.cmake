@@ -422,7 +422,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
 
         if(ENABLE_OPENMP)
-            target_link_libraries(core INTERFACE openmp)
+            target_link_libraries(core INTERFACE blt::openmp)
         endif()
 
         blt_convert_to_system_includes(TARGET core)
