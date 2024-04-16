@@ -148,7 +148,7 @@ struct Integral {
 #ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   using grad_func = std::function<void(ExecArrayView<double, 3, ExecutionSpace::GPU>)>;
 #else
-  using grad_func = std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)>;
+  using grad_func            = std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)>;
 #endif
 
   /// @brief kernels for calculation of element jacobians

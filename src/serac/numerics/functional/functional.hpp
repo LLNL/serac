@@ -625,7 +625,8 @@ private:
               trial_restrictions[geom].GetElementVDofs(e, trial_vdofs);
 #ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
               axom::Array<double, 3, axom::MemorySpace::Host> elem_matrices_host(
-                  test_restrictions[geom].num_elements, test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components,
+                  test_restrictions[geom].num_elements,
+                  test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components,
                   test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components);
               elem_matrices_host = elem_matrices;
 #else
