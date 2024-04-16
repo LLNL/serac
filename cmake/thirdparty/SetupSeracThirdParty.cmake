@@ -414,6 +414,9 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
         set(AXOM_FOUND TRUE CACHE BOOL "" FORCE)
 
+        add_library(axom::cli11 ALIAS cli11)
+        add_library(axom::fmt ALIAS fmt)
+
         if (STRUMPACK_DIR)
             target_link_libraries(sidre PUBLIC STRUMPACK::strumpack)
         endif()
