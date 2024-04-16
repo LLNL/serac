@@ -80,20 +80,22 @@ void whole_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](double /*t*/, auto x, auto temperature) {
-        auto [u, du_dx] = temperature;
-        auto source     = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
-        auto flux       = d10 * u + dot(d11, du_dx);
+      [=](double /*t*/, auto position, auto temperature) {
+        auto [X, dX_dxi] = position;
+        auto [u, du_dX]  = temperature;
+        auto source      = d00 * u + dot(d01, du_dX) - 0.0 * (100 * X[0] * X[1]);
+        auto flux        = d10 * u + dot(d11, du_dX);
         return serac::tuple{source, flux};
       },
       left);
 
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](double /*t*/, auto x, auto temperature) {
-        auto [u, du_dx] = temperature;
-        auto source     = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
-        auto flux       = d10 * u + dot(d11, du_dx);
+      [=](double /*t*/, auto position, auto temperature) {
+        auto [X, dX_dxi] = position;
+        auto [u, du_dX] = temperature;
+        auto source     = d00 * u + dot(d01, du_dX) - 0.0 * (100 * X[0] * X[1]);
+        auto flux       = d10 * u + dot(d11, du_dX);
         return serac::tuple{source, flux};
       },
       right);
@@ -125,10 +127,11 @@ void whole_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual_comparison.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](double /*t*/, auto x, auto temperature) {
-        auto [u, du_dx] = temperature;
-        auto source     = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
-        auto flux       = d10 * u + dot(d11, du_dx);
+      [=](double /*t*/, auto position, auto temperature) {
+        auto [X, dX_dxi] = position;
+        auto [u, du_dX] = temperature;
+        auto source     = d00 * u + dot(d01, du_dX) - 0.0 * (100 * X[0] * X[1]);
+        auto flux       = d10 * u + dot(d11, du_dX);
         return serac::tuple{source, flux};
       },
       whole_mesh);
@@ -222,10 +225,11 @@ void partial_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](double /*t*/, auto x, auto temperature) {
-        auto [u, du_dx] = temperature;
-        auto source     = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
-        auto flux       = d10 * u + dot(d11, du_dx);
+      [=](double /*t*/, auto position, auto temperature) {
+        auto [X, dX_dxi] = position;
+        auto [u, du_dX] = temperature;
+        auto source     = d00 * u + dot(d01, du_dX) - 0.0 * (100 * X[0] * X[1]);
+        auto flux       = d10 * u + dot(d11, du_dX);
         return serac::tuple{source, flux};
       },
       left);
@@ -248,7 +252,8 @@ void partial_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual_comparison.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](double /*t*/, auto X, auto temperature) {
+      [=](double /*t*/, auto position, auto temperature) {
+        auto [X, dX_dxi] = position;
         auto [u, du_dX] = temperature;
         double mask     = (X[0] < 4.0);
         auto   source   = mask * (d00 * u + dot(d01, du_dX) - 0.0 * (100 * X[0] * X[1]));

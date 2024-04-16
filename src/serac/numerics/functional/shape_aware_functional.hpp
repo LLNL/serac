@@ -204,7 +204,7 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper(lambda&& qf, double t, const 
 {
   static_assert(tuple_size<trial_types>::value == tuple_size<space_types>::value,
                 "Argument and finite element space tuples are not the same size.");
-  return qf(t, x + get<VALUE>(shape),
+  return qf(t, x + shape,
             correction.modify_trial_argument(serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
 }
 
@@ -236,7 +236,8 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper(lambda&& qf, double t, const 
  */
 template <typename lambda, typename coord_type, typename state_type, typename shape_type, typename space_types,
           typename trial_types, typename correction_type, int... i>
-SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper_with_state(lambda&& qf, double t, const coord_type& x,
+SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper_with_state(lambda&& qf, double t, 
+                                                              const coord_type& x,
                                                               state_type& state, const shape_type& shape,
                                                               const space_types&     space_tuple,
                                                               const trial_types&     arg_tuple,
@@ -245,7 +246,7 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper_with_state(lambda&& qf, doubl
 {
   static_assert(tuple_size<trial_types>::value == tuple_size<space_types>::value,
                 "Argument and finite element space tuples are not the same size.");
-  return qf(t, x + get<VALUE>(shape), state,
+  return qf(t, x + shape, state,
             correction.modify_trial_argument(serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
 }
 

@@ -80,11 +80,12 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   // Add the total domain residual term to the weak form
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [&](double /*t*/, [[maybe_unused]] auto x, [[maybe_unused]] auto temperature) {
+      [&](double /*t*/, [[maybe_unused]] auto position, [[maybe_unused]] auto temperature) {
         // get the value and the gradient from the input tuple
-        auto [u, du_dx] = temperature;
-        auto source     = a * u - (100 * x[0] * x[1]);
-        auto flux       = b * du_dx;
+        auto [X, dX_dxi] = position;
+        auto [u, du_dX] = temperature;
+        auto source     = a * u - (100 * X[0] * X[1]);
+        auto flux       = b * du_dX;
         return serac::tuple{source, flux};
       },
       mesh);

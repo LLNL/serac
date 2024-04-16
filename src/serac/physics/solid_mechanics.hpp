@@ -919,8 +919,8 @@ public:
 
     residual_->AddDomainIntegral(
         Dimension<dim>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
-        [body_force](double t, auto x, auto /* displacement */, auto /* acceleration */, auto... params) {
-          return serac::tuple{-1.0 * body_force(x, t, params...), zero{}};
+        [body_force](double t, auto X, auto /* displacement */, auto /* acceleration */, auto... params) {
+          return serac::tuple{-1.0 * body_force(get<VALUE>(X), t, params...), zero{}};
         },
         domain);
   }
