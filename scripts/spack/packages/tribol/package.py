@@ -35,7 +35,10 @@ class Tribol(CachedCMakePackage, CudaPackage, ROCmPackage):
     homepage = "https://github.com/LLNL/Tribol"
     git      = "https://github.com/LLNL/Tribol.git"
 
-    version("develop", branch="develop", submodules=True, preferred=True)
+    # SERAC EDIT START
+    #version("develop", branch="develop", submodules=True, preferred=True)
+    version("develop", branch="develop", submodules=True)
+    # SERAC EDIT END
 
 
     # SERAC EDIT START

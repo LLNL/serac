@@ -28,7 +28,9 @@
 
 static char help[] = "Solves 2D Poisson equation using multigrid.\n\n";
 
+// SERAC_EDIT_START
 #include <algorithm>
+// SERAC_EDIT_END
 
 #include <petscdm.h>
 #include <petscdmda.h>
