@@ -12,8 +12,6 @@
 
 #pragma once
 
-#include "mfem.hpp"
-
 #include "serac/physics/solid_mechanics.hpp"
 #include "serac/physics/contact/contact_data.hpp"
 

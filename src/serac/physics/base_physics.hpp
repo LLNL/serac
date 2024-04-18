@@ -56,8 +56,11 @@ public:
    * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
    * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param[in] time The simulation time to initialize the physics module to
+   * @param[in] checkpoint_to_disk A flag to save the transient states on disk instead of memory for the transient
+   * adjoint solves
    */
-  BasePhysics(std::string physics_name, std::string mesh_tag, int cycle = 0, double time = 0.0);
+  BasePhysics(std::string physics_name, std::string mesh_tag, int cycle = 0, double time = 0.0,
+              bool checkpoint_to_disk = false);
 
   /**
    * @brief Construct a new Base Physics object (copy constructor)
@@ -336,21 +339,21 @@ public:
   virtual void outputStateToDisk(std::optional<std::string> paraview_output_dir = {}) const;
 
   /**
-   * @brief Accessor for getting named finite element state primal solution from the physics modules at a given
+   * @brief Accessor for getting a single named finite element state primal solution from the physics modules at a given
    * checkpointed cycle index
    *
-   * @param state_name The name of the Finite Element State primal solution to retrieve
    * @param cycle The cycle to retrieve state from
+   * @param state_name The name of the state to retrieve (e.g. "temperature", "displacement")
    * @return The named primal Finite Element State
    */
-  virtual FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const;
+  FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const;
 
   /**
    * @brief Get a timestep increment which has been previously checkpointed at the give cycle
    * @param cycle The previous 'timestep' number where the timestep increment is requested
    * @return The timestep increment
    */
-  virtual double loadCheckpointedTimestep(int cycle) const;
+  virtual double getCheckpointedTimestep(int cycle) const;
 
   /**
    * @brief Initializes the Sidre structure for simulation summary data
@@ -383,6 +386,18 @@ public:
 
 protected:
   /**
+   * @brief Create a paraview data collection for the physics package if requested
+   */
+  void CreateParaviewDataCollection() const;
+
+  /**
+   * @brief Update the paraview states, duals, parameters, and metadata (cycle, time) in preparation for output
+   *
+   * @param paraview_output_dir The directory to write the paraview output
+   */
+  void UpdateParaviewDataCollection(const std::string& paraview_output_dir) const;
+
+  /**
    * @brief Protected, non-virtual method to reset physics states to zero.  This does not reset design parameters or
    * shape.
    *
@@ -390,6 +405,15 @@ protected:
    * @param[in] time The simulation time to initialize the physics module to
    */
   void initializeBasePhysicsStates(int cycle, double time);
+
+  /**
+   * @brief Accessor for getting all of the primal solutions from the physics modules at a given
+   * checkpointed cycle index
+   *
+   * @param cycle The cycle to retrieve state from
+   * @return A map containing the primal field names and their associated FiniteElementStates at the requested cycle
+   */
+  virtual std::unordered_map<std::string, FiniteElementState> getCheckpointedStates(int cycle) const;
 
   /// @brief Name of the physics module
   std::string name_ = {};
@@ -469,6 +493,21 @@ protected:
   /// physics module)
   std::unique_ptr<FiniteElementDual> shape_displacement_sensitivity_;
 
+  /// @brief A map containing optionally in-memory checkpointed primal states for transient adjoint solvers
+  mutable std::unordered_map<std::string, std::vector<serac::FiniteElementState>> checkpoint_states_;
+
+  /**
+   * @brief A container relating a checkpointed cycle and the associated finite element state fields
+   *
+   * @note This is only used when the disk-based checkpointing is used. It avoids thrashing the disk IO
+   * by performing a file open/read/close for every separate retrieval of state checkpoint data for the
+   * various primal fields.
+   */
+  mutable std::unordered_map<std::string, serac::FiniteElementState> cached_checkpoint_states_;
+
+  /// @brief An optional int for disk-based checkpointing containing the cycle number of the last retrieved checkpoint
+  mutable std::optional<int> cached_checkpoint_cycle_;
+
   /**
    *@brief Whether the simulation is time-independent
    */
@@ -535,9 +574,22 @@ protected:
   mutable std::unique_ptr<mfem::ParaViewDataCollection> paraview_dc_;
 
   /**
+   * @brief A optional map of the dual names and duals in grid function form for paraview output
+   */
+  mutable std::unordered_map<std::string, std::unique_ptr<mfem::ParGridFunction>> paraview_dual_grid_functions_;
+
+  /**
+   * @brief A optional view of the shape sensitivity in grid function form for paraview output
+   */
+  mutable std::unique_ptr<mfem::ParGridFunction> shape_sensitivity_grid_function_;
+
+  /**
    * @brief Boundary condition manager instance
    */
   BoundaryConditionManager bcs_;
+
+  /// A flag denoting whether to save the state to disk or memory as needed for dynamic adjoint solves
+  bool checkpoint_to_disk_;
 };
 
 }  // namespace serac

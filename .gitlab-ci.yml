@@ -69,3 +69,5 @@ variables:
 include:
   - local: .gitlab/build_lassen.yml
   - local: .gitlab/build_quartz.yml
+  - project: 'lc-templates/id_tokens'
+    file: 'id_tokens.yml'

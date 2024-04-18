@@ -106,19 +106,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
 
 
     #------------------------------------------------------------------------------
-    # PETSC
-    #------------------------------------------------------------------------------
-    if(PETSC_DIR)
-        serac_assert_is_directory(VARIABLE_NAME PETSC_DIR)
-        include(${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake)
-        message(STATUS "PETSc support is ON")
-        set(PETSC_FOUND TRUE)
-    else()
-        message(STATUS "PETSc support is OFF")
-        set(PETSC_FOUND FALSE)
-    endif()
-
-    #------------------------------------------------------------------------------
     # Adiak
     #------------------------------------------------------------------------------
     if(SERAC_ENABLE_PROFILING AND NOT ADIAK_DIR)
@@ -225,7 +212,9 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             set(ParMETIS_DIR ${PARMETIS_DIR} CACHE PATH "")
         endif()
         set(MFEM_USE_OPENMP ${ENABLE_OPENMP} CACHE BOOL "")
-        set(MFEM_USE_PETSC ${PETSC_FOUND} CACHE BOOL "")
+        # Disabling mfem using petsc in codevelop due to https://github.com/LLNL/serac/issues/1082
+        set(MFEM_USE_PETSC OFF CACHE BOOL "")
+        set(MFEM_USE_SLEPC OFF CACHE BOOL "")
         set(MFEM_USE_RAJA OFF CACHE BOOL "")
         set(MFEM_USE_SUNDIALS ${SERAC_USE_SUNDIALS} CACHE BOOL "")
         if(SUPERLUDIST_DIR)
@@ -237,7 +226,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         if(STRUMPACK_DIR)
             serac_assert_is_directory(VARIABLE_NAME STRUMPACK_DIR)
             set(MFEM_USE_STRUMPACK ON CACHE BOOL "")
-            find_package(strumpack CONFIG PATHS ${STRUMPACK_DIR}/lib/cmake/STRUMPACK)
+            find_package(strumpack CONFIG
+                PATHS ${STRUMPACK_DIR}/lib/cmake/STRUMPACK;${STRUMPACK_DIR}/lib64/cmake/STRUMPACK)
             set(STRUMPACK_REQUIRED_PACKAGES "MPI" "MPI_Fortran" "ParMETIS" "METIS"
                 "ScaLAPACK" CACHE STRING
                 "Additional packages required by STRUMPACK.")
@@ -274,6 +264,11 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
 
         set(HDF5_IMPORT_CONFIG "RELEASE" CACHE STRING "")
 
+        # Add missing include dir to var that MFEM uses
+        if (CALIPER_FOUND)
+            get_target_property(CALIPER_INCLUDE_DIRS caliper INTERFACE_INCLUDE_DIRECTORIES)
+        endif()
+
         # Disable tests + examples
         set(MFEM_ENABLE_TESTING  OFF CACHE BOOL "")
         set(MFEM_ENABLE_EXAMPLES OFF CACHE BOOL "")
@@ -299,6 +294,19 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endforeach()
 
         set(MFEM_BUILT_WITH_CMAKE TRUE)
+    endif()
+
+    #------------------------------------------------------------------------------
+    # PETSC
+    #------------------------------------------------------------------------------
+    if(PETSC_DIR)
+        serac_assert_is_directory(VARIABLE_NAME PETSC_DIR)
+        include(${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake)
+        message(STATUS "PETSc support is ON")
+        set(PETSC_FOUND TRUE)
+    else()
+        message(STATUS "PETSc support is OFF")
+        set(PETSC_FOUND FALSE)
     endif()
 
     #------------------------------------------------------------------------------
@@ -396,15 +404,22 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             target_link_libraries(sidre PUBLIC STRUMPACK::strumpack)
         endif()
 
-        # Alias Axom's builtin thirdparty targets under axom namespace
-        foreach(_comp ${AXOM_COMPONENTS_ENABLED};cli11;fmt)
-            add_library(axom::${_comp} ALIAS ${_comp})
-        endforeach()
+        # NOTE: Keeping this for compatibility, but this section is already done in axom since 858531b.
+        if (NOT TARGET axom)
+            # Create convenience target that bundles all Axom targets (axom)
+            # This normally happens in axom's installed config file
+            add_library(axom INTERFACE IMPORTED)
+            target_link_libraries(axom INTERFACE ${AXOM_COMPONENTS_ENABLED})
 
-        # Create convenience target that bundles all Axom targets (axom)
-        # This normally happens in axom's installed config file
-        add_library(axom INTERFACE IMPORTED)
-        target_link_libraries(axom INTERFACE ${AXOM_COMPONENTS_ENABLED})
+            # Alias Axom's builtin thirdparty targets under axom namespace
+            foreach(_comp ${AXOM_COMPONENTS_ENABLED};cli11;fmt)
+                add_library(axom::${_comp} ALIAS ${_comp})
+            endforeach()
+        else()
+            foreach(_comp cli11;fmt)
+                add_library(axom::${_comp} ALIAS ${_comp})
+            endforeach()
+        endif()
 
         if(ENABLE_OPENMP)
             target_link_libraries(core INTERFACE openmp)
@@ -472,19 +487,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         
         set(TRIBOL_FOUND TRUE CACHE BOOL "" FORCE)
         set(ENABLE_FORTRAN ON CACHE BOOL "" FORCE)
-    endif()
-
-    #------------------------------------------------------------------------------
-    # PETSC
-    #------------------------------------------------------------------------------
-    if(PETSC_DIR)
-        serac_assert_is_directory(VARIABLE_NAME PETSC_DIR)
-        include(${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake)
-        message(STATUS "PETSc support is ON")
-        set(PETSC_FOUND TRUE)
-    else()
-        message(STATUS "PETSc support is OFF")
-        set(PETSC_FOUND FALSE)
     endif()
 
     #------------------------------------------------------------------------------
@@ -572,4 +574,24 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
                     DESTINATION          lib)
         endif()
     endforeach()
+
+    # When both MFEM and Strumpack are on, MFEM adds the Fortran
+    # MPI library/directory but in some cases Spack cannot determine
+    # the correct MPI lib directory. This guards against that.
+    # https://github.com/spack/spack/issues/24685
+    if(STRUMPACK_DIR)
+        list(GET MPI_C_LIBRARIES 0 _first_mpi_lib)
+        get_filename_component(_mpi_lib_dir ${_first_mpi_lib} DIRECTORY)
+    
+        set(_mfem_targets
+            mfem
+            axom::mfem
+            tribol::mfem)
+        foreach(_target ${_mfem_targets})
+            if(TARGET ${_target})
+                message(STATUS "Adding MPI link directory to target [${_target}]")
+                target_link_directories(${_target} BEFORE INTERFACE ${_mpi_lib_dir})
+            endif()
+        endforeach()
+    endif()
 endif()

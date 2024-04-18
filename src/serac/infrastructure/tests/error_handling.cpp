@@ -16,8 +16,7 @@
 #include "serac/numerics/equation_solver.hpp"
 #include "serac/serac_config.hpp"
 
-class SlicErrorException : public std::exception {
-};
+class SlicErrorException : public std::exception {};
 
 namespace serac {
 

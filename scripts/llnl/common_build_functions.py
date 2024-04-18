@@ -271,7 +271,7 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
     bld_output_file =  pjoin(build_dir,"output.log.make.txt")
     print("[starting build]")
     print("[log file: %s]" % bld_output_file)
-    res = sexe("cd %s && make -j 8 VERBOSE=1 " % build_dir,
+    res = sexe("cd %s && make -j 4 VERBOSE=1 " % build_dir,
                 output_file = bld_output_file,
                 echo=True)
 
@@ -506,6 +506,10 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
             src_build_failed = True
         else:
             print("[SUCCESS: Build and test of src vs tpls test passed.]\n")
+
+    # Clean up spack repo
+    cmd = f"{prefix}/spack/bin/spack -D {prefix}/spack_env clean --all"
+    sexe(cmd, echo=True)
 
     # set proper perms for installed tpls
     set_group_and_perms(prefix)

@@ -1,12 +1,22 @@
-FROM axom/compilers:<NAME>-<MAJ_VER>_latest
+FROM <IMAGE>
 LABEL maintainer="bramwell1@llnl.gov"
 ARG branch=develop
 
 SHELL ["/bin/bash", "-c"]
 RUN sudo apt-get update -y
-RUN sudo apt-get install doxygen gfortran graphviz libopenblas-dev libomp-dev mpich python3-sphinx ssh texlive-full -fy
-
+RUN sudo apt-get install doxygen gettext gfortran-$(gcc -dumpversion) graphviz libomp-<MAJ_VER>-dev libopenblas-dev \
+                         lsb-release lua5.2 lua5.2-dev mpich python3-sphinx ssh texlive-full -fy
 RUN sudo useradd -m -s /bin/bash -G sudo serac
+
+# Remove flags from mpich
+RUN sudo sed -i "s/ -flto=auto//g" /usr/bin/mpicxx.mpich
+RUN sudo sed -i "s/ -flto=auto//g" /usr/bin/mpicc.mpich
+RUN sudo sed -i "s/ -flto=auto//g" /usr/bin/mpifort.mpich
+RUN sudo sed -i "s/ -ffat-lto-objects//g" /usr/bin/mpicxx.mpich
+RUN sudo sed -i "s/ -ffat-lto-objects//g" /usr/bin/mpicc.mpich
+RUN sudo sed -i "s/ -ffat-lto-objects//g" /usr/bin/mpifort.mpich
+RUN sudo sed -i "s/ -fallow-invalid-boz//g" /usr/bin/mpifort.mpich
+RUN sudo sed -i "s/ -fallow-argument-mismatch//g" /usr/bin/mpifort.mpich
 
 WORKDIR "/home/serac"
 USER serac
@@ -14,9 +24,9 @@ USER serac
 RUN git clone --recursive --branch $branch --single-branch --depth 1 https://github.com/LLNL/serac.git serac_repo
 
 # Build/install TPLs via spack and then remove the temporary build directory on success
-RUN cd serac_repo && python3 ./scripts/uberenv/uberenv.py --spack-env-file=./scripts/spack/configs/docker/<DISTRO>/spack.yaml \
+RUN cd serac_repo && python3 ./scripts/uberenv/uberenv.py --spack-env-file=./scripts/spack/configs/docker/ubuntu22/spack.yaml \
                                                           --project-json=.uberenv_config.json \
-                                                          --spec=%<NAME>@<VER>.0 --prefix=/home/serac/serac_tpls -k \
+                                                          --spec=%<NAME>@<VER> --prefix=/home/serac/serac_tpls -k \
                   && rm -rf /home/serac/serac_tpls/builds
 
 RUN mkdir -p /home/serac/export_hostconfig
