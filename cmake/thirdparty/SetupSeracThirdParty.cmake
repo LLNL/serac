@@ -393,6 +393,12 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
 
     else()
+        # TODO Remove this once Axom issue is resolved: https://github.com/LLNL/axom/issues/1323
+        set(_adiak_dir_temp ${ADIAK_DIR})
+        set(_caliper_dir_temp ${CALIPER_DIR})
+        unset(ADIAK_DIR CACHE)
+        unset(CALIPER_DIR CACHE)
+
         set(ENABLE_FORTRAN OFF CACHE BOOL "" FORCE)
         # Otherwise we use the submodule
         message(STATUS "Using Axom submodule")
@@ -428,6 +434,10 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         blt_convert_to_system_includes(TARGET core)
 
         set(ENABLE_FORTRAN ON CACHE BOOL "" FORCE)
+
+        # TODO Remove this once Axom issue is resolved: https://github.com/LLNL/axom/issues/1323
+        set(_adiak_dir_temp ${ADIAK_DIR} CACHE PATH "")
+        set(_caliper_dir_temp ${CALIPER_DIR} CACHE PATH "")
     endif()
 
     #------------------------------------------------------------------------------
