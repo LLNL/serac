@@ -436,8 +436,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(ENABLE_FORTRAN ON CACHE BOOL "" FORCE)
 
         # TODO Remove this once Axom issue is resolved: https://github.com/LLNL/axom/issues/1323
-        set(_adiak_dir_temp ${ADIAK_DIR} CACHE PATH "")
-        set(_caliper_dir_temp ${CALIPER_DIR} CACHE PATH "")
+        set(ADIAK_DIR ${_adiak_dir_temp} CACHE PATH "")
+        set(CALIPER_DIR ${_caliper_dir_temp} CACHE PATH "")
     endif()
 
     #------------------------------------------------------------------------------
