@@ -393,7 +393,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
 
     else()
-        # TODO Remove this once Axom issue is resolved: https://github.com/LLNL/axom/issues/1323
+        # Turn off profiling in Axom to keep logs specific to Serac
         set(_adiak_dir_temp ${ADIAK_DIR})
         set(_caliper_dir_temp ${CALIPER_DIR})
         unset(ADIAK_DIR CACHE)
@@ -435,7 +435,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
 
         set(ENABLE_FORTRAN ON CACHE BOOL "" FORCE)
 
-        # TODO Remove this once Axom issue is resolved: https://github.com/LLNL/axom/issues/1323
+        # Restore TPLs after turning off profiling in Axom to keep logs specific to Serac
         set(ADIAK_DIR ${_adiak_dir_temp} CACHE PATH "")
         set(CALIPER_DIR ${_caliper_dir_temp} CACHE PATH "")
     endif()
