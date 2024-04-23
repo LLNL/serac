@@ -591,7 +591,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     # MPI library/directory but in some cases Spack cannot determine
     # the correct MPI lib directory. This guards against that.
     # https://github.com/spack/spack/issues/24685
-    if(STRUMPACK_DIR AND MPI_C_LIBRARIES)
+    if(STRUMPACK_DIRS)
         list(GET MPI_C_LIBRARIES 0 _first_mpi_lib)
         get_filename_component(_mpi_lib_dir ${_first_mpi_lib} DIRECTORY)
     
