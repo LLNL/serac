@@ -4,13 +4,13 @@
 # CMake executable path: /usr/local/bin/cmake
 #------------------------------------------------------------------------------
 
-set(CMAKE_PREFIX_PATH "/home/serac/serac_tpls/gcc-13.1.0/tribol-0.1.0.10-7ukaqbifu2dsdbhx5j27aaog4oeknzl4;/home/serac/serac_tpls/gcc-13.1.0/gmake-4.4.1-3dzqw4rxoojbhd3n5wkzx5bkawgnjopg;/home/serac/serac_tpls/gcc-13.1.0/axom-0.8.1.1-mx6zfj6agmf436nrp42gvne6ajh7xv6q;/home/serac/serac_tpls/gcc-13.1.0/umpire-2023.06.0-k4mf7vllryshei5zypv3pxzea6lhupiw;/home/serac/serac_tpls/gcc-13.1.0/raja-2023.06.1-ais24qjgfqtn7bpa7pwto5657ghkqijr;/home/serac/serac_tpls/gcc-13.1.0/camp-2023.06.0-p6sqb475gvsuuho2ysk7z6mpdsrt74o2;/home/serac/serac_tpls/gcc-13.1.0/blt-0.5.3-rrgmiehkpwzq3qztnppsuzexajttrukp;/home/serac/serac_tpls/gcc-13.1.0/mfem-4.6.2-rc0-bhmlakramok35finjtddorealfuzuwds;/home/serac/serac_tpls/gcc-13.1.0/superlu-dist-8.1.2-3fdmvtve24iwa3qumfxu3dvk6fpvuswo;/home/serac/serac_tpls/gcc-13.1.0/sundials-6.7.0-tmu6dhubh6ez7vpruzwa5t3ruwz3pkpy;/home/serac/serac_tpls/gcc-13.1.0/strumpack-7.2.0-xygh6sqkdr3kxcpo67hb4muhyjm463mb;/home/serac/serac_tpls/gcc-13.1.0/zfp-1.0.0-d5jz4v7olujgiqdx3nn5qo3xb62kxzam;/home/serac/serac_tpls/gcc-13.1.0/netlib-scalapack-2.2.0-u6x3bixaukifd64rjdgtdaew3trji2id;/home/serac/serac_tpls/gcc-13.1.0/netcdf-c-4.7.4-5gap53jl6rb2ty463esj2rhvlaellsrs;/home/serac/serac_tpls/gcc-13.1.0/hypre-2.26.0-noadsrixke4ekohwzvrpi37nps4fcby2;/home/serac/serac_tpls/gcc-13.1.0/conduit-0.9.1-cgd2znvf3cgpfg4f6yq2dk64lkiusu2n;/home/serac/serac_tpls/gcc-13.1.0/parmetis-4.0.3-vx53bukhcqvnh4klrwuo6gt47qcckfn4;/home/serac/serac_tpls/gcc-13.1.0/metis-5.1.0-zl7yjg5qqu2kdxbpl4apapscv7n6za2q;/home/serac/serac_tpls/gcc-13.1.0/hdf5-1.8.23-zy5r5tmyyvevp47awp4fmcaepdszrea4;/home/serac/serac_tpls/gcc-13.1.0/zlib-ng-2.1.5-tvook7wagvtuqbcsqb2lzpp6dfrptmtq;/home/serac/serac_tpls/gcc-13.1.0/gcc-runtime-13.1.0-xw2j26h3d4dv6b4dox3pruadwc5xvjgv" CACHE STRING "")
+set(CMAKE_PREFIX_PATH "/home/serac/serac_tpls/gcc-13.1.0/tribol-0.1.0.15-h3smypp3tctjcdnlgcuswsrigc24bbik;/home/serac/serac_tpls/gcc-13.1.0/axom-0.9.0.1-jca3xou3fb7triyfre3jy3uygdnmyfb2;/home/serac/serac_tpls/gcc-13.1.0/umpire-2024.02.0-hl6ujgfwfiknpg4nydv2zdnyvgl3xoa4;/home/serac/serac_tpls/gcc-13.1.0/fmt-10.2.1-cbwym733r5d6j4sm7het77jqaih4hdsp;/home/serac/serac_tpls/gcc-13.1.0/raja-2024.02.0-k55isxup66c4hdhdzosqz23vwc6xg5i3;/home/serac/serac_tpls/gcc-13.1.0/camp-2024.02.0-op6a47mh62puo5wuudomgvp2k2nfdtsw;/home/serac/serac_tpls/gcc-13.1.0/mfem-4.6.2.4-3vogagqe373qvomfobw3u3xayoyq4kej;/home/serac/serac_tpls/gcc-13.1.0/sundials-6.7.0-fx4dtgyy2ne2blqczlswdvd6oau7f3wz;/home/serac/serac_tpls/gcc-13.1.0/strumpack-7.2.0-ha4sja45vknxzwhvectrn7gwn7rlvwzn;/home/serac/serac_tpls/gcc-13.1.0/netlib-scalapack-2.2.0-wldgunnh3dizvs4jdb6pqkhdl6qmqcxj;/home/serac/serac_tpls/gcc-13.1.0/petsc-3.21.0-hidc43v6sfctsdfkl5zxb6j2x5yfso4l;/home/serac/serac_tpls/gcc-13.1.0/superlu-dist-8.1.2-neuiz3aecer45e3oib4smipvhg7wbxor;/home/serac/serac_tpls/gcc-13.1.0/gmake-4.4.1-yaglfigf4laurl34r3cvdwp275ouzjuv;/home/serac/serac_tpls/gcc-13.1.0/netcdf-c-4.7.4-rdsakrxvedp2epnc3ej45yuyfirddt72;/home/serac/serac_tpls/gcc-13.1.0/hypre-2.26.0-oka5dsmquovyeg2cibsdtrmyckjiis4u;/home/serac/serac_tpls/gcc-13.1.0/conduit-0.9.1-za4dpitc6degv4sfulmocd7qirzmfudt;/home/serac/serac_tpls/gcc-13.1.0/parmetis-4.0.3-7y2sed6q3qzfyf6g7237qlfcxvkik6c3;/home/serac/serac_tpls/gcc-13.1.0/metis-5.1.0-bcw7mkm22kkxvexemd4wtr2g4ibfge35;/home/serac/serac_tpls/gcc-13.1.0/hdf5-1.8.23-uxed2tywfsd5okm2nszwi4wsolsmccxw;/home/serac/serac_tpls/gcc-13.1.0/zlib-ng-2.1.6-zkqla3wmxzl2l6qazex7iehf5vz73bv4;/home/serac/serac_tpls/gcc-13.1.0/gcc-runtime-13.1.0-vsdqg43gyhzhzzyoaeir5jive6dmpbl4" CACHE STRING "")
 
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH "ON" CACHE STRING "")
 
-set(CMAKE_BUILD_RPATH "/home/serac/serac_tpls/gcc-13.1.0/serac-develop-inobm2tut367cvb6hfnrlt3c4jvlgvf3/lib;/home/serac/serac_tpls/gcc-13.1.0/serac-develop-inobm2tut367cvb6hfnrlt3c4jvlgvf3/lib64;/home/serac/serac_tpls/gcc-13.1.0/axom-0.8.1.1-mx6zfj6agmf436nrp42gvne6ajh7xv6q/lib;/home/serac/serac_tpls/gcc-13.1.0/conduit-0.9.1-cgd2znvf3cgpfg4f6yq2dk64lkiusu2n/lib;/home/serac/serac_tpls/gcc-13.1.0/gcc-runtime-13.1.0-xw2j26h3d4dv6b4dox3pruadwc5xvjgv/lib;/home/serac/serac_tpls/gcc-13.1.0/hdf5-1.8.23-zy5r5tmyyvevp47awp4fmcaepdszrea4/lib;/home/serac/serac_tpls/gcc-13.1.0/zlib-ng-2.1.5-tvook7wagvtuqbcsqb2lzpp6dfrptmtq/lib;/home/serac/serac_tpls/gcc-13.1.0/metis-5.1.0-zl7yjg5qqu2kdxbpl4apapscv7n6za2q/lib;/home/serac/serac_tpls/gcc-13.1.0/parmetis-4.0.3-vx53bukhcqvnh4klrwuo6gt47qcckfn4/lib;/home/serac/serac_tpls/gcc-13.1.0/mfem-4.6.2-rc0-bhmlakramok35finjtddorealfuzuwds/lib;/home/serac/serac_tpls/gcc-13.1.0/hypre-2.26.0-noadsrixke4ekohwzvrpi37nps4fcby2/lib;/home/serac/serac_tpls/gcc-13.1.0/netcdf-c-4.7.4-5gap53jl6rb2ty463esj2rhvlaellsrs/lib;/home/serac/serac_tpls/gcc-13.1.0/strumpack-7.2.0-xygh6sqkdr3kxcpo67hb4muhyjm463mb/lib;/home/serac/serac_tpls/gcc-13.1.0/netlib-scalapack-2.2.0-u6x3bixaukifd64rjdgtdaew3trji2id/lib;/home/serac/serac_tpls/gcc-13.1.0/zfp-1.0.0-d5jz4v7olujgiqdx3nn5qo3xb62kxzam/lib;/home/serac/serac_tpls/gcc-13.1.0/sundials-6.7.0-tmu6dhubh6ez7vpruzwa5t3ruwz3pkpy/lib;/home/serac/serac_tpls/gcc-13.1.0/superlu-dist-8.1.2-3fdmvtve24iwa3qumfxu3dvk6fpvuswo/lib;/home/serac/serac_tpls/gcc-13.1.0/raja-2023.06.1-ais24qjgfqtn7bpa7pwto5657ghkqijr/lib;/home/serac/serac_tpls/gcc-13.1.0/camp-2023.06.0-p6sqb475gvsuuho2ysk7z6mpdsrt74o2/lib;/home/serac/serac_tpls/gcc-13.1.0/umpire-2023.06.0-k4mf7vllryshei5zypv3pxzea6lhupiw/lib;/home/serac/serac_tpls/gcc-13.1.0/tribol-0.1.0.10-7ukaqbifu2dsdbhx5j27aaog4oeknzl4/lib" CACHE STRING "")
+set(CMAKE_BUILD_RPATH "/home/serac/serac_tpls/gcc-13.1.0/serac-develop-si7q5dvpfdskypvc6rbxzxwi2dy2yhxg/lib;/home/serac/serac_tpls/gcc-13.1.0/serac-develop-si7q5dvpfdskypvc6rbxzxwi2dy2yhxg/lib64;/home/serac/serac_tpls/gcc-13.1.0/axom-0.9.0.1-jca3xou3fb7triyfre3jy3uygdnmyfb2/lib;/home/serac/serac_tpls/gcc-13.1.0/conduit-0.9.1-za4dpitc6degv4sfulmocd7qirzmfudt/lib;/home/serac/serac_tpls/gcc-13.1.0/gcc-runtime-13.1.0-vsdqg43gyhzhzzyoaeir5jive6dmpbl4/lib;/home/serac/serac_tpls/gcc-13.1.0/hdf5-1.8.23-uxed2tywfsd5okm2nszwi4wsolsmccxw/lib;/home/serac/serac_tpls/gcc-13.1.0/zlib-ng-2.1.6-zkqla3wmxzl2l6qazex7iehf5vz73bv4/lib;/home/serac/serac_tpls/gcc-13.1.0/metis-5.1.0-bcw7mkm22kkxvexemd4wtr2g4ibfge35/lib;/home/serac/serac_tpls/gcc-13.1.0/parmetis-4.0.3-7y2sed6q3qzfyf6g7237qlfcxvkik6c3/lib;/home/serac/serac_tpls/gcc-13.1.0/mfem-4.6.2.4-3vogagqe373qvomfobw3u3xayoyq4kej/lib;/home/serac/serac_tpls/gcc-13.1.0/hypre-2.26.0-oka5dsmquovyeg2cibsdtrmyckjiis4u/lib;/home/serac/serac_tpls/gcc-13.1.0/netcdf-c-4.7.4-rdsakrxvedp2epnc3ej45yuyfirddt72/lib;/home/serac/serac_tpls/gcc-13.1.0/petsc-3.21.0-hidc43v6sfctsdfkl5zxb6j2x5yfso4l/lib;/home/serac/serac_tpls/gcc-13.1.0/superlu-dist-8.1.2-neuiz3aecer45e3oib4smipvhg7wbxor/lib;/home/serac/serac_tpls/gcc-13.1.0/strumpack-7.2.0-ha4sja45vknxzwhvectrn7gwn7rlvwzn/lib;/home/serac/serac_tpls/gcc-13.1.0/netlib-scalapack-2.2.0-wldgunnh3dizvs4jdb6pqkhdl6qmqcxj/lib;/home/serac/serac_tpls/gcc-13.1.0/sundials-6.7.0-fx4dtgyy2ne2blqczlswdvd6oau7f3wz/lib;/home/serac/serac_tpls/gcc-13.1.0/raja-2024.02.0-k55isxup66c4hdhdzosqz23vwc6xg5i3/lib;/home/serac/serac_tpls/gcc-13.1.0/camp-2024.02.0-op6a47mh62puo5wuudomgvp2k2nfdtsw/lib;/home/serac/serac_tpls/gcc-13.1.0/umpire-2024.02.0-hl6ujgfwfiknpg4nydv2zdnyvgl3xoa4/lib;/home/serac/serac_tpls/gcc-13.1.0/fmt-10.2.1-cbwym733r5d6j4sm7het77jqaih4hdsp/lib;/home/serac/serac_tpls/gcc-13.1.0/tribol-0.1.0.15-h3smypp3tctjcdnlgcuswsrigc24bbik/lib" CACHE STRING "")
 
-set(CMAKE_INSTALL_RPATH "/home/serac/serac_tpls/gcc-13.1.0/serac-develop-inobm2tut367cvb6hfnrlt3c4jvlgvf3/lib;/home/serac/serac_tpls/gcc-13.1.0/serac-develop-inobm2tut367cvb6hfnrlt3c4jvlgvf3/lib64;/home/serac/serac_tpls/gcc-13.1.0/axom-0.8.1.1-mx6zfj6agmf436nrp42gvne6ajh7xv6q/lib;/home/serac/serac_tpls/gcc-13.1.0/conduit-0.9.1-cgd2znvf3cgpfg4f6yq2dk64lkiusu2n/lib;/home/serac/serac_tpls/gcc-13.1.0/gcc-runtime-13.1.0-xw2j26h3d4dv6b4dox3pruadwc5xvjgv/lib;/home/serac/serac_tpls/gcc-13.1.0/hdf5-1.8.23-zy5r5tmyyvevp47awp4fmcaepdszrea4/lib;/home/serac/serac_tpls/gcc-13.1.0/zlib-ng-2.1.5-tvook7wagvtuqbcsqb2lzpp6dfrptmtq/lib;/home/serac/serac_tpls/gcc-13.1.0/metis-5.1.0-zl7yjg5qqu2kdxbpl4apapscv7n6za2q/lib;/home/serac/serac_tpls/gcc-13.1.0/parmetis-4.0.3-vx53bukhcqvnh4klrwuo6gt47qcckfn4/lib;/home/serac/serac_tpls/gcc-13.1.0/mfem-4.6.2-rc0-bhmlakramok35finjtddorealfuzuwds/lib;/home/serac/serac_tpls/gcc-13.1.0/hypre-2.26.0-noadsrixke4ekohwzvrpi37nps4fcby2/lib;/home/serac/serac_tpls/gcc-13.1.0/netcdf-c-4.7.4-5gap53jl6rb2ty463esj2rhvlaellsrs/lib;/home/serac/serac_tpls/gcc-13.1.0/strumpack-7.2.0-xygh6sqkdr3kxcpo67hb4muhyjm463mb/lib;/home/serac/serac_tpls/gcc-13.1.0/netlib-scalapack-2.2.0-u6x3bixaukifd64rjdgtdaew3trji2id/lib;/home/serac/serac_tpls/gcc-13.1.0/zfp-1.0.0-d5jz4v7olujgiqdx3nn5qo3xb62kxzam/lib;/home/serac/serac_tpls/gcc-13.1.0/sundials-6.7.0-tmu6dhubh6ez7vpruzwa5t3ruwz3pkpy/lib;/home/serac/serac_tpls/gcc-13.1.0/superlu-dist-8.1.2-3fdmvtve24iwa3qumfxu3dvk6fpvuswo/lib;/home/serac/serac_tpls/gcc-13.1.0/raja-2023.06.1-ais24qjgfqtn7bpa7pwto5657ghkqijr/lib;/home/serac/serac_tpls/gcc-13.1.0/camp-2023.06.0-p6sqb475gvsuuho2ysk7z6mpdsrt74o2/lib;/home/serac/serac_tpls/gcc-13.1.0/umpire-2023.06.0-k4mf7vllryshei5zypv3pxzea6lhupiw/lib;/home/serac/serac_tpls/gcc-13.1.0/tribol-0.1.0.10-7ukaqbifu2dsdbhx5j27aaog4oeknzl4/lib" CACHE STRING "")
+set(CMAKE_INSTALL_RPATH "/home/serac/serac_tpls/gcc-13.1.0/serac-develop-si7q5dvpfdskypvc6rbxzxwi2dy2yhxg/lib;/home/serac/serac_tpls/gcc-13.1.0/serac-develop-si7q5dvpfdskypvc6rbxzxwi2dy2yhxg/lib64;/home/serac/serac_tpls/gcc-13.1.0/axom-0.9.0.1-jca3xou3fb7triyfre3jy3uygdnmyfb2/lib;/home/serac/serac_tpls/gcc-13.1.0/conduit-0.9.1-za4dpitc6degv4sfulmocd7qirzmfudt/lib;/home/serac/serac_tpls/gcc-13.1.0/gcc-runtime-13.1.0-vsdqg43gyhzhzzyoaeir5jive6dmpbl4/lib;/home/serac/serac_tpls/gcc-13.1.0/hdf5-1.8.23-uxed2tywfsd5okm2nszwi4wsolsmccxw/lib;/home/serac/serac_tpls/gcc-13.1.0/zlib-ng-2.1.6-zkqla3wmxzl2l6qazex7iehf5vz73bv4/lib;/home/serac/serac_tpls/gcc-13.1.0/metis-5.1.0-bcw7mkm22kkxvexemd4wtr2g4ibfge35/lib;/home/serac/serac_tpls/gcc-13.1.0/parmetis-4.0.3-7y2sed6q3qzfyf6g7237qlfcxvkik6c3/lib;/home/serac/serac_tpls/gcc-13.1.0/mfem-4.6.2.4-3vogagqe373qvomfobw3u3xayoyq4kej/lib;/home/serac/serac_tpls/gcc-13.1.0/hypre-2.26.0-oka5dsmquovyeg2cibsdtrmyckjiis4u/lib;/home/serac/serac_tpls/gcc-13.1.0/netcdf-c-4.7.4-rdsakrxvedp2epnc3ej45yuyfirddt72/lib;/home/serac/serac_tpls/gcc-13.1.0/petsc-3.21.0-hidc43v6sfctsdfkl5zxb6j2x5yfso4l/lib;/home/serac/serac_tpls/gcc-13.1.0/superlu-dist-8.1.2-neuiz3aecer45e3oib4smipvhg7wbxor/lib;/home/serac/serac_tpls/gcc-13.1.0/strumpack-7.2.0-ha4sja45vknxzwhvectrn7gwn7rlvwzn/lib;/home/serac/serac_tpls/gcc-13.1.0/netlib-scalapack-2.2.0-wldgunnh3dizvs4jdb6pqkhdl6qmqcxj/lib;/home/serac/serac_tpls/gcc-13.1.0/sundials-6.7.0-fx4dtgyy2ne2blqczlswdvd6oau7f3wz/lib;/home/serac/serac_tpls/gcc-13.1.0/raja-2024.02.0-k55isxup66c4hdhdzosqz23vwc6xg5i3/lib;/home/serac/serac_tpls/gcc-13.1.0/camp-2024.02.0-op6a47mh62puo5wuudomgvp2k2nfdtsw/lib;/home/serac/serac_tpls/gcc-13.1.0/umpire-2024.02.0-hl6ujgfwfiknpg4nydv2zdnyvgl3xoa4/lib;/home/serac/serac_tpls/gcc-13.1.0/fmt-10.2.1-cbwym733r5d6j4sm7het77jqaih4hdsp/lib;/home/serac/serac_tpls/gcc-13.1.0/tribol-0.1.0.15-h3smypp3tctjcdnlgcuswsrigc24bbik/lib" CACHE STRING "")
 
 set(CMAKE_BUILD_TYPE "Release" CACHE STRING "")
 
@@ -69,27 +69,27 @@ set(ENABLE_OPENMP ON CACHE BOOL "")
 
 set(TPL_ROOT "/home/serac/serac_tpls/gcc-13.1.0" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.8.1.1-mx6zfj6agmf436nrp42gvne6ajh7xv6q" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.9.0.1-jca3xou3fb7triyfre3jy3uygdnmyfb2" CACHE PATH "")
 
-set(CAMP_DIR "${TPL_ROOT}/camp-2023.06.0-p6sqb475gvsuuho2ysk7z6mpdsrt74o2" CACHE PATH "")
+set(CAMP_DIR "${TPL_ROOT}/camp-2024.02.0-op6a47mh62puo5wuudomgvp2k2nfdtsw" CACHE PATH "")
 
-set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.9.1-cgd2znvf3cgpfg4f6yq2dk64lkiusu2n" CACHE PATH "")
+set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.9.1-za4dpitc6degv4sfulmocd7qirzmfudt" CACHE PATH "")
 
 set(LUA_DIR "/usr" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.6.2-rc0-bhmlakramok35finjtddorealfuzuwds" CACHE PATH "")
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.6.2.4-3vogagqe373qvomfobw3u3xayoyq4kej" CACHE PATH "")
 
-set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.23-zy5r5tmyyvevp47awp4fmcaepdszrea4" CACHE PATH "")
+set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.23-uxed2tywfsd5okm2nszwi4wsolsmccxw" CACHE PATH "")
 
-set(HYPRE_DIR "${TPL_ROOT}/hypre-2.26.0-noadsrixke4ekohwzvrpi37nps4fcby2" CACHE PATH "")
+set(HYPRE_DIR "${TPL_ROOT}/hypre-2.26.0-oka5dsmquovyeg2cibsdtrmyckjiis4u" CACHE PATH "")
 
-set(METIS_DIR "${TPL_ROOT}/metis-5.1.0-zl7yjg5qqu2kdxbpl4apapscv7n6za2q" CACHE PATH "")
+set(METIS_DIR "${TPL_ROOT}/metis-5.1.0-bcw7mkm22kkxvexemd4wtr2g4ibfge35" CACHE PATH "")
 
-set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3-vx53bukhcqvnh4klrwuo6gt47qcckfn4" CACHE PATH "")
+set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3-7y2sed6q3qzfyf6g7237qlfcxvkik6c3" CACHE PATH "")
 
-set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4-5gap53jl6rb2ty463esj2rhvlaellsrs" CACHE PATH "")
+set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4-rdsakrxvedp2epnc3ej45yuyfirddt72" CACHE PATH "")
 
-set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-8.1.2-3fdmvtve24iwa3qumfxu3dvk6fpvuswo" CACHE PATH "")
+set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-8.1.2-neuiz3aecer45e3oib4smipvhg7wbxor" CACHE PATH "")
 
 # ADIAK not built
 
@@ -97,17 +97,17 @@ set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-8.1.2-3fdmvtve24iwa3qumfxu3dvk6fpv
 
 # CALIPER not built
 
-# PETSC not built
+set(PETSC_DIR "${TPL_ROOT}/petsc-3.21.0-hidc43v6sfctsdfkl5zxb6j2x5yfso4l" CACHE PATH "")
 
-set(RAJA_DIR "${TPL_ROOT}/raja-2023.06.1-ais24qjgfqtn7bpa7pwto5657ghkqijr" CACHE PATH "")
+set(RAJA_DIR "${TPL_ROOT}/raja-2024.02.0-k55isxup66c4hdhdzosqz23vwc6xg5i3" CACHE PATH "")
 
-set(STRUMPACK_DIR "${TPL_ROOT}/strumpack-7.2.0-xygh6sqkdr3kxcpo67hb4muhyjm463mb" CACHE PATH "")
+set(STRUMPACK_DIR "${TPL_ROOT}/strumpack-7.2.0-ha4sja45vknxzwhvectrn7gwn7rlvwzn" CACHE PATH "")
 
-set(SUNDIALS_DIR "${TPL_ROOT}/sundials-6.7.0-tmu6dhubh6ez7vpruzwa5t3ruwz3pkpy" CACHE PATH "")
+set(SUNDIALS_DIR "${TPL_ROOT}/sundials-6.7.0-fx4dtgyy2ne2blqczlswdvd6oau7f3wz" CACHE PATH "")
 
-set(UMPIRE_DIR "${TPL_ROOT}/umpire-2023.06.0-k4mf7vllryshei5zypv3pxzea6lhupiw" CACHE PATH "")
+set(UMPIRE_DIR "${TPL_ROOT}/umpire-2024.02.0-hl6ujgfwfiknpg4nydv2zdnyvgl3xoa4" CACHE PATH "")
 
-set(TRIBOL_DIR "${TPL_ROOT}/tribol-0.1.0.10-7ukaqbifu2dsdbhx5j27aaog4oeknzl4" CACHE PATH "")
+set(TRIBOL_DIR "${TPL_ROOT}/tribol-0.1.0.15-h3smypp3tctjcdnlgcuswsrigc24bbik" CACHE PATH "")
 
 #------------------------------------------------------------------------------
 # Devtools

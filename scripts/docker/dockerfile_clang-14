@@ -27,7 +27,7 @@ RUN git clone --recursive --branch $branch --single-branch --depth 1 https://git
 RUN cd serac_repo && python3 ./scripts/uberenv/uberenv.py --spack-env-file=./scripts/spack/configs/docker/ubuntu22/spack.yaml \
                                                           --project-json=.uberenv_config.json \
                                                           --spec=%clang@14.0.0 --prefix=/home/serac/serac_tpls -k \
-                  && rm -rf /home/serac/serac_tpls/builds
+                  && rm -rf /home/serac/serac_tpls/build_stage /home/serac/serac_tpls/spack
 
 RUN mkdir -p /home/serac/export_hostconfig
 RUN cp ./serac_repo/*.cmake /home/serac/export_hostconfig
