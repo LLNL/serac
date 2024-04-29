@@ -25,7 +25,7 @@ import time
 from os.path import join as pjoin
 
 def sexe(cmd,
-         ret_output=False,
+         ret_output = False,
          output_file = None,
          echo = False,
          error_prefix = "ERROR:"):
@@ -33,26 +33,34 @@ def sexe(cmd,
     if echo:
         print("[exe: %s]" % cmd)
     if ret_output:
+        # Return exit code and output
         p = subprocess.Popen(cmd,
                              shell=True,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT)
-        res =p.communicate()[0]
+        res = p.communicate()[0]
         if isinstance(res, bytes):
             res = res.decode()
         return p.returncode,res
     elif output_file != None:
-        ofile = open(output_file,"w")
+        # Write to stdout and output file
         p = subprocess.Popen(cmd,
                              shell=True,
-                             stdout= ofile,
+                             stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT)
-        res =p.communicate()[0]
+        ofile = open(output_file, "w")
+        for line in p.stdout:
+            if isinstance(line, bytes):
+                line = line.decode()
+            sys.stdout.write(line)
+            ofile.write(line)
+        p.wait()
         return p.returncode
     else:
-        rcode = subprocess.call(cmd,shell=True)
+        # Only return exit code
+        rcode = subprocess.call(cmd, shell=True)
         if rcode != 0:
-            print("[{0} [return code: {1}] from command: {2}]".format(error_prefix, rcode,cmd))
+            print("[{0} [return code: {1}] from command: {2}]".format(error_prefix, rcode, cmd))
         return rcode
 
 
