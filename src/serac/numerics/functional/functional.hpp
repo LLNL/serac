@@ -25,6 +25,8 @@
 
 #include "serac/numerics/functional/domain.hpp"
 
+#include <RAJA/index/RangeSegment.hpp>
+#include <RAJA/pattern/forall.hpp>
 #include <array>
 #include <vector>
 
@@ -358,7 +360,8 @@ public:
     check_for_missing_nodal_gridfunc(domain.mesh_);
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
-    integrals_.push_back(MakeBoundaryIntegral<signature, Q, dim>(domain, integrand, std::vector<uint32_t>{args...}));
+    integrals_.push_back(
+        MakeBoundaryIntegral<signature, Q, dim>(std::move(domain), integrand, std::vector<uint32_t>{args...}));
   }
 
   /**
@@ -624,14 +627,11 @@ private:
               test_restrictions[geom].GetElementVDofs(e, test_vdofs);
               trial_restrictions[geom].GetElementVDofs(e, trial_vdofs);
 #ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-              axom::Array<double, 3, axom::MemorySpace::Host> elem_matrices_host(
-                  test_restrictions[geom].num_elements,
-                  test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components,
-                  test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components);
-              elem_matrices_host = elem_matrices;
+              axom::Array<double, 3, axom::MemorySpace::Host> elem_matrices_host = elem_matrices;
 #else
               auto elem_matrices_host = elem_matrices;
 #endif
+
               for (uint32_t i = 0; i < uint32_t(elem_matrices.shape()[1]); i++) {
                 int col = int(trial_vdofs[i].index());
 

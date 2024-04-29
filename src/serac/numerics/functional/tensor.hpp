@@ -1422,18 +1422,26 @@ SERAC_HOST_DEVICE constexpr auto deduce_contract_return_type(const zero&, const 
   return zero{};
 }
 
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
 template <int l1, int l2, typename S, int m, typename T, int p, int q, int n0, int n1, int n2, int... n>
-SERAC_DEVICE void contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B, tensor<S, n0, n1, n2>* C, int qx,
-                           int qy, int qz, bool accumulate = false)
+SERAC_HOST_DEVICE void contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B, tensor<S, n0, n1, n2>* C, int qx,
+                                int qy, int qz, bool accumulate = false)
 {
   constexpr int Adims[] = {m, n...};
   for (int i0 = qz; i0 < n0; i0 += BLOCK_Z) {
     for (int i1 = qy; i1 < n1; i1 += BLOCK_Y) {
       for (int i2 = qx; i2 < n2; i2 += BLOCK_X) {
-        double sum = (accumulate) ? (*C)(i0, i1, i2) : 0.0;
+        double sum = 0.0;
 
         for (int j = 0; j < Adims[l1]; j++) {
+          if constexpr (l1 == 0 && l2 == 0) {
+            sum += A(j, i1, i2) * B(j, i0);
+          }
+          if constexpr (l1 == 1 && l2 == 0) {
+            sum += A(i0, j, i2) * B(j, i1);
+          }
+          if constexpr (l1 == 2 && l2 == 0) {
+            sum += A(i0, i1, j) * B(j, i2);
+          }
           if constexpr (l1 == 0 && l2 == 1) {
             sum += A(j, i1, i2) * B(i0, j);
           }
@@ -1444,35 +1452,36 @@ SERAC_DEVICE void contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B
             sum += A(i0, i1, j) * B(i2, j);
           }
         }
-
-        (*C)(i0, i1, i2) = sum;
+        if (accumulate) {
+          (*C)(i0, i1, i2) += sum;
+        } else {
+          (*C)(i0, i1, i2) = sum;
+        }
       }
     }
   }
 }
 
 template <int l1, int l2, typename T, int p, int q>
-SERAC_DEVICE void contract(const zero&, const tensor<T, p, q>&, zero*, int, int, int,
-                           [[maybe_unused]] bool accumulate = false)
+SERAC_HOST_DEVICE void contract(const zero&, const tensor<T, p, q>&, zero*, int, int, int,
+                                [[maybe_unused]] bool accumulate = false)
 {
   return;
 }
 
 template <int l1, int l2, typename S, typename T, int p, int q, int n0, int n1, int n2>
-SERAC_DEVICE void contract(const zero&, const tensor<T, p, q>&, tensor<S, n0, n1, n2>*, int, int, int,
-                           [[maybe_unused]] bool accumulate = false)
+SERAC_HOST_DEVICE void contract(const zero&, const tensor<T, p, q>&, tensor<S, n0, n1, n2>*, int, int, int,
+                                [[maybe_unused]] bool accumulate = false)
 {
   return;
 }
 
 template <int l1, int l2, typename S, int m, typename T, int p, int q, int... n>
-SERAC_DEVICE void contract(const tensor<S, m, n...>&, const tensor<T, p, q>&, zero*, int, int, int,
-                           [[maybe_unused]] bool accumulate = false)
+SERAC_HOST_DEVICE void contract(const tensor<S, m, n...>&, const tensor<T, p, q>&, zero*, int, int, int,
+                                [[maybe_unused]] bool accumulate = false)
 {
   return;
 }
-
-#endif
 
 /// @overload
 template <int i1, int i2, typename T>
@@ -1764,7 +1773,33 @@ SERAC_HOST_DEVICE void print(const tensor<T, m, n...>& A)
     printf(",");
     print(A[i]);
   }
-  printf("}");
+  printf("}\n");
+}
+
+/**
+ * @brief print a tensor's shape using printf for use inside CUDA kenels
+ * @param[in] A the tensor whose shape to print.
+ */
+template <typename T, int m, int... n>
+SERAC_HOST_DEVICE void print_shape(const tensor<T, m, n...>&)
+{
+  printf("shape [ %d", m);
+  (printf(", %d", n), ...);
+  printf(" ]\n");
+}
+
+template <typename T>
+SERAC_HOST_DEVICE void memset_tensor(T& A, T value)
+{
+  A = value;
+}
+
+template <typename T, int m, int... n>
+SERAC_HOST_DEVICE void memset_tensor(tensor<T, m, n...>& A, T value)
+{
+  for (int i = 0; i < m; ++i) {
+    memset_tensor(A[i], value);
+  }
 }
 
 /**

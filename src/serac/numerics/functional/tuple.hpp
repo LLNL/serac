@@ -675,6 +675,34 @@ auto& operator<<(std::ostream& out, const serac::tuple<T...>& A)
 }
 
 /**
+ * @brief Overload for the print function to print tuples or tensors of tuples.
+          Enables calling print(tensor<tuple<T, U>, ...> a);
+
+ * @tparam T The tuple types
+ * @tparam i The integer sequence to i
+ * @param A the tensor to print
+ * @param (anonymous) integer sequence representing 1, ..., sizeof...(tuple)
+*/
+template <typename... T, size_t... i>
+SERAC_HOST_DEVICE void print(const serac::tuple<T...>& A, std::integer_sequence<size_t, i...>)
+{
+  (print(get<i>(A)), ...);
+}
+
+/**
+ * @brief Helper function for the above overload
+
+ * @tparam T The tuple types
+ * @tparam i The integer sequence to i
+ * @param A the tensor to print
+*/
+template <typename... T>
+SERAC_HOST_DEVICE void print(const serac::tuple<T...>& A)
+{
+  print(A, std::make_integer_sequence<size_t, sizeof...(T)>());
+}
+
+/**
  * @brief A helper to apply a lambda to a tuple
  *
  * @tparam lambda The functor type

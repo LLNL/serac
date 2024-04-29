@@ -60,7 +60,7 @@ if(ENABLE_CUDA)
     # functional_qoi.cpp
     # functional_nonlinear.cpp
     # functional_boundary_test.cpp
-    # functional_comparisons.cpp
+    functional_comparisons.cpp
     # functional_comparison_L2.cpp
     )
 

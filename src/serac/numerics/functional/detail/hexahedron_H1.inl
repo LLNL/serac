@@ -11,6 +11,7 @@
  */
 
 #include "RAJA/RAJA.hpp"
+#include "serac/numerics/functional/tensor.hpp"
 
 // this specialization defines shape functions (and their gradients) that
 // interpolate at Gauss-Lobatto nodes for the appropriate polynomial order
@@ -163,7 +164,10 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
       auto& d11 = get<1>(get<1>(input(Q)));
 
       output[Q] = {d00 * phi_j + dot(d01, dphi_j_dxi), d10 * phi_j + dot(d11, dphi_j_dxi)};
+      // print(get<0>(output[Q]));
+      // print(get<1>(output[Q]));
     });
+    ctx.teamSync();
 
     return output;
   }
@@ -236,30 +240,18 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
 
         // Perform actual contractions
         contract<2, 1>(X[i], B, &A10, qx, qy, qz);
-
-        ctx.teamSync();
         contract<2, 1>(X[i], G, &A11, qx, qy, qz);
 
         ctx.teamSync();
         contract<1, 1>(A10, B, &A20, qx, qy, qz);
-
-        ctx.teamSync();
-        contract<1, 1>(A11, B, &A21, qx, qy, qz);
-
-        ctx.teamSync();
         contract<1, 1>(A10, G, &A22, qx, qy, qz);
+        contract<1, 1>(A11, B, &A21, qx, qy, qz);
 
         ctx.teamSync();
 
         contract<0, 1>(A20, B, &value(i), qx, qy, qz);
-
-        ctx.teamSync();
         contract<0, 1>(A21, B, &gradient(i, 0), qx, qy, qz);
-
-        ctx.teamSync();
         contract<0, 1>(A22, B, &gradient(i, 1), qx, qy, qz);
-
-        ctx.teamSync();
         contract<0, 1>(A20, G, &gradient(i, 2), qx, qy, qz);
 
         ctx.teamSync();
@@ -321,7 +313,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
       for (int i = 0; i < c; i++) {
         s_buffer_type source;
         f_buffer_type flux;
-
+        ctx.teamSync();
         RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
           if (tid >= q * q * q) {
             return;
@@ -333,37 +325,79 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
           if constexpr (!is_zero<source_type>{}) {
             source(qz, qy, qx) = reinterpret_cast<const double*>(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
           }
-          if constexpr (!is_zero<flux_type>{}) {
-            for (int k = 0; k < dim; k++) {
-              flux(k, qz, qy, qx) =
-                  reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
+        });
+        for (int k = 0; k < dim; k++) {
+          // RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
+          //   if (tid >= q * q * q) {
+          //     return;
+          //   }
+          //   int qx = tid % q;
+          //   int qy = (tid / q) % q;
+          //   int qz = tid / (q * q);
+          for (int qz = 0; qz < q; qz++) {
+            for (int qy = 0; qy < q; qy++) {
+              for (int qx = 0; qx < q; qx++) {
+                int Q = (qz * q + qy) * q + qx;
+                if constexpr (!is_zero<flux_type>{}) {
+                  flux(k, qz, qy, qx) =
+                      reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
+                  // printf("%f\n", reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial +
+                  // j]);
+                }
+              }
             }
           }
-        });
+          //});
+        }
+        ctx.teamSync();
 
-#ifndef SERAC_USE_CUDA_KERNEL_EVALUATION
-        constexpr auto B   = calculate_B<apply_weights, q>();
-        constexpr auto G   = calculate_G<apply_weights, q>();
-        auto           A20 = contract<2, 0>(source, B) + contract<2, 0>(flux(0), G);
-        auto           A21 = contract<2, 0>(flux(1), B);
-        auto           A22 = contract<2, 0>(flux(2), B);
+        constexpr auto B = calculate_B<apply_weights, q>();
+        constexpr auto G = calculate_G<apply_weights, q>();
+        //#ifndef SERAC_USE_CUDA_KERNEL_EVALUATION
+        //        printf("printing B\n");
+        //        print(B);
+        //        printf("printing G\n");
+        //        print(G);
+        //        printf("printing flux\n");
+        //        print(flux);
+        //        printf("printing src\n");
+        //        print(source);
+        //
+        //        auto           A20 = contract<2, 0>(source, B) + contract<2, 0>(flux(0), G);
+        //        auto           A21 = contract<2, 0>(flux(1), B);
+        //        auto           A22 = contract<2, 0>(flux(2), B);
+        //
+        //        auto A10 = contract<1, 0>(A20, B) + contract<1, 0>(A21, G);
+        //        auto A11 = contract<1, 0>(A22, B);
+        //
+        //        element_residual[j * step](i) += contract<0, 0>(A10, B) + contract<0, 0>(A11, G);
+        //#else
+        RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 0>(source, B))  A20;
+        RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 0>(flux(1), B)) A21;
+        RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 0>(flux(2), B)) A22;
+        RAJA_TEAM_SHARED decltype(deduce_contract_return_type<1, 0>(A20, B))     A10;
+        RAJA_TEAM_SHARED decltype(deduce_contract_return_type<1, 0>(A22, B))     A11;
 
-        auto A10 = contract<1, 0>(A20, B) + contract<1, 0>(A21, G);
-        auto A11 = contract<1, 0>(A22, B);
-
-        element_residual[j * step](i) += contract<0, 0>(A10, B) + contract<0, 0>(A11, G);
-#else
         RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
-          int                                                                      qx = tid % BLOCK_X;
-          int                                                                      qy = tid / BLOCK_X;
-          int                                                                      qz = tid / (BLOCK_X * BLOCK_Y);
-          constexpr auto                                                           B  = calculate_B<apply_weights, q>();
-          constexpr auto                                                           G  = calculate_G<apply_weights, q>();
-          RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 0>(source, B))  A20;
-          RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 0>(flux(1), B)) A21;
-          RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 0>(flux(2), B)) A22;
-          RAJA_TEAM_SHARED decltype(deduce_contract_return_type<1, 0>(A20, B))     A10;
-          RAJA_TEAM_SHARED decltype(deduce_contract_return_type<1, 0>(A22, B))     A11;
+          int qx = tid % q;
+          int qy = (tid / q) % q;
+          int qz = tid / (q * q);
+
+          if (tid == 0) {
+            // printf("printing B\n");
+            // print(B);
+            // printf("printing G\n");
+            // print(G);
+            // printf("printing flux\n");
+            // print(flux);
+            // printf("printing src\n");
+            // print(source);
+            memset_tensor(A20, 0.0);
+            memset_tensor(A21, 0.0);
+            memset_tensor(A22, 0.0);
+            memset_tensor(A10, 0.0);
+            memset_tensor(A11, 0.0);
+          }
           ctx.teamSync();
 
           contract<2, 0>(source, B, &A20, qx, qy, qz);
@@ -372,23 +406,30 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
           ctx.teamSync();
 
           contract<2, 0>(flux(1), B, &A21, qx, qy, qz);
-          ctx.teamSync();
           contract<2, 0>(flux(2), B, &A22, qx, qy, qz);
           ctx.teamSync();
-
+        });
+        RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
+          int qx = tid % q;
+          int qy = (tid / q) % q;
+          int qz = tid / (q * q);
           contract<1, 0>(A21, G, &A10, qx, qy, qz);
           ctx.teamSync();
           contract<1, 0>(A20, B, &A10, qx, qy, qz, true);
           ctx.teamSync();
           contract<1, 0>(A22, B, &A11, qx, qy, qz);
           ctx.teamSync();
-
+        });
+        RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
+          int qx = tid % q;
+          int qy = (tid / q) % q;
+          int qz = tid / (q * q);
           contract<0, 0>(A10, B, &(element_residual[j * step](i)), qx, qy, qz, true);
           ctx.teamSync();
           contract<0, 0>(A11, G, &(element_residual[j * step](i)), qx, qy, qz, true);
           ctx.teamSync();
         });
-#endif
+        //#endif
       }
     }
   }

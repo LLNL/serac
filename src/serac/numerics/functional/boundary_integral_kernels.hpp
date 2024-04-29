@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 #pragma once
 
+#include <RAJA/pattern/launch/launch_core.hpp>
 #include <array>
 
 #include "serac/serac_config.hpp"
@@ -211,15 +212,16 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(
             ctx, e_range,
-            // The explicit capture list is needed here because the capture occurs in a function template with a
-            // variadic non-type parameter.
+            // The explicit capture list is needed here because the capture occurs in a function
+            // template with a variadic non-type parameter.
             [&ctx, t, J, x, u, qf, trial_elements, qpts_per_elem, rule, device_r, elements, qf_derivatives, qf_inputs,
              interpolate_result](uint32_t e) {
-              // These casts are needed to suppres -Werror compilation errors caused by the explicit capture above.
+              // These casts are needed to suppres -Werror compilation errors
+              // caused by the explicit capture above.
               (void)qpts_per_elem;
-
               detail::suppress_unused_capture_warnings(qf_derivatives, qpts_per_elem, trial_elements, qf_inputs,
                                                        interpolate_result, u);
+
               // batch-calculate values / derivatives of each trial space, at each quadrature point
               (get<indices>(trial_elements)
                    .interpolate(get<indices>(u)[elements[e]], rule, &get<indices>(interpolate_result[e]), ctx),
@@ -234,7 +236,8 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
               ctx.teamSync();
 
               // (batch) evalute the q-function at each quadrature point
-              auto qf_outputs = batch_apply_qf(qf, t, x[e], J[e], get<indices>(qf_inputs[e])...);
+              RAJA_TEAM_SHARED decltype(batch_apply_qf(qf, t, x[e], J[e], get<indices>(qf_inputs[e])...)) qf_outputs;
+              qf_outputs = batch_apply_qf(qf, t, x[e], J[e], get<indices>(qf_inputs[e])...);
 
               ctx.teamSync();
 
@@ -335,7 +338,8 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
   auto&           rm        = umpire::ResourceManager::getInstance();
   auto            allocator = rm.getAllocator(device_name);
   qf_inputs_type* qf_inputs = static_cast<qf_inputs_type*>(allocator.allocate(sizeof(qf_inputs_type) * num_elements));
-
+  // This typedef is needed to declare qf_outputs in shared memory.
+  using qf_outputs_type = decltype(batch_apply_chain_rule(qf_derivatives, *qf_inputs, RAJA::LaunchContext{}));
   rm.memset(qf_inputs, 0);
 
   // for each element in the domain
@@ -347,7 +351,8 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
           trial_element::interpolate(du[elements[e]], rule, qf_inputs, ctx);
 
           // (batch) evalute the q-function at each quadrature point
-          auto qf_outputs = batch_apply_chain_rule(qf_derivatives + e * nqp, *qf_inputs, ctx);
+          RAJA_TEAM_SHARED qf_outputs_type qf_outputs;
+          qf_outputs = batch_apply_chain_rule(qf_derivatives + e * nqp, *qf_inputs, ctx);
 
           // (batch) integrate the material response against the test-space basis functions
           test_element::integrate(qf_outputs, rule, &dr[elements[e]], ctx);
@@ -378,8 +383,12 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
  * @param[in] num_elements The number of elements in the mesh
  */
 template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type>
-void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, derivatives_type* qf_derivatives,
-                             const int* elements, std::size_t num_elements)
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::GPU> dK,
+#else
+void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
+#endif
+                             derivatives_type* qf_derivatives, const int* elements, std::size_t num_elements)
 {
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
@@ -400,8 +409,8 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, d
           (void)nquad;
           auto* output_ptr = reinterpret_cast<typename test_element::dof_type*>(&dK(elements[e], 0, 0));
 
-          tensor<derivatives_type, nquad> derivatives{};
-          RAJA::RangeSegment              x_range(0, nquad);
+          RAJA_TEAM_SHARED tensor<derivatives_type, nquad> derivatives;
+          RAJA::RangeSegment                               x_range(0, nquad);
           RAJA::loop<threads_x>(ctx, x_range, [&](int q) { derivatives(q) = qf_derivatives[e * nquad + uint32_t(q)]; });
 
           ctx.teamSync();
@@ -441,10 +450,18 @@ std::function<void(const double*, double*)> jacobian_vector_product_kernel(
 }
 
 template <int wrt, int Q, mfem::Geometry::Type geom, typename signature, typename derivative_type>
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+std::function<void(ExecArrayView<double, 3, ExecutionSpace::GPU>)> element_gradient_kernel(
+#else
 std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)> element_gradient_kernel(
+#endif
     signature, std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+  return [=](ExecArrayView<double, 3, ExecutionSpace::GPU> K_elem) {
+#else
   return [=](ExecArrayView<double, 3, ExecutionSpace::CPU> K_elem) {
+#endif
     using test_space  = typename signature::return_type;
     using trial_space = typename std::tuple_element<wrt, typename signature::parameter_types>::type;
     element_gradient_kernel<geom, test_space, trial_space, Q>(K_elem, qf_derivatives.get(), elements, num_elements);

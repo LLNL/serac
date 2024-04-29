@@ -80,9 +80,8 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, TestThermalModelOne<dim>{}, *mesh);
 
-#ifndef SERAC_USE_CUDA_KERNEL_EVALUATION
   residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, TestThermalModelTwo{}, *mesh);
-#endif
+
   double t = 0.0;
 
   check_gradient(residual, t, U);

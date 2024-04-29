@@ -12,6 +12,8 @@
 #include "serac/numerics/functional/differentiate_wrt.hpp"
 #include "RAJA/RAJA.hpp"
 
+#include <RAJA/pattern/launch/launch_core.hpp>
+#include <RAJA/policy/sequential/policy.hpp>
 #include <array>
 #include <cstdint>
 
@@ -231,15 +233,17 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
               // note: the weird immediately-invoked lambda expression is
               // a workaround for a bug in GCC(<12.0) where it fails to
               // decide which function overload to use, and crashes
-
-              auto qf_outputs = [&]() {
+              auto qf_outputs_lambda = [&]() {
                 if constexpr (std::is_same_v<state_type, Nothing>) {
                   return batch_apply_qf_no_qdata(qf, t, x[e], ctx, get<indices>(qf_inputs[e])...);
                 }
                 if constexpr (!std::is_same_v<state_type, Nothing>) {
                   return batch_apply_qf(qf, t, x[e], &qf_state(e, 0), update_state, ctx, get<indices>(qf_inputs[e])...);
                 }
-              }();
+              };
+              // RAJA_TEAM_SHARED
+              decltype(qf_outputs_lambda()) qf_outputs;
+              qf_outputs = qf_outputs_lambda();
               ctx.teamSync();
 
               // use J to transform sources / fluxes on the physical element
@@ -345,27 +349,30 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
 
   using qf_inputs_type = decltype(trial_element::template interpolate_output_helper<Q>());
 
+// clang-format off
 #ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   std::string device_name = "DEVICE";
 #else
-  std::string                           device_name = "HOST";
+  std::string device_name = "HOST";
 #endif
+  // clang-format on
 
   auto&           rm        = umpire::ResourceManager::getInstance();
   auto            allocator = rm.getAllocator(device_name);
   qf_inputs_type* qf_inputs = static_cast<qf_inputs_type*>(allocator.allocate(sizeof(qf_inputs_type) * num_elements));
   rm.memset(qf_inputs, 0);
+  // This typedef is needed to declare qf_outputs in shared memory.
+  using qf_outputs_type = decltype(batch_apply_chain_rule<is_QOI>(qf_derivatives, *qf_inputs, RAJA::LaunchContext{}));
 
   // for each element in the domain
   RAJA::launch<launch_policy>(
       RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_X, BLOCK_Y, BLOCK_Z)),
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(ctx, e_range, [=](int e) {
-          (void)num_qpts;
           // (batch) interpolate each quadrature point's value
           trial_element::interpolate(du[elements[e]], rule, qf_inputs, ctx);
-
-          auto qf_outputs = batch_apply_chain_rule<is_QOI>(qf_derivatives + e * num_qpts, *qf_inputs, ctx);
+          RAJA_TEAM_SHARED qf_outputs_type qf_outputs;
+          qf_outputs = batch_apply_chain_rule<is_QOI>(qf_derivatives + e * num_qpts, *qf_inputs, ctx);
 
           test_element::integrate(qf_outputs, rule, &dr[elements[e]], ctx);
         });
@@ -418,14 +425,12 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
       RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_SZ)),
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(ctx, elements_range, [&](uint32_t e) {
-          (void)nquad;
-
           static constexpr bool  is_QOI_2 = test::family == Family::QOI;
           [[maybe_unused]] auto* output_ptr =
               reinterpret_cast<typename test_element::dof_type*>(&dK(elements[e], 0, 0));
 
-          tensor<padded_derivative_type, nquad> derivatives{};
-          RAJA::RangeSegment                    x_range(0, nquad);
+          RAJA::RangeSegment                                         x_range(0, nquad);
+          /*RAJA_TEAM_SHARED*/ tensor<padded_derivative_type, nquad> derivatives;
           RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
             if constexpr (is_QOI_2) {
               get<0>(derivatives(q)) = qf_derivatives[e * nquad + uint32_t(q)];
@@ -438,14 +443,18 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
           ctx.teamSync();
 
           for (int J = 0; J < trial_element::ndof; ++J) {
-            RAJA_TEAM_SHARED decltype(trial_element::batch_apply_shape_fn(J, derivatives, rule, ctx)) source_and_flux;
+            decltype(trial_element::batch_apply_shape_fn(J, derivatives, rule, ctx)) source_and_flux;
             source_and_flux = trial_element::batch_apply_shape_fn(J, derivatives, rule, ctx);
+            ctx.teamSync();
+            print(source_and_flux);
             test_element::integrate(source_and_flux, rule, output_ptr + J, ctx, trial_element::ndof);
           }
 
           ctx.teamSync();
         });
       });
+  axom::Array<double, 3, axom::MemorySpace::Host> bar = dK;
+  std::cout << bar << std::endl;
 }
 
 template <uint32_t wrt, int Q, mfem::Geometry::Type geom, typename signature, typename lambda_type, typename state_type,

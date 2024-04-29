@@ -313,7 +313,13 @@ void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integr
   const double*  jacobians        = gf.J.Read(true);
   const uint32_t num_elements     = uint32_t(gf.num_elements);
   const uint32_t qpts_per_element = num_quadrature_points(geom, Q);
-  const int*     elements         = &gf.elements[0];
+
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+  int* elements =
+      copy_data(const_cast<int*>(&gf.elements[0]), sizeof(int) * integral.domain_.get(geom).size(), "DEVICE");
+#else
+  const int* elements = &gf.elements[0];
+#endif
 
   std::shared_ptr<zero> dummy_derivatives;
   integral.evaluation_[geom] = boundary_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom>(
@@ -366,7 +372,7 @@ Integral MakeBoundaryIntegral(const Domain& domain, lambda_type&& qf, std::vecto
   SLIC_ERROR_IF(domain.type_ != Domain::Type::BoundaryElements,
                 "Error: trying to evaluate a boundary integral over a non-boundary domain of integration");
 
-  Integral integral(domain, argument_indices);
+  Integral integral(std::move(domain), argument_indices);
 
   if constexpr (dim == 1) {
     generate_bdr_kernels<mfem::Geometry::SEGMENT, Q>(signature, integral, qf);
