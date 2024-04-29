@@ -53,12 +53,10 @@ int ex1_main(int argc, char** argv)
   PetscCall(MatCreate(PETSC_COMM_WORLD,&A));
   PetscCall(MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,N,N));
   PetscCall(MatSetFromOptions(A));
-  PetscCall(MatSetUp(A));
 
   PetscCall(MatCreate(PETSC_COMM_WORLD,&B));
   PetscCall(MatSetSizes(B,PETSC_DECIDE,PETSC_DECIDE,N,N));
   PetscCall(MatSetFromOptions(B));
-  PetscCall(MatSetUp(B));
 
   PetscCall(MatGetOwnershipRange(A,&Istart,&Iend));
   for (II=Istart;II<Iend;II++) {
@@ -366,14 +364,7 @@ TEST(SlepcSmoketest, SlepcEx1)
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if (rank == 0) {
-    if (num_procs > 1) {
-      // If it's multiple processes, just make sure the program didn't crash
-      EXPECT_NE(output.find("type: mpiaij"), std::string::npos);
-      EXPECT_NE(output.find("Mat Object: " + std::to_string(num_procs) + " MPI processes"), std::string::npos);
-      EXPECT_NE(output.find("Level of orthogonality below the tolerance"), std::string::npos);
-    } else {
-      EXPECT_EQ(output, correct_serial_output);
-    }
+    EXPECT_EQ(output, correct_serial_output);
   }
 }
 
