@@ -30,7 +30,7 @@ For more information, see the [contributing guide](./CONTRIBUTING.md).
 License
 -------
 
-Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC. 
+Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC. 
 Produced at the Lawrence Livermore National Laboratory.
 
 Copyrights and patents in the Serac project are retained by contributors.
