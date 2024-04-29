@@ -119,3 +119,6 @@ install(
   DESTINATION 
     ${SERAC_INSTALL_CMAKE_MODULE_DIR}
 )
+
+# Install BLT files that recreate BLT targets in downstream projects
+blt_install_tpl_setups(DESTINATION ${SERAC_INSTALL_CMAKE_MODULE_DIR})

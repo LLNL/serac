@@ -33,7 +33,6 @@ if(NOT SERAC_FOUND)
   set(SERAC_USE_AXOM           @SERAC_USE_AXOM@)
   set(SERAC_USE_CAMP           @SERAC_USE_CAMP@)
   set(SERAC_USE_CALIPER        @SERAC_USE_CALIPER@)
-  set(SERAC_USE_CHAI           @SERAC_USE_CHAI@)
   set(SERAC_USE_CONDUIT        @SERAC_USE_CONDUIT@)
   set(SERAC_USE_HDF5           @SERAC_USE_HDF5@)
   set(SERAC_USE_MFEM           @SERAC_USE_MFEM@)
@@ -50,7 +49,6 @@ if(NOT SERAC_FOUND)
   set(SERAC_AXOM_DIR           "@AXOM_DIR@")
   set(SERAC_CAMP_DIR           "@CAMP_DIR@")
   set(SERAC_CALIPER_DIR        "@CALIPER_DIR@")
-  set(SERAC_CHAI_DIR           "@CHAI_DIR@")
   set(SERAC_CONDUIT_DIR        "@CONDUIT_DIR@")
   set(SERAC_HDF5_DIR           "@HDF5_DIR@")
   set(SERAC_MFEM_DIR           "@MFEM_DIR@")
@@ -69,7 +67,7 @@ if(NOT SERAC_FOUND)
   endif()
 
   # Set to real variable unless user overrode it
-  foreach(dep ADIAK AXOM CAMP CALIPER CHAI CONDUIT HDF5 MFEM PETSC RAJA STRUMPACK SUNDIALS TRIBOL UMPIRE)
+  foreach(dep ADIAK AXOM CAMP CALIPER CONDUIT HDF5 MFEM PETSC RAJA STRUMPACK SUNDIALS TRIBOL UMPIRE)
     if (NOT ${dep}_DIR)
       set(${dep}_DIR "${SERAC_${dep}_DIR}")
     endif()
@@ -80,11 +78,57 @@ if(NOT SERAC_FOUND)
   #----------------------------------------------------------------------------
   include(CMakeFindDependencyMacro)
 
+  # Enable various find commands to look in non-default paths
+  set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB32_PATHS TRUE)
+  set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS TRUE)
+  set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIBX32_PATHS TRUE)
+
+  # Adiak
+  if(SERAC_USE_ADIAK)
+    find_dependency(adiak REQUIRED PATHS "${ADIAK_DIR}" "${ADIAK_DIR}/lib/cmake/adiak")
+  endif()
+
+  # Caliper
+  if(SERAC_USE_CALIPER)
+    # See comment in SetupSeracThirdParty.cmake
+    if(SERAC_ENABLE_CUDA)
+      if(CMAKE_VERSION VERSION_LESS 3.17)
+        message(FATAL_ERROR "Serac+Caliper+CUDA requires CMake > 3.17.")
+      else()
+        find_package(CUDAToolkit REQUIRED)
+      endif() 
+    endif()
+    find_dependency(caliper REQUIRED PATHS "${CALIPER_DIR}" "${CALIPER_DIR}/share/cmake/caliper")
+  endif()
+
+  # Camp
+  find_dependency(camp REQUIRED PATHS "${CAMP_DIR}")
+
+  # Umpire
+  if(SERAC_USE_UMPIRE)
+    find_dependency(umpire REQUIRED PATHS "${UMPIRE_DIR}")
+  endif()
+
+  # RAJA
+  if(SERAC_USE_RAJA)
+    find_dependency(raja REQUIRED PATHS "${RAJA_DIR}")
+  endif()
+
+  # Conduit
+  if(SERAC_USE_CONDUIT)
+    # Load mpi targets because we require the optional Conduit mpi targets
+    find_package(MPI REQUIRED)
+
+    find_dependency(Conduit REQUIRED
+                    PATHS "${CONDUIT_DIR}"
+                          "${CONDUIT_DIR}/lib/cmake/conduit")
+  endif()
+
   # MFEM
   if(SERAC_USE_MFEM AND NOT TARGET mfem)
     set(SERAC_MFEM_BUILT_WITH_CMAKE @MFEM_BUILT_WITH_CMAKE@)
     if(SERAC_MFEM_BUILT_WITH_CMAKE)
-      find_dependency(mfem REQUIRED NO_DEFAULT_PATH PATHS "${MFEM_DIR}/lib/cmake/mfem" NAMES MFEM)
+      find_dependency(mfem REQUIRED PATHS "${MFEM_DIR}/lib/cmake/mfem" NAMES MFEM)
       # MFEM include directories are added as the variable but not always added to the target itself
       target_include_directories(mfem SYSTEM INTERFACE "${MFEM_INCLUDE_DIRS}")
     else()
@@ -100,16 +144,6 @@ if(NOT SERAC_FOUND)
     find_dependency(Axom REQUIRED NO_DEFAULT_PATH PATHS "${AXOM_DIR}/lib/cmake")
   endif()
   
-  # Camp
-  if(SERAC_USE_CAMP)
-    find_dependency(camp REQUIRED NO_DEFAULT_PATH PATHS "${CAMP_DIR}/lib/cmake/camp")
-  endif()
-
-  # Conduit
-  if(SERAC_USE_CONDUIT)
-    find_dependency(Conduit REQUIRED NO_DEFAULT_PATH PATHS "${CONDUIT_DIR}/lib/cmake/conduit")
-  endif()
-
   # HDF5
   if(SERAC_USE_HDF5)
     set(SERAC_HDF5_DIR     "@HDF5_DIR@")
@@ -118,50 +152,17 @@ if(NOT SERAC_FOUND)
 
   # Tribol
   if(SERAC_USE_TRIBOL)
-    find_dependency(tribol REQUIRED NO_DEFAULT_PATH PATHS "${TRIBOL_DIR}/lib/cmake")
+    find_dependency(tribol REQUIRED PATHS "${TRIBOL_DIR}/lib/cmake")
   endif()
 
-  # Adiak
-  if(SERAC_USE_ADIAK)
-    find_dependency(adiak REQUIRED NO_DEFAULT_PATH PATHS "${ADIAK_DIR}")
-  endif()
-
-  # Caliper
-  if(SERAC_USE_CALIPER)
-    # See comment in SetupSeracThirdParty.cmake
-    if(SERAC_ENABLE_CUDA)
-      if(CMAKE_VERSION VERSION_LESS 3.17)
-        message(FATAL_ERROR "Serac+Caliper+CUDA requires CMake > 3.17.")
-      else()
-        find_package(CUDAToolkit REQUIRED)
-      endif() 
-    endif()
-    find_dependency(caliper REQUIRED NO_DEFAULT_PATH PATHS "${CALIPER_DIR}")
-  endif()
-
-  # Petsc
+  # PETSc
   if(SERAC_USE_PETSC)
     include("${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake")
   endif()
 
-  # Slepc
+  # SLEPc
   if(SERAC_USE_SLEPC)
     include("${CMAKE_CURRENT_LIST_DIR}/FindSLEPc.cmake")
-  endif()
-
-  # Umpire
-  if(SERAC_USE_UMPIRE)
-    find_dependency(umpire REQUIRED NO_DEFAULT_PATH PATHS "${UMPIRE_DIR}")
-  endif()
-
-  # RAJA
-  if(SERAC_USE_RAJA)
-    find_dependency(raja REQUIRED NO_DEFAULT_PATH PATHS "${RAJA_DIR}")
-  endif()
-
-  # CHAI
-  if(SERAC_USE_CHAI)
-    find_dependency(CHAI REQUIRED NO_DEFAULT_PATH PATHS "${CHAI_DIR}")
   endif()
 
   # SUNDIALS
@@ -170,9 +171,10 @@ if(NOT SERAC_FOUND)
   endif()
 
   #----------------------------------------------------------------------------
-  # Include targets exported by CMake
+  # Load BLT and Serac targets
   #----------------------------------------------------------------------------
   get_filename_component(SERAC_CMAKE_CONFIG_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+  include(${SERAC_CMAKE_CONFIG_DIR}/BLTSetupTargets.cmake)
   include(${SERAC_CMAKE_CONFIG_DIR}/serac-targets.cmake)
 
   #----------------------------------------------------------------------------
