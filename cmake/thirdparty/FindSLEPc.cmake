@@ -26,21 +26,25 @@ if(NOT ARPACK_DIR)
   message(FATAL_ERROR "Could not find arpack. Slepc requires ARPACK_DIR.")
 endif()
 
-# Give slepc petsc's link libs and dirs and add missing arpack include dir and link libs
-
-# Link libraries
+# Add petsc and arpack link libraries
 get_target_property(_slepc_link_libs PkgConfig::SLEPC INTERFACE_LINK_LIBRARIES)
 get_target_property(_petsc_link_libs PkgConfig::PETSC INTERFACE_LINK_LIBRARIES)
-list(APPEND _slepc_link_libs ${ARPACK_DIR}/lib64/libparpack.so ${_petsc_link_libs})
+list(APPEND _slepc_link_libs ${_petsc_link_libs})
+
+# NOTE: The arpack shared object file may be at a different location depending on system
+set(_libparpack_paths ${ARPACK_DIR}/lib/libparpack.so ${ARPACK_DIR}/lib64/libparpack.so)
+foreach(_path ${_libparpack_paths})
+  if (EXISTS ${_path})
+    list(APPEND _slepc_link_libs ${_path})
+  endif()
+endforeach()
+
 blt_list_remove_duplicates(TO _slepc_link_libs)
 set_target_properties(PkgConfig::SLEPC PROPERTIES INTERFACE_LINK_LIBRARIES "${_slepc_link_libs}")
 
-# Include directories
-get_target_property(_slepc_include_dirs PkgConfig::SLEPC INTERFACE_INCLUDE_DIRECTORIES)
-list(APPEND _slepc_include_dirs ${ARPACK_DIR}/include)
-set_target_properties(PkgConfig::SLEPC PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${_slepc_include_dirs}")
+# Add arpack include directories
+target_include_directories(PkgConfig::SLEPC INTERFACE ${ARPACK_DIR}/include)
 
-# Link directories
+# Add petsc link directories
 get_target_property(_petsc_link_dirs PkgConfig::PETSC INTERFACE_LINK_DIRECTORIES)
-set(_slepc_link_dirs ${_petsc_link_dirs})
-set_target_properties(PkgConfig::SLEPC PROPERTIES INTERFACE_LINK_DIRECTORIES "${_slepc_link_dirs}")
+target_link_directories(PkgConfig::SLEPC INTERFACE ${_petsc_link_dirs})
