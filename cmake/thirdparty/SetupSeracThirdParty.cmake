@@ -191,6 +191,14 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         serac_assert_find_succeeded(PROJECT_NAME MFEM
                                     TARGET       mfem
                                     DIR_VARIABLE MFEM_DIR)
+        if(AMGX_DIR AND ENABLE_CUDA)
+            get_target_property(_mfem_libs mfem INTERFACE_LINK_LIBRARIES)
+            # white238: Add an extra one at the end because its in the wrong order
+            # but if I touch it the link fails for other reasons
+            if("${_mfem_libs}" MATCHES "-lnvToolsExt")
+                target_link_libraries(mfem INTERFACE "-lnvToolsExt")
+            endif()
+       endif()
     else()
         message(STATUS "Using MFEM submodule")
 
