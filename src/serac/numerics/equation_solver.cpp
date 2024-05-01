@@ -19,7 +19,7 @@ namespace serac {
 class NewtonSolver : public mfem::NewtonSolver {
 protected:
 
-  mfem::Vector x0;
+  mutable mfem::Vector x0;
 
 public:
   NewtonSolver() {}
@@ -42,8 +42,6 @@ public:
     if (print_options.first_and_last && !print_options.iterations) {
       mfem::out << "Newton iteration " << std::setw(2) << 0 << " : ||r|| = " << norm << "...\n";
     }
-
-    // printf("rel, abs tol = %g %g\n", rel_tol, abs_tol);
 
     norm_goal            = std::max(rel_tol * initial_norm, abs_tol);
     prec->iterative_mode = false;
@@ -75,73 +73,63 @@ public:
       prec->SetOperator(*grad);
 
       prec->Mult(r, c);  // c = [DF(x_i)]^{-1} [F(x_i)-b]
-
-      //x0 = x
-
-      // real_t m = -Dot(c,r);
-      // std::cout << "m is negative ? " << m << std::endl;
-      // if (m > 0.0) m = 0.0;
+  
+      // there must be a better way to do this?
+      x0.SetSize(x.Size());
+      x0 = 0.0;
+      x0.Add(1.0, x);
 
       real_t c_scale = 1.0;
-      x.Add(-c_scale, c);
-      real_t follow = -c_scale;
+      add(x0, -c_scale, c, x);
       oper->Mult(x, r);
       norm = Norm(r);
 
       static constexpr int max_ls_iters = 20;
+      static constexpr real_t reduction = 0.5;
 
       auto is_converged = [=](real_t currentNorm, real_t) {
-        //static constexpr real_t c_tol = 0.0;
-        return currentNorm < norm_nm1; // + c_tol * stepScale * m;
+        return currentNorm < norm_nm1;
       };
 
       // back-track linesearch
       int ls_iter     = 0;
       int ls_iter_sum = 0.0;
       for (; !is_converged(norm, c_scale) && ls_iter < max_ls_iters; ++ls_iter, ++ls_iter_sum) {
-        real_t reduction = 0.5;
-        x.Add(c_scale * 0.5, c);
-        follow += c_scale * 0.5;
+        c_scale *= reduction;
+        add(x0, -c_scale, c, x);
         oper->Mult(x, r);
         norm = Norm(r);
-        c_scale *= reduction;
       }
 
       // try the opposite direction and linesearch back from there
       if (ls_iter==max_ls_iters && !is_converged(norm, c_scale)) {
 
-        std::cout << std::setprecision(15) << "tmp norm = " << norm << " " << norm_nm1 << " " << ls_iter << " " << c_scale << " " << follow << std::endl;
+        // std::cout << std::setprecision(15) << "tmp norm = " << norm << " " << norm_nm1 << " " << ls_iter << " " << c_scale << " " << std::endl;
 
-        x.Add(1.0 + c_scale, c);
-        follow += 1.0 + c_scale;
+        c_scale = 1.0;
+        add(x0, c_scale, c, x);
         oper->Mult(x, r);
         norm = Norm(r);
-        c_scale = 1.0;
-
-        std::cout << std::setprecision(15) << "opp norm = " << norm << " " << norm_nm1 << " " << follow << std::endl;
 
         ls_iter = 0;
         for (; !is_converged(norm, c_scale) && ls_iter < max_ls_iters; ++ls_iter, ++ls_iter_sum) {
-          real_t reduction = 0.5;
-          x.Add(-c_scale * 0.5, c);
-          follow -= c_scale * 0.5;
+          c_scale *= reduction;
+          add(x0, c_scale, c, x);
           oper->Mult(x, r);
           norm = Norm(r);
-          c_scale *= reduction;
         }
 
-        std::cout << std::setprecision(15) << "int norm = " << norm << " " << norm_nm1 << " " << ls_iter_sum << " " << c_scale << " " << follow << std::endl;
+        // std::cout << std::setprecision(15) << "int norm = " << norm << " " << norm_nm1 << " " << ls_iter_sum << " " << c_scale << " " << std::endl;
 
-        // ok, the opposite direction was also terrible, lets go back
+        // ok, the opposite direction was also terrible, lets go back, cut in half 1 last time and accept it
         if (ls_iter==max_ls_iters && !is_converged(norm, c_scale)) {
           ++ls_iter_sum;
-          x.Add(-2.0 * c_scale, c);
-          follow -= 2.0 * c_scale;
+          add(x0, -reduction * c_scale, c, x);
           oper->Mult(x, r);
           norm = Norm(r);
         }
       }
-      std::cout << std::setprecision(15) << "new norm = " << norm << " " << norm_nm1 << " " << ls_iter_sum << " " << c_scale << " " << follow << std::endl;
+      // std::cout << std::setprecision(15) << "new norm = " << norm << " " << norm_nm1 << " " << ls_iter_sum << " " << c_scale << " " << std::endl;
     }
 
     final_iter = it;
@@ -153,7 +141,6 @@ public:
     if (!converged && (print_options.summary || print_options.warnings)) {
       mfem::out << "Newton: No convergence!\n";
     }
-    printf("end newton solver\n");
   }
 };
 
