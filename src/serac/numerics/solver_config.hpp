@@ -116,6 +116,7 @@ enum class NonlinearSolver
 {
   Newton,                    /**< MFEM-native Newton-Raphson */
   LBFGS,                     /**< MFEM-native Limited memory BFGS */
+  NewtonLineSearch,          /**< Custom solver using preconditioned earch direction with backtracking line search */
   KINFullStep,               /**< KINSOL Full Newton (Sundials must be enabled) */
   KINBacktrackingLineSearch, /**< KINSOL Newton with Backtracking Line Search (Sundials must be enabled) */
   KINPicard                  /**< KINSOL Picard (Sundials must be enabled) */
