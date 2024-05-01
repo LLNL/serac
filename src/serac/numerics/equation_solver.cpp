@@ -5,12 +5,136 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/numerics/equation_solver.hpp"
+#include <iomanip>
+#include <sstream>
+#include <ios>
+#include <iostream>
 
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
 #include "serac/serac_config.hpp"
 
 namespace serac {
+
+class NewtonSolver : public mfem::NewtonSolver {
+protected:
+public:
+  NewtonSolver() {}
+
+#ifdef MFEM_USE_MPI
+  NewtonSolver(MPI_Comm comm_) : mfem::NewtonSolver(comm_) {}
+#endif
+
+  void Mult(const mfem::Vector&, mfem::Vector& x) const
+  {
+    MFEM_ASSERT(oper != NULL, "the Operator is not set (use SetOperator).");
+    MFEM_ASSERT(prec != NULL, "the Solver is not set (use SetSolver).");
+
+    using real_t = mfem::real_t;
+
+    real_t norm, norm_goal;
+    oper->Mult(x, r);
+
+    norm = initial_norm = Norm(r);
+    if (print_options.first_and_last && !print_options.iterations) {
+      mfem::out << "Newton iteration " << std::setw(2) << 0 << " : ||r|| = " << norm << "...\n";
+    }
+
+    printf("rel, abs tol = %g %g\n", rel_tol, abs_tol);
+
+    norm_goal            = std::max(rel_tol * initial_norm, abs_tol);
+    prec->iterative_mode = false;
+
+    int it = 0;
+    for (; true; it++) {
+      MFEM_ASSERT(IsFinite(norm), "norm = " << norm);
+      if (print_options.iterations) {
+        mfem::out << "Newton iteration " << std::setw(2) << it << " : ||r|| = " << norm;
+        if (it > 0) {
+          mfem::out << ", ||r||/||r_0|| = " << norm / initial_norm;
+        }
+        mfem::out << '\n';
+      }
+
+      if (norm <= norm_goal) {
+        converged = true;
+        break;
+      }
+
+      if (it >= max_iter) {
+        converged = false;
+        break;
+      }
+
+      real_t norm_nm1 = norm;
+
+      grad = &oper->GetGradient(x);
+      prec->SetOperator(*grad);
+
+      prec->Mult(r, c);  // c = [DF(x_i)]^{-1} [F(x_i)-b]
+
+      real_t c_scale = 1.0;
+      x.Add(-c_scale, c);
+      oper->Mult(x, r);
+      norm = Norm(r);
+
+      static constexpr int max_ls_iters = 20;
+
+      // back-track linesearch
+      int ls_iter     = 0;
+      int ls_iter_sum = 0.0;
+      for (; norm >= norm_nm1 && ls_iter < max_ls_iters; ++ls_iter, ++ls_iter_sum) {
+        real_t reduction = 0.5;
+        x.Add(c_scale * 0.5, c);
+        c_scale *= reduction;
+        oper->Mult(x, r);
+        norm = Norm(r);
+      }
+
+      if (ls_iter == max_ls_iters && norm >= norm_nm1) {  // try the opposite direction and linesearch back from there
+
+        std::cout << std::setprecision(15) << "tmp norm = " << norm << " " << norm_nm1 << " " << ls_iter << std::endl;
+
+        x.Add(1.0 + c_scale, c);
+        c_scale = 1.0;
+        oper->Mult(x, r);
+        norm = Norm(r);
+
+        std::cout << std::setprecision(15) << "opp norm = " << norm << " " << norm_nm1 << std::endl;
+
+        ls_iter = 0;
+        for (; norm >= norm_nm1 && ls_iter < max_ls_iters; ++ls_iter, ++ls_iter_sum) {
+          real_t reduction = 0.5;
+          x.Add(-c_scale * 0.5, c);
+          c_scale *= reduction;
+          oper->Mult(x, r);
+          norm = Norm(r);
+          // std::cout << std::setprecision(15) << "red norm = " << norm << " " << norm_nm1 << std::endl;
+        }
+
+        if (ls_iter == max_ls_iters &&
+            norm >= norm_nm1) {  // ok, the opposite direction was also terrible, lets go back
+          ++ls_iter_sum;
+          x.Add(-2.0 * c_scale, c);
+          oper->Mult(x, r);
+          norm = Norm(r);
+        }
+      }
+      std::cout << std::setprecision(15) << "new norm = " << norm << " " << norm_nm1 << " " << ls_iter_sum << std::endl;
+    }
+
+    final_iter = it;
+    final_norm = norm;
+
+    if (print_options.summary || (!converged && print_options.warnings) || print_options.first_and_last) {
+      mfem::out << "Newton: Number of iterations: " << final_iter << '\n' << "   ||r|| = " << final_norm << '\n';
+    }
+    if (!converged && (print_options.summary || print_options.warnings)) {
+      mfem::out << "Newton: No convergence!\n";
+    }
+    printf("end newton solver\n");
+  }
+};
 
 EquationSolver::EquationSolver(NonlinearSolverOptions nonlinear_opts, LinearSolverOptions lin_opts, MPI_Comm comm)
 {
@@ -161,6 +285,8 @@ std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions 
     nonlinear_solver = std::make_unique<mfem::NewtonSolver>(comm);
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::LBFGS) {
     nonlinear_solver = std::make_unique<mfem::LBFGSSolver>(comm);
+  } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::NewtonLineSearch) {
+    nonlinear_solver = std::make_unique<NewtonSolver>(comm);
   }
   // KINSOL
   else {

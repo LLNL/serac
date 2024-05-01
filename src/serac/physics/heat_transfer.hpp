@@ -35,7 +35,7 @@ const LinearSolverOptions default_linear_options = {.linear_solver  = LinearSolv
                                                     .preconditioner = Preconditioner::HypreL1Jacobi,
                                                     .relative_tol   = 1.0e-6,
                                                     .absolute_tol   = 1.0e-12,
-                                                    .max_iterations = 200};
+                                                    .max_iterations = 4};
 
 /// the default direct solver option for solving the linear stiffness equations
 #ifdef MFEM_USE_STRUMPACK
