@@ -18,7 +18,6 @@ namespace serac {
 
 class NewtonSolver : public mfem::NewtonSolver {
 protected:
-
   mutable mfem::Vector x0;
 
 public:
@@ -73,7 +72,7 @@ public:
       prec->SetOperator(*grad);
 
       prec->Mult(r, c);  // c = [DF(x_i)]^{-1} [F(x_i)-b]
-  
+
       // there must be a better way to do this?
       x0.SetSize(x.Size());
       x0 = 0.0;
@@ -84,12 +83,10 @@ public:
       oper->Mult(x, r);
       norm = Norm(r);
 
-      static constexpr int max_ls_iters = 20;
-      static constexpr real_t reduction = 0.5;
+      static constexpr int    max_ls_iters = 20;
+      static constexpr real_t reduction    = 0.5;
 
-      auto is_converged = [=](real_t currentNorm, real_t) {
-        return currentNorm < norm_nm1;
-      };
+      auto is_converged = [=](real_t currentNorm, real_t) { return currentNorm < norm_nm1; };
 
       // back-track linesearch
       int ls_iter     = 0;
@@ -102,9 +99,9 @@ public:
       }
 
       // try the opposite direction and linesearch back from there
-      if (ls_iter==max_ls_iters && !is_converged(norm, c_scale)) {
-
-        // std::cout << std::setprecision(15) << "tmp norm = " << norm << " " << norm_nm1 << " " << ls_iter << " " << c_scale << " " << std::endl;
+      if (ls_iter == max_ls_iters && !is_converged(norm, c_scale)) {
+        // std::cout << std::setprecision(15) << "tmp norm = " << norm << " " << norm_nm1 << " " << ls_iter << " " <<
+        // c_scale << " " << std::endl;
 
         c_scale = 1.0;
         add(x0, c_scale, c, x);
@@ -119,17 +116,19 @@ public:
           norm = Norm(r);
         }
 
-        // std::cout << std::setprecision(15) << "int norm = " << norm << " " << norm_nm1 << " " << ls_iter_sum << " " << c_scale << " " << std::endl;
+        // std::cout << std::setprecision(15) << "int norm = " << norm << " " << norm_nm1 << " " << ls_iter_sum << " "
+        // << c_scale << " " << std::endl;
 
         // ok, the opposite direction was also terrible, lets go back, cut in half 1 last time and accept it
-        if (ls_iter==max_ls_iters && !is_converged(norm, c_scale)) {
+        if (ls_iter == max_ls_iters && !is_converged(norm, c_scale)) {
           ++ls_iter_sum;
           add(x0, -reduction * c_scale, c, x);
           oper->Mult(x, r);
           norm = Norm(r);
         }
       }
-      // std::cout << std::setprecision(15) << "new norm = " << norm << " " << norm_nm1 << " " << ls_iter_sum << " " << c_scale << " " << std::endl;
+      // std::cout << std::setprecision(15) << "new norm = " << norm << " " << norm_nm1 << " " << ls_iter_sum << " " <<
+      // c_scale << " " << std::endl;
     }
 
     final_iter = it;
