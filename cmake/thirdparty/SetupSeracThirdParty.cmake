@@ -341,6 +341,9 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     if(SLEPC_DIR)
         serac_assert_is_directory(DIR_VARIABLE SLEPC_DIR)
         include(${CMAKE_CURRENT_LIST_DIR}/FindSLEPc.cmake)
+        serac_assert_find_succeeded(PROJECT_NAME SLEPC
+                                    TARGET PkgConfig::SLEPC
+                                    DIR_VARIABLE SLEPC_DIR)
         message(STATUS "SLEPc support is ON")
         set(SLEPC_FOUND TRUE)
     else()
