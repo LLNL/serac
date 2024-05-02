@@ -85,7 +85,7 @@ TEST(LiquidCrystalElastomerMaterial, StrainEnergyAndStressAgree)
   LiquidCrystalElastomerZhang::State state{};
 
   auto order_param_tuple = serac::make_tuple(0.39, 0.0);
-  auto gamma_param_tuple = serac::make_tuple(0.0, 0.0);
+  auto gamma_param_tuple = serac::make_tuple(M_PI_2, 0.0);
   auto eta_param_tuple = serac::make_tuple(0.0, 0.0);
 
   // auto energy_and_stress = material.calculateStrainEnergy(make_dual(displacement_grad), temperature);
