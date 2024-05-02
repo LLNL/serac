@@ -234,7 +234,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             set(ParMETIS_DIR ${PARMETIS_DIR} CACHE PATH "")
         endif()
         set(MFEM_USE_OPENMP ${ENABLE_OPENMP} CACHE BOOL "")
-        # Disabling mfem using petsc in codevelop due to https://github.com/LLNL/serac/issues/1082
         set(MFEM_USE_PETSC OFF CACHE BOOL "")
         set(MFEM_USE_SLEPC OFF CACHE BOOL "")
         set(MFEM_USE_RAJA OFF CACHE BOOL "")
@@ -334,6 +333,22 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     else()
         message(STATUS "PETSc support is OFF")
         set(PETSC_FOUND FALSE)
+    endif()
+
+    #------------------------------------------------------------------------------
+    # SLEPC
+    #------------------------------------------------------------------------------
+    if(SLEPC_DIR)
+        serac_assert_is_directory(DIR_VARIABLE SLEPC_DIR)
+        include(${CMAKE_CURRENT_LIST_DIR}/FindSLEPc.cmake)
+        serac_assert_find_succeeded(PROJECT_NAME SLEPC
+                                    TARGET PkgConfig::SLEPC
+                                    DIR_VARIABLE SLEPC_DIR)
+        message(STATUS "SLEPc support is ON")
+        set(SLEPC_FOUND TRUE)
+    else()
+        message(STATUS "SLEPc support is OFF")
+        set(SLEPC_FOUND FALSE)
     endif()
 
     #------------------------------------------------------------------------------
