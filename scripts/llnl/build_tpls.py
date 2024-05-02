@@ -49,6 +49,10 @@ def parse_args():
                       dest="mirror",
                       default="",
                       help="Mirror location to use (defaults to shared location)")
+    parser.add_option("-j", "--jobs",
+                      dest="jobs",
+                      default=4,
+                      help="Allow N jobs at once for any `make` commands")
 
     ###############
     # parse args
@@ -79,7 +83,7 @@ def main():
         os.chdir(repo_dir)
 
         timestamp = get_timestamp()
-        res = full_build_and_test_of_tpls(builds_dir, timestamp, opts["spec"], opts["verbose"], opts["short_path"], opts["mirror"])
+        res = full_build_and_test_of_tpls(builds_dir, timestamp, opts["spec"], opts["verbose"], opts["short_path"], opts["mirror"], opts["jobs"])
     finally:
         os.chdir(original_wd)
 
