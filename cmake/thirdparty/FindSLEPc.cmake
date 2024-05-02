@@ -1,11 +1,8 @@
-# Copyright (c) 2024, Lawrence Livermore National Security, LLC. All rights
-# reserved.  LLNL-CODE-856946
-
-# OFFICIAL USE ONLY This work was produced at the Lawrence Livermore National
-# Laboratory (LLNL) under contract no. DE-AC52-07NA27344 (Contract 44) between
-# the U.S. Department of Energy (DOE) and Lawrence Livermore National Security,
-# LLC (LLNS) for the operation of LLNL.  See license for disclaimers, notice of
-# U.S. Government Rights and license terms and conditions.
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
+# other Serac Project Developers. See the top-level LICENSE file for
+# details.
+#
+# SPDX-License-Identifier: (BSD-3-Clause)
 
 # Defines the following imported target: PkgConfig::SLEPC
 
@@ -43,7 +40,7 @@ blt_list_remove_duplicates(TO _slepc_link_libs)
 set_target_properties(PkgConfig::SLEPC PROPERTIES INTERFACE_LINK_LIBRARIES "${_slepc_link_libs}")
 
 # Add arpack include directories
-target_include_directories(PkgConfig::SLEPC INTERFACE ${ARPACK_DIR}/include)
+target_include_directories(PkgConfig::SLEPC SYSTEM INTERFACE ${ARPACK_DIR}/include)
 
 # Add petsc link directories
 get_target_property(_petsc_link_dirs PkgConfig::PETSC INTERFACE_LINK_DIRECTORIES)
