@@ -22,7 +22,7 @@
 
 using namespace serac;
 
-void functional_solid_test_nonlinear_radiation()
+void functional_solid_test_nonlinear_buckle()
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -78,7 +78,7 @@ void functional_solid_test_nonlinear_radiation()
   seracSolid->setTraction([&](auto, auto n, auto) {return -loadMagnitude*n;}, topSurface);
 
   seracSolid->completeSetup();
-  seracSolid->advanceTimestep(1.0);
+  //seracSolid->advanceTimestep(1.0);
 
   serac::FiniteElementState const &displacement = seracSolid->state("displacement");
   mfem::ParGridFunction uGF(const_cast<mfem::ParFiniteElementSpace*>(&displacement.space()));
@@ -89,7 +89,7 @@ void functional_solid_test_nonlinear_radiation()
   //visit_dc.Save();
 }
 
-TEST(SolidMechanics, nonlinear_solve) { functional_solid_test_nonlinear_radiation(); }
+TEST(SolidMechanics, nonlinear_solve) { functional_solid_test_nonlinear_buckle(); }
 
 int main(int argc, char* argv[])
 {
