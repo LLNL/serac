@@ -34,14 +34,9 @@ void functional_test_static()
   std::string filename =
       (dim == 2) ? SERAC_REPO_DIR "/data/meshes/star.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
 
-<<<<<<< HEAD
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-   std::string mesh_tag{"mesh"}; auto& pmesh = serac::StateManager::setMesh(std::move(mesh));
-=======
   auto mesh =
       serac::mesh::refineAndDistribute(serac::buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh), "default_mesh");
->>>>>>> dcde5f1e3e093b8e83186379835e3cbf12a83913
 
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};
@@ -111,14 +106,9 @@ void functional_test_dynamic()
   std::string filename =
       (dim == 2) ? SERAC_REPO_DIR "/data/meshes/star.mesh" : SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
 
-<<<<<<< HEAD
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
-   std::string mesh_tag{"mesh"}; auto& pmesh = serac::StateManager::setMesh(std::move(mesh));
-=======
   auto mesh =
       serac::mesh::refineAndDistribute(serac::buildMeshFromFile(filename), serial_refinement, parallel_refinement);
   serac::StateManager::setMesh(std::move(mesh), "default_mesh");
->>>>>>> dcde5f1e3e093b8e83186379835e3cbf12a83913
 
   // Define a boundary attribute set
   std::set<int> ess_bdr = {1};

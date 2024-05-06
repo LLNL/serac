@@ -21,8 +21,6 @@
 #include "serac/numerics/functional/dual.hpp"
 #include "serac/physics/materials/solid_material.hpp"
 
-// #include <complex>
-
 namespace serac {
 
 /**
