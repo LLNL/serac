@@ -23,6 +23,7 @@ serac_add_tests( SOURCES ${serial_solver_tests}
 
 set(solver_tests
     mmp_functionally_graded_tensile.cpp
+    lce_Zhang_free_swelling_test_for_Dan.cpp
     # lce_Brighenti_logpile.cpp
     # lce_Brighenti_free_swelling.cpp
     # lce_Brighenti_tension.cpp

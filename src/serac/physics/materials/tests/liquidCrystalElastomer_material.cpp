@@ -73,7 +73,7 @@ TEST(LiquidCrystalElastomerMaterial, StrainEnergyAndStressAgree)
   double density         = 1.0;
   double shear_mod       = 3.113e5; //  young_modulus_ / 2.0 / (1.0 + poisson_ratio_);
   double ini_order_param = 0.40;
-  double omega_param     = 5.75e5;
+  double omega_param     = 0.12;
   double bulk_mod        = 100.0*shear_mod;
   LiquidCrystalElastomerZhang material(density, shear_mod, ini_order_param, omega_param, bulk_mod);
 
