@@ -33,8 +33,9 @@ set(solver_tests
     thermal_shape.cpp
     thermal_mechanics.cpp
     thermal_robin_condition.cpp
-    thermal_nonlinear_solve.cpp
     dynamic_thermal_adjoint.cpp
+    thermal_nonlinear_solve.cpp
+    solid_nonlinear_solve.cpp
     )
 blt_list_append(TO solver_tests ELEMENTS contact_patch.cpp contact_beam.cpp IF TRIBOL_FOUND)
 

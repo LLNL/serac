@@ -90,7 +90,7 @@ public:
 
       // back-track linesearch
       int ls_iter     = 0;
-      int ls_iter_sum = 0.0;
+      int ls_iter_sum = 0;
       for (; !is_converged(norm, c_scale) && ls_iter < max_ls_iters; ++ls_iter, ++ls_iter_sum) {
         c_scale *= reduction;
         add(x0, -c_scale, c, x);
@@ -122,13 +122,20 @@ public:
         // ok, the opposite direction was also terrible, lets go back, cut in half 1 last time and accept it
         if (ls_iter == max_ls_iters && !is_converged(norm, c_scale)) {
           ++ls_iter_sum;
-          add(x0, -reduction * c_scale, c, x);
+          c_scale *= reduction;
+          add(x0, -c_scale, c, x);
           oper->Mult(x, r);
           norm = Norm(r);
         }
       }
       // std::cout << std::setprecision(15) << "new norm = " << norm << " " << norm_nm1 << " " << ls_iter_sum << " " <<
       // c_scale << " " << std::endl;
+
+      if (ls_iter_sum) {
+        if (print_options.summary || (!converged && print_options.warnings) || print_options.first_and_last) {
+          mfem::out << "Number of line search steps taken = : " << ls_iter_sum << std::endl;
+        }
+      }
     }
 
     final_iter = it;
