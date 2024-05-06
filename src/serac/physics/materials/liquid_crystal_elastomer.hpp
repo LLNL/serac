@@ -384,25 +384,24 @@ struct LiquidCrystalElastomerZhang {
    * @brief Constructor
    *
    * @param rho mass density of the material (in reference configuration)
-   * @param young_modulus Bulk modulus of the material
-   * @param poisson_ratio Poisson ratio of the material
-   * @param initial_order_parameter Initial value of the order parameter
-   * @param beta_parameter Parameter for degree of coupling between elastic and nematic energies
+   * @param shear_mod Shear modulus of the material
+   * @param initial_order_param Parameter for degree of coupling between elastic and nematic energies
+   * @param omega_param Parameter for degree of swelling
+   * @param bulk_mod Bulk modulus of the material
    */
-  LiquidCrystalElastomerZhang(double rho, double young_modulus, double poisson_ratio, double initial_order_parameter,
-                                 double beta_parameter)
+  LiquidCrystalElastomerZhang(double rho, double shear_mod, double initial_order_param, 
+                              double omega_param, double bulk_mod)
       : density(rho),
-        young_modulus_(young_modulus),
-        poisson_ratio_(poisson_ratio),
-        initial_order_parameter_(initial_order_parameter),
-        beta_parameter_(beta_parameter)
+        shear_mod_(shear_mod),
+        initial_order_param_(initial_order_param),
+        omega_param_(omega_param),
+        bulk_mod_(bulk_mod)
   {
     SLIC_ERROR_ROOT_IF(density <= 0.0, "Density must be positive in the LCE material model.");
-    SLIC_ERROR_ROOT_IF(young_modulus_ <= 0.0, "Bulk modulus must be positive in the LCE material model.");
-    SLIC_ERROR_ROOT_IF(poisson_ratio_ <= 0.0, "Poisson ratio must be positive in the LCE material model.");
-    SLIC_ERROR_ROOT_IF(initial_order_parameter_ <= 0.0,
-                       "Initial order parameter must be positive in the LCE material model.");
-    SLIC_ERROR_ROOT_IF(beta_parameter_ <= 0.0, "The beta parameter must be positive in the LCE material model.");
+    SLIC_ERROR_ROOT_IF(shear_mod_ <= 0.0, "Shear modulus must be positive in the LCE material model.");
+    SLIC_ERROR_ROOT_IF(initial_order_param_ <= 0.0, "Initial order parameter must be positive in the LCE material model.");
+    SLIC_ERROR_ROOT_IF(omega_param_ <= 0.0, "Omega parameter must be positive in the LCE material model.");
+    SLIC_ERROR_ROOT_IF(bulk_mod_ <= 0.0, "Bulk modulus must be positive in the LCE material model.");
   }
 
   /// -------------------------------------------------------
@@ -435,10 +434,10 @@ struct LiquidCrystalElastomerZhang {
 
     // Get order parameters
     auto   St = get<0>(inst_order_param_tuple);
-    double S0 = initial_order_parameter_;
-
-    const double mu     = young_modulus_ / 2.0 / (1.0 + poisson_ratio_);
-    const double bulk   = 0.0 * mu;
+    const double S0 = initial_order_param_;
+    const double mu   = shear_mod_;
+    const double bulk = bulk_mod_;
+    const double omega = omega_param_;
 
     // Kinematics
     auto I    = Identity<dim>();
@@ -450,51 +449,39 @@ struct LiquidCrystalElastomerZhang {
     auto Cbar = dot(transpose(Fbar), Fbar);
 
   // Compute partial derivatives of strain energy wrt Cbar
-    auto dW1dCbar_1 = mu/2.0*(1.0-S0)/(1.0-St) * I;
-    auto dW1dCbar_2 = mu/2.0*((3.0*S0)/(1.0+2.0*St) - beta_parameter_) * outer(normal, normal);
-    auto dW1dCbar_3 = -mu/2.0*((3.0*St)*(1.0-S0)/(1.0-St)/(1.0+2.0*St) - beta_parameter_) / dot(normal, dot(Cbar,normal)) * 
+    auto dWLCEdCbar_1 = mu/2.0*(1.0-S0)/(1.0-St) * I;
+    auto dWLCEdCbar_2 = mu/2.0*((3.0*S0)/(1.0+2.0*St) - omega) * outer(normal, normal);
+    auto dWLCEdCbar_3 = -mu/2.0*((3.0*St)*(1.0-S0)/(1.0-St)/(1.0+2.0*St) - omega) / dot(normal, dot(Cbar,normal)) * 
                     ( outer(normal, dot(Cbar,normal)) + 
                       outer(dot(transpose(Cbar),normal), normal) - 
                       inner(normal, dot(dot(Cbar,Cbar), normal)) * outer(normal, normal)/dot(normal, dot(Cbar,normal)) 
                     );
 
-    auto dW1dCbar = dW1dCbar_1 + dW1dCbar_2 + dW1dCbar_3;
+    auto dWLCEdCbar = dWLCEdCbar_1 + dWLCEdCbar_2 + dWLCEdCbar_3;
 
-std::cout<<"\n\n... F ..."<<std::endl; print(F);
-std::cout<<"\n\n... Fbar ..."<<std::endl; print(Fbar);
-std::cout<<"\n\n... dW1dCbar_1 value ...\n"<<dW1dCbar_1.value<<std::endl;
-
-std::cout<<"\n\n... dW1dCbar_2 ..."<<std::endl; print(dW1dCbar_2);
-std::cout<<"\n\n... dW1dCbar_3 ..."<<std::endl; print(dW1dCbar_3);
-std::cout<<"\n\n... dW1dCbar ..."<<std::endl; print(dW1dCbar);
-
+    // Compute partial derivative os Cbar wrt strain
     auto dCbardF = make_tensor<3, 3, 3, 3>([&](auto i, auto j, auto m, auto n) {
         return pow(J, -1.0/3.0) * ( Fbar(m,j)*I(i,n) + Fbar(m,i)*I(j,n) - 2.0/3.0*Cbar(i,j)*FbarInv(n,m));
       });
 
     // Compute strain energy derivatives wrt strain (PK stress)
-    auto dW1dF = make_tensor<3, 3>([&](auto m, auto n) {
-        auto temp = 0.0 * dW1dCbar(0,0) * dCbardF(0,0,0,0);
+    auto dWLCEdF = make_tensor<3, 3>([&](auto m, auto n) {
+        auto temp = 0.0 * dWLCEdCbar(0,0) * dCbardF(0,0,0,0);
         for ( int i=0; i<3; i++)
           for ( int j=0; j<3; j++) {
-            temp = temp + dW1dCbar(i,j) * dCbardF(i,j,m,n); 
+            temp = temp + dWLCEdCbar(i,j) * dCbardF(i,j,m,n); 
           }
         return temp;
       });
-    auto dW2dF = bulk*log(J)*transpose(Finv) + 0.0*dW1dF ;
-    auto dWdF  = dW1dF + dW2dF;
+
+    // Compute incompressibility component
+    auto dWIncdF = bulk*log(J)*transpose(Finv) + 0.0*dWLCEdF ;
+
+    // Compute total dW/dF
+    auto dWdF  = dWLCEdF + dWIncdF;
 
     // Transform from first Piola-Kirchhoff (dWdF) to Cauchy stress
-    auto stress = 1.0 / J * dWdF* transpose(F);
-
-    // auto stress = dWdF;
-// std::cout<<"\n\n... dWdF ..."<<std::endl;
-// print(dWdF);
-// std::cout<<"\n\n... stress ..."<<std::endl;
-// print(stress);
-// std::cout<<std::endl;
-// // exit(0);
-    return stress;
+    return 1.0 / J * dWdF* transpose(F);
   }
 
   /// -------------------------------------------------------
@@ -528,10 +515,10 @@ std::cout<<"\n\n... dW1dCbar ..."<<std::endl; print(dW1dCbar);
 
     // Get order parameters
     auto   St = get<0>(inst_order_param_tuple);
-    double S0 = initial_order_parameter_;
-
-    const double mu   = young_modulus_ / 2.0 / (1.0 + poisson_ratio_);
-    const double bulk = 0.0 * mu;
+    const double S0 = initial_order_param_;
+    const double mu   = shear_mod_;
+    const double bulk = bulk_mod_;
+    const double omega = omega_param_;
 
     // kinematics
     auto I    = Identity<dim>();
@@ -541,22 +528,22 @@ std::cout<<"\n\n... dW1dCbar ..."<<std::endl; print(dW1dCbar);
     auto Cbar = dot(transpose(Fbar), Fbar);
 
     // Compute the strain_energy
-    auto strain_energy_1 = mu/2.0 * ( (1.0-S0)/(1.0-St) * tr(Cbar) + 0.0*inner(normal, dot(Cbar,normal)) );
-    auto strain_energy_2 = mu/2.0 * ( (3.0*S0)/(1.0+2.0*St) - beta_parameter_ ) * inner(normal, dot(Cbar,normal));
-    auto strain_energy_3 = -mu/2.0 * ((3.0*St)*(1.0-S0)/(1.0-St)/(1.0+2.0*St) - beta_parameter_) * 
+    auto W_1 = mu/2.0 * ( (1.0-S0)/(1.0-St) * tr(Cbar) + 0.0*inner(normal, dot(Cbar,normal)) );
+    auto W_2 = mu/2.0 * ( (3.0*S0)/(1.0+2.0*St) - omega ) * inner(normal, dot(Cbar,normal));
+    auto W_3 = -mu/2.0 * ((3.0*St)*(1.0-S0)/(1.0-St)/(1.0+2.0*St) - omega) * 
                     ( inner(normal, dot(dot(Cbar,Cbar), normal)) / inner(normal, dot(Cbar,normal)) );
-    auto strain_energy_4 = bulk/2.0*log(J)*log(J) + 0.0*strain_energy_2 ;
+    auto W_Inc = bulk/2.0*log(J)*log(J) + 0.0*W_2 ;
 
-    auto strain_energy = (strain_energy_1 + strain_energy_2 + strain_energy_3) + strain_energy_4;
+    auto W = W_1 + W_2 + W_3 + W_Inc;
 
-    return strain_energy;
+    return W;
   }
 
-  double density;                   ///<  mass density
-  double young_modulus_;            ///< Young's modulus in stress-free configuration
-  double poisson_ratio_;            ///< poisson's ratio
-  double initial_order_parameter_;  ///< initial value of order parameter
-  double beta_parameter_;           ///< Degree of coupling between elastic and nematic energies
+  double density;               ///<  mass density
+  double shear_mod_;            ///< Shear modulus in stress-free configuration
+  double initial_order_param_;  ///< initial value of order parameter
+  double omega_param_;          ///< Degree of coupling between elastic and nematic energies
+  double bulk_mod_;             ///< Bulk modulus in stress-free configuration
 };
 
 }  // namespace serac

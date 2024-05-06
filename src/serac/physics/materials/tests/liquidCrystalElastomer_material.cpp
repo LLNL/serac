@@ -71,11 +71,11 @@ TEST(LiquidCrystalElastomerMaterial, StrainEnergyAndStressAgree)
 {
   // LiquidCrystalElastomerZhang material{.E = 100.0, .nu = 0.25, .C = 1.0, .alpha = 1.0e-3, .theta_ref = 300.0, .k = 1.0};
   double density         = 1.0;
-  double young_modulus   = 9.34e5;
-  double possion_ratio   = 0.45;
-  double beta_param      = 5.75e5;
-  double max_order_param = 0.40;
-  LiquidCrystalElastomerZhang material(density, young_modulus, possion_ratio, max_order_param, beta_param);
+  double shear_mod       = 3.113e5; //  young_modulus_ / 2.0 / (1.0 + poisson_ratio_);
+  double ini_order_param = 0.40;
+  double omega_param     = 5.75e5;
+  double bulk_mod        = 100.0*shear_mod;
+  LiquidCrystalElastomerZhang material(density, shear_mod, ini_order_param, omega_param, bulk_mod);
 
   // clang-format off
   tensor<double, 3, 3>  displacement_grad{{{0.35490513, 0.60419905, 0.4275843},
@@ -98,27 +98,8 @@ TEST(LiquidCrystalElastomerMaterial, StrainEnergyAndStressAgree)
   auto PKStress = J * CauchyStress * transpose(Finv);
 
   auto error  = PKStress - get_gradient(energy_and_stress);
-
-std::cout<<"\n\n... CauchyStress ..."<<std::endl;
-print(CauchyStress);
-
-std::cout<<"\n\n... PKStress ..."<<std::endl;
-print(PKStress);
-
-std::cout<<"\n\n... grad of strain energy ..."<<std::endl;
-print(get_gradient(energy_and_stress));
-
-std::cout<<"\n\n"<<std::endl;
-
-std::cout<<"\n\n... testing basic operations ..."<<std::endl;
-// std::cout<<"\n\n... F = ..."<<std::endl;
-// print(F);
-// std::cout<<"\n\n... F*F = ..."<<std::endl;
-// print(dot(F,F));
-
+  
   EXPECT_NEAR(norm(error), 0.0, 1e-10*norm(PKStress));
-
-exit(0);
 }
 
 // TEST(LiquidCrystalElastomerMaterial, IsFrameIndifferent)
