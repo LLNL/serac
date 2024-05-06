@@ -21,7 +21,7 @@
 #include "serac/numerics/functional/dual.hpp"
 #include "serac/physics/materials/solid_material.hpp"
 
-#include <complex>
+// #include <complex>
 
 namespace serac {
 
@@ -439,42 +439,49 @@ struct LiquidCrystalElastomerZhang {
 
     // const double lambda = poisson_ratio_ * young_modulus_ / (1.0 + poisson_ratio_) / (1.0 - 2.0 * poisson_ratio_);
     const double mu     = young_modulus_ / 2.0 / (1.0 + poisson_ratio_);
-    const double bulk   = 100.0 * mu;
+    const double bulk   = 0.0 * mu;
 
     // kinematics
     auto I    = Identity<dim>();
     auto F    = displacement_grad + I;
 //////////////////////////
-S0=0.5;
-St=S0;
-auto mul_alt=2.0 + 0.0*mu;
-auto bulk_alt=0.0 + 0.0*bulk;
-auto beta_parameter_alt=0.1 + 0.0*beta_parameter_;
-using std::sqrt,std::real;
-auto temp2 = 0.0*F;
-F = temp2;
-double maxLambda1 = 0.1*0.45;     
-double iLambda = 1+maxLambda1;
-double A = 1.5*(1.0-1.0/(1.0+2.0*S0)) - beta_parameter_alt;
-// std::complex<double> iTauComplex = pow(pow(A,1.0/3.0) - 1.0/iLambda/iLambda * pow(A,-1.0/3.0),0.5);  //real(sqrt(A^(1/3) - 1/iLambda^2 * A^(-1/3)));
-// double iTau = iTauComplex.real();
-double iTau = 0;
-double iEta = 1.0/iLambda * pow(A,-1.0/6.0);
-// F = [iLambda iTau 0; 0 iEta 0; 0 0 1/(iLambda*iEta)];
-F(0,0)=iLambda;
-F(0,1)=iTau;
-F(1,1)=iEta;
-F(2,2)=1.0/(iLambda*iEta);
+// S0=0.5;
+// St=S0;
+// using std::sqrt,std::real;
+// auto temp2 = 0.0*F;
+// F = temp2;
+// double maxLambda1 = 0.1*0.45;     
+// double iLambda = 1+maxLambda1;
+// double A = 1.5*(1.0-1.0/(1.0+2.0*S0)) - beta_parameter;
+// // std::complex<double> iTauComplex = pow(pow(A,1.0/3.0) - 1.0/iLambda/iLambda * pow(A,-1.0/3.0),0.5);  //real(sqrt(A^(1/3) - 1/iLambda^2 * A^(-1/3)));
+// // double iTau = iTauComplex.real();
+// double iTau = 0;
+// double iEta = 1.0/iLambda * pow(A,-1.0/6.0);
+// // F = [iLambda iTau 0; 0 iEta 0; 0 0 1/(iLambda*iEta)];
+// F(0,0)=iLambda;
+// F(0,1)=iTau;
+// F(1,1)=iEta;
+// F(2,2)=1.0/(iLambda*iEta);
+// std::cout<<"\n\n... iLambda = "<<iLambda<<std::endl;
+// std::cout<<"\n\n... A = "<<A<<std::endl;
+// std::cout<<"\n\n... iTau = "<<iTau<<std::endl;
+// std::cout<<"\n\n... iEta = "<<iEta<<std::endl;
+// std::cout<<"\n\n... normal ..."<<std::endl;
+// print(normal);
 
 //////////////////////////
     auto Finv = inv(F);
     auto J    = det(F);
-    auto Fbar = F; // pow(J, -1.0/3.0) * F;
+//////////////////////////
+    // auto Fbar = F; // pow(J, -1.0/3.0) * F;
+    auto Fbar = pow(J, -1.0/3.0) * F;
+    auto FbarInv = inv(Fbar);
+//////////////////////////
     auto Cbar = dot(transpose(Fbar), Fbar);
 
-    auto dW1dCbar_1 = mul_alt/2.0*(1.0-S0)/(1.0-St) * I;
-    auto dW1dCbar_2 = mul_alt/2.0*((3.0*S0)/(1.0+2.0*St) - beta_parameter_alt) * outer(normal, normal);
-    auto dW1dCbar_3 = -mul_alt/2.0*((3.0*S0)*(1.0-S0)/(1.0-St)/(1.0+2.0*St) - beta_parameter_alt) / dot(normal, dot(Cbar,normal)) * 
+    auto dW1dCbar_1 = mu/2.0*(1.0-S0)/(1.0-St) * I;
+    auto dW1dCbar_2 = mu/2.0*((3.0*S0)/(1.0+2.0*St) - beta_parameter_) * outer(normal, normal);
+    auto dW1dCbar_3 = -mu/2.0*((3.0*St)*(1.0-S0)/(1.0-St)/(1.0+2.0*St) - beta_parameter_) / dot(normal, dot(Cbar,normal)) * 
                     ( outer(normal, dot(Cbar,normal)) + 
                       outer(dot(transpose(Cbar),normal), normal) - 
                       inner(normal, dot(dot(Cbar,Cbar), normal)) * outer(normal, normal)/dot(normal, dot(Cbar,normal)) 
@@ -482,13 +489,6 @@ F(2,2)=1.0/(iLambda*iEta);
 
     auto dW1dCbar = dW1dCbar_1 + dW1dCbar_2 + dW1dCbar_3;
 
-
-std::cout<<"\n\n... iLambda = "<<iLambda<<std::endl;
-std::cout<<"\n\n... A = "<<A<<std::endl;
-std::cout<<"\n\n... iTau = "<<iTau<<std::endl;
-std::cout<<"\n\n... iEta = "<<iEta<<std::endl;
-std::cout<<"\n\n... normal ..."<<std::endl;
-print(normal);
 std::cout<<"\n\n... F ..."<<std::endl;
 print(F);
 std::cout<<"\n\n... Fbar ..."<<std::endl;
@@ -509,10 +509,20 @@ print(dW1dCbar);
           for ( int j=0; j<3; j++) {
             temp = temp + (F(i,s)*I(r,j) + F(i,r)*I(s,j)) * (-1.0/3.0*Finv(n,m)*F(i,j) + I(j,n)*I(i,m));
           }
-        return pow(J, -1.0/3.0) * temp;
+        return pow(J, -2.0/3.0) * temp;
       });
+      
 std::cout<<"\n\n... dCbardF ..."<<std::endl;
 print(dCbardF);
+
+    auto dCbardF_alt = make_tensor<3, 3, 3, 3>([&](auto i, auto j, auto m, auto n) {
+        return pow(J, -1.0/3.0) * ( Fbar(m,j)*I(i,n) + Fbar(m,i)*I(j,n) - 2.0/3.0*Cbar(i,j)*FbarInv(n,m));
+      });
+      
+std::cout<<"\n\n... dCbardF_alt ..."<<std::endl;
+print(dCbardF_alt);
+exit(0);
+
     auto dCbardFbar = make_tensor<3, 3, 3, 3>([&](auto r, auto s, auto m, auto n) {
       auto temp = 0.0 * F(0,0);
         for ( int i=0; i<3; i++){
@@ -533,15 +543,16 @@ print(dCbardFbar);
         for ( int i=0; i<3; i++)
           for ( int j=0; j<3; j++) {
             // temp = temp + dW1dCbar(i,j) * dFbardF(i,j,m,n) + 0.0*dW1dCbar(i,j) * dCbardF(i,j,m,n); 
-            temp = temp + 0.0 * dW1dCbar(i,j) * dFbardF(i,j,m,n) + 1.0*dW1dCbar(i,j) * dCbardFbar(i,j,m,n); 
+            // temp = temp + 0.0 * dW1dCbar(i,j) * dFbardF(i,j,m,n) + 1.0*dW1dCbar(i,j) * dCbardFbar(i,j,m,n); 
+            temp = temp + 0.0 * dW1dCbar(i,j) * dFbardF(i,j,m,n) + 1.0*dW1dCbar(i,j) * dCbardF(i,j,m,n); 
           }
         return temp;
       });
 
-    // auto dW2dF = bulk_alt*log(J)*transpose(Finv) + 0.0*dW1dF ;
-    // auto dWdF  = mul_alt/2.0*(transpose(F) + F) + 0.0 *dW1dF + 0.0*dW2dF;
+    // auto dW2dF = bulk*log(J)*transpose(Finv) + 0.0*dW1dF ;
+    // auto dWdF  = mu/2.0*(transpose(F) + F) + 0.0 *dW1dF + 0.0*dW2dF;
 
-    auto dW2dF = 0.0*bulk_alt*log(J)*transpose(Finv) + 0.0*dW1dF ;
+    auto dW2dF = 0.0*bulk*log(J)*transpose(Finv) + 0.0*dW1dF ;
     auto dWdF  = dW1dF + 0.0*dW2dF;
 
     // transform from first Piola-Kirchhoff (dWdF) to Cauchy stress
@@ -552,7 +563,7 @@ print(dWdF);
 std::cout<<"\n\n... stress ..."<<std::endl;
 print(stress);
 std::cout<<std::endl;
-exit(0);
+// exit(0);
     return stress;
   }
 
@@ -601,11 +612,11 @@ exit(0);
 
     // Compute the strain_energy
     auto strain_energy_1 = tr(dot(F,F)) + 0.0 *(1.0-S0)/(1.0-St) * tr(Cbar) + 0.0*inner(normal, dot(Cbar,normal));
-    auto strain_energy_2 = 0.0*((3*S0)/(1.0+2.0*St) - beta_parameter_) * inner(normal, dot(Cbar,normal));
-    auto strain_energy_3 = 0.0*((3*S0)*(1-S0)/(1.0-St)/(1.0+2.0*St) - beta_parameter_) / dot(normal, dot(Cbar,normal)) * 
+    auto strain_energy_2 = ((3*S0)/(1.0+2.0*St) - beta_parameter_) * inner(normal, dot(Cbar,normal));
+    auto strain_energy_3 = ((3*St)*(1-S0)/(1.0-St)/(1.0+2.0*St) - beta_parameter_) / dot(normal, dot(Cbar,normal)) * 
                     (inner(normal, dot(dot(Cbar,Cbar), normal))/inner(normal, dot(Cbar,normal)) 
                     );
-    auto strain_energy_4 = 0.0*bulk/2.0*log(J)*log(J) + 0.0*strain_energy_2 ;
+    auto strain_energy_4 = bulk/2.0*log(J)*log(J) + 0.0*strain_energy_2 ;
 
     auto strain_energy = mu/2.0*(strain_energy_1 + strain_energy_2 + strain_energy_3) + strain_energy_4;
 
