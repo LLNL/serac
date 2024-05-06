@@ -503,40 +503,37 @@ std::cout<<"\n\n... dW1dCbar ..."<<std::endl;
 print(dW1dCbar);
 // exit(0);
 
-    auto dCbardF = make_tensor<3, 3, 3, 3>([&](auto r, auto s, auto m, auto n) {
-        auto temp = 0.0 * F(0,0);
-        for ( int i=0; i<3; i++)
-          for ( int j=0; j<3; j++) {
-            temp = temp + (F(i,s)*I(r,j) + F(i,r)*I(s,j)) * (-1.0/3.0*Finv(n,m)*F(i,j) + I(j,n)*I(i,m));
-          }
-        return pow(J, -2.0/3.0) * temp;
+    auto dCbardF = make_tensor<3, 3, 3, 3>([&](auto i, auto j, auto m, auto n) {
+        return pow(J, -1.0/3.0) * ( Fbar(m,j)*I(i,n) + Fbar(m,i)*I(j,n) - 2.0/3.0*Cbar(i,j)*FbarInv(n,m));
       });
       
 std::cout<<"\n\n... dCbardF ..."<<std::endl;
 print(dCbardF);
 
-    auto dCbardF_alt = make_tensor<3, 3, 3, 3>([&](auto i, auto j, auto m, auto n) {
-        return pow(J, -1.0/3.0) * ( Fbar(m,j)*I(i,n) + Fbar(m,i)*I(j,n) - 2.0/3.0*Cbar(i,j)*FbarInv(n,m));
+    auto dCbardFbar = make_tensor<3, 3, 3, 3>([&](auto i, auto j, auto m, auto n) {
+        return pow(J, -1.0/3.0) * (F(m,j)*I(i,n) + F(m,i)*I(j,n));
       });
-      
-std::cout<<"\n\n... dCbardF_alt ..."<<std::endl;
-print(dCbardF_alt);
-exit(0);
+// std::cout<<"\n\n... dCbardFbar ..."<<std::endl;
+// print(dCbardFbar);
 
-    auto dCbardFbar = make_tensor<3, 3, 3, 3>([&](auto r, auto s, auto m, auto n) {
+    auto dFbardF = make_tensor<3, 3, 3, 3>([&](auto i, auto j, auto m, auto n) {
+        return pow(J, -1.0/3.0) * (-1.0/3.0*Finv(n,m)*F(i,j) + I(j,n)*I(i,m));
+      });
+// std::cout<<"\n\n... dCbardFbar ..."<<std::endl;
+// print(dCbardFbar);
+
+    auto dCbardF_check = make_tensor<3, 3, 3, 3>([&](auto i, auto j, auto m, auto n) {
       auto temp = 0.0 * F(0,0);
-        for ( int i=0; i<3; i++){
-          for ( int j=0; j<3; j++) {
-            temp = temp + (F(i,s)*I(r,j) + F(i,r)*I(s,j)) * (-1.0/3.0*Finv(n,m)*F(i,j) + I(j,n)*I(i,m));
+        for ( int r=0; r<3; r++){
+          for ( int s=0; s<3; s++) {
+            temp = temp + dCbardFbar(i,j,r,s) * dFbardF(r,s,m,n);
           }
         }
-        return pow(J, -1.0/3.0) * temp;
+        return temp;
       });
-std::cout<<"\n\n... dCbardFbar ..."<<std::endl;
-print(dCbardFbar);
-    auto dFbardF = make_tensor<3, 3, 3, 3>([&](auto r, auto s, auto i, auto j) {
-        return pow(J, -1.0/3.0) * (-1.0/3.0*Finv(s,r)*F(i,j) + I(j,s)*I(i,r));
-      });
+std::cout<<"\n\n... dCbardF_check ..."<<std::endl;
+print(dCbardF_check);
+exit(0);
 
     auto dW1dF = make_tensor<3, 3>([&](auto m, auto n) {
         auto temp = 0.0 * dW1dCbar(0,0) * dCbardF(0,0,0,0);
