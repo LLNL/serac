@@ -22,7 +22,7 @@
 
 using namespace serac;
 
-void functional_thermal_test_nonlinear_radiation()
+void functional_thermal_test_nonlinear()
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -33,7 +33,7 @@ void functional_thermal_test_nonlinear_radiation()
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "heat_transfer_nonlinear_radiation");
+  serac::StateManager::initialize(datastore, "heat_transfer_nonlinear");
 
   // Construct the appropriate dimension mesh and give it to the data store
   std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
@@ -95,7 +95,7 @@ void functional_thermal_test_nonlinear_radiation()
   }
 }
 
-TEST(HeatTransfer, robin_condition) { functional_thermal_test_nonlinear_radiation(); }
+TEST(HeatTransfer, robin_condition) { functional_thermal_test_nonlinear(); }
 
 int main(int argc, char* argv[])
 {
