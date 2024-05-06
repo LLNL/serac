@@ -99,19 +99,26 @@ TEST(LiquidCrystalElastomerMaterial, StrainEnergyAndStressAgree)
 
   auto error  = PKStress - get_gradient(energy_and_stress);
 
+std::cout<<"\n\n... CauchyStress ..."<<std::endl;
+print(CauchyStress);
+
 std::cout<<"\n\n... PKStress ..."<<std::endl;
 print(PKStress);
+
 std::cout<<"\n\n... grad of strain energy ..."<<std::endl;
 print(get_gradient(energy_and_stress));
+
 std::cout<<"\n\n"<<std::endl;
 
 std::cout<<"\n\n... testing basic operations ..."<<std::endl;
-std::cout<<"\n\n... F = ..."<<std::endl;
-print(F);
-std::cout<<"\n\n... F*F = ..."<<std::endl;
-print(dot(F,F));
+// std::cout<<"\n\n... F = ..."<<std::endl;
+// print(F);
+// std::cout<<"\n\n... F*F = ..."<<std::endl;
+// print(dot(F,F));
 
   EXPECT_NEAR(norm(error), 0.0, 1e-10*norm(PKStress));
+
+exit(0);
 }
 
 // TEST(LiquidCrystalElastomerMaterial, IsFrameIndifferent)

@@ -437,48 +437,19 @@ struct LiquidCrystalElastomerZhang {
     auto   St = get<0>(inst_order_param_tuple);
     double S0 = initial_order_parameter_;
 
-    // const double lambda = poisson_ratio_ * young_modulus_ / (1.0 + poisson_ratio_) / (1.0 - 2.0 * poisson_ratio_);
     const double mu     = young_modulus_ / 2.0 / (1.0 + poisson_ratio_);
     const double bulk   = 0.0 * mu;
 
-    // kinematics
+    // Kinematics
     auto I    = Identity<dim>();
     auto F    = displacement_grad + I;
-//////////////////////////
-// S0=0.5;
-// St=S0;
-// using std::sqrt,std::real;
-// auto temp2 = 0.0*F;
-// F = temp2;
-// double maxLambda1 = 0.1*0.45;     
-// double iLambda = 1+maxLambda1;
-// double A = 1.5*(1.0-1.0/(1.0+2.0*S0)) - beta_parameter;
-// // std::complex<double> iTauComplex = pow(pow(A,1.0/3.0) - 1.0/iLambda/iLambda * pow(A,-1.0/3.0),0.5);  //real(sqrt(A^(1/3) - 1/iLambda^2 * A^(-1/3)));
-// // double iTau = iTauComplex.real();
-// double iTau = 0;
-// double iEta = 1.0/iLambda * pow(A,-1.0/6.0);
-// // F = [iLambda iTau 0; 0 iEta 0; 0 0 1/(iLambda*iEta)];
-// F(0,0)=iLambda;
-// F(0,1)=iTau;
-// F(1,1)=iEta;
-// F(2,2)=1.0/(iLambda*iEta);
-// std::cout<<"\n\n... iLambda = "<<iLambda<<std::endl;
-// std::cout<<"\n\n... A = "<<A<<std::endl;
-// std::cout<<"\n\n... iTau = "<<iTau<<std::endl;
-// std::cout<<"\n\n... iEta = "<<iEta<<std::endl;
-// std::cout<<"\n\n... normal ..."<<std::endl;
-// print(normal);
-
-//////////////////////////
     auto Finv = inv(F);
     auto J    = det(F);
-//////////////////////////
-    // auto Fbar = F; // pow(J, -1.0/3.0) * F;
     auto Fbar = pow(J, -1.0/3.0) * F;
     auto FbarInv = inv(Fbar);
-//////////////////////////
     auto Cbar = dot(transpose(Fbar), Fbar);
 
+  // Compute partial derivatives of strain energy wrt Cbar
     auto dW1dCbar_1 = mu/2.0*(1.0-S0)/(1.0-St) * I;
     auto dW1dCbar_2 = mu/2.0*((3.0*S0)/(1.0+2.0*St) - beta_parameter_) * outer(normal, normal);
     auto dW1dCbar_3 = -mu/2.0*((3.0*St)*(1.0-S0)/(1.0-St)/(1.0+2.0*St) - beta_parameter_) / dot(normal, dot(Cbar,normal)) * 
@@ -489,78 +460,40 @@ struct LiquidCrystalElastomerZhang {
 
     auto dW1dCbar = dW1dCbar_1 + dW1dCbar_2 + dW1dCbar_3;
 
-std::cout<<"\n\n... F ..."<<std::endl;
-print(F);
-std::cout<<"\n\n... Fbar ..."<<std::endl;
-print(Fbar);
+std::cout<<"\n\n... F ..."<<std::endl; print(F);
+std::cout<<"\n\n... Fbar ..."<<std::endl; print(Fbar);
 std::cout<<"\n\n... dW1dCbar_1 value ...\n"<<dW1dCbar_1.value<<std::endl;
-// print(dW1dCbar_1.value);
-std::cout<<"\n\n... dW1dCbar_2 ..."<<std::endl;
-print(dW1dCbar_2);
-std::cout<<"\n\n... dW1dCbar_3 ..."<<std::endl;
-print(dW1dCbar_3);
-std::cout<<"\n\n... dW1dCbar ..."<<std::endl;
-print(dW1dCbar);
-// exit(0);
+
+std::cout<<"\n\n... dW1dCbar_2 ..."<<std::endl; print(dW1dCbar_2);
+std::cout<<"\n\n... dW1dCbar_3 ..."<<std::endl; print(dW1dCbar_3);
+std::cout<<"\n\n... dW1dCbar ..."<<std::endl; print(dW1dCbar);
 
     auto dCbardF = make_tensor<3, 3, 3, 3>([&](auto i, auto j, auto m, auto n) {
         return pow(J, -1.0/3.0) * ( Fbar(m,j)*I(i,n) + Fbar(m,i)*I(j,n) - 2.0/3.0*Cbar(i,j)*FbarInv(n,m));
       });
-      
-std::cout<<"\n\n... dCbardF ..."<<std::endl;
-print(dCbardF);
 
-    auto dCbardFbar = make_tensor<3, 3, 3, 3>([&](auto i, auto j, auto m, auto n) {
-        return pow(J, -1.0/3.0) * (F(m,j)*I(i,n) + F(m,i)*I(j,n));
-      });
-// std::cout<<"\n\n... dCbardFbar ..."<<std::endl;
-// print(dCbardFbar);
-
-    auto dFbardF = make_tensor<3, 3, 3, 3>([&](auto i, auto j, auto m, auto n) {
-        return pow(J, -1.0/3.0) * (-1.0/3.0*Finv(n,m)*F(i,j) + I(j,n)*I(i,m));
-      });
-// std::cout<<"\n\n... dCbardFbar ..."<<std::endl;
-// print(dCbardFbar);
-
-    auto dCbardF_check = make_tensor<3, 3, 3, 3>([&](auto i, auto j, auto m, auto n) {
-      auto temp = 0.0 * F(0,0);
-        for ( int r=0; r<3; r++){
-          for ( int s=0; s<3; s++) {
-            temp = temp + dCbardFbar(i,j,r,s) * dFbardF(r,s,m,n);
-          }
-        }
-        return temp;
-      });
-std::cout<<"\n\n... dCbardF_check ..."<<std::endl;
-print(dCbardF_check);
-exit(0);
-
+    // Compute strain energy derivatives wrt strain (PK stress)
     auto dW1dF = make_tensor<3, 3>([&](auto m, auto n) {
         auto temp = 0.0 * dW1dCbar(0,0) * dCbardF(0,0,0,0);
         for ( int i=0; i<3; i++)
           for ( int j=0; j<3; j++) {
-            // temp = temp + dW1dCbar(i,j) * dFbardF(i,j,m,n) + 0.0*dW1dCbar(i,j) * dCbardF(i,j,m,n); 
-            // temp = temp + 0.0 * dW1dCbar(i,j) * dFbardF(i,j,m,n) + 1.0*dW1dCbar(i,j) * dCbardFbar(i,j,m,n); 
-            temp = temp + 0.0 * dW1dCbar(i,j) * dFbardF(i,j,m,n) + 1.0*dW1dCbar(i,j) * dCbardF(i,j,m,n); 
+            temp = temp + dW1dCbar(i,j) * dCbardF(i,j,m,n); 
           }
         return temp;
       });
+    auto dW2dF = bulk*log(J)*transpose(Finv) + 0.0*dW1dF ;
+    auto dWdF  = dW1dF + dW2dF;
 
-    // auto dW2dF = bulk*log(J)*transpose(Finv) + 0.0*dW1dF ;
-    // auto dWdF  = mu/2.0*(transpose(F) + F) + 0.0 *dW1dF + 0.0*dW2dF;
-
-    auto dW2dF = 0.0*bulk*log(J)*transpose(Finv) + 0.0*dW1dF ;
-    auto dWdF  = dW1dF + 0.0*dW2dF;
-
-    // transform from first Piola-Kirchhoff (dWdF) to Cauchy stress
+    // Transform from first Piola-Kirchhoff (dWdF) to Cauchy stress
     auto stress = 1.0 / J * dWdF* transpose(F);
+
     // auto stress = dWdF;
-std::cout<<"\n\n... dWdF ..."<<std::endl;
-print(dWdF);
-std::cout<<"\n\n... stress ..."<<std::endl;
-print(stress);
-std::cout<<std::endl;
-// exit(0);
+// std::cout<<"\n\n... dWdF ..."<<std::endl;
+// print(dWdF);
+// std::cout<<"\n\n... stress ..."<<std::endl;
+// print(stress);
+// std::cout<<std::endl;
+// // exit(0);
     return stress;
   }
 
@@ -597,8 +530,8 @@ std::cout<<std::endl;
     auto   St = get<0>(inst_order_param_tuple);
     double S0 = initial_order_parameter_;
 
-    const double mu     = young_modulus_ / 2.0 / (1.0 + poisson_ratio_);
-    const double bulk   = 100.0 * mu;
+    const double mu   = young_modulus_ / 2.0 / (1.0 + poisson_ratio_);
+    const double bulk = 0.0 * mu;
 
     // kinematics
     auto I    = Identity<dim>();
@@ -608,14 +541,13 @@ std::cout<<std::endl;
     auto Cbar = dot(transpose(Fbar), Fbar);
 
     // Compute the strain_energy
-    auto strain_energy_1 = tr(dot(F,F)) + 0.0 *(1.0-S0)/(1.0-St) * tr(Cbar) + 0.0*inner(normal, dot(Cbar,normal));
-    auto strain_energy_2 = ((3*S0)/(1.0+2.0*St) - beta_parameter_) * inner(normal, dot(Cbar,normal));
-    auto strain_energy_3 = ((3*St)*(1-S0)/(1.0-St)/(1.0+2.0*St) - beta_parameter_) / dot(normal, dot(Cbar,normal)) * 
-                    (inner(normal, dot(dot(Cbar,Cbar), normal))/inner(normal, dot(Cbar,normal)) 
-                    );
+    auto strain_energy_1 = mu/2.0 * ( (1.0-S0)/(1.0-St) * tr(Cbar) + 0.0*inner(normal, dot(Cbar,normal)) );
+    auto strain_energy_2 = mu/2.0 * ( (3.0*S0)/(1.0+2.0*St) - beta_parameter_ ) * inner(normal, dot(Cbar,normal));
+    auto strain_energy_3 = -mu/2.0 * ((3.0*St)*(1.0-S0)/(1.0-St)/(1.0+2.0*St) - beta_parameter_) * 
+                    ( inner(normal, dot(dot(Cbar,Cbar), normal)) / inner(normal, dot(Cbar,normal)) );
     auto strain_energy_4 = bulk/2.0*log(J)*log(J) + 0.0*strain_energy_2 ;
 
-    auto strain_energy = mu/2.0*(strain_energy_1 + strain_energy_2 + strain_energy_3) + strain_energy_4;
+    auto strain_energy = (strain_energy_1 + strain_energy_2 + strain_energy_3) + strain_energy_4;
 
     return strain_energy;
   }
