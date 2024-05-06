@@ -1,0 +1,105 @@
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)
+
+#include "serac/physics/solid_mechanics.hpp"
+
+#include <functional>
+#include <fstream>
+#include <set>
+#include <string>
+
+#include "axom/slic/core/SimpleLogger.hpp"
+#include <gtest/gtest.h>
+#include "mfem.hpp"
+
+#include "serac/mesh/mesh_utils.hpp"
+#include "serac/physics/state/state_manager.hpp"
+#include "serac/physics/materials/solid_material.hpp"
+#include "serac/serac_config.hpp"
+
+using namespace serac;
+
+void functional_solid_test_nonlinear_radiation()
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  // initialize serac
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore, "logicStore");
+
+  static constexpr int ORDER{1};
+  static constexpr int DIM{3};
+
+  int Nx = 20;
+  int Ny = 30;
+  int Nz = 4;
+
+  double Lx = 20.0; // in
+  double Ly = 10.0; // in
+  double Lz = 0.3; // in
+
+  double density = 1.0;
+  double bulkMod = 1.0;
+  double shearMod = 1.0;
+  double loadMagnitude = 3.0e-3; //1e-3; //1e-4; //2e-4;
+
+  std::string meshTag = "mesh";
+  mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(Nx, Ny, Nz, mfem::Element::HEXAHEDRON, Lx, Ly, Lz);
+  auto pmesh = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, mesh);
+  mfem::ParMesh *meshPtr = &serac::StateManager::setMesh(std::move(pmesh), meshTag);
+
+  // solid mechanics
+  using seracSolidType = serac::SolidMechanics<ORDER, DIM, serac::Parameters<>>;
+
+  // _solver_params_start
+  serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::NewtonLineSearch,
+                                                  // serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
+                                                  .relative_tol   = 1.0e-8,
+                                                  .absolute_tol   = 1.0e-12,
+                                                  .max_iterations = 400,
+                                                  .print_level    = 1};
+  
+  auto seracSolid = std::make_unique<seracSolidType>(nonlinear_options,
+                                                     serac::solid_mechanics::direct_linear_options,
+                                                     serac::solid_mechanics::default_quasistatic_options,
+                                                     serac::GeometricNonlinearities::On, "serac_solid", meshTag, std::vector<std::string>{});
+
+  // set linear elastic material
+  serac::solid_mechanics::NeoHookean material{density, bulkMod, shearMod};
+  seracSolid->setMaterial(serac::DependsOn<>{}, material);
+
+  // fix displacement on side surface
+  seracSolid->setDisplacementBCs({2, 3, 4, 5}, [](const mfem::Vector&, mfem::Vector&u){u=0.0;});
+
+  serac::Domain topSurface = serac::Domain::ofBoundaryElements(*meshPtr, serac::by_attr<DIM>(6));
+  seracSolid->setTraction([&](auto, auto n, auto) {return -loadMagnitude*n;}, topSurface);
+
+  seracSolid->completeSetup();
+  seracSolid->advanceTimestep(1.0);
+
+  serac::FiniteElementState const &displacement = seracSolid->state("displacement");
+  mfem::ParGridFunction uGF(const_cast<mfem::ParFiniteElementSpace*>(&displacement.space()));
+  displacement.fillGridFunction(uGF);
+
+  //mfem::VisItDataCollection visit_dc("nonlinearPlate", meshPtr);
+  //visit_dc.RegisterField("u", &uGF);
+  //visit_dc.Save();
+}
+
+TEST(SolidMechanics, nonlinear_solve) { functional_solid_test_nonlinear_radiation(); }
+
+int main(int argc, char* argv[])
+{
+  ::testing::InitGoogleTest(&argc, argv);
+  MPI_Init(&argc, &argv);
+
+  axom::slic::SimpleLogger logger;
+
+  int result = RUN_ALL_TESTS();
+  MPI_Finalize();
+
+  return result;
+}
