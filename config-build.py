@@ -100,6 +100,10 @@ def parse_arguments():
                         action='store_true',
                         help="print the machine name for this system and exit")
 
+    parser.add_argument("--ninja",
+                        action='store_true',
+                        help="use ninja generator to build serac instead of make")
+
 
     
     args, unknown_args = parser.parse_known_args()
@@ -233,6 +237,9 @@ def create_cmake_command_line(args, unknown_args, buildpath, installpath, hostco
 
     if args.eclipse:
         cmakeline += ' -G "Eclipse CDT4 - Unix Makefiles"'
+
+    if args.ninja:
+        cmakeline += ' -G Ninja'
 
     if unknown_args:
         cmakeline += " " + " ".join( unknown_args )
