@@ -10,12 +10,8 @@ class Mfem(BuiltinMfem):
 
     # Note: Make sure this sha coincides with the git submodule
     # Note: We add a number to the end of the real version number to indicate that we have
-    #  moved forward past the release. Increment the last number when updating the commit sha.
-
-    # BIG NOTE: We have strayed from master due to needing a change in a one-off-branch.
-    # This commit resides in serac/master_04_08_2024_plus_mesh-partitioner-dev
-    # which is master as of 04/08/2024 merged with mesh-partitioner-dev
-    version("4.6.2.4", commit="fc4057955e017d41db78ebd19b0c6af71f947eb0")
+    # moved forward past the release. Increment the last number when updating the commit sha.
+    version("4.7.0.0", commit="dc9128ef596e84daf1138aa3046b826bba9d259f")
 
     variant('asan', default=False, description='Add Address Sanitizer flags')
 
