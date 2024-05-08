@@ -44,7 +44,7 @@ void functional_solid_test_nonlinear_buckle()
   double density = 1.0;
   double bulkMod = 1.0;
   double shearMod = 1.0;
-  double loadMagnitude = 3.0e-3; //1e-3; //1e-4; //2e-4;
+  double loadMagnitude = 1e-6; //3.0e-3; //1e-3; //1e-4; //2e-4;
 
   std::string meshTag = "mesh";
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(Nx, Ny, Nz, mfem::Element::HEXAHEDRON, Lx, Ly, Lz);
@@ -60,7 +60,7 @@ void functional_solid_test_nonlinear_buckle()
                                                   // serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
                                                   .relative_tol   = 1.0e-8,
                                                   .absolute_tol   = 1.0e-12,
-                                                  .max_iterations = 400,
+                                                  .max_iterations = 20,
                                                   .print_level    = 1};
   
   serac::LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::CG,
@@ -85,7 +85,11 @@ void functional_solid_test_nonlinear_buckle()
   seracSolid->setDisplacementBCs({2, 3, 4, 5}, [](const mfem::Vector&, mfem::Vector& u){ u=0.0; });
 
   serac::Domain topSurface = serac::Domain::ofBoundaryElements(*meshPtr, serac::by_attr<DIM>(6));
-  seracSolid->setTraction([&](auto, auto n, auto) {return -loadMagnitude*n;}, topSurface);
+  seracSolid->setTraction([&](auto, auto n, auto) {
+    auto v = n;
+    v[0] = 0; v[1] = 0; v[2] = 1.0;
+    return -loadMagnitude*v;
+  }, topSurface);
 
   seracSolid->completeSetup();
   seracSolid->advanceTimestep(1.0);
