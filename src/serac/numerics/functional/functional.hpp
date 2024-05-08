@@ -80,7 +80,7 @@ inline void check_for_missing_nodal_gridfunc(const mfem::Mesh& mesh)
       following member functions are invoked before use
 
       > mfem::Mesh::EnsureNodes();
-      > mfem::Mesh::ExchangeFaceNbrData();
+      > mfem::ParMesh::ExchangeFaceNbrData();
 
       or else the mfem::Mesh won't be fully initialized
       )errmsg";);
