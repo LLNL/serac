@@ -26,8 +26,8 @@ double t = 0.0;
 
 int num_procs, my_rank;
 
-TEST(BoundaryIntegralQOI, AttrBug) {
-
+TEST(BoundaryIntegralQOI, AttrBug)
+{
   constexpr int ORDER = 1;
 
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian2D(10, 10, mfem::Element::QUADRILATERAL, false, 1.0, 1.0);
@@ -37,28 +37,28 @@ TEST(BoundaryIntegralQOI, AttrBug) {
   pmesh->EnsureNodes();
   pmesh->ExchangeFaceNbrData();
 
-  using shapeFES = serac::H1<ORDER, 2>;
+  using shapeFES              = serac::H1<ORDER, 2>;
   auto [shape_fes, shape_fec] = serac::generateParFiniteElementSpace<shapeFES>(pmesh.get());
 
   serac::ShapeAwareFunctional<shapeFES, double()> totalSurfArea(shape_fes.get(), {});
-  totalSurfArea.AddBoundaryIntegral(serac::Dimension<2-1>{}, serac::DependsOn<>{}, [](auto, auto) {return 1.0;}, *pmesh);
+  totalSurfArea.AddBoundaryIntegral(
+      serac::Dimension<2 - 1>{}, serac::DependsOn<>{}, [](auto, auto) { return 1.0; }, *pmesh);
   serac::FiniteElementState shape(*shape_fes);
-  double totalSurfaceArea = totalSurfArea(0.0, shape);
+  double                    totalSurfaceArea = totalSurfArea(0.0, shape);
 
   EXPECT_NEAR(totalSurfaceArea, 4.0, 1.0e-14);
-  
+
   serac::Domain attr1 = serac::Domain::ofBoundaryElements(*pmesh, serac::by_attr<2>(1));
   serac::ShapeAwareFunctional<shapeFES, double()> attr1SurfArea(shape_fes.get(), {});
-  attr1SurfArea.AddBoundaryIntegral(serac::Dimension<2-1>{}, serac::DependsOn<>{}, [](auto, auto) {return 1.0;}, attr1);
+  attr1SurfArea.AddBoundaryIntegral(
+      serac::Dimension<2 - 1>{}, serac::DependsOn<>{}, [](auto, auto) { return 1.0; }, attr1);
   double attr1SurfaceArea = attr1SurfArea(0.0, shape);
-  
-  EXPECT_NEAR(attr1SurfaceArea, 1.0, 1.0e-14);
 
+  EXPECT_NEAR(attr1SurfaceArea, 1.0, 1.0e-14);
 }
 
 int main(int argc, char* argv[])
 {
-
   ::testing::InitGoogleTest(&argc, argv);
 
   MPI_Init(&argc, &argv);
@@ -72,5 +72,4 @@ int main(int argc, char* argv[])
   MPI_Finalize();
 
   return result;
-
 }
