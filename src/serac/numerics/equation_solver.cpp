@@ -384,7 +384,6 @@ public:
       double cn = Dot(cp, newtonP);
       project_to_boundary_between_with_coefs(s, newtonP, trSize, cc, cn, nn);
       std::cout << "set norm, trsize = " << Norm(s) << " " << trSize << std::endl;
-      exit(1);
     } else {
       s = newtonP;
     }
@@ -417,7 +416,6 @@ public:
     precond(rCurrent, Pr);
     d = 0.0;
     add(d, -1.0, Pr, d); // d = -Pr
-    std::cout << "norms = " << Norm(d) << " " << Norm(r) << std::endl;
     
     z = 0.0;
     double zz = 0.;
@@ -435,13 +433,13 @@ public:
       double zzNp1 = Dot(zPred, zPred); // update_step_length_squared(alpha, zz, zd, dd); MRT, perf optimization
 
       if (curvature <= 0) {
-        mfem::out << "negative curvature found.\n";
+        // mfem::out << "negative curvature found.\n";
         project_to_boundary_with_coefs(z, d, trSize,
                                        zz, zd, dd);
         results.interiorStatus = TrustRegionResults::Status::NegativeCurvature;
         return;
       } else if (zzNp1 > (trSize*trSize)) {
-        mfem::out << "step outside trust region.\n";
+        // mfem::out << "step outside trust region.\n";
         project_to_boundary_with_coefs(z, d, trSize,
                                        zz, zd, dd);
         results.interiorStatus = TrustRegionResults::Status::OnBoundary;
@@ -450,8 +448,6 @@ public:
 
       z = zPred;
 
-
-      Hd = 0.0;
       hess_vec_func(d, Hd);
       add(rCurrent, alpha, Hd, rCurrent);
       
@@ -459,12 +455,10 @@ public:
       double rPrNp1 = Dot(rCurrent, Pr);
 
       if (Dot(rCurrent,rCurrent) <= cgTolSquared) {      
-        mfem::out << "converged cg " << std::endl;
-        Hd = 0.0;
-        hess_vec_func(z, Hd);
-        double energy = Dot(r0, z) + 0.5 * Dot(z, Hd);
-        std::cout << "energy = " << energy << std::endl;
-        // minimize r@z + 0.5*z@J@z
+        // Hd = 0.0;
+        // hess_vec_func(z, Hd);
+        // double energy = Dot(r0, z) + 0.5 * Dot(z, Hd);
+        // std::cout << "converged cg with energy drop = " << energy << std::endl;
         return;
       }
 
@@ -488,8 +482,6 @@ public:
 
     real_t norm, norm_goal;
     oper->Mult(x, r);
-
-    std::cout << "initial residual norm = " << Norm(r) << std::endl;
 
     norm = initial_norm = Norm(r);
     norm_goal = std::max(rel_tol * initial_norm, abs_tol);
@@ -553,18 +545,16 @@ public:
       } else {
         double alpha = -trSize / std::sqrt( Dot(r,r) );
         add(trResults.cauchyPoint, alpha, r, trResults.cauchyPoint);
-        mfem::out << "negative curvature unpreconditioned cauchy point direction found." << "\n";
+        mfem::out << "Negative curvature unpreconditioned cauchy point direction found." << "\n";
       }
 
       if (cauchyPointNormSquared >= trSize*trSize) {
-        mfem::out << "unpreconditioned gradient cauchy point outside trust region at dist = " << std::sqrt(cauchyPointNormSquared) << "\n";
+        mfem::out << "Unpreconditioned gradient cauchy point outside trust region at dist = " << std::sqrt(cauchyPointNormSquared) << "\n";
         trResults.cauchyPoint *= (trSize / std::sqrt(cauchyPointNormSquared));
-        mfem::out << "unpreconditioned gradient cauchy point outside trust region, set to = " << std::sqrt(Dot(trResults.cauchyPoint,trResults.cauchyPoint)) << "\n";
         trResults.z = trResults.cauchyPoint;
         trResults.cgIterationsCount = 1;
         trResults.interiorStatus = TrustRegionResults::Status::OnBoundary;
       } else {
-        mfem::out << "solving standary trust region = " << std::sqrt(cauchyPointNormSquared) << "\n";
         solve_trust_region_minimization(r,
                                         scratch,
                                         hess_vec_func,
@@ -580,21 +570,18 @@ public:
       while (!happyAboutTrSize) {
         auto& d = trResults.d;    // reuse, dangerous!
         auto& Hd = trResults.Hd;  // reuse, dangerous!
-        Hd = 0.0;
 
-        std::cout << "norm z in = " << Norm(trResults.z) << std::endl;
         dogleg_step(trResults.cauchyPoint, trResults.z, trSize, d);
-        std::cout << "norm d out = " << Norm(d) << std::endl;
 
         hess_vec_func(d,Hd);
-        double dJd = Dot(d,Hd);
-        double modelObjective = Dot(r,d) + 0.5*dJd;
+        double dHd = Dot(d,Hd);
+        double modelObjective = Dot(r,d) + 0.5*dHd;
         
         add(x, d, xPred);
         oper->Mult(xPred, rPred);
         double realObjective = 0.5 * (Dot(r, d) + Dot(rPred, d));
 
-        std::cout << "model, real objective = " << modelObjective << " " << realObjective << std::endl;
+        // mfem::out << "model, real objective = " << modelObjective << " " << realObjective << "\n";
 
         double normPred = Norm(rPred);
         MFEM_ASSERT(IsFinite(normPred), "norm = " << normPred);
