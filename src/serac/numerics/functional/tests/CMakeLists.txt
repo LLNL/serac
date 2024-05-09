@@ -16,6 +16,7 @@ blt_add_executable(NAME        tensor_unit_tests
 set(functional_tests_serial
     functional_shape_derivatives.cpp
     simplex_basis_function_unit_tests.cpp
+    bug_boundary_qoi.cpp
     domain_tests.cpp
     geometric_factors_tests.cpp
     hcurl_unit_tests.cpp
@@ -47,6 +48,8 @@ serac_add_tests( SOURCES ${functional_tests_mpi}
 foreach(filename ${functional_tests_mpi})
     set_source_files_properties(${filename} PROPERTIES LANGUAGE CXX)
 endforeach()
+
+target_link_libraries(bug_boundary_qoi PUBLIC serac_physics)
 
 if(ENABLE_CUDA)
 
