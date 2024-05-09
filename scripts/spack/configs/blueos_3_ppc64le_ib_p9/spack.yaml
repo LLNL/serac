@@ -232,13 +232,19 @@ spack:
       buildable: false
 
     # Globally lock version of third party libraries
+    axom:
+      require: "@0.9.0.1"
     camp:
-      require: "@2023.06.0"
+      require: "@2024.02.0"
     conduit:
-      require: "@0.8.8~shared~test~examples~utilities"
+      require: "@0.9.1~shared~test~examples~utilities"
     hdf5:
       variants: ~shared~mpi
+    mfem:
+      require: "@4.6.2.4"
     raja:
-      require: "@2023.06.1~shared~examples~exercises"
+      require: "@2024.02.0~shared~examples~exercises"
+    tribol:
+      require: "@0.1.0.15~examples~tests"
     umpire:
-      require: "@2023.06.0~shared~examples"
+      require: "@2024.02.0~shared~examples~werror"

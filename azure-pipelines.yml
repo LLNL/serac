@@ -1,13 +1,13 @@
 #
-# Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 #
 
 variables:
-  Clang_14_ImageName: 'seracllnl/tpls:clang-14_03-15-24_21h-56m'
-  GCC_13_ImageName: 'seracllnl/tpls:gcc-13_03-15-24_21h-56m'
+  Clang_14_ImageName: 'seracllnl/tpls:clang-14_04-29-24_23h-39m'
+  GCC_13_ImageName: 'seracllnl/tpls:gcc-13_04-29-24_23h-39m'
 
 jobs:
 - job: Build_and_Test

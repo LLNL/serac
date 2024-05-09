@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -108,10 +108,17 @@ set(ENABLE_BENCHMARKS  OFF CACHE BOOL "")
 set(ENABLE_ALL_WARNINGS ON CACHE BOOL "")
 set(ENABLE_WARNINGS_AS_ERRORS ON CACHE BOOL "")
 
-# Allows MPI/CUDA/etc targets to be exported in the serac namespace
-set(BLT_EXPORT_THIRDPARTY ON CACHE BOOL "")
+set(BLT_EXPORT_THIRDPARTY OFF CACHE BOOL "")
+if (BLT_EXPORT_THIRDPARTY)
+    message(FATAL_ERROR "Serac does not use BLT's exporting of TPLs, it conflicts with the new blt_install_tpl_setups macro.")
+endif()
 
 include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
+
+# white238 - On some machines, the linker needs nvToolsExt after all the cuda libraries
+if(ENABLE_CUDA AND AMGX_DIR)
+    target_link_libraries(cuda INTERFACE nvToolsExt)
+endif()
 
 #------------------------------------------------------------------------------
 # Setup Macros and dependencies

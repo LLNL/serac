@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -187,7 +187,7 @@ static Domain domain_of_faces(const mfem::Mesh&                                 
       attr = mesh.GetAttribute(i);
     } else {
       int bdr_id = face_id_to_bdr_id[i];
-      attr       = (bdr_id > 0) ? mesh.GetBdrAttribute(bdr_id) : -1;
+      attr       = (bdr_id >= 0) ? mesh.GetBdrAttribute(bdr_id) : -1;
     }
 
     if (predicate(x, attr)) {
@@ -332,7 +332,7 @@ static Domain domain_of_boundary_elems(const mfem::Mesh&                        
     auto x = gather<d>(vertices, vertex_ids);
 
     int bdr_id = face_id_to_bdr_id[f];
-    int attr   = (bdr_id > 0) ? mesh.GetBdrAttribute(bdr_id) : -1;
+    int attr   = (bdr_id >= 0) ? mesh.GetBdrAttribute(bdr_id) : -1;
 
     bool add = predicate(x, attr);
 
