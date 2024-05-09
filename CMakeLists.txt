@@ -115,11 +115,6 @@ endif()
 
 include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
 
-# white238 - On some machines, the linker needs nvToolsExt after all the cuda libraries
-if(ENABLE_CUDA AND AMGX_DIR)
-    target_link_libraries(cuda INTERFACE nvToolsExt)
-endif()
-
 #------------------------------------------------------------------------------
 # Setup Macros and dependencies
 #------------------------------------------------------------------------------
