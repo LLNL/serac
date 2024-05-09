@@ -13,7 +13,7 @@ if(ENABLE_TESTS)
     add_subdirectory(tests)
 endif()
 
-if(SERAC_ENABLE_BENCHMARKS)
+if(ENABLE_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif()
 
