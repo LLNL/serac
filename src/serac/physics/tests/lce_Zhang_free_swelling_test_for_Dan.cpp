@@ -81,11 +81,11 @@ int main(int argc, char* argv[])
   // -------------------
 
   double density         = 1.0;
-  double shear_mod       = 3.113e5; //  young_modulus_ / 2.0 / (1.0 + poisson_ratio_);
-  double ini_order_param = 0.40;
+  double shear_mod       = 4476171.852; // 3.113e4; //  young_modulus_ / 2.0 / (1.0 + poisson_ratio_);
+  double ini_order_param = 0.2; // 0.28544; // 0.40;
   double min_order_param = 0.001;
-  double omega_param     = 0.2;
-  double bulk_mod        = 100.0*shear_mod;
+  double omega_param     = 0.1151; // 1.0e2;
+  double bulk_mod        = 1.0e1*shear_mod;
   // -------------------
 
   // Set material
