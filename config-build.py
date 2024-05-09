@@ -100,7 +100,8 @@ def parse_arguments():
                         action='store_true',
                         help="print the machine name for this system and exit")
 
-    parser.add_argument("--ninja",
+    parser.add_argument("-n", 
+                        "--ninja",
                         action='store_true',
                         help="use ninja generator to build serac instead of make")
 
