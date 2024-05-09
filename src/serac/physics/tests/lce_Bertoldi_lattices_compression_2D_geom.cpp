@@ -203,14 +203,14 @@ int main(int argc, char* argv[])
   Functional<double(H1<p, dim>)> area({&solid_solver.displacement().space()});
   area.AddSurfaceIntegral(
       DependsOn<>{}, 
-      [=](auto position) { 
+      [=](double /*t*/, auto position) { 
           auto [X, dX_dxi] = position;
           return (X[1] > topBoundaryYCoord) ? 1.0 : 0.0; 
           // return (X[1] > 6.0) ? 1.0 : 0.0; 
         }, 
         pmesh);
 
-  double initial_area = area(solid_solver.displacement());
+  double initial_area = area(0.0, solid_solver.displacement());
   if (rank == 0) {
     std::cout << "... Initial Area of the top surface: " << initial_area << std::endl;
   }

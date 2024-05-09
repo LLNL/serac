@@ -174,7 +174,7 @@ int main(int argc, char* argv[])
   strainEnergyQoI.AddDomainIntegral(
       serac::Dimension<dim>{},
       DependsOn<0, 1, 2, 3>{},
-      [=](auto /*x*/, auto displacement, auto order_param_tuple, auto gamma_param_tuple, auto eta_param_tuple) {
+      [=](double /*t*/, auto /*x*/, auto displacement, auto order_param_tuple, auto gamma_param_tuple, auto eta_param_tuple) {
         auto du_dx = serac::get<1>(displacement);
         serac::LiquidCrystalElastomerBertoldi::State state{};
         // auto strain = serac::sym(du_dx);
@@ -211,11 +211,11 @@ int main(int argc, char* argv[])
     solid_solver.outputStateToDisk(outputFilename);
 
     // Compute QoI
-    double current_qoi = strainEnergyQoI(solid_solver.displacement(), orderParam, gammaParam, etaParam);
+    double current_qoi = strainEnergyQoI(t, solid_solver.displacement(), orderParam, gammaParam, etaParam);
 
     // Construct adjoint load
     serac::FiniteElementDual adjoint_load(solid_solver.displacement().space(), "adjoint_load");
-    auto dqoi_du = get<1>(strainEnergyQoI(DifferentiateWRT<0>{}, solid_solver.displacement(), orderParam, gammaParam, etaParam));
+    auto dqoi_du = get<1>(strainEnergyQoI(DifferentiateWRT<0>{}, t, solid_solver.displacement(), orderParam, gammaParam, etaParam));
     adjoint_load = *assemble(dqoi_du);
 
     // Solve adjoint problem
