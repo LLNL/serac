@@ -135,8 +135,8 @@ public:
       if (ls_iter_sum) {
         if (print_options.summary || (!converged && print_options.warnings) || print_options.first_and_last) {
           mfem::out << "Number of line search steps taken = : " << ls_iter_sum << std::endl;
-          if (ls_iter_sum = 2 * max_ls_iters + 1) {
-            mfem::out << "The maximum number of line search cut back have happened, the resulting residual may not have decreased. " << std::endl;
+          if (ls_iter_sum == 2 * max_ls_iters + 1) {
+            mfem::out << "The maximum number of line search cut back have occurred, the resulting residual may not have decreased. " << std::endl;
           }
         }
       }
