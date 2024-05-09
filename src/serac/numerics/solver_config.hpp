@@ -216,8 +216,14 @@ struct NonlinearSolverOptions {
   /// Absolute tolerance
   double absolute_tol = 1.0e-12;
 
+  /// Minimum number of iterations
+  int min_iterations = 0;
+
   /// Maximum number of iterations
   int max_iterations = 20;
+
+  /// Maximum line search cutbacks
+  int max_line_search_iterations = 20;
 
   /// Debug print level
   int print_level = 0;
