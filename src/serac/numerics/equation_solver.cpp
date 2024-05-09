@@ -19,12 +19,13 @@ namespace serac {
 class NewtonSolver : public mfem::NewtonSolver {
 protected:
   mutable mfem::Vector x0;
+  NonlinearSolverOptions nonlinear_options;
 
 public:
-  NewtonSolver() {}
+  NewtonSolver(const NonlinearSolverOptions& nonlinear_opts) : nonlinear_options(nonlinear_opts) { }
 
 #ifdef MFEM_USE_MPI
-  NewtonSolver(MPI_Comm comm_) : mfem::NewtonSolver(comm_) {}
+  NewtonSolver(MPI_Comm comm_, const NonlinearSolverOptions& nonlinear_opts) : mfem::NewtonSolver(comm_), nonlinear_options(nonlinear_opts) {}
 #endif
 
   void Mult(const mfem::Vector&, mfem::Vector& x) const
@@ -56,7 +57,7 @@ public:
         mfem::out << '\n';
       }
 
-      if (norm <= norm_goal) {
+      if (norm <= norm_goal && it >= nonlinear_options.min_iterations) {
         converged = true;
         break;
       }
@@ -83,7 +84,7 @@ public:
       oper->Mult(x, r);
       norm = Norm(r);
 
-      static constexpr int    max_ls_iters = 20;
+      const int max_ls_iters = nonlinear_options.max_line_search_iterations;
       static constexpr real_t reduction    = 0.5;
 
       auto is_improved = [=](real_t currentNorm, real_t) { return currentNorm < norm_nm1; };
@@ -802,7 +803,7 @@ std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions 
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::LBFGS) {
     nonlinear_solver = std::make_unique<mfem::LBFGSSolver>(comm);
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::NewtonLineSearch) {
-    nonlinear_solver = std::make_unique<NewtonSolver>(comm);
+    nonlinear_solver = std::make_unique<NewtonSolver>(comm, nonlinear_opts);
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::Nesterov) {
     nonlinear_solver = std::make_unique<Nesterov>(comm);
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::TrustRegion) {
