@@ -42,8 +42,8 @@ void functional_solid_test_nonlinear_buckle()
   double Lz = 0.3; // in
 
   double density = 1.0;
-  double bulkMod = 1.0;
-  double shearMod = 1.0;
+  double bulkMod = 100.0;
+  double shearMod = 100.0;
   double loadMagnitude = 5.0e-3; //1e-3;
 
   std::string meshTag = "mesh";
@@ -55,8 +55,8 @@ void functional_solid_test_nonlinear_buckle()
   using seracSolidType = serac::SolidMechanics<ORDER, DIM, serac::Parameters<>>;
 
   serac::NonlinearSolverOptions nonlinear_options{
-                                                  //.nonlin_solver  = NonlinearSolver::TrustRegion,
-                                                  .nonlin_solver  = NonlinearSolver::NewtonLineSearch,
+                                                  .nonlin_solver  = NonlinearSolver::TrustRegion,
+                                                  //.nonlin_solver  = NonlinearSolver::NewtonLineSearch,
                                                   // serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
                                                   .relative_tol   = 1.0e-8,
                                                   .absolute_tol   = 1.0e-12,
