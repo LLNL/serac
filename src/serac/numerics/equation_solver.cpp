@@ -101,8 +101,6 @@ public:
 
       // try the opposite direction and linesearch back from there
       if (ls_iter == max_ls_iters && !is_improved(norm, c_scale)) {
-        // std::cout << std::setprecision(15) << "tmp norm = " << norm << " " << norm_nm1 << " " << ls_iter << " " <<
-        // c_scale << " " << std::endl;
 
         c_scale = 1.0;
         add(x0, c_scale, c, x);
@@ -116,9 +114,6 @@ public:
           oper->Mult(x, r);
           norm = Norm(r);
         }
-
-        // std::cout << std::setprecision(15) << "int norm = " << norm << " " << norm_nm1 << " " << ls_iter_sum << " "
-        // << c_scale << " " << std::endl;
 
         // ok, the opposite direction was also terrible, lets go back, cut in half 1 last time and accept it
         if (ls_iter == max_ls_iters && !is_improved(norm, c_scale)) {
@@ -153,7 +148,6 @@ public:
     }
   }
 };
-
 
 
 class Nesterov : public mfem::NewtonSolver {
@@ -241,7 +235,6 @@ public:
       add(x, -c_scale, c, xPred);
       add(rOld, -c_scale, Ks, rPred);
 
-
       double normPred = Norm(rPred);
 
       oper->Mult(xPred, r);
@@ -292,7 +285,7 @@ public:
 struct TrustRegionSettings {
   double cgTol = 1e-8;
   size_t maxCgIterations = 5000;
-  size_t maxCumulativeIteration = 10000;
+  size_t maxCumulativeIteration = 1;
   double min_tr_size = 1e-9;
   double t1 = 0.25;
   double t2 = 1.75;
@@ -340,11 +333,12 @@ protected:
   mutable mfem::Vector rPred;
   mutable mfem::Vector scratch;
 
+  Solver &trPrec;
+
 public:
-  TrustRegion() {}
 
 #ifdef MFEM_USE_MPI
-  TrustRegion(MPI_Comm comm_) : mfem::NewtonSolver(comm_) {}
+  TrustRegion(MPI_Comm comm_, Solver& tPrec) : mfem::NewtonSolver(comm_), trPrec(tPrec) {}
 #endif
 
   void project_to_boundary_with_coefs(mfem::Vector& z, const mfem::Vector& d, double trSize, double zz, double zd, double dd) const
@@ -383,11 +377,9 @@ public:
       mfem::out << "cp outside newton, preconditioner likely inaccurate\n";
       add(s, 1.0, cp, s);
     } else if (nn > tt) { // on the dogleg (we have nn >= cc, and tt >= cc)
-      mfem::out << "on dogleg\n";
       add(s, 1.0, cp, s);
       double cn = Dot(cp, newtonP);
       project_to_boundary_between_with_coefs(s, newtonP, trSize, cc, cn, nn);
-      std::cout << "set norm, trsize = " << Norm(s) << " " << trSize << std::endl;
     } else {
       s = newtonP;
     }
@@ -427,7 +419,7 @@ public:
     double zd = 0.0;
     double dd = Dot(d,d);
 
-    for (cgIter=0; cgIter < settings.maxCgIterations; ++cgIter) {
+    for (cgIter=1; cgIter <= settings.maxCgIterations; ++cgIter) {
       hess_vec_func(d, Hd);
       double curvature = Dot(d, Hd);
       double alpha = rPr / curvature;
@@ -493,7 +485,8 @@ public:
       mfem::out << "Newton iteration " << std::setw(2) << 0 << " : ||r|| = " << norm << "...\n";
     }
     prec->iterative_mode = false;
- 
+    trPrec.iterative_mode = false;
+
     // local arrays
     xPred.SetSize(x.Size()); xPred = 0.0;
     rPred.SetSize(x.Size()); rPred = 0.0;
@@ -525,17 +518,22 @@ public:
       }
 
       auto K = &oper->GetGradient(x);
-
-      //if (it==0) { // MRT, need to implement SPD preconditioner
-      //  printf("setting preconditioner\n");
-      //  prec->SetOperator(*K);
-      //}
+      if (it==0 || (trResults.cgIterationsCount >= settings.maxCgIterations || cumulativeCgIters >= settings.maxCumulativeIteration)) {
+        trPrec.SetOperator(*K);
+        cumulativeCgIters=0;
+        if (print_options.iterations || print_options.warnings) {
+          mfem::out << "Updating trust region preconditioner." << std::endl;
+        }
+      }
 
       auto hess_vec_func = [=](const mfem::Vector& x, mfem::Vector& v) {
-
         K->Mult(x, v);
       };
-      auto precond_func = [=](const mfem::Vector& x, mfem::Vector& v) { v = x; }; // prec->Mult(x, v); };
+
+      auto precond_func = [=](const mfem::Vector& x, mfem::Vector& v) {
+        trPrec.Mult(x, v);
+        // v = x;
+      };
 
       double cauchyPointNormSquared = trSize * trSize;
       trResults.reset();
@@ -549,11 +547,15 @@ public:
       } else {
         double alpha = -trSize / std::sqrt( Dot(r,r) );
         add(trResults.cauchyPoint, alpha, r, trResults.cauchyPoint);
-        mfem::out << "Negative curvature unpreconditioned cauchy point direction found." << "\n";
+        if (print_options.iterations || print_options.warnings) {
+          mfem::out << "Negative curvature unpreconditioned cauchy point direction found." << "\n";
+        }
       }
 
       if (cauchyPointNormSquared >= trSize*trSize) {
-        mfem::out << "Unpreconditioned gradient cauchy point outside trust region at dist = " << std::sqrt(cauchyPointNormSquared) << "\n";
+        if (print_options.iterations || print_options.warnings) {
+          mfem::out << "Unpreconditioned gradient cauchy point outside trust region at dist = " << std::sqrt(cauchyPointNormSquared) << "\n";
+        }
         trResults.cauchyPoint *= (trSize / std::sqrt(cauchyPointNormSquared));
         trResults.z = trResults.cauchyPoint;
         trResults.cgIterationsCount = 1;
@@ -564,7 +566,9 @@ public:
                                         hess_vec_func,
                                         precond_func,
                                         settings, trSize, trResults);
-        mfem::out << "trust region solve took " << trResults.cgIterationsCount << "\n";
+        if (print_options.iterations || print_options.warnings) {
+          mfem::out << "Trust region linear solve took " << trResults.cgIterationsCount << " cg iterations.\n";
+        }
       }
       cumulativeCgIters += trResults.cgIterationsCount;
 
@@ -603,7 +607,9 @@ public:
 
         double rho = realImprove / modelImprove;
         if (modelObjective > 0) {
-          mfem::out << "Found a positive model objective increase.  Debug if you see this.\n";
+          if (print_options.iterations || print_options.warnings) {
+            mfem::out << "Found a positive model objective increase.  Debug if you see this.\n";
+          }
           rho = realImprove / -modelImprove;
         }
         
@@ -613,33 +619,20 @@ public:
           trSize *= settings.t2;
         }
 
-        //modelRes = g + Jd
-        //modelResNorm = np.linalg.norm(modelRes)
-        //realResNorm = np.linalg.norm(gy)
-
+        // eventually extend to handle this case
+        // modelRes = g + Jd
+        // modelResNorm = np.linalg.norm(modelRes)
+        // realResNorm = np.linalg.norm(gy)
         bool willAccept = rho >= settings.eta1; // or (rho >= -0 and realResNorm <= gNorm)
         
-        //print_min_banner(realObjective, modelObjective,
-        //                  realResNorm, modelResNorm,
-        //                  cgIters, trSizeUsed, stepType,
-        //                  willAccept,
-        //                  settings)
-
         if (willAccept) {
           x = xPred;
           r = rPred;
           norm = normPred;
           happyAboutTrSize = true;
-
-          if (trResults.cgIterationsCount >= settings.maxCgIterations || cumulativeCgIters >= settings.maxCumulativeIteration) {
-            //prec->SetOperator(*K); // UPDATE PRECONDITIONER NOW
-            cumulativeCgIters=0;
-          }
           break;
         } 
-            
       }
-
     }
 
     final_iter = it;
@@ -654,7 +647,12 @@ public:
   }
 };
 
-
+bool usePreconditionerInsteadOfLinearSolve(const mfem::NewtonSolver* const nonlinearSolver) {
+  if (dynamic_cast<const TrustRegion*>(nonlinearSolver)) {
+    return true;
+  }
+  return false;
+}
 
 EquationSolver::EquationSolver(NonlinearSolverOptions nonlinear_opts, LinearSolverOptions lin_opts, MPI_Comm comm)
 {
@@ -662,7 +660,7 @@ EquationSolver::EquationSolver(NonlinearSolverOptions nonlinear_opts, LinearSolv
 
   lin_solver_     = std::move(lin_solver);
   preconditioner_ = std::move(preconditioner);
-  nonlin_solver_  = buildNonlinearSolver(nonlinear_opts, comm);
+  nonlin_solver_  = buildNonlinearSolver(nonlinear_opts, *preconditioner_, comm);
 }
 
 EquationSolver::EquationSolver(std::unique_ptr<mfem::NewtonSolver> nonlinear_solver,
@@ -797,7 +795,7 @@ void StrumpackSolver::SetOperator(const mfem::Operator& op)
 
 #endif
 
-std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions nonlinear_opts, MPI_Comm comm)
+std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(const NonlinearSolverOptions& nonlinear_opts, mfem::Solver& prec, MPI_Comm comm)
 {
   std::unique_ptr<mfem::NewtonSolver> nonlinear_solver;
 
@@ -810,7 +808,7 @@ std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions 
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::Nesterov) {
     nonlinear_solver = std::make_unique<Nesterov>(comm);
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::TrustRegion) {
-    nonlinear_solver = std::make_unique<TrustRegion>(comm);
+    nonlinear_solver = std::make_unique<TrustRegion>(comm, prec);
   }
   // KINSOL
   else {
@@ -855,16 +853,18 @@ std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions 
 std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLinearSolverAndPreconditioner(
     LinearSolverOptions linear_opts, MPI_Comm comm)
 {
+  auto preconditioner = buildPreconditioner(linear_opts.preconditioner, linear_opts.preconditioner_print_level, comm);
+
   if (linear_opts.linear_solver == LinearSolver::SuperLU) {
     auto lin_solver = std::make_unique<SuperLUSolver>(linear_opts.print_level, comm);
-    return {std::move(lin_solver), nullptr};
+    return {std::move(lin_solver), std::move(preconditioner)};
   }
 
 #ifdef MFEM_USE_STRUMPACK
 
   if (linear_opts.linear_solver == LinearSolver::Strumpack) {
     auto lin_solver = std::make_unique<StrumpackSolver>(linear_opts.print_level, comm);
-    return {std::move(lin_solver), nullptr};
+    return {std::move(lin_solver), std::move(preconditioner)};
   }
 
 #endif
@@ -887,8 +887,6 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
   iter_lin_solver->SetAbsTol(linear_opts.absolute_tol);
   iter_lin_solver->SetMaxIter(linear_opts.max_iterations);
   iter_lin_solver->SetPrintLevel(linear_opts.print_level);
-
-  auto preconditioner = buildPreconditioner(linear_opts.preconditioner, linear_opts.preconditioner_print_level, comm);
 
   if (preconditioner) {
     iter_lin_solver->SetPreconditioner(*preconditioner);
@@ -1113,7 +1111,7 @@ serac::EquationSolver FromInlet<serac::EquationSolver>::operator()(const axom::i
 
   auto [linear_solver, preconditioner] = serac::buildLinearSolverAndPreconditioner(lin, MPI_COMM_WORLD);
 
-  serac::EquationSolver eq_solver(serac::buildNonlinearSolver(nonlin, MPI_COMM_WORLD), std::move(linear_solver),
+  serac::EquationSolver eq_solver(serac::buildNonlinearSolver(nonlin, *preconditioner, MPI_COMM_WORLD), std::move(linear_solver),
                                   std::move(preconditioner));
 
   return eq_solver;
