@@ -51,8 +51,8 @@ def parse_args():
                       help="Mirror location to use (defaults to shared location)")
     parser.add_option("-j", "--jobs",
                       dest="jobs",
-                      default=4,
-                      help="Allow N jobs at once for any `make` commands")
+                      default="",
+                      help="Allow N jobs at once for any `make` commands (empty string means max system amount)")
 
     ###############
     # parse args
