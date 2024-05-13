@@ -93,11 +93,11 @@ def build_info():
     res["built_from_branch"] = "unknown"
     res["built_from_sha1"]   = "unknown"
     res["platform"] = get_platform()
-    rc, out = shell_exec('git branch -a | grep \"*\"',ret_output=True,error_prefix="WARNING:")
+    rc, out = shell_exec('git branch -a | grep \"*\"',return_output=True,error_prefix="WARNING:")
     out = out.strip()
     if rc == 0 and out != "":
         res["built_from_branch"]  = out.split()[1]
-    rc,out = shell_exec('git rev-parse --verify HEAD',ret_output=True,error_prefix="WARNING:")
+    rc,out = shell_exec('git rev-parse --verify HEAD',return_output=True,error_prefix="WARNING:")
     out = out.strip()
     if rc == 0 and out != "":
         res["built_from_sha1"] = out
