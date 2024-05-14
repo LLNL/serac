@@ -28,7 +28,7 @@ endif()
 option(SERAC_ENABLE_CODE_CHECKS "Enable Serac's code checks" ${_enable_serac_code_checks})
 option(SERAC_ENABLE_PROFILING "Enable profiling functionality" OFF)
 
-cmake_dependent_option(SERAC_ENABLE_BENCHMARKS "Enable benchmark executables" OFF
+cmake_dependent_option(SERAC_ENABLE_BENCHMARKS "Enable benchmark executables" ON
                        "ENABLE_BENCHMARKS;SERAC_ENABLE_PROFILING" OFF)
 
 #------------------------------------------------------------------------------
