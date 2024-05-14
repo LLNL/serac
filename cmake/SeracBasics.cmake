@@ -28,8 +28,12 @@ endif()
 option(SERAC_ENABLE_CODE_CHECKS "Enable Serac's code checks" ${_enable_serac_code_checks})
 option(SERAC_ENABLE_PROFILING "Enable profiling functionality" OFF)
 
-cmake_dependent_option(SERAC_ENABLE_BENCHMARKS "Enable benchmark executables" ON
-                       "ENABLE_BENCHMARKS;SERAC_ENABLE_PROFILING" OFF)
+cmake_dependent_option(SERAC_ENABLE_BENCHMARKS "Enable benchmark executables" ON "ENABLE_BENCHMARKS" OFF)
+
+if ((ENABLE_BENCHMARKS OR SERAC_ENABLE_BENCHMARKS) AND NOT SERAC_ENABLE_PROFILING)
+    message(FATAL_ERROR
+            "Both ENABLE_BENCHMARKS and SERAC_ENABLE_BENCHMARKS require SERAC_ENABLE_PROFILING to be turned on")
+endif()
 
 #------------------------------------------------------------------------------
 # Create symlink in installed bin
