@@ -26,10 +26,20 @@ else()
     set(_enable_serac_code_checks OFF)
 endif()
 option(SERAC_ENABLE_CODE_CHECKS "Enable Serac's code checks" ${_enable_serac_code_checks})
+
+#------------------------------------------------------------------------------
+# Profiling options
+#------------------------------------------------------------------------------
+# User turned on benchmarking but didn't turn on profiling
+if ((ENABLE_BENCHMARKS OR SERAC_ENABLE_BENCHMARKS) AND NOT DEFINED SERAC_ENABLE_PROFILING)
+    set(SERAC_ENABLE_PROFILING ON)
+endif()
+
 option(SERAC_ENABLE_PROFILING "Enable profiling functionality" OFF)
 
 cmake_dependent_option(SERAC_ENABLE_BENCHMARKS "Enable benchmark executables" ON "ENABLE_BENCHMARKS" OFF)
 
+# User turned on benchmarking but explicitly turned off profiling. Error out.
 if ((ENABLE_BENCHMARKS OR SERAC_ENABLE_BENCHMARKS) AND NOT SERAC_ENABLE_PROFILING)
     message(FATAL_ERROR
             "Both ENABLE_BENCHMARKS and SERAC_ENABLE_BENCHMARKS require SERAC_ENABLE_PROFILING to be turned on")
