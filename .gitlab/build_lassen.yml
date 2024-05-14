@@ -43,7 +43,7 @@ lassen-clang_10_0_1-src:
   variables:
     COMPILER: "clang@10.0.1"
     HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}.cmake"
-    EXTRA_BUILD_OPTIONS: "--extra-cmake-options='-DENABLE_BENCHMARKS=ON -DSERAC_ENABLE_PROFILING=ON' "
+    EXTRA_BUILD_OPTIONS: "--extra-cmake-options='-DENABLE_BENCHMARKS=ON'"
     ALLOC_NODES: "1"
     ALLOC_TIME: "20"
   extends: [.src_build_on_lassen, .with_cuda]
@@ -54,7 +54,7 @@ lassen-clang_10_0_1-full:
   variables:
     COMPILER: "clang@10.0.1"
     HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}.cmake"
-    EXTRA_BUILD_OPTIONS: "--extra-cmake-options='-DENABLE_BENCHMARKS=ON -DSERAC_ENABLE_PROFILING=ON' "
+    EXTRA_BUILD_OPTIONS: "--extra-cmake-options='-DENABLE_BENCHMARKS=ON'"
     ALLOC_NODES: "1"
     ALLOC_TIME: "55"
   extends: [.full_build_on_lassen, .with_cuda]
