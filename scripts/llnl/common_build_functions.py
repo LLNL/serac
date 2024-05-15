@@ -250,7 +250,7 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
 
     return 0
 
-def build_and_test_host_config(test_root, host_config, report_to_stdout=False, extra_cmake_options="", skip_install=False, job_count=4):
+def build_and_test_host_config(test_root, host_config, report_to_stdout=False, extra_cmake_options="", skip_install=False, job_count=""):
     host_config_root = get_host_config_root(host_config)
     # setup build and install dirs
     build_dir   = pjoin(test_root,"build-%s"   % host_config_root)
@@ -297,7 +297,7 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
 
     # Use a maximum of 8 job slots for unit tests due to extra parallelism from OpenMP/MPI
     test_job_count = 8
-    if job_count != "":
+    if isinstance(job_count, int):
         test_job_count = min(job_count, 8)
 
     tst_cmd = "cd %s && make CTEST_OUTPUT_ON_FAILURE=1 test ARGS=\"--no-compress-output -T Test -VV -j %s\"" % (build_dir, test_job_count)
@@ -360,7 +360,7 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
 
 
 def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, report_to_stdout = False,
-                                extra_cmake_options = "", skip_install=False, job_count=4):
+                                extra_cmake_options = "", skip_install=False, job_count=""):
     host_configs = get_host_configs_for_current_machine(prefix, use_generated_host_configs)
     if len(host_configs) == 0:
         log_failure(prefix,"[ERROR: No host configs found at %s]" % prefix)
@@ -437,7 +437,7 @@ def set_group_and_perms(directory):
     return 0
 
 
-def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = False, short_path = False, mirror_location = '', job_count=4):
+def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = False, short_path = False, mirror_location = '', job_count=""):
     if spec:
         specs = [spec]
     else:
