@@ -295,10 +295,10 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
     print("[starting unit tests]")
     print("[log file: %s]" % tst_output_file)
 
-    if job_count == "":
-        test_job_count=8
-    else:
-        test_job_count=min(job_count, 8)
+    # Use a maximum of 8 job slots for unit tests due to extra parallelism from OpenMP/MPI
+    test_job_count = 8
+    if job_count != "":
+        test_job_count = min(job_count, 8)
 
     tst_cmd = "cd %s && make CTEST_OUTPUT_ON_FAILURE=1 test ARGS=\"--no-compress-output -T Test -VV -j %s\"" % (build_dir, test_job_count)
     res = shell_exec(tst_cmd,
