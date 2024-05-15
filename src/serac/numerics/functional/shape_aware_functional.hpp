@@ -205,17 +205,14 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper(lambda&& qf, double t, const 
   static_assert(tuple_size<trial_types>::value == tuple_size<space_types>::value,
                 "Argument and finite element space tuples are not the same size.");
 
-  auto x = serac::tuple{
-    get<VALUE>(X) + get<VALUE>(shape),
+  auto x = serac::tuple{get<VALUE>(X) + get<VALUE>(shape),
 
-    // x := X + u, 
-    // so, dx/dxi = dX/dxi + du/dxi 
-    //            = dX/dxi + du/dX * dX/dxi
-    get<DERIVATIVE>(X) + get<DERIVATIVE>(shape) * get<DERIVATIVE>(X)
-  };
+                        // x := X + u,
+                        // so, dx/dxi = dX/dxi + du/dxi
+                        //            = dX/dxi + du/dX * dX/dxi
+                        get<DERIVATIVE>(X) + get<DERIVATIVE>(shape) * get<DERIVATIVE>(X)};
 
-  return qf(t, x,
-            correction.modify_trial_argument(serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
+  return qf(t, x, correction.modify_trial_argument(serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
 }
 
 /**
@@ -246,8 +243,7 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper(lambda&& qf, double t, const 
  */
 template <typename lambda, typename coord_type, typename state_type, typename shape_type, typename space_types,
           typename trial_types, typename correction_type, int... i>
-SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper_with_state(lambda&& qf, double t, 
-                                                              const coord_type& X,
+SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper_with_state(lambda&& qf, double t, const coord_type& X,
                                                               state_type& state, const shape_type& shape,
                                                               const space_types&     space_tuple,
                                                               const trial_types&     arg_tuple,
@@ -257,17 +253,14 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper_with_state(lambda&& qf, doubl
   static_assert(tuple_size<trial_types>::value == tuple_size<space_types>::value,
                 "Argument and finite element space tuples are not the same size.");
 
-  auto x = serac::tuple{
-    get<VALUE>(X) + get<VALUE>(shape),
+  auto x = serac::tuple{get<VALUE>(X) + get<VALUE>(shape),
 
-    // x := X + u, 
-    // so, dx/dxi = dX/dxi + du/dxi 
-    //            = dX/dxi + du/dX * dX/dxi
-    get<DERIVATIVE>(X) + get<DERIVATIVE>(shape) * get<DERIVATIVE>(X)
-  };
+                        // x := X + u,
+                        // so, dx/dxi = dX/dxi + du/dxi
+                        //            = dX/dxi + du/dX * dX/dxi
+                        get<DERIVATIVE>(X) + get<DERIVATIVE>(shape) * get<DERIVATIVE>(X)};
 
-  return qf(t, x, state,
-            correction.modify_trial_argument(serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
+  return qf(t, x, state, correction.modify_trial_argument(serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
 }
 
 }  // namespace detail

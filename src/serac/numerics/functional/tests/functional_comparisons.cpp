@@ -112,9 +112,9 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
       [=](double /*t*/, auto position, auto temperature) {
         // get the value and the gradient from the input tuple
         auto [X, dX_dxi] = position;
-        auto [u, du_dX] = temperature;
-        auto source     = a * u - (100 * X[0] * X[1]);
-        auto flux       = b * du_dX;
+        auto [u, du_dX]  = temperature;
+        auto source      = a * u - (100 * X[0] * X[1]);
+        auto flux        = b * du_dX;
         return serac::tuple{source, flux};
       },
       mesh);

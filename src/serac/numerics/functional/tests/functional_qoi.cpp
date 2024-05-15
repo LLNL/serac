@@ -184,7 +184,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
       f.AddDomainIntegral(
           Dimension<dim>{}, DependsOn<0>{},
           [&](double /*t*/, auto position, auto temperature) {
-            auto X = get<VALUE>(position);
+            auto X           = get<VALUE>(position);
             auto [u, grad_u] = temperature;
             return X[0] * X[0] + sin(X[1]) + X[0] * u * u * u;
           },
