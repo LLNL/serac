@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -76,14 +76,13 @@ std::unique_ptr<mfem::HypreParMatrix> buildMonolithicMatrix(const mfem::BlockOpe
 
   SLIC_ERROR_ROOT_IF(row_blocks != col_blocks, "Attempted to use a direct solver on a non-square block system.");
 
-  mfem::Array2D<mfem::HypreParMatrix*> hypre_blocks(row_blocks, col_blocks);
+  mfem::Array2D<const mfem::HypreParMatrix*> hypre_blocks(row_blocks, col_blocks);
 
   for (int i = 0; i < row_blocks; ++i) {
     for (int j = 0; j < col_blocks; ++j) {
       // checks for presence of empty (null) blocks, which happen fairly common in multirank contact
       if (!block_operator.IsZeroBlock(i, j)) {
-        auto* hypre_block = const_cast<mfem::HypreParMatrix*>(
-            dynamic_cast<const mfem::HypreParMatrix*>(&block_operator.GetBlock(i, j)));
+        auto* hypre_block = dynamic_cast<const mfem::HypreParMatrix*>(&block_operator.GetBlock(i, j));
         SLIC_ERROR_ROOT_IF(!hypre_block,
                            "Trying to use SuperLU on a block operator that does not contain HypreParMatrix blocks.");
 

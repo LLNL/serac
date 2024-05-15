@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -115,6 +115,10 @@ install(
     ${CMAKE_CURRENT_BINARY_DIR}/serac-config.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/serac-config-version.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/thirdparty/FindPETSc.cmake
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/thirdparty/FindSLEPc.cmake
   DESTINATION 
     ${SERAC_INSTALL_CMAKE_MODULE_DIR}
 )
+
+# Install BLT files that recreate BLT targets in downstream projects
+blt_install_tpl_setups(DESTINATION ${SERAC_INSTALL_CMAKE_MODULE_DIR})

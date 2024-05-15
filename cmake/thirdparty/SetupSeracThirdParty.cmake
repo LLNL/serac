@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -27,6 +27,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(CMAKE_POLICY_DEFAULT_CMP0074 NEW)
     endif()
 
+    include(CMakeFindDependencyMacro)
+
     #------------------------------------------------------------------------------
     # Camp
     #------------------------------------------------------------------------------
@@ -34,33 +36,27 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         message(FATAL_ERROR "CAMP_DIR is required.")
     endif()
 
-    if (NOT EXISTS "${CAMP_DIR}")
-        message(FATAL_ERROR "Given CAMP_DIR does not exist: ${CAMP_DIR}")
-    endif()
+    serac_assert_is_directory(DIR_VARIABLE CAMP_DIR)
 
-    if (NOT IS_DIRECTORY "${CAMP_DIR}")
-        message(FATAL_ERROR "Given CAMP_DIR is not a directory: ${CAMP_DIR}")
-    endif()
+    find_dependency(camp REQUIRED PATHS "${CAMP_DIR}")
 
-    find_package(camp REQUIRED PATHS ${CAMP_DIR})
-
-    message(STATUS "Checking for expected Camp target 'camp'")
-    if (NOT TARGET camp)
-        message(FATAL_ERROR "Camp failed to load: ${CAMP_DIR}")
-    else()
-        message(STATUS "Camp loaded: ${CAMP_DIR}")
-    endif()
-
-    # Note: camp sets a compile feature that is not available on XL
-    set_target_properties(camp PROPERTIES INTERFACE_COMPILE_FEATURES "")
+    serac_assert_find_succeeded(PROJECT_NAME Camp
+                                TARGET       camp
+                                DIR_VARIABLE CAMP_DIR)
+    message(STATUS "Camp support is ON")
+    set(CAMP_FOUND TRUE)
 
     #------------------------------------------------------------------------------
     # Umpire
     #------------------------------------------------------------------------------
     if(UMPIRE_DIR)
-        serac_assert_is_directory(VARIABLE_NAME UMPIRE_DIR)
-        find_package(umpire REQUIRED NO_DEFAULT_PATH 
-                     PATHS ${UMPIRE_DIR})
+        serac_assert_is_directory(DIR_VARIABLE UMPIRE_DIR)
+        find_dependency(umpire REQUIRED PATHS "${UMPIRE_DIR}")
+
+        serac_assert_find_succeeded(PROJECT_NAME Umpire
+                                    TARGET       umpire
+                                    DIR_VARIABLE UMPIRE_DIR)
+
         message(STATUS "Umpire support is ON")
         set(UMPIRE_FOUND TRUE)
     else()
@@ -72,9 +68,11 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     # RAJA
     #------------------------------------------------------------------------------
     if(RAJA_DIR)
-        serac_assert_is_directory(VARIABLE_NAME RAJA_DIR)
-        find_package(RAJA REQUIRED NO_DEFAULT_PATH 
-                     PATHS ${RAJA_DIR})
+        serac_assert_is_directory(DIR_VARIABLE RAJA_DIR)
+        find_dependency(RAJA REQUIRED PATHS ${RAJA_DIR})
+        serac_assert_find_succeeded(PROJECT_NAME RAJA
+                                    TARGET       RAJA
+                                    DIR_VARIABLE RAJA_DIR)
         message(STATUS "RAJA support is ON")
         set(RAJA_FOUND TRUE)
     else()
@@ -89,21 +87,28 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         MESSAGE(FATAL_ERROR "Could not find Conduit. Conduit requires explicit CONDUIT_DIR.")
     endif()
 
+    serac_assert_is_directory(DIR_VARIABLE CONDUIT_DIR)
+
     set(_conduit_config "${CONDUIT_DIR}/lib/cmake/conduit/ConduitConfig.cmake")
     if(NOT EXISTS ${_conduit_config})
         MESSAGE(FATAL_ERROR "Could not find Conduit CMake include file ${_conduit_config}")
     endif()
 
-    find_package(Conduit REQUIRED
-                 NO_DEFAULT_PATH
-                 PATHS ${CONDUIT_DIR}/lib/cmake/conduit)
+    find_dependency(Conduit REQUIRED
+                    PATHS "${CONDUIT_DIR}"
+                          "${CONDUIT_DIR}/lib/cmake/conduit")
+
+    serac_assert_find_succeeded(PROJECT_NAME Conduit
+                                TARGET       conduit::conduit
+                                DIR_VARIABLE CONDUIT_DIR)
+    message(STATUS "Conduit support is ON")
+    set(CONDUIT_FOUND TRUE)
 
     # Manually set includes as system includes
     get_target_property(_dirs conduit::conduit INTERFACE_INCLUDE_DIRECTORIES)
     set_property(TARGET conduit::conduit 
                  APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
                  "${_dirs}")
-
 
     #------------------------------------------------------------------------------
     # Adiak
@@ -113,9 +118,12 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
 
     if(ADIAK_DIR AND SERAC_ENABLE_PROFILING)
-        serac_assert_is_directory(VARIABLE_NAME ADIAK_DIR)
+        serac_assert_is_directory(DIR_VARIABLE ADIAK_DIR)
 
-        find_package(adiak REQUIRED NO_DEFAULT_PATH PATHS ${ADIAK_DIR})
+        find_dependency(adiak REQUIRED PATHS "${ADIAK_DIR}")
+        serac_assert_find_succeeded(PROJECT_NAME Adiak
+                                    TARGET       adiak::adiak
+                                    DIR_VARIABLE ADIAK_DIR)
         message(STATUS "Adiak support is ON")
         set(ADIAK_FOUND TRUE)
     else()
@@ -131,7 +139,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
 
     if(CALIPER_DIR AND SERAC_ENABLE_PROFILING)
-        serac_assert_is_directory(VARIABLE_NAME CALIPER_DIR)
+        serac_assert_is_directory(DIR_VARIABLE CALIPER_DIR)
 
         # Should this logic be in the Caliper CMake package?
         # If CMake version doesn't support CUDAToolkit the libraries
@@ -144,8 +152,10 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             endif() 
         endif()
 
-        find_package(caliper REQUIRED NO_DEFAULT_PATH 
-                     PATHS ${CALIPER_DIR})
+        find_dependency(caliper REQUIRED PATHS "${CALIPER_DIR}")
+        serac_assert_find_succeeded(PROJECT_NAME Caliper
+                                    TARGET       caliper
+                                    DIR_VARIABLE CALIPER_DIR)
         message(STATUS "Caliper support is ON")
         set(CALIPER_FOUND TRUE)
     else()
@@ -158,7 +168,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #------------------------------------------------------------------------------
     if (SUNDIALS_DIR)
         # Note: Sundials is currently only used via MFEM and MFEM's target contains it's information
-        serac_assert_is_directory(VARIABLE_NAME SUNDIALS_DIR)
+        serac_assert_is_directory(DIR_VARIABLE SUNDIALS_DIR)
         set(SERAC_USE_SUNDIALS ON CACHE BOOL "")
         
         # Note: MFEM sets SUNDIALS_FOUND itself
@@ -176,12 +186,16 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #------------------------------------------------------------------------------
     if(NOT SERAC_ENABLE_CODEVELOP)
         message(STATUS "Using installed MFEM")
+        serac_assert_is_directory(DIR_VARIABLE MFEM_DIR)
         include(${CMAKE_CURRENT_LIST_DIR}/FindMFEM.cmake)
+        serac_assert_find_succeeded(PROJECT_NAME MFEM
+                                    TARGET       mfem
+                                    DIR_VARIABLE MFEM_DIR)
     else()
         message(STATUS "Using MFEM submodule")
 
         #### Store Data that MFEM clears
-        set(tpls_to_save AMGX AXOM CALIPER CAMP CONDUIT HDF5
+        set(tpls_to_save ADIAK AMGX AXOM CALIPER CAMP CONDUIT HDF5
                          HYPRE LUA METIS MFEM NETCDF PARMETIS PETSC RAJA 
                          SUPERLU_DIST STRUMPACK SUNDIALS TRIBOL UMPIRE)
         foreach(_tpl ${tpls_to_save})
@@ -202,32 +216,33 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(MFEM_USE_METIS_5 ${ENABLE_MPI} CACHE BOOL "")
         set(MFEM_USE_MPI ${ENABLE_MPI} CACHE BOOL "")
         if(NETCDF_DIR)
-            serac_assert_is_directory(VARIABLE_NAME NETCDF_DIR)
+            serac_assert_is_directory(DIR_VARIABLE NETCDF_DIR)
             set(MFEM_USE_NETCDF ON CACHE BOOL "")
         endif()
         # mfem+mpi also needs parmetis
         if(ENABLE_MPI)
-            serac_assert_is_directory(VARIABLE_NAME PARMETIS_DIR)
+            serac_assert_is_directory(DIR_VARIABLE PARMETIS_DIR)
             # Slightly different naming convention
             set(ParMETIS_DIR ${PARMETIS_DIR} CACHE PATH "")
         endif()
         set(MFEM_USE_OPENMP ${ENABLE_OPENMP} CACHE BOOL "")
-        # Disabling mfem using petsc in codevelop due to https://github.com/LLNL/serac/issues/1082
         set(MFEM_USE_PETSC OFF CACHE BOOL "")
         set(MFEM_USE_SLEPC OFF CACHE BOOL "")
         set(MFEM_USE_RAJA OFF CACHE BOOL "")
         set(MFEM_USE_SUNDIALS ${SERAC_USE_SUNDIALS} CACHE BOOL "")
         if(SUPERLUDIST_DIR)
-            serac_assert_is_directory(VARIABLE_NAME SUPERLUDIST_DIR)
+            serac_assert_is_directory(DIR_VARIABLE SUPERLUDIST_DIR)
             # MFEM uses a slightly different naming convention
             set(SuperLUDist_DIR ${SUPERLUDIST_DIR} CACHE PATH "")
             set(MFEM_USE_SUPERLU ${ENABLE_MPI} CACHE BOOL "")
         endif()
         if(STRUMPACK_DIR)
-            serac_assert_is_directory(VARIABLE_NAME STRUMPACK_DIR)
+            serac_assert_is_directory(DIR_VARIABLE STRUMPACK_DIR)
             set(MFEM_USE_STRUMPACK ON CACHE BOOL "")
-            find_package(strumpack CONFIG
-                PATHS ${STRUMPACK_DIR}/lib/cmake/STRUMPACK;${STRUMPACK_DIR}/lib64/cmake/STRUMPACK)
+            find_dependency(strumpack CONFIG
+                            PATHS "${STRUMPACK_DIR}"
+                                  "${STRUMPACK_DIR}/lib/cmake/STRUMPACK"
+                                  "${STRUMPACK_DIR}/lib64/cmake/STRUMPACK")
             set(STRUMPACK_REQUIRED_PACKAGES "MPI" "MPI_Fortran" "ParMETIS" "METIS"
                 "ScaLAPACK" CACHE STRING
                 "Additional packages required by STRUMPACK.")
@@ -297,11 +312,14 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
 
     #------------------------------------------------------------------------------
-    # PETSC
+    # PETSc
     #------------------------------------------------------------------------------
     if(PETSC_DIR)
-        serac_assert_is_directory(VARIABLE_NAME PETSC_DIR)
+        serac_assert_is_directory(DIR_VARIABLE PETSC_DIR)
         include(${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake)
+        serac_assert_find_succeeded(PROJECT_NAME PETSc
+                                    TARGET       PkgConfig::PETSC
+                                    DIR_VARIABLE PETSC_DIR)
         message(STATUS "PETSc support is ON")
         set(PETSC_FOUND TRUE)
     else()
@@ -310,16 +328,33 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
 
     #------------------------------------------------------------------------------
+    # SLEPC
+    #------------------------------------------------------------------------------
+    if(SLEPC_DIR)
+        serac_assert_is_directory(DIR_VARIABLE SLEPC_DIR)
+        include(${CMAKE_CURRENT_LIST_DIR}/FindSLEPc.cmake)
+        serac_assert_find_succeeded(PROJECT_NAME SLEPC
+                                    TARGET PkgConfig::SLEPC
+                                    DIR_VARIABLE SLEPC_DIR)
+        message(STATUS "SLEPc support is ON")
+        set(SLEPC_FOUND TRUE)
+    else()
+        message(STATUS "SLEPc support is OFF")
+        set(SLEPC_FOUND FALSE)
+    endif()
+
+    #------------------------------------------------------------------------------
     # Axom
     #------------------------------------------------------------------------------
     if(NOT SERAC_ENABLE_CODEVELOP)
         message(STATUS "Using installed Axom")
-        serac_assert_is_directory(VARIABLE_NAME AXOM_DIR)
+        serac_assert_is_directory(DIR_VARIABLE AXOM_DIR)
 
-        find_package(axom REQUIRED
-                        NO_DEFAULT_PATH 
-                        PATHS ${AXOM_DIR}/lib/cmake)
+        find_dependency(axom REQUIRED PATHS "${AXOM_DIR}/lib/cmake")
 
+        serac_assert_find_succeeded(PROJECT_NAME Axom
+                                    TARGET       axom
+                                    DIR_VARIABLE AXOM_DIR)
         message(STATUS "Axom support is ON")
 
         #
@@ -373,6 +408,12 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
 
     else()
+        # Turn off profiling in Axom to keep logs specific to Serac
+        set(_adiak_dir_temp ${ADIAK_DIR})
+        set(_caliper_dir_temp ${CALIPER_DIR})
+        unset(ADIAK_DIR CACHE)
+        unset(CALIPER_DIR CACHE)
+
         set(ENABLE_FORTRAN OFF CACHE BOOL "" FORCE)
         # Otherwise we use the submodule
         message(STATUS "Using Axom submodule")
@@ -384,15 +425,9 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(AXOM_ENABLE_TESTS    OFF CACHE BOOL "")
         set(AXOM_ENABLE_DOCS     OFF CACHE BOOL "")
         set(AXOM_ENABLE_TOOLS    OFF CACHE BOOL "")
-        set(AXOM_USE_CALIPER ${CALIPER_FOUND} CACHE BOOL "")
-        set(CUDA_SEPARABLE_COMPILATION ON CACHE BOOL "")
 
         # Used for the doxygen target
         set(AXOM_CUSTOM_TARGET_PREFIX "axom_" CACHE STRING "" FORCE)
-        if(ENABLE_CUDA)
-            # This appears to be unconditionally needed for Axom, why isn't it part of the build system?
-            set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
-        endif()
         if(${PROJECT_NAME} STREQUAL "smith")
             add_subdirectory(${PROJECT_SOURCE_DIR}/serac/axom/src  ${CMAKE_BINARY_DIR}/axom)
         else()
@@ -400,34 +435,24 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
         set(AXOM_FOUND TRUE CACHE BOOL "" FORCE)
 
+        add_library(axom::cli11 ALIAS cli11)
+        add_library(axom::fmt ALIAS fmt)
+
         if (STRUMPACK_DIR)
             target_link_libraries(sidre PUBLIC STRUMPACK::strumpack)
         endif()
 
-        # NOTE: Keeping this for compatibility, but this section is already done in axom since 858531b.
-        if (NOT TARGET axom)
-            # Create convenience target that bundles all Axom targets (axom)
-            # This normally happens in axom's installed config file
-            add_library(axom INTERFACE IMPORTED)
-            target_link_libraries(axom INTERFACE ${AXOM_COMPONENTS_ENABLED})
-
-            # Alias Axom's builtin thirdparty targets under axom namespace
-            foreach(_comp ${AXOM_COMPONENTS_ENABLED};cli11;fmt)
-                add_library(axom::${_comp} ALIAS ${_comp})
-            endforeach()
-        else()
-            foreach(_comp cli11;fmt)
-                add_library(axom::${_comp} ALIAS ${_comp})
-            endforeach()
-        endif()
-
         if(ENABLE_OPENMP)
-            target_link_libraries(core INTERFACE openmp)
+            target_link_libraries(core INTERFACE blt::openmp)
         endif()
 
         blt_convert_to_system_includes(TARGET core)
 
         set(ENABLE_FORTRAN ON CACHE BOOL "" FORCE)
+
+        # Restore TPLs after turning off profiling in Axom to keep logs specific to Serac
+        set(ADIAK_DIR ${_adiak_dir_temp} CACHE PATH "")
+        set(CALIPER_DIR ${_caliper_dir_temp} CACHE PATH "")
     endif()
 
     #------------------------------------------------------------------------------
@@ -435,23 +460,14 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #------------------------------------------------------------------------------
     if (NOT SERAC_ENABLE_CODEVELOP)
         if(TRIBOL_DIR)
-            serac_assert_is_directory(VARIABLE_NAME TRIBOL_DIR)
+            serac_assert_is_directory(DIR_VARIABLE TRIBOL_DIR)
 
-            find_package(tribol REQUIRED
-                                NO_DEFAULT_PATH 
-                                PATHS ${TRIBOL_DIR}/lib/cmake)
+            find_dependency(tribol REQUIRED PATHS "${TRIBOL_DIR}/lib/cmake")
 
-            if(TARGET tribol)
-                message(STATUS "Tribol CMake exported library loaded: tribol")
-            else()
-                message(FATAL_ERROR "Could not load Tribol CMake exported library: tribol")
-            endif()
-
-            # Set include dir to system
-            set(TRIBOL_INCLUDE_DIR ${TRIBOL_DIR}/include)
-            set_property(TARGET tribol
-                        APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                        ${TRIBOL_INCLUDE_DIR})
+            serac_assert_find_succeeded(PROJECT_NAME Tribol
+                                        TARGET       tribol
+                                        DIR_VARIABLE TRIBOL_DIR)
+            blt_convert_to_system_includes(TARGET tribol)
             set(TRIBOL_FOUND ON)
         else()
             set(TRIBOL_FOUND OFF)
@@ -489,43 +505,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(ENABLE_FORTRAN ON CACHE BOOL "" FORCE)
     endif()
 
-    #------------------------------------------------------------------------------
-    # Remove exported OpenMP flags because they are not language agnostic
-    #------------------------------------------------------------------------------
-    if (NOT SERAC_ENABLE_CODEVELOP)
-
-        set(_props)
-        if( ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.13.0" )
-            list(APPEND _props INTERFACE_LINK_OPTIONS)
-        endif()
-        list(APPEND _props INTERFACE_COMPILE_OPTIONS)
-
-        # This flag is empty due to us not enabling fortran but we need to strip it
-        # so it doesn't propagate in our project
-        if("${OpenMP_Fortran_FLAGS}" STREQUAL "")
-            set(OpenMP_Fortran_FLAGS "$<$<NOT:$<COMPILE_LANGUAGE:Fortran>>:-fopenmp=libomp>;$<$<COMPILE_LANGUAGE:Fortran>:-fopenmp>")
-        endif()
-
-        foreach(_target axom)
-            if(TARGET ${_target})
-                message(STATUS "Removing OpenMP Flags from target[${_target}]")
-
-                foreach(_prop ${_props})
-                    get_target_property(_flags ${_target} ${_prop})
-                    if ( _flags )
-                        string( REPLACE "${OpenMP_CXX_FLAGS}" ""
-                                correct_flags "${_flags}" )
-                        string( REPLACE "${OpenMP_Fortran_FLAGS}" ""
-                                correct_flags "${correct_flags}" )
-
-                        set_target_properties( ${_target} PROPERTIES ${_prop} "${correct_flags}" )
-                    endif()
-                endforeach()
-            endif()
-        endforeach()
-
-    endif()
-
     #---------------------------------------------------------------------------
     # Remove non-existant INTERFACE_INCLUDE_DIRECTORIES from imported targets
     # to work around CMake error
@@ -557,21 +536,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
                 set_target_properties(${_target} PROPERTIES
                                       INTERFACE_INCLUDE_DIRECTORIES "${_existing_dirs}" )
             endif()
-        endif()
-    endforeach()
-
-    # List of TPL targets built in to BLT - will need to be adjusted when we start using HIP
-    set(TPL_DEPS)
-    blt_list_append(TO TPL_DEPS ELEMENTS cuda cuda_runtime IF ENABLE_CUDA)
-    blt_list_append(TO TPL_DEPS ELEMENTS mpi IF ENABLE_MPI)
-
-    foreach(dep ${TPL_DEPS})
-        # If the target is EXPORTABLE, add it to the export set
-        get_target_property(_is_imported ${dep} IMPORTED)
-        if(NOT ${_is_imported})
-            install(TARGETS              ${dep}
-                    EXPORT               serac-targets
-                    DESTINATION          lib)
         endif()
     endforeach()
 
