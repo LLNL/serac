@@ -206,12 +206,12 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper(lambda&& qf, double t, const 
   static_assert(tuple_size<trial_types>::value == tuple_size<space_types>::value,
                 "Argument and finite element space tuples are not the same size.");
 
-  auto x = serac::tuple{get<VALUE>(X) + get<VALUE>(shape),
+  auto x = serac::tuple{get<VALUE>(position) + get<VALUE>(shape),
 
                         // x := X + u,
                         // so, dx/dxi = dX/dxi + du/dxi
                         //            = dX/dxi + du/dX * dX/dxi
-                        get<DERIVATIVE>(X) + get<DERIVATIVE>(shape) * get<DERIVATIVE>(X)};
+                        get<DERIVATIVE>(position) + get<DERIVATIVE>(shape) * get<DERIVATIVE>(position)};
 
   return qf(t, x, correction.modify_trial_argument(serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
 }
@@ -254,12 +254,12 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper_with_state(lambda&& qf, doubl
   static_assert(tuple_size<trial_types>::value == tuple_size<space_types>::value,
                 "Argument and finite element space tuples are not the same size.");
 
-  auto x = serac::tuple{get<VALUE>(X) + get<VALUE>(shape),
+  auto x = serac::tuple{get<VALUE>(position) + get<VALUE>(shape),
 
                         // x := X + u,
                         // so, dx/dxi = dX/dxi + du/dxi
                         //            = dX/dxi + du/dX * dX/dxi
-                        get<DERIVATIVE>(X) + get<DERIVATIVE>(shape) * get<DERIVATIVE>(X)};
+                        get<DERIVATIVE>(position) + get<DERIVATIVE>(shape) * get<DERIVATIVE>(position)};
 
   return qf(t, x, state, correction.modify_trial_argument(serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
 }
