@@ -33,8 +33,8 @@ void functional_solid_test_nonlinear_buckle()
   static constexpr int ORDER{1};
   static constexpr int DIM{3};
 
-  int Nx = 20;
-  int Ny = 30;
+  int Nx = 110;
+  int Ny = 55;
   int Nz = 4;
 
   double Lx = 20.0;  // in
@@ -42,9 +42,9 @@ void functional_solid_test_nonlinear_buckle()
   double Lz = 0.3;   // in
 
   double density       = 1.0;
-  double bulkMod       = 1.0;
-  double shearMod      = 1.0;
-  double loadMagnitude = 5.0e-3;  // 1e-3;
+  double bulkMod       = 0.1;
+  double shearMod      = 0.5;
+  double loadMagnitude = 8.0e-1; //6.e-1;  // 1e-3;
 
   std::string    meshTag = "mesh";
   mfem::Mesh     mesh    = mfem::Mesh::MakeCartesian3D(Nx, Ny, Nz, mfem::Element::HEXAHEDRON, Lx, Ly, Lz);
@@ -63,7 +63,7 @@ void functional_solid_test_nonlinear_buckle()
       .min_iterations             = 1,
       .max_iterations             = 400,
       .max_line_search_iterations = 30,
-      .print_level                = 0};
+      .print_level                = 1};
 
   serac::LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::CG,
                                                .preconditioner = Preconditioner::HypreJacobi,
