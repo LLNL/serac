@@ -1,7 +1,7 @@
-# Copyright 2013-2023 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level LICENSE file for details.
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
+# other Serac Project Developers. See the top-level COPYRIGHT file for details.
 #
-# SPDX-License-Identifier: (Apache-2.0 OR MIT)
+# SPDX-License-Identifier: (BSD-3-Clause)
 
 from spack import *
 from spack.spec import UnsupportedCompilerError
@@ -59,6 +59,7 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     variant("petsc", default=True,
             description="Enable PETSc support")
+    variant("slepc", default=True, description="Enable SLEPc integration") 
     variant("netcdf", default=True,
            description="Enable Cubit/Genesis reader")
     variant("sundials", default=True,
@@ -77,7 +78,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     # -----------------------------------------------------------------------
     # Basic dependencies
     depends_on("mpi")
-    depends_on("cmake@3.8:")
+    depends_on("cmake@3.14:")
 
     depends_on("lua")
 
@@ -96,7 +97,6 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     depends_on("mfem+metis+superlu-dist+lapack+mpi")
     depends_on("mfem+netcdf", when="+netcdf")
-    depends_on("mfem+petsc", when="+petsc")
     depends_on("mfem+sundials", when="+sundials")
     depends_on("mfem+amgx", when="+cuda")
     depends_on("mfem+asan", when="+asan")
@@ -107,8 +107,13 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("hypre@2.26.0~superlu-dist+mpi")
 
     depends_on("petsc", when="+petsc")
+    depends_on("petsc+strumpack", when="+petsc+strumpack")
+    depends_on("petsc~strumpack", when="+petsc~strumpack")
+    depends_on("petsc+openmp", when="+petsc+openmp")
+    depends_on("petsc~openmp", when="+petsc~openmp")
+    depends_on("slepc+arpack", when="+slepc")
 
-    depends_on("tribol~minbuild", when="+tribol")
+    depends_on("tribol", when="+tribol")
 
     # Needs to be first due to a bug with the Spack concretizer
     # Note: Certain combinations of CMake and Conduit do not like +mpi
@@ -116,17 +121,17 @@ class Serac(CachedCMakePackage, CudaPackage):
     #  (includes, libs, etc) instead of hdf5 info
     depends_on("hdf5@1.8.21:+hl~mpi")
 
-    depends_on("camp@2022.03.2:")
+    depends_on("camp@2024.02.0:")
 
-    depends_on("raja~examples~exercises", when="+raja")
+    depends_on("raja@2024.02.0:~examples~exercises", when="+raja")
     depends_on("raja~openmp", when="+raja~openmp")
     depends_on("raja+openmp", when="+raja+openmp")
 
-    depends_on("umpire@2022.03.1:~examples~device_alloc", when="+umpire")
+    depends_on("umpire@2024.02.0:~examples~device_alloc", when="+umpire")
     depends_on("umpire~openmp", when="+umpire~openmp")
     depends_on("umpire+openmp", when="+umpire+openmp")
 
-    depends_on("axom~fortran~tools~examples+mfem+lua")
+    depends_on("axom@0.9:~fortran~tools~examples+mfem+lua")
     depends_on("axom~raja", when="~raja")
     depends_on("axom~umpire", when="~umpire")
     depends_on("axom~openmp", when="~openmp")
@@ -144,12 +149,12 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     # The optional slate dependency is not handled in the MFEM spack package
     depends_on("strumpack~slate~butterflypack~zfp", when="+strumpack")
-
+    depends_on("strumpack+openmp", when="+strumpack+openmp")
     depends_on("strumpack~openmp", when="+strumpack~openmp")
 
     #
     # Forward variants
-    # NOTE: propogating variants to dependencies should be removed when pushing this recipe up to Spack
+    # NOTE: propagating variants to dependencies should be removed when pushing this recipe up to Spack
     #
 
     # CMake packages "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
@@ -187,7 +192,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("netcdf-c~shared", when="+netcdf~shared")
 
     # Tribol does not have shared variant
-    depends_on("tribol+debug".format(dep), when="+tribol build_type=Debug".format(dep))
+    depends_on("tribol build_type=Debug", when="+tribol build_type=Debug")
 
     # Required but not CMake
     for dep in ["hypre", "mfem"]:
@@ -236,7 +241,7 @@ class Serac(CachedCMakePackage, CudaPackage):
                     when="cuda_arch={0}".format(sm_))
     
     # Check if these variants are true and +cuda before adding
-    cuda_deps_with_variants = ["raja", "sundials", "tribol", "umpire"]
+    cuda_deps_with_variants = ["raja", "sundials", "tribol", "umpire", "petsc", "slepc"]
     for dep in cuda_deps_with_variants:
         depends_on("{0}+cuda".format(dep), when="+{0}+cuda".format(dep))
         for sm_ in CudaPackage.cuda_arch_values:
@@ -292,13 +297,9 @@ class Serac(CachedCMakePackage, CudaPackage):
                 # CXX flags will be propagated to the host compiler
                 cxxflags = " ".join(spec.compiler_flags["cxxflags"])
                 cuda_flags = cxxflags
-                cuda_flags += " --expt-extended-lambda --expt-relaxed-constexpr "
+                cuda_flags += "${CMAKE_CUDA_FLAGS} --expt-extended-lambda --expt-relaxed-constexpr "
                 entries.append(cmake_cache_string("CMAKE_CUDA_FLAGS",
-                                                  cuda_flags))
-
-                cuda_arch = spec.variants["cuda_arch"].value[0]
-                entries.append(cmake_cache_string("CMAKE_CUDA_ARCHITECTURES",
-                                                  cuda_arch))
+                                                  cuda_flags, force=True))
 
                 entries.append(
                     "# nvcc does not like gtest's 'pthreads' flag\n")
@@ -379,8 +380,13 @@ class Serac(CachedCMakePackage, CudaPackage):
         dep_dir = get_spec_path(spec, "superlu-dist", path_replacements)
         entries.append(cmake_cache_path("SUPERLUDIST_DIR", dep_dir))
 
+        if spec.satisfies("^arpack-ng"):
+            dep_dir = get_spec_path(spec, "arpack-ng", path_replacements)
+            entries.append(cmake_cache_path("ARPACK_DIR", dep_dir))
+
         # optional tpls
-        for dep in ("adiak", "amgx", "caliper", "petsc", "raja", "strumpack", "sundials", "umpire", "tribol"):
+        for dep in ("adiak", "amgx", "caliper", "petsc", "raja", "slepc", "strumpack", "sundials", "umpire",
+                    "tribol"):
             if spec.satisfies("^{0}".format(dep)):
                 dep_dir = get_spec_path(spec, dep, path_replacements)
                 entries.append(cmake_cache_path("%s_DIR" % dep.upper(),

@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -48,8 +48,8 @@ set(infrastructure_sources
 set(infrastructure_depends axom::inlet axom::fmt axom::cli11 mfem)
 blt_list_append(TO infrastructure_depends ELEMENTS tribol IF TRIBOL_FOUND)
 blt_list_append(TO infrastructure_depends ELEMENTS caliper adiak::adiak IF SERAC_ENABLE_PROFILING)
-blt_list_append(TO infrastructure_depends ELEMENTS cuda IF ENABLE_CUDA)
-list(APPEND infrastructure_depends mpi)
+blt_list_append(TO infrastructure_depends ELEMENTS blt::cuda IF ENABLE_CUDA)
+list(APPEND infrastructure_depends blt::mpi)
 
 blt_add_library(
     NAME        serac_infrastructure
