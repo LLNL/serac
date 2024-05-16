@@ -28,6 +28,8 @@ set(functional_tests_serial
 serac_add_tests( SOURCES ${functional_tests_serial}
                  DEPENDS_ON gtest serac_functional ${functional_depends})
 
+set_source_files_properties(functional_tet_quality PROPERTIES LANGUAGE CXX)
+
 # Then add the examples/tests
 set(functional_tests_mpi
     #functional_basic_hcurl.cpp
