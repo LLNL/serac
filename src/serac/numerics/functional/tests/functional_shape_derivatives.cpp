@@ -237,8 +237,8 @@ void functional_test_2D(mfem::ParMesh& mesh, double tolerance)
   auto div_f = [c](auto x) { return tr(dot(c, grad_monomials<p>(x))); };
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<>{},
-      [=](double /*t*/, auto X) {
-        return serac::tuple{div_f(X), zero{}};
+      [=](double /*t*/, auto position) {
+        return serac::tuple{div_f(get<VALUE>(position)), zero{}};
       },
       mesh);
 
@@ -295,7 +295,7 @@ void functional_test_3D(mfem::ParMesh& mesh, double tolerance)
   // Construct the new functional object using the known test and trial spaces
   ShapeAwareFunctional<shape_space, test_space(trial_space)> residual(&fespace2, &fespace1, {&fespace1});
 
-  auto div_f = [c](auto x) { return tr(dot(c, grad_monomials<p>(x))); };
+  auto div_f = [c](auto position) { return tr(dot(c, grad_monomials<p>(get<VALUE>(position)))); };
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<>{},
       [=](double /*t*/, auto X) {
