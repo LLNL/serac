@@ -257,8 +257,7 @@ private:
  * @return The constructed nonlinear solver
  */
 std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(const NonlinearSolverOptions& nonlinear_opts,
-                                                         mfem::Solver& Preconditioner,
-                                                         MPI_Comm               comm           = MPI_COMM_WORLD);
+                                                         mfem::Solver& Preconditioner, MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
  * @brief Build the linear solver and its associated preconditioner given a linear options struct

@@ -37,35 +37,34 @@ void functional_solid_test_nonlinear_buckle()
   int Ny = 30;
   int Nz = 4;
 
-  double Lx = 20.0; // in
-  double Ly = 10.0; // in
-  double Lz = 0.3; // in
+  double Lx = 20.0;  // in
+  double Ly = 10.0;  // in
+  double Lz = 0.3;   // in
 
-  double density = 1.0;
-  double bulkMod = 1.0;
-  double shearMod = 1.0;
-  double loadMagnitude = 5.0e-3; //1e-3;
+  double density       = 1.0;
+  double bulkMod       = 1.0;
+  double shearMod      = 1.0;
+  double loadMagnitude = 5.0e-3;  // 1e-3;
 
-  std::string meshTag = "mesh";
-  mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(Nx, Ny, Nz, mfem::Element::HEXAHEDRON, Lx, Ly, Lz);
-  auto pmesh = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, mesh);
-  mfem::ParMesh *meshPtr = &serac::StateManager::setMesh(std::move(pmesh), meshTag);
+  std::string    meshTag = "mesh";
+  mfem::Mesh     mesh    = mfem::Mesh::MakeCartesian3D(Nx, Ny, Nz, mfem::Element::HEXAHEDRON, Lx, Ly, Lz);
+  auto           pmesh   = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, mesh);
+  mfem::ParMesh* meshPtr = &serac::StateManager::setMesh(std::move(pmesh), meshTag);
 
   // solid mechanics
   using seracSolidType = serac::SolidMechanics<ORDER, DIM, serac::Parameters<>>;
 
   serac::NonlinearSolverOptions nonlinear_options{
-                                                  .nonlin_solver  = NonlinearSolver::TrustRegion,
-                                                  // .nonlin_solver  = NonlinearSolver::NewtonLineSearch,
-                                                  // serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
-                                                  .relative_tol   = 1.0e-8,
-                                                  .absolute_tol   = 1.0e-12,
-                                                  .min_iterations = 1,
-                                                  .max_iterations = 400,
-                                                  .max_line_search_iterations = 30,
-                                                  .print_level    = 0
-                                                 };
-  
+      .nonlin_solver = NonlinearSolver::TrustRegion,
+      // .nonlin_solver  = NonlinearSolver::NewtonLineSearch,
+      // serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
+      .relative_tol               = 1.0e-8,
+      .absolute_tol               = 1.0e-12,
+      .min_iterations             = 1,
+      .max_iterations             = 400,
+      .max_line_search_iterations = 30,
+      .print_level                = 0};
+
   serac::LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::CG,
                                                .preconditioner = Preconditioner::HypreJacobi,
                                                .relative_tol   = 1.0e-6,
@@ -74,29 +73,26 @@ void functional_solid_test_nonlinear_buckle()
 
   linear_options = serac::solid_mechanics::direct_linear_options;
 
-  auto seracSolid = std::make_unique<seracSolidType>(nonlinear_options,
-                                                     linear_options,
-                                                     serac::solid_mechanics::default_quasistatic_options,
-                                                     serac::GeometricNonlinearities::On, "serac_solid", meshTag, std::vector<std::string>{});
+  auto seracSolid = std::make_unique<seracSolidType>(
+      nonlinear_options, linear_options, serac::solid_mechanics::default_quasistatic_options,
+      serac::GeometricNonlinearities::On, "serac_solid", meshTag, std::vector<std::string>{});
 
   // set linear elastic material
   serac::solid_mechanics::NeoHookean material{density, bulkMod, shearMod};
-  //serac::solid_mechanics::StVenantKirchhoff material{density, bulkMod, shearMod};
+  // serac::solid_mechanics::StVenantKirchhoff material{density, bulkMod, shearMod};
   seracSolid->setMaterial(serac::DependsOn<>{}, material);
 
   // fix displacement on side surface
-  seracSolid->setDisplacementBCs({2, 3, 4, 5}, [](const mfem::Vector&, mfem::Vector& u){ u=0.0; });
+  seracSolid->setDisplacementBCs({2, 3, 4, 5}, [](const mfem::Vector&, mfem::Vector& u) { u = 0.0; });
 
   serac::Domain topSurface = serac::Domain::ofBoundaryElements(*meshPtr, serac::by_attr<DIM>(6));
-  seracSolid->setTraction([&](auto, auto n, auto) {
-    return -loadMagnitude*n;
-  }, topSurface);
+  seracSolid->setTraction([&](auto, auto n, auto) { return -loadMagnitude * n; }, topSurface);
 
   seracSolid->completeSetup();
   seracSolid->advanceTimestep(1.0);
 
   const serac::FiniteElementState& displacement = seracSolid->state("displacement");
-  mfem::ParGridFunction uGF(const_cast<mfem::ParFiniteElementSpace*>(&displacement.space()));
+  mfem::ParGridFunction            uGF(const_cast<mfem::ParFiniteElementSpace*>(&displacement.space()));
   displacement.fillGridFunction(uGF);
 
   mfem::VisItDataCollection visit_dc("nonlinearPlate", meshPtr);
