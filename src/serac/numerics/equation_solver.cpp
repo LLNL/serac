@@ -376,6 +376,14 @@ public:
     return zz + 2 * alpha * zd + alpha * alpha * dd;
   }
 
+  double max_val(const mfem::Vector& x) const {
+    double mv = -std::numeric_limits<double>::max();
+    for (int i=0; i < x.Size(); ++i) {
+      mv = std::max(mv, x(i));
+    }
+    return mv;
+  }
+
   void dogleg_step(const mfem::Vector& cp, const mfem::Vector& newtonP, double trSize, mfem::Vector& s) const
   {
     // MRT, could optimize some of these eventually, compute on the outside and save
@@ -508,7 +516,7 @@ public:
     TrustRegionResults  trResults(x.Size());
     TrustRegionSettings settings;  // MRT, read these in please
     settings.cgTol           = 0.2 * norm_goal;
-    double trSize            = 10.0;
+    double trSize            = 2000; //10.0;
     size_t cumulativeCgIters = 0;
 
     int it = 0;
@@ -633,6 +641,8 @@ public:
 
         if (willAccept) {
           x                = xPred;
+          double mv = max_val(x);
+          mfem::out << "max displacement = " << mv << "\n";
           r                = rPred;
           norm             = normPred;
           happyAboutTrSize = true;
