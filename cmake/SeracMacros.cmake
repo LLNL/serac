@@ -82,7 +82,7 @@ endmacro(serac_add_code_checks)
 
 
 #------------------------------------------------------------------------------
-# serac_assert_find_succeeded(DIR_VARIABLE <variable that holds the prefix>)
+# serac_assert_is_directory(DIR_VARIABLE <variable that holds the prefix>)
 #
 # Asserts that the given DIR_VARIABLE's value is a directory and exists.
 # Fails with a helpful message when it doesn't.
