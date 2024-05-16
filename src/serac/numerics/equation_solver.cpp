@@ -18,14 +18,17 @@ namespace serac {
 
 class NewtonSolver : public mfem::NewtonSolver {
 protected:
-  mutable mfem::Vector x0;
+  mutable mfem::Vector   x0;
   NonlinearSolverOptions nonlinear_options;
 
 public:
-  NewtonSolver(const NonlinearSolverOptions& nonlinear_opts) : nonlinear_options(nonlinear_opts) { }
+  NewtonSolver(const NonlinearSolverOptions& nonlinear_opts) : nonlinear_options(nonlinear_opts) {}
 
 #ifdef MFEM_USE_MPI
-  NewtonSolver(MPI_Comm comm_, const NonlinearSolverOptions& nonlinear_opts) : mfem::NewtonSolver(comm_), nonlinear_options(nonlinear_opts) {}
+  NewtonSolver(MPI_Comm comm_, const NonlinearSolverOptions& nonlinear_opts)
+      : mfem::NewtonSolver(comm_), nonlinear_options(nonlinear_opts)
+  {
+  }
 #endif
 
   void Mult(const mfem::Vector&, mfem::Vector& x) const
@@ -84,12 +87,12 @@ public:
       oper->Mult(x, r);
       norm = Norm(r);
 
-      const int max_ls_iters = nonlinear_options.max_line_search_iterations;
+      const int               max_ls_iters = nonlinear_options.max_line_search_iterations;
       static constexpr real_t reduction    = 0.5;
 
-      const double cMagnitudeInR = std::abs( Dot(c,r) ) / norm_nm1;
-      const double sufficientDegreeParam = 0.0; //1e-15;
-      auto is_improved = [=](real_t currentNorm, real_t c_scale) {
+      const double cMagnitudeInR         = std::abs(Dot(c, r)) / norm_nm1;
+      const double sufficientDegreeParam = 0.0;  // 1e-15;
+      auto         is_improved           = [=](real_t currentNorm, real_t c_scale) {
         return currentNorm < norm_nm1 - sufficientDegreeParam * c_scale * cMagnitudeInR;
       };
 
@@ -105,7 +108,6 @@ public:
 
       // try the opposite direction and linesearch back from there
       if (ls_iter == max_ls_iters && !is_improved(norm, c_scale)) {
-
         c_scale = 1.0;
         add(x0, c_scale, c, x);
         oper->Mult(x, r);
@@ -119,7 +121,8 @@ public:
           norm = Norm(r);
         }
 
-        // ok, the opposite direction was also terrible, lets go back, cut in half 1 last time and accept it hoping for the best
+        // ok, the opposite direction was also terrible, lets go back, cut in half 1 last time and accept it hoping for
+        // the best
         if (ls_iter == max_ls_iters && !is_improved(norm, c_scale)) {
           ++ls_iter_sum;
           c_scale *= reduction;
@@ -134,7 +137,9 @@ public:
           mfem::out << "Number of line search steps taken = : " << ls_iter_sum << std::endl;
         }
         if (print_options.warnings && (ls_iter_sum == 2 * max_ls_iters + 1)) {
-          mfem::out << "The maximum number of line search cut back have occurred, the resulting residual may not have decreased. " << std::endl;
+          mfem::out << "The maximum number of line search cut back have occurred, the resulting residual may not have "
+                       "decreased. "
+                    << std::endl;
         }
       }
     }
@@ -151,7 +156,6 @@ public:
   }
 };
 
-
 class Nesterov : public mfem::NewtonSolver {
 protected:
   mutable mfem::Vector v;
@@ -160,7 +164,7 @@ protected:
   mutable mfem::Vector Ks;
   mutable mfem::Vector rOld;
   mutable mfem::Vector rPred;
-  mutable double dt;
+  mutable double       dt;
 
 public:
   Nesterov() {}
@@ -182,19 +186,25 @@ public:
     mfem::out << "initial residual norm = " << Norm(r) << std::endl;
 
     norm = initial_norm = Norm(r);
-    norm_goal = std::max(rel_tol * initial_norm, abs_tol);
+    norm_goal           = std::max(rel_tol * initial_norm, abs_tol);
     if (print_options.first_and_last && !print_options.iterations) {
       mfem::out << "Newton iteration " << std::setw(2) << 0 << " : ||r|| = " << norm << "...\n";
     }
     prec->iterative_mode = false;
 
     // local arrays
-    v.SetSize(x.Size()); v = 0.0;
-    a.SetSize(x.Size()); a = 0.0;
-    xPred.SetSize(x.Size()); xPred = 0.0;
-    Ks.SetSize(x.Size()); Ks = 0.0;
-    rPred.SetSize(x.Size()); rPred = 0.0;
-    rOld.SetSize(x.Size()); rOld = 0.0;
+    v.SetSize(x.Size());
+    v = 0.0;
+    a.SetSize(x.Size());
+    a = 0.0;
+    xPred.SetSize(x.Size());
+    xPred = 0.0;
+    Ks.SetSize(x.Size());
+    Ks = 0.0;
+    rPred.SetSize(x.Size());
+    rPred = 0.0;
+    rOld.SetSize(x.Size());
+    rOld = 0.0;
 
     int it = 0;
     for (; true; it++) {
@@ -216,7 +226,7 @@ public:
       }
 
       auto K = &oper->GetGradient(x);
-      if (it==0) {
+      if (it == 0) {
         printf("setting preconditioner\n");
         prec->SetOperator(*K);
       }
@@ -225,13 +235,13 @@ public:
       prec->Mult(r, c);  // c = [DF(x_i)]^{-1} [F(x_i)-b]
       std::cout << "c a " << Norm(c) << std::endl;
 
-      real_t c_scale = 0.9;//0.1; //1.0; //1e-2;//1.0;
+      real_t c_scale = 0.9;  // 0.1; //1.0; //1e-2;//1.0;
       K->Mult(c, Ks);
       double alpha = Dot(Ks, c) / Dot(c, c);
-      c_scale = 1.0 / (alpha * std::sqrt(Dot(c, c)));
+      c_scale      = 1.0 / (alpha * std::sqrt(Dot(c, c)));
       std::cout << "initial c scale = " << c_scale << std::endl;
 
-      rOld = r;
+      rOld           = r;
       double normOld = norm;
 
       add(x, -c_scale, c, xPred);
@@ -242,12 +252,14 @@ public:
       oper->Mult(xPred, r);
       norm = Norm(r);
 
-      std::cout << "nrm , pre = " << norm-normOld << " " << normPred-normOld << std::endl;
+      std::cout << "nrm , pre = " << norm - normOld << " " << normPred - normOld << std::endl;
 
       static constexpr int    max_ls_iters = 30;
       static constexpr real_t reduction    = 0.5;
 
-      auto is_progress = [=](real_t currentNorm, real_t) { return ( (currentNorm < 1.001 * normPred) || currentNorm < normOld); };
+      auto is_progress = [=](real_t currentNorm, real_t) {
+        return ((currentNorm < 1.001 * normPred) || currentNorm < normOld);
+      };
 
       // back-track linesearch
       int ls_iter     = 0;
@@ -259,7 +271,7 @@ public:
         normPred = Norm(rPred);
         oper->Mult(xPred, r);
         norm = Norm(r);
-        std::cout << "nrm , pre = " << norm-normOld << " " << normPred-normOld << std::endl;
+        std::cout << "nrm , pre = " << norm - normOld << " " << normPred - normOld << std::endl;
       }
 
       x = xPred;
@@ -283,23 +295,21 @@ public:
   }
 };
 
-
 struct TrustRegionSettings {
-  double cgTol = 1e-8;
-  size_t maxCgIterations = 5000;
+  double cgTol                  = 1e-8;
+  size_t maxCgIterations        = 5000;
   size_t maxCumulativeIteration = 1;
-  double min_tr_size = 1e-9;
-  double t1 = 0.25;
-  double t2 = 1.75;
-  double eta1 = 1e-9;
-  double eta2 = 0.1;
-  double eta3 = 0.6;
+  double min_tr_size            = 1e-9;
+  double t1                     = 0.25;
+  double t2                     = 1.75;
+  double eta1                   = 1e-9;
+  double eta2                   = 0.1;
+  double eta3                   = 0.6;
 };
 
-
 struct TrustRegionResults {
-
-  TrustRegionResults(int size) {
+  TrustRegionResults(int size)
+  {
     z.SetSize(size);
     d.SetSize(size);
     Pr.SetSize(size);
@@ -307,62 +317,63 @@ struct TrustRegionResults {
     cauchyPoint.SetSize(size);
   }
 
-  void reset() {
-    z = 0.0;
+  void reset()
+  {
+    z           = 0.0;
     cauchyPoint = 0.0;
   }
 
-  enum class Status {
+  enum class Status
+  {
     Interior,
     NegativeCurvature,
     OnBoundary,
   };
 
-  mfem::Vector z;  // step direction
-  mfem::Vector d;  // incrementalCG direction
-  mfem::Vector Pr; // preconditioned residual
-  mfem::Vector Hd; // action of hessian on direction d
+  mfem::Vector z;   // step direction
+  mfem::Vector d;   // incrementalCG direction
+  mfem::Vector Pr;  // preconditioned residual
+  mfem::Vector Hd;  // action of hessian on direction d
   mfem::Vector cauchyPoint;
-  Status interiorStatus = Status::Interior;
-  size_t cgIterationsCount = 0;
+  Status       interiorStatus    = Status::Interior;
+  size_t       cgIterationsCount = 0;
 };
-
 
 class TrustRegion : public mfem::NewtonSolver {
 protected:
-
   mutable mfem::Vector xPred;
   mutable mfem::Vector rPred;
   mutable mfem::Vector scratch;
 
-  Solver &trPrec;
+  Solver& trPrec;
 
 public:
-
 #ifdef MFEM_USE_MPI
   TrustRegion(MPI_Comm comm_, Solver& tPrec) : mfem::NewtonSolver(comm_), trPrec(tPrec) {}
 #endif
 
-  void project_to_boundary_with_coefs(mfem::Vector& z, const mfem::Vector& d, double trSize, double zz, double zd, double dd) const
+  void project_to_boundary_with_coefs(mfem::Vector& z, const mfem::Vector& d, double trSize, double zz, double zd,
+                                      double dd) const
   {
     // find tau s.t. (z + tau*d)^2 = trSize^2
-    double tau = (std::sqrt( (trSize*trSize-zz)*dd + zd*zd ) - zd)/dd;
+    double tau = (std::sqrt((trSize * trSize - zz) * dd + zd * zd) - zd) / dd;
     z.Add(tau, d);
   }
 
-  void project_to_boundary_between_with_coefs(mfem::Vector& z, const mfem::Vector& y, double trSize, double zz, double zy, double yy) const
+  void project_to_boundary_between_with_coefs(mfem::Vector& z, const mfem::Vector& y, double trSize, double zz,
+                                              double zy, double yy) const
   {
     // find tau s.t. (z + tau*(y-z))^2 = trSize^2
-    double dd = yy - 2*zy + zz;
-    double zd = zy - zz;
-    double tau = (std::sqrt( (trSize*trSize-zz)*dd + zd*zd ) - zd)/dd;
+    double dd  = yy - 2 * zy + zz;
+    double zd  = zy - zz;
+    double tau = (std::sqrt((trSize * trSize - zz) * dd + zd * zd) - zd) / dd;
     z.Add(-tau, z);
     z.Add(tau, y);
   }
 
   double update_step_length_squared(double alpha, double zz, double zd, double dd) const
   {
-    return zz + 2*alpha*zd + alpha*alpha*dd;
+    return zz + 2 * alpha * zd + alpha * alpha * dd;
   }
 
   void dogleg_step(const mfem::Vector& cp, const mfem::Vector& newtonP, double trSize, mfem::Vector& s) const
@@ -370,17 +381,17 @@ public:
     // MRT, could optimize some of these eventually, compute on the outside and save
     double cc = Dot(cp, cp);
     double nn = Dot(newtonP, newtonP);
-    double tt = trSize*trSize;
-    
+    double tt = trSize * trSize;
+
     s = 0.0;
     if (cc >= tt) {
-      add(s, std::sqrt(tt/cc), cp, s);
+      add(s, std::sqrt(tt / cc), cp, s);
     } else if (cc > nn) {
       if (print_options.warnings) {
         mfem::out << "cp outside newton, preconditioner likely inaccurate\n";
       }
       add(s, 1.0, cp, s);
-    } else if (nn > tt) { // on the dogleg (we have nn >= cc, and tt >= cc)
+    } else if (nn > tt) {  // on the dogleg (we have nn >= cc, and tt >= cc)
       add(s, 1.0, cp, s);
       double cn = Dot(cp, newtonP);
       project_to_boundary_between_with_coefs(s, newtonP, trSize, cc, cn, nn);
@@ -390,58 +401,54 @@ public:
   }
 
   template <typename HessVecFunc, typename PrecondFunc>
-  void solve_trust_region_minimization(const mfem::Vector& r0,
-                                       mfem::Vector& rCurrent,
-                                       HessVecFunc hess_vec_func, PrecondFunc precond,
-                                       const TrustRegionSettings& settings, double& trSize,
+  void solve_trust_region_minimization(const mfem::Vector& r0, mfem::Vector& rCurrent, HessVecFunc hess_vec_func,
+                                       PrecondFunc precond, const TrustRegionSettings& settings, double& trSize,
                                        TrustRegionResults& results) const
   {
     // minimize r@z + 0.5*z@J@z
-    results.interiorStatus = TrustRegionResults::Status::Interior;
+    results.interiorStatus    = TrustRegionResults::Status::Interior;
     results.cgIterationsCount = 0;
 
-    auto& z = results.z;
+    auto& z      = results.z;
     auto& cgIter = results.cgIterationsCount;
-    auto& d = results.d;
-    auto& Pr = results.Pr;
-    auto& Hd = results.Hd;
+    auto& d      = results.d;
+    auto& Pr     = results.Pr;
+    auto& Hd     = results.Hd;
 
-    const double cgTolSquared = settings.cgTol*settings.cgTol;
+    const double cgTolSquared = settings.cgTol * settings.cgTol;
 
-    if (Dot(r0,r0) < cgTolSquared) {
+    if (Dot(r0, r0) < cgTolSquared) {
       return;
     }
 
     rCurrent = r0;
     precond(rCurrent, Pr);
     d = 0.0;
-    add(d, -1.0, Pr, d); // d = -Pr
-    
-    z = 0.0;
-    double zz = 0.;
-    double rPr = Dot(rCurrent, Pr);
-    double zd = 0.0;
-    double dd = Dot(d,d);
+    add(d, -1.0, Pr, d);  // d = -Pr
 
-    for (cgIter=1; cgIter <= settings.maxCgIterations; ++cgIter) {
+    z          = 0.0;
+    double zz  = 0.;
+    double rPr = Dot(rCurrent, Pr);
+    double zd  = 0.0;
+    double dd  = Dot(d, d);
+
+    for (cgIter = 1; cgIter <= settings.maxCgIterations; ++cgIter) {
       hess_vec_func(d, Hd);
       double curvature = Dot(d, Hd);
-      double alpha = rPr / curvature;
+      double alpha     = rPr / curvature;
 
-      auto& zPred = Hd; // re-use Hd, this is where bugs come from
+      auto& zPred = Hd;  // re-use Hd, this is where bugs come from
       add(z, alpha, d, zPred);
-      double zzNp1 = Dot(zPred, zPred); // update_step_length_squared(alpha, zz, zd, dd); MRT, perf optimization
+      double zzNp1 = Dot(zPred, zPred);  // update_step_length_squared(alpha, zz, zd, dd); MRT, perf optimization
 
       if (curvature <= 0) {
         // mfem::out << "negative curvature found.\n";
-        project_to_boundary_with_coefs(z, d, trSize,
-                                       zz, zd, dd);
+        project_to_boundary_with_coefs(z, d, trSize, zz, zd, dd);
         results.interiorStatus = TrustRegionResults::Status::NegativeCurvature;
         return;
-      } else if (zzNp1 > (trSize*trSize)) {
+      } else if (zzNp1 > (trSize * trSize)) {
         // mfem::out << "step outside trust region.\n";
-        project_to_boundary_with_coefs(z, d, trSize,
-                                       zz, zd, dd);
+        project_to_boundary_with_coefs(z, d, trSize, zz, zd, dd);
         results.interiorStatus = TrustRegionResults::Status::OnBoundary;
         return;
       }
@@ -450,11 +457,11 @@ public:
 
       hess_vec_func(d, Hd);
       add(rCurrent, alpha, Hd, rCurrent);
-      
+
       precond(rCurrent, Pr);
       double rPrNp1 = Dot(rCurrent, Pr);
 
-      if (Dot(rCurrent,rCurrent) <= cgTolSquared) {      
+      if (Dot(rCurrent, rCurrent) <= cgTolSquared) {
         // Hd = 0.0;
         // hess_vec_func(z, Hd);
         // double energy = Dot(r0, z) + 0.5 * Dot(z, Hd);
@@ -463,7 +470,7 @@ public:
       }
 
       double beta = rPrNp1 / rPr;
-      rPr = rPrNp1;
+      rPr         = rPrNp1;
       add(-1.0, Pr, beta, d, d);
 
       zz = zzNp1;
@@ -471,7 +478,6 @@ public:
       dd = Dot(d, d);
     }
   }
-
 
   void Mult(const mfem::Vector&, mfem::Vector& x) const
   {
@@ -484,22 +490,25 @@ public:
     oper->Mult(x, r);
 
     norm = initial_norm = Norm(r);
-    norm_goal = std::max(rel_tol * initial_norm, abs_tol);
+    norm_goal           = std::max(rel_tol * initial_norm, abs_tol);
     if (print_options.first_and_last && !print_options.iterations) {
       mfem::out << "Newton iteration " << std::setw(2) << 0 << " : ||r|| = " << norm << "...\n";
     }
-    prec->iterative_mode = false;
+    prec->iterative_mode  = false;
     trPrec.iterative_mode = false;
 
     // local arrays
-    xPred.SetSize(x.Size()); xPred = 0.0;
-    rPred.SetSize(x.Size()); rPred = 0.0;
-    scratch.SetSize(x.Size()); scratch = 0.0;
+    xPred.SetSize(x.Size());
+    xPred = 0.0;
+    rPred.SetSize(x.Size());
+    rPred = 0.0;
+    scratch.SetSize(x.Size());
+    scratch = 0.0;
 
-    TrustRegionResults trResults(x.Size());
-    TrustRegionSettings settings; // MRT, read these in please
-    settings.cgTol = 0.2 * norm_goal;
-    double trSize = 10.0;
+    TrustRegionResults  trResults(x.Size());
+    TrustRegionSettings settings;  // MRT, read these in please
+    settings.cgTol           = 0.2 * norm_goal;
+    double trSize            = 10.0;
     size_t cumulativeCgIters = 0;
 
     int it = 0;
@@ -522,17 +531,16 @@ public:
       }
 
       auto K = &oper->GetGradient(x);
-      if (it==0 || (trResults.cgIterationsCount >= settings.maxCgIterations || cumulativeCgIters >= settings.maxCumulativeIteration)) {
+      if (it == 0 || (trResults.cgIterationsCount >= settings.maxCgIterations ||
+                      cumulativeCgIters >= settings.maxCumulativeIteration)) {
         trPrec.SetOperator(*K);
-        cumulativeCgIters=0;
+        cumulativeCgIters = 0;
         if (print_options.iterations) {
           mfem::out << "Updating trust region preconditioner." << std::endl;
         }
       }
 
-      auto hess_vec_func = [=](const mfem::Vector& x, mfem::Vector& v) {
-        K->Mult(x, v);
-      };
+      auto hess_vec_func = [=](const mfem::Vector& x, mfem::Vector& v) { K->Mult(x, v); };
 
       auto precond_func = [=](const mfem::Vector& x, mfem::Vector& v) {
         trPrec.Mult(x, v);
@@ -545,48 +553,46 @@ public:
       hess_vec_func(r, trResults.Hd);
       double gKg = Dot(r, trResults.Hd);
       if (gKg > 0) {
-        double alpha = -Dot(r,r) / gKg;
+        double alpha = -Dot(r, r) / gKg;
         add(trResults.cauchyPoint, alpha, r, trResults.cauchyPoint);
         cauchyPointNormSquared = Dot(trResults.cauchyPoint, trResults.cauchyPoint);
       } else {
-        double alpha = -trSize / std::sqrt( Dot(r,r) );
+        double alpha = -trSize / std::sqrt(Dot(r, r));
         add(trResults.cauchyPoint, alpha, r, trResults.cauchyPoint);
         if (print_options.iterations) {
-          mfem::out << "Negative curvature unpreconditioned cauchy point direction found." << "\n";
+          mfem::out << "Negative curvature unpreconditioned cauchy point direction found."
+                    << "\n";
         }
       }
 
-      if (cauchyPointNormSquared >= trSize*trSize) {
+      if (cauchyPointNormSquared >= trSize * trSize) {
         if (print_options.iterations) {
-          mfem::out << "Unpreconditioned gradient cauchy point outside trust region, step size = " << std::sqrt(cauchyPointNormSquared) << "\n";
+          mfem::out << "Unpreconditioned gradient cauchy point outside trust region, step size = "
+                    << std::sqrt(cauchyPointNormSquared) << "\n";
         }
         trResults.cauchyPoint *= (trSize / std::sqrt(cauchyPointNormSquared));
-        trResults.z = trResults.cauchyPoint;
+        trResults.z                 = trResults.cauchyPoint;
         trResults.cgIterationsCount = 1;
-        trResults.interiorStatus = TrustRegionResults::Status::OnBoundary;
+        trResults.interiorStatus    = TrustRegionResults::Status::OnBoundary;
       } else {
-        solve_trust_region_minimization(r,
-                                        scratch,
-                                        hess_vec_func,
-                                        precond_func,
-                                        settings, trSize, trResults);
+        solve_trust_region_minimization(r, scratch, hess_vec_func, precond_func, settings, trSize, trResults);
         if (print_options.iterations) {
           mfem::out << "Trust region linear solve took " << trResults.cgIterationsCount << " cg iterations.\n";
         }
       }
       cumulativeCgIters += trResults.cgIterationsCount;
 
-      bool happyAboutTrSize=false;
+      bool happyAboutTrSize = false;
       while (!happyAboutTrSize) {
-        auto& d = trResults.d;    // reuse, dangerous!
+        auto& d  = trResults.d;   // reuse, dangerous!
         auto& Hd = trResults.Hd;  // reuse, dangerous!
 
         dogleg_step(trResults.cauchyPoint, trResults.z, trSize, d);
 
-        hess_vec_func(d,Hd);
-        double dHd = Dot(d,Hd);
-        double modelObjective = Dot(r,d) + 0.5*dHd;
-        
+        hess_vec_func(d, Hd);
+        double dHd            = Dot(d, Hd);
+        double modelObjective = Dot(r, d) + 0.5 * dHd;
+
         add(x, d, xPred);
         oper->Mult(xPred, rPred);
         double realObjective = 0.5 * (Dot(r, d) + Dot(rPred, d));
@@ -595,15 +601,15 @@ public:
         MFEM_ASSERT(IsFinite(normPred), "norm = " << normPred);
 
         if (normPred <= norm_goal) {
-          x = xPred;
-          r = rPred;
-          norm = normPred;
+          x                = xPred;
+          r                = rPred;
+          norm             = normPred;
           happyAboutTrSize = true;
           break;
         }
 
         double modelImprove = -modelObjective;
-        double realImprove = -realObjective;
+        double realImprove  = -realObjective;
 
         double rho = realImprove / modelImprove;
         if (modelObjective > 0) {
@@ -612,10 +618,10 @@ public:
           }
           rho = realImprove / -modelImprove;
         }
-        
-        if (!(rho >= settings.eta2)) { // write it this way to handle NaNs
+
+        if (!(rho >= settings.eta2)) {  // write it this way to handle NaNs
           trSize *= settings.t1;
-        } else if ( (rho > settings.eta3) && (trResults.interiorStatus == TrustRegionResults::Status::OnBoundary)) {
+        } else if ((rho > settings.eta3) && (trResults.interiorStatus == TrustRegionResults::Status::OnBoundary)) {
           trSize *= settings.t2;
         }
 
@@ -623,15 +629,15 @@ public:
         // modelRes = g + Jd
         // modelResNorm = np.linalg.norm(modelRes)
         // realResNorm = np.linalg.norm(gy)
-        bool willAccept = rho >= settings.eta1; // or (rho >= -0 and realResNorm <= gNorm)
-        
+        bool willAccept = rho >= settings.eta1;  // or (rho >= -0 and realResNorm <= gNorm)
+
         if (willAccept) {
-          x = xPred;
-          r = rPred;
-          norm = normPred;
+          x                = xPred;
+          r                = rPred;
+          norm             = normPred;
           happyAboutTrSize = true;
           break;
-        } 
+        }
       }
     }
 
@@ -647,7 +653,8 @@ public:
   }
 };
 
-bool usePreconditionerInsteadOfLinearSolve(const mfem::NewtonSolver* const nonlinearSolver) {
+bool usePreconditionerInsteadOfLinearSolve(const mfem::NewtonSolver* const nonlinearSolver)
+{
   if (dynamic_cast<const TrustRegion*>(nonlinearSolver)) {
     return true;
   }
@@ -795,7 +802,8 @@ void StrumpackSolver::SetOperator(const mfem::Operator& op)
 
 #endif
 
-std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(const NonlinearSolverOptions& nonlinear_opts, mfem::Solver& prec, MPI_Comm comm)
+std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(const NonlinearSolverOptions& nonlinear_opts,
+                                                         mfem::Solver& prec, MPI_Comm comm)
 {
   std::unique_ptr<mfem::NewtonSolver> nonlinear_solver;
 
@@ -1111,8 +1119,8 @@ serac::EquationSolver FromInlet<serac::EquationSolver>::operator()(const axom::i
 
   auto [linear_solver, preconditioner] = serac::buildLinearSolverAndPreconditioner(lin, MPI_COMM_WORLD);
 
-  serac::EquationSolver eq_solver(serac::buildNonlinearSolver(nonlin, *preconditioner, MPI_COMM_WORLD), std::move(linear_solver),
-                                  std::move(preconditioner));
+  serac::EquationSolver eq_solver(serac::buildNonlinearSolver(nonlin, *preconditioner, MPI_COMM_WORLD),
+                                  std::move(linear_solver), std::move(preconditioner));
 
   return eq_solver;
 }

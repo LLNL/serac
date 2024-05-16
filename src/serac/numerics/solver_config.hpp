@@ -114,12 +114,12 @@ enum class LinearSolver
 /// Nonlinear solver method indicator
 enum class NonlinearSolver
 {
-  Newton,                    /**< MFEM-native Newton-Raphson */
-  LBFGS,                     /**< MFEM-native Limited memory BFGS */
-  NewtonLineSearch,          /**< Custom solver using preconditioned earch direction with backtracking line search */
-  Nesterov,                  /**< Custom solver using Nesterov dynamic (damped) dynamics for accelerating implicit solves */
-  TrustRegion,               /**< Custom solver using a trust region solver */
-  KINFullStep,               /**< KINSOL Full Newton (Sundials must be enabled) */
+  Newton,           /**< MFEM-native Newton-Raphson */
+  LBFGS,            /**< MFEM-native Limited memory BFGS */
+  NewtonLineSearch, /**< Custom solver using preconditioned earch direction with backtracking line search */
+  Nesterov,         /**< Custom solver using Nesterov dynamic (damped) dynamics for accelerating implicit solves */
+  TrustRegion,      /**< Custom solver using a trust region solver */
+  KINFullStep,      /**< KINSOL Full Newton (Sundials must be enabled) */
   KINBacktrackingLineSearch, /**< KINSOL Newton with Backtracking Line Search (Sundials must be enabled) */
   KINPicard                  /**< KINSOL Picard (Sundials must be enabled) */
 };

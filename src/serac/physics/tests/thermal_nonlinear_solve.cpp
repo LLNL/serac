@@ -55,7 +55,7 @@ void functional_thermal_test_nonlinear()
   // _solver_params_end
 
   heat_transfer::LinearIsotropicConductor mat{
-      1.0,   // mass density
+      1.0,  // mass density
       9.0,  // Specific heat capacity
       21.0  // isotropic thermal conductivity
   };
