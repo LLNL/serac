@@ -45,7 +45,7 @@ serac_add_tests( SOURCES ${functional_tests_mpi}
                  DEPENDS_ON gtest serac_functional serac_state ${functional_depends}
                  NUM_MPI_TASKS 4 )
 
-foreach(filename ${functional_tests_mpi})
+foreach(filename ${functional_tests_mpi} ${functional_tests_serial})
     set_source_files_properties(${filename} PROPERTIES LANGUAGE CXX)
 endforeach()
 
@@ -67,7 +67,7 @@ if(ENABLE_CUDA)
     )
 
     serac_add_tests( SOURCES ${functional_tests_cuda}
-                     USE_CUDA On
-                     DEPENDS_ON gtest serac_functional serac_state ${functional_depends} cuda)
+                     USE_CUDA ON
+                     DEPENDS_ON gtest serac_functional serac_state ${functional_depends} blt::cuda)
 
 endif()
