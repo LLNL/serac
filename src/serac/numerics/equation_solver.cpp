@@ -87,7 +87,11 @@ public:
       const int max_ls_iters = nonlinear_options.max_line_search_iterations;
       static constexpr real_t reduction    = 0.5;
 
-      auto is_improved = [=](real_t currentNorm, real_t) { return currentNorm < norm_nm1; };
+      const double cMagnitudeInR = std::abs( Dot(c,r) ) / norm_nm1;
+      const double sufficientDegreeParam = 0.0; //1e-15;
+      auto is_improved = [=](real_t currentNorm, real_t c_scale) {
+        return currentNorm < norm_nm1 - sufficientDegreeParam * c_scale * cMagnitudeInR;
+      };
 
       // back-track linesearch
       int ls_iter     = 0;
@@ -115,7 +119,7 @@ public:
           norm = Norm(r);
         }
 
-        // ok, the opposite direction was also terrible, lets go back, cut in half 1 last time and accept it
+        // ok, the opposite direction was also terrible, lets go back, cut in half 1 last time and accept it hoping for the best
         if (ls_iter == max_ls_iters && !is_improved(norm, c_scale)) {
           ++ls_iter_sum;
           c_scale *= reduction;
@@ -124,15 +128,13 @@ public:
           norm = Norm(r);
         }
       }
-      // std::cout << std::setprecision(15) << "new norm = " << norm << " " << norm_nm1 << " " << ls_iter_sum << " " <<
-      // c_scale << " " << std::endl;
 
       if (ls_iter_sum) {
-        if (print_options.summary || (!converged && print_options.warnings) || print_options.first_and_last) {
+        if (print_options.iterations) {
           mfem::out << "Number of line search steps taken = : " << ls_iter_sum << std::endl;
-          if (ls_iter_sum == 2 * max_ls_iters + 1) {
-            mfem::out << "The maximum number of line search cut back have occurred, the resulting residual may not have decreased. " << std::endl;
-          }
+        }
+        if (print_options.warnings && (ls_iter_sum == 2 * max_ls_iters + 1)) {
+          mfem::out << "The maximum number of line search cut back have occurred, the resulting residual may not have decreased. " << std::endl;
         }
       }
     }
@@ -374,7 +376,9 @@ public:
     if (cc >= tt) {
       add(s, std::sqrt(tt/cc), cp, s);
     } else if (cc > nn) {
-      mfem::out << "cp outside newton, preconditioner likely inaccurate\n";
+      if (print_options.warnings) {
+        mfem::out << "cp outside newton, preconditioner likely inaccurate\n";
+      }
       add(s, 1.0, cp, s);
     } else if (nn > tt) { // on the dogleg (we have nn >= cc, and tt >= cc)
       add(s, 1.0, cp, s);
@@ -521,7 +525,7 @@ public:
       if (it==0 || (trResults.cgIterationsCount >= settings.maxCgIterations || cumulativeCgIters >= settings.maxCumulativeIteration)) {
         trPrec.SetOperator(*K);
         cumulativeCgIters=0;
-        if (print_options.iterations || print_options.warnings) {
+        if (print_options.iterations) {
           mfem::out << "Updating trust region preconditioner." << std::endl;
         }
       }
@@ -547,14 +551,14 @@ public:
       } else {
         double alpha = -trSize / std::sqrt( Dot(r,r) );
         add(trResults.cauchyPoint, alpha, r, trResults.cauchyPoint);
-        if (print_options.iterations || print_options.warnings) {
+        if (print_options.iterations) {
           mfem::out << "Negative curvature unpreconditioned cauchy point direction found." << "\n";
         }
       }
 
       if (cauchyPointNormSquared >= trSize*trSize) {
-        if (print_options.iterations || print_options.warnings) {
-          mfem::out << "Unpreconditioned gradient cauchy point outside trust region at dist = " << std::sqrt(cauchyPointNormSquared) << "\n";
+        if (print_options.iterations) {
+          mfem::out << "Unpreconditioned gradient cauchy point outside trust region, step size = " << std::sqrt(cauchyPointNormSquared) << "\n";
         }
         trResults.cauchyPoint *= (trSize / std::sqrt(cauchyPointNormSquared));
         trResults.z = trResults.cauchyPoint;
@@ -566,13 +570,11 @@ public:
                                         hess_vec_func,
                                         precond_func,
                                         settings, trSize, trResults);
-        if (print_options.iterations || print_options.warnings) {
+        if (print_options.iterations) {
           mfem::out << "Trust region linear solve took " << trResults.cgIterationsCount << " cg iterations.\n";
         }
       }
       cumulativeCgIters += trResults.cgIterationsCount;
-
-      //double trSizeUsed = trSize; for output
 
       bool happyAboutTrSize=false;
       while (!happyAboutTrSize) {
@@ -588,8 +590,6 @@ public:
         add(x, d, xPred);
         oper->Mult(xPred, rPred);
         double realObjective = 0.5 * (Dot(r, d) + Dot(rPred, d));
-
-        // mfem::out << "model, real objective = " << modelObjective << " " << realObjective << "\n";
 
         double normPred = Norm(rPred);
         MFEM_ASSERT(IsFinite(normPred), "norm = " << normPred);
