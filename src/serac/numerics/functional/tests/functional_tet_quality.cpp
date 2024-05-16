@@ -94,7 +94,6 @@ TEST(QoI, TetrahedronQuality)
 
   std::cout << "(ShapeAwareFunctional) mu(J) for regular tetrahedron: " << saf_qoi(t, *u) << std::endl;
   std::cout << "(          Functional) mu(J) for regular tetrahedron: " << qoi(t, *u) << std::endl;
-
 }
 
 int main(int argc, char* argv[])
