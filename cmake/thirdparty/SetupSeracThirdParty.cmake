@@ -559,3 +559,16 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endforeach()
     endif()
 endif()
+
+
+#------------------------------------------------------------------------------
+# Enzyme
+#------------------------------------------------------------------------------
+include(FetchContent)                                                            
+                                                                                 
+FetchContent_Declare(                                                            
+  enzyme                                                                         
+  URL https://github.com/EnzymeAD/Enzyme/archive/refs/tags/v0.0.110.tar.gz          
+  SOURCE_SUBDIR enzyme                                                           
+)                                                                                
+FetchContent_MakeAvailable(enzyme)   
