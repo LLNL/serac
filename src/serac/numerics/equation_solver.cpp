@@ -51,7 +51,7 @@ public:
 
     int it = 0;
     for (; true; it++) {
-      MFEM_ASSERT(IsFinite(norm), "norm = " << norm);
+      MFEM_ASSERT(mfem::IsFinite(norm), "norm = " << norm);
       if (print_options.iterations) {
         mfem::out << "Newton iteration " << std::setw(2) << it << " : ||r|| = " << norm;
         if (it > 0) {
@@ -208,7 +208,7 @@ public:
 
     int it = 0;
     for (; true; it++) {
-      MFEM_ASSERT(IsFinite(norm), "norm = " << norm);
+      MFEM_ASSERT(mfem::IsFinite(norm), "norm = " << norm);
       if (print_options.iterations) {
         mfem::out << "Newton iteration " << std::setw(2) << it << " : ||r|| = " << norm;
         if (it > 0) {
@@ -376,14 +376,6 @@ public:
     return zz + 2 * alpha * zd + alpha * alpha * dd;
   }
 
-  double max_val(const mfem::Vector& x) const {
-    double mv = -std::numeric_limits<double>::max();
-    for (int i=0; i < x.Size(); ++i) {
-      mv = std::max(mv, x(i));
-    }
-    return mv;
-  }
-
   void dogleg_step(const mfem::Vector& cp, const mfem::Vector& newtonP, double trSize, mfem::Vector& s) const
   {
     // MRT, could optimize some of these eventually, compute on the outside and save
@@ -516,12 +508,12 @@ public:
     TrustRegionResults  trResults(x.Size());
     TrustRegionSettings settings;  // MRT, read these in please
     settings.cgTol           = 0.2 * norm_goal;
-    double trSize            = 2000; //10.0;
+    double trSize            = 10.0;
     size_t cumulativeCgIters = 0;
 
     int it = 0;
     for (; true; it++) {
-      MFEM_ASSERT(IsFinite(norm), "norm = " << norm);
+      MFEM_ASSERT(mfem::IsFinite(norm), "norm = " << norm);
       if (print_options.iterations) {
         mfem::out << "Newton iteration " << std::setw(2) << it << " : ||r|| = " << norm;
         if (it > 0) {
@@ -548,11 +540,12 @@ public:
         }
       }
 
-      auto hess_vec_func = [=](const mfem::Vector& x, mfem::Vector& v) { K->Mult(x, v); };
+      auto hess_vec_func = [=](const mfem::Vector& x, mfem::Vector& v) {
+        K->Mult(x, v);
+      };
 
       auto precond_func = [=](const mfem::Vector& x, mfem::Vector& v) {
         trPrec.Mult(x, v);
-        // v = x;
       };
 
       double cauchyPointNormSquared = trSize * trSize;
@@ -602,11 +595,17 @@ public:
         double modelObjective = Dot(r, d) + 0.5 * dHd;
 
         add(x, d, xPred);
-        oper->Mult(xPred, rPred);
-        double realObjective = 0.5 * (Dot(r, d) + Dot(rPred, d));
 
-        double normPred = Norm(rPred);
-        MFEM_ASSERT(IsFinite(normPred), "norm = " << normPred);
+        double realObjective = std::numeric_limits<double>::max();
+        double normPred = std::numeric_limits<double>::max();
+        try {
+          oper->Mult(xPred, rPred);
+          realObjective = 0.5 * (Dot(r, d) + Dot(rPred, d));
+          normPred = Norm(rPred);
+        } catch(std::exception) {
+          realObjective = std::numeric_limits<double>::max();
+          normPred = std::numeric_limits<double>::max();
+        }
 
         if (normPred <= norm_goal) {
           x                = xPred;
@@ -639,10 +638,12 @@ public:
         // realResNorm = np.linalg.norm(gy)
         bool willAccept = rho >= settings.eta1;  // or (rho >= -0 and realResNorm <= gNorm)
 
+        if (print_options.iterations) {
+          mfem::out << "real energy = " << std::setw(13) << realObjective << ", model energy = " << std::setw(13) << modelObjective << ", tr size = " << std::setw(13) << trSize << ", accepting = " << willAccept << std::endl;
+        }
+
         if (willAccept) {
           x                = xPred;
-          double mv = max_val(x);
-          mfem::out << "max displacement = " << mv << "\n";
           r                = rPred;
           norm             = normPred;
           happyAboutTrSize = true;
