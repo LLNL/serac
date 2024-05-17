@@ -31,6 +31,17 @@ public:
   }
 #endif
 
+  double evaluate_norm(const mfem::Vector& x, mfem::Vector& rOut) const {
+    double normEval = std::numeric_limits<double>::max();
+    try {
+      oper->Mult(x, rOut);
+      normEval = Norm(rOut);
+    } catch (std::exception) {
+      normEval = std::numeric_limits<double>::max();
+    }
+    return normEval;
+  }
+
   void Mult(const mfem::Vector&, mfem::Vector& x) const
   {
     MFEM_ASSERT(oper != NULL, "the Operator is not set (use SetOperator).");
@@ -84,15 +95,15 @@ public:
 
       real_t c_scale = 1.0;
       add(x0, -c_scale, c, x);
-      oper->Mult(x, r);
-      norm = Norm(r);
+      norm = evaluate_norm(x, r);
 
       const int               max_ls_iters = nonlinear_options.max_line_search_iterations;
       static constexpr real_t reduction    = 0.5;
 
       const double cMagnitudeInR         = std::abs(Dot(c, r)) / norm_nm1;
       const double sufficientDegreeParam = 0.0;  // 1e-15;
-      auto         is_improved           = [=](real_t currentNorm, real_t c_scale) {
+
+      auto is_improved = [=](real_t currentNorm, real_t c_scale) {
         return currentNorm < norm_nm1 - sufficientDegreeParam * c_scale * cMagnitudeInR;
       };
 
@@ -102,23 +113,20 @@ public:
       for (; !is_improved(norm, c_scale) && ls_iter < max_ls_iters; ++ls_iter, ++ls_iter_sum) {
         c_scale *= reduction;
         add(x0, -c_scale, c, x);
-        oper->Mult(x, r);
-        norm = Norm(r);
+        norm = evaluate_norm(x, r);
       }
 
       // try the opposite direction and linesearch back from there
       if (ls_iter == max_ls_iters && !is_improved(norm, c_scale)) {
         c_scale = 1.0;
         add(x0, c_scale, c, x);
-        oper->Mult(x, r);
-        norm = Norm(r);
+        norm = evaluate_norm(x, r);
 
         ls_iter = 0;
         for (; !is_improved(norm, c_scale) && ls_iter < max_ls_iters; ++ls_iter, ++ls_iter_sum) {
           c_scale *= reduction;
           add(x0, c_scale, c, x);
-          oper->Mult(x, r);
-          norm = Norm(r);
+          norm = evaluate_norm(x, r);
         }
 
         // ok, the opposite direction was also terrible, lets go back, cut in half 1 last time and accept it hoping for
@@ -127,8 +135,7 @@ public:
           ++ls_iter_sum;
           c_scale *= reduction;
           add(x0, -c_scale, c, x);
-          oper->Mult(x, r);
-          norm = Norm(r);
+          norm = evaluate_norm(x, r);
         }
       }
 
@@ -536,7 +543,8 @@ public:
         trPrec.SetOperator(*K);
         cumulativeCgIters = 0;
         if (print_options.iterations) {
-          mfem::out << "Updating trust region preconditioner." << std::endl;
+          // currently it will always be updated
+          // mfem::out << "Updating trust region preconditioner." << std::endl;
         }
       }
 
@@ -577,9 +585,9 @@ public:
         trResults.interiorStatus    = TrustRegionResults::Status::OnBoundary;
       } else {
         solve_trust_region_minimization(r, scratch, hess_vec_func, precond_func, settings, trSize, trResults);
-        if (print_options.iterations) {
-          mfem::out << "Trust region linear solve took " << trResults.cgIterationsCount << " cg iterations.\n";
-        }
+        //if (print_options.iterations) {
+          //mfem::out << "Trust region linear solve took " << trResults.cgIterationsCount << " cg iterations.\n";
+        //}
       }
       cumulativeCgIters += trResults.cgIterationsCount;
 
@@ -639,7 +647,7 @@ public:
         bool willAccept = rho >= settings.eta1;  // or (rho >= -0 and realResNorm <= gNorm)
 
         if (print_options.iterations) {
-          mfem::out << "real energy = " << std::setw(13) << realObjective << ", model energy = " << std::setw(13) << modelObjective << ", tr size = " << std::setw(13) << trSize << ", accepting = " << willAccept << std::endl;
+          mfem::out << "real energy = " << std::setw(13) << realObjective << ", model energy = " << std::setw(13) << modelObjective << ", cg iter = " << std::setw(7) << trResults.cgIterationsCount << ", tr size = " << std::setw(10) << trSize << ", accepting = " << willAccept << std::endl;
         }
 
         if (willAccept) {
