@@ -247,14 +247,6 @@ int main(int argc, char* argv[])
 {
   serac::initialize(argc, argv);
 
-  // TODO: Remove this after input file functionality is restored.
-  const std::string warning_message = R"PREFIX(******************************
-This Serac driver does not
-currently work due to missing
-input file functionality.
-******************************)PREFIX";
-  SLIC_INFO(warning_message);
-
   // Handle Command line
   std::unordered_map<std::string, std::string> cli_opts =
       serac::cli::defineAndParse(argc, argv, "Serac: a high order nonlinear thermomechanical simulation code");
