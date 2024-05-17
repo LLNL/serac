@@ -31,7 +31,8 @@ public:
   }
 #endif
 
-  double evaluate_norm(const mfem::Vector& x, mfem::Vector& rOut) const {
+  double evaluate_norm(const mfem::Vector& x, mfem::Vector& rOut) const
+  {
     double normEval = std::numeric_limits<double>::max();
     try {
       oper->Mult(x, rOut);
@@ -548,13 +549,9 @@ public:
         }
       }
 
-      auto hess_vec_func = [=](const mfem::Vector& x, mfem::Vector& v) {
-        K->Mult(x, v);
-      };
+      auto hess_vec_func = [=](const mfem::Vector& x, mfem::Vector& v) { K->Mult(x, v); };
 
-      auto precond_func = [=](const mfem::Vector& x, mfem::Vector& v) {
-        trPrec.Mult(x, v);
-      };
+      auto precond_func = [=](const mfem::Vector& x, mfem::Vector& v) { trPrec.Mult(x, v); };
 
       double cauchyPointNormSquared = trSize * trSize;
       trResults.reset();
@@ -585,8 +582,8 @@ public:
         trResults.interiorStatus    = TrustRegionResults::Status::OnBoundary;
       } else {
         solve_trust_region_minimization(r, scratch, hess_vec_func, precond_func, settings, trSize, trResults);
-        //if (print_options.iterations) {
-          //mfem::out << "Trust region linear solve took " << trResults.cgIterationsCount << " cg iterations.\n";
+        // if (print_options.iterations) {
+        // mfem::out << "Trust region linear solve took " << trResults.cgIterationsCount << " cg iterations.\n";
         //}
       }
       cumulativeCgIters += trResults.cgIterationsCount;
@@ -605,14 +602,14 @@ public:
         add(x, d, xPred);
 
         double realObjective = std::numeric_limits<double>::max();
-        double normPred = std::numeric_limits<double>::max();
+        double normPred      = std::numeric_limits<double>::max();
         try {
           oper->Mult(xPred, rPred);
           realObjective = 0.5 * (Dot(r, d) + Dot(rPred, d));
-          normPred = Norm(rPred);
-        } catch(std::exception) {
+          normPred      = Norm(rPred);
+        } catch (std::exception) {
           realObjective = std::numeric_limits<double>::max();
-          normPred = std::numeric_limits<double>::max();
+          normPred      = std::numeric_limits<double>::max();
         }
 
         if (normPred <= norm_goal) {
@@ -647,7 +644,9 @@ public:
         bool willAccept = rho >= settings.eta1;  // or (rho >= -0 and realResNorm <= gNorm)
 
         if (print_options.iterations) {
-          mfem::out << "real energy = " << std::setw(13) << realObjective << ", model energy = " << std::setw(13) << modelObjective << ", cg iter = " << std::setw(7) << trResults.cgIterationsCount << ", tr size = " << std::setw(10) << trSize << ", accepting = " << willAccept << std::endl;
+          mfem::out << "real energy = " << std::setw(13) << realObjective << ", model energy = " << std::setw(13)
+                    << modelObjective << ", cg iter = " << std::setw(7) << trResults.cgIterationsCount
+                    << ", tr size = " << std::setw(10) << trSize << ", accepting = " << willAccept << std::endl;
         }
 
         if (willAccept) {
