@@ -41,13 +41,13 @@ void functional_solid_test_nonlinear_buckle()
   double Ly = 10.0;  // in
   double Lz = 0.3;   // in
 
-  double density       = 1.0;
-  //double bulkMod       = 0.1;
-  //double shearMod      = 0.5;
-  double E = 1.0;
-  double v = 0.33;
-  double bulkMod = E / (3.*(1.-2.*v));
-  double shearMod = E / (2.*(1.+v));
+  double density = 1.0;
+  // double bulkMod       = 0.1;
+  // double shearMod      = 0.5;
+  double E             = 1.0;
+  double v             = 0.33;
+  double bulkMod       = E / (3. * (1. - 2. * v));
+  double shearMod      = E / (2. * (1. + v));
   double loadMagnitude = 2e-2;
 
   std::string    meshTag = "mesh";
@@ -62,12 +62,12 @@ void functional_solid_test_nonlinear_buckle()
       .nonlin_solver = NonlinearSolver::TrustRegion,
       // .nonlin_solver  = NonlinearSolver::NewtonLineSearch,
       // serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
-      .relative_tol               = 1.0e-4,
-      .absolute_tol               = 1.0e-8,
-      .min_iterations             = 1,
-      .max_iterations             = 200,
+      .relative_tol   = 1.0e-4,
+      .absolute_tol   = 1.0e-8,
+      .min_iterations = 1,
+      .max_iterations = 200,
       //.max_line_search_iterations = 30,
-      .print_level                = 1};
+      .print_level = 1};
 
   serac::LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::CG,
                                                .preconditioner = Preconditioner::HypreJacobi,
