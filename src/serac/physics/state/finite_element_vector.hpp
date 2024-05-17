@@ -18,7 +18,7 @@
 #include "mfem.hpp"
 
 #include "serac/infrastructure/variant.hpp"
-#include "serac/numerics/functional/functional.hpp"
+#include "serac/numerics/functional/finite_element.hpp"
 
 namespace serac {
 
