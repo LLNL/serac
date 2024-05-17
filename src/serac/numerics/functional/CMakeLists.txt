@@ -71,6 +71,7 @@ blt_add_library(
       DEPENDS_ON  ${functional_depends}
       )
 
+target_link_libraries(serac_functional PUBLIC ClangEnzymeFlags)
 
 install(FILES ${functional_headers} DESTINATION include/serac/numerics/functional )
 install(FILES ${functional_detail_headers} DESTINATION include/serac/numerics/functional/detail )

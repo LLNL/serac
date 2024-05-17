@@ -68,3 +68,7 @@ if(ENABLE_CUDA)
                      DEPENDS_ON gtest serac_functional serac_state ${functional_depends})
 
 endif()
+
+add_executable(enzyme_test enzyme_test.cpp)
+
+target_link_libraries(enzyme_test PUBLIC serac_functional)

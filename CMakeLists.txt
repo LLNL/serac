@@ -17,6 +17,11 @@ if(ENABLE_CUDA AND ${CMAKE_VERSION} VERSION_LESS 3.18.0)
     message(FATAL_ERROR "Serac requires CMake version 3.18.0+ when CUDA is enabled.")
 endif()
 
+# N.B. leave compilers unspecified when configuring CMake to ensure that            
+#      the clang/clang++ binaries appropriate for enzyme are chosen              
+set(CMAKE_C_COMPILER "${LLVM_BIN_DIR}/clang")
+set(CMAKE_CXX_COMPILER "${LLVM_BIN_DIR}/clang++")
+
 project(serac LANGUAGES CXX C)
 
 # MPI is required in Serac.
