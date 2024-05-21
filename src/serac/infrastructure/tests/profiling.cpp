@@ -29,16 +29,16 @@ TEST(Profiling, MeshRefinement)
   // the following string is a proxy for templated test names
   std::string test_name = "_profiling";
 
-  SERAC_MARK_BEGIN(profiling::concat("RefineAndLoadMesh", test_name).c_str());
+  CALI_MARK_BEGIN(profiling::concat("RefineAndLoadMesh", test_name).c_str());
   auto pmesh = mesh::refineAndDistribute(SERAC_PROFILE_EXPR("LOAD_MESH", buildMeshFromFile(mesh_file)), 0, 0);
-  SERAC_MARK_END(profiling::concat("RefineAndLoadMesh", test_name).c_str());
+  CALI_MARK_END(profiling::concat("RefineAndLoadMesh", test_name).c_str());
 
-  SERAC_MARK_LOOP_BEGIN(refinement_loop, "refinement_loop");
+  CALI_CXX_MARK_LOOP_BEGIN(refinement_loop, "refinement_loop");
   for (int i = 0; i < 2; i++) {
-    SERAC_MARK_LOOP_ITER(refinement_loop, i);
+    CALI_CXX_MARK_LOOP_ITERATION(refinement_loop, i);
     pmesh->UniformRefinement();
   }
-  SERAC_MARK_LOOP_END(refinement_loop);
+  CALI_CXX_MARK_LOOP_END(refinement_loop);
 
   // Refine once more and utilize SERAC_PROFILE_SCOPE
   {
