@@ -263,8 +263,7 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
     cfg_output_file = pjoin(test_root,"output.log.%s.configure.txt" % host_config_root)
     print("[starting configure of %s]" % host_config)
     print("[log file: %s]" % cfg_output_file)
-    # Disable docs until we build our own doxygen/sphinx to stop the random failures on LC
-    res = shell_exec("%s config-build.py -DENABLE_DOCS=OFF -bp %s -hc %s -ip %s %s" % (sys.executable, build_dir, host_config, install_dir, extra_cmake_options),
+    res = shell_exec("%s config-build.py -bp %s -hc %s -ip %s %s" % (sys.executable, build_dir, host_config, install_dir, extra_cmake_options),
                      output_file = cfg_output_file,
                      print_output = report_to_stdout,
                      echo=True)
@@ -326,20 +325,19 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
         print("[ERROR: Tests for host-config: %s failed]\n" % host_config)
         return res
 
-    # Disable docs until we build our own doxygen/sphinx to stop the random failures on LC
     # build the docs
-    # docs_output_file = pjoin(build_dir,"output.log.make.docs.txt")
-    # print("[starting docs generation]")
-    # print("[log file: %s]" % docs_output_file)
+    docs_output_file = pjoin(build_dir,"output.log.make.docs.txt")
+    print("[starting docs generation]")
+    print("[log file: %s]" % docs_output_file)
 
-    # res = shell_exec("cd %s && make docs " % build_dir,
-    #                  output_file = docs_output_file,
-    #                  print_output = report_to_stdout,
-    #                  echo=True)
+    res = shell_exec("cd %s && make docs " % build_dir,
+                     output_file = docs_output_file,
+                     print_output = report_to_stdout,
+                     echo=True)
 
-    # if res != 0:
-    #     print("[ERROR: Docs generation for host-config: %s failed]\n\n" % host_config)
-    #     return res
+    if res != 0:
+        print("[ERROR: Docs generation for host-config: %s failed]\n\n" % host_config)
+        return res
 
     # Install and test examples
     if skip_install:
