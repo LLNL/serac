@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
   serac::profiling::initialize();
 
   // Add metadata
-  SERAC_SET_METADATA("test", "thermal_functional");
+  adiak::value("test", "thermal_functional");
 
   CALI_MARK_BEGIN("2D Linear Static");
   functional_test_static<1, 2>();

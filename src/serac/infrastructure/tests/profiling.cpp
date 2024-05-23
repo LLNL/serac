@@ -21,6 +21,7 @@ namespace serac {
 TEST(Profiling, MeshRefinement)
 {
   // profile mesh refinement
+  CALI_CXX_MARK_FUNCTION;
   MPI_Barrier(MPI_COMM_WORLD);
   serac::profiling::initialize();
 
@@ -40,18 +41,18 @@ TEST(Profiling, MeshRefinement)
   }
   CALI_CXX_MARK_LOOP_END(refinement_loop);
 
-  // Refine once more and utilize SERAC_PROFILE_SCOPE
+  // Refine once more and utilize CALI_CXX_MARK_SCOPE
   {
-    SERAC_PROFILE_SCOPE("RefineOnceMore");
+    CALI_CXX_MARK_SCOPE("RefineOnceMore");
     pmesh->UniformRefinement();
   }
 
-  SERAC_SET_METADATA("mesh_file", mesh_file.c_str());
-  SERAC_SET_METADATA("number_mesh_elements", pmesh->GetNE());
+  adiak::value("mesh_file", mesh_file.c_str());
+  adiak::value("number_mesh_elements", pmesh->GetNE());
 
   // this number represents "llnl" as an unsigned integer
   unsigned int magic_uint = 1819176044;
-  SERAC_SET_METADATA("magic_uint", magic_uint);
+  adiak::value("magic_uint", magic_uint);
 
   // decode unsigned int back into char[4]
   std::array<char, sizeof(magic_uint) + 1> uint_string;
@@ -62,7 +63,7 @@ TEST(Profiling, MeshRefinement)
   // encode double with "llnl" bytes
   double magic_double;
   std::memcpy(&magic_double, "llnl", 4);
-  SERAC_SET_METADATA("magic_double", magic_double);
+  adiak::value("magic_double", magic_double);
 
   // decode the double and print
   std::array<char, sizeof(magic_double) + 1> double_string;
@@ -82,9 +83,9 @@ TEST(Profiling, Exception)
   serac::profiling::initialize();
 
   {
-    SERAC_PROFILE_SCOPE("Non-exceptionScope");
+    CALI_CXX_MARK_SCOPE("Non-exceptionScope");
     try {
-      SERAC_PROFILE_SCOPE("Exception scope");
+      CALI_CXX_MARK_SCOPE("Exception scope");
       throw std::runtime_error("Caliper to verify RAII");
     } catch (std::exception& e) {
       std::cout << e.what() << "\n";
