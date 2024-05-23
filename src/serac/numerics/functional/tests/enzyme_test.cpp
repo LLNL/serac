@@ -30,6 +30,30 @@ namespace impl {
   template < typename T0, typename T1 >
   constexpr int vsize(const serac::tuple< T0, T1 > &) { return vsize(T0{}) + vsize(T1{}); }
 
+  template < typename T0, typename T1 >
+  struct nested;
+
+  template <> 
+  struct nested< double, double >{ using type = double; };
+
+  template < int ... n > 
+  struct nested< double, tensor<double,n...> >{ using type = tensor<double,n...>; };
+
+  template < typename T0, typename T1 > 
+  struct nested< double, tuple<T0, T1> >{ using type = tuple<T0, T1>; };
+
+////////////////////////////////////////////////////////////////////////////////
+
+  template < int ... n, typename T > 
+  struct nested< tensor<double, n...>, T >{ using type = tensor<T, n ...>; };
+
+////////////////////////////////////////////////////////////////////////////////
+
+  template < typename S0, typename S1, typename T > 
+  struct nested< tuple< S0, S1 >, T >{ 
+    using type = tuple< typename nested<S0, T>::type, typename nested<S1, T>::type >; 
+  };
+
 }
 
 template < typename S, typename T0, typename T1 >
@@ -49,7 +73,7 @@ template < typename function, typename input_type >
 __attribute__((always_inline))
 auto jacfwd(const function & f, const input_type & x) {
   using output_type = decltype(f(x));
-  using jac_type = typename serac::detail::outer_prod<output_type, input_type>::type;
+  using jac_type = typename impl::nested<output_type, input_type>::type;
   void * func_ptr = reinterpret_cast<void*>(wrapper< output_type, function, input_type >);
 
   constexpr int m = impl::vsize(output_type{});
@@ -63,8 +87,6 @@ auto jacfwd(const function & f, const input_type & x) {
   for (int j = 0; j < n; j++) {
     dx_ptr[j] = 1.0;
 
-    std::cout << dx << std::endl;
-
     output_type unused{};
     output_type df_dxj{};
     __enzyme_fwddiff<void>(func_ptr,
@@ -72,14 +94,11 @@ auto jacfwd(const function & f, const input_type & x) {
       enzyme_const, reinterpret_cast<const void*>(&f), 
       enzyme_dup, &x, &dx
     );
-    std::cout << df_dxj << std::endl;
 
     double * df_dxj_ptr = reinterpret_cast<double *>(&df_dxj);
     for (int i = 0; i < m; i++) {
       J_ptr[i * n + j] = df_dxj_ptr[i];
     }
-
-    std::cout << J << std::endl;
 
     dx_ptr[j] = 0.0;
   }
@@ -183,11 +202,33 @@ int main() {
   std::cout << std::endl;
 
   auto df_ddisp = jacfwd<1>(f, z, displacement);
-  std::cout << "df_du: " << get<0>(df_ddisp) << std::endl;
+  std::cout << "df_du: ";
+  std::cout << "{";
+  for (int i = 0; i < 3; i++) {
+    std::cout << "{";
+    for (int j = 0; j < 3; j++) {
+      std::cout << get<0>(df_ddisp(i,j));
+      if (j != 2) { std::cout << ","; }
+    }
+    std::cout << "}";
+    if (i != 2) { std::cout << ","; }
+  }
+  std::cout << "}" << std::endl;
   std::cout << "expected: " << dfdu(z, displacement) << std::endl;
   std::cout << std::endl;
 
-  std::cout << "df_d(du_dx): " << get<1>(df_ddisp) << std::endl;
+  std::cout << "df_d(du_dx): ";
+  std::cout << "{";
+  for (int i = 0; i < 3; i++) {
+    std::cout << "{";
+    for (int j = 0; j < 3; j++) {
+      std::cout << get<1>(df_ddisp(i,j));
+      if (j != 2) { std::cout << ","; }
+    }
+    std::cout << "}";
+    if (i != 2) { std::cout << ","; }
+  }
+  std::cout << "}" << std::endl;
   std::cout << "expected: " << dfddudx(z, displacement) << std::endl;
   std::cout << std::endl;
 
