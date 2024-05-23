@@ -107,12 +107,12 @@ public:
    * @return A pointer to the underlying preconditioner
    * @note This may be null if a preconditioner is not given
    */
-  mfem::Solver* preconditioner() { return preconditioner_.get(); }
+  mfem::Solver& preconditioner() { return *preconditioner_; }
 
   /**
    * @overload
    */
-  const mfem::Solver* preconditioner() const { return preconditioner_.get(); }
+  const mfem::Solver& preconditioner() const { return *preconditioner_; }
 
   /**
    * Input file parameters specific to this class
@@ -256,8 +256,8 @@ private:
  * @param comm The MPI communicator for the supplied nonlinear operators and HypreParVectors
  * @return The constructed nonlinear solver
  */
-std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions nonlinear_opts = {},
-                                                         MPI_Comm               comm           = MPI_COMM_WORLD);
+std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(const NonlinearSolverOptions& nonlinear_opts,
+                                                         mfem::Solver& Preconditioner, MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
  * @brief Build the linear solver and its associated preconditioner given a linear options struct

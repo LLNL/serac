@@ -236,7 +236,7 @@ public:
 
     // If the user wants the AMG preconditioner with a linear solver, set the pfes
     // to be the displacement
-    auto* amg_prec = dynamic_cast<mfem::HypreBoomerAMG*>(nonlin_solver_->preconditioner());
+    auto* amg_prec = dynamic_cast<mfem::HypreBoomerAMG*>(&nonlin_solver_->preconditioner());
     if (amg_prec) {
       // amg_prec->SetElasticityOptions(&displacement_.space());
 
@@ -919,8 +919,8 @@ public:
 
     residual_->AddDomainIntegral(
         Dimension<dim>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
-        [body_force](double t, auto x, auto /* displacement */, auto /* acceleration */, auto... params) {
-          return serac::tuple{-1.0 * body_force(x, t, params...), zero{}};
+        [body_force](double t, auto X, auto /* displacement */, auto /* acceleration */, auto... params) {
+          return serac::tuple{-1.0 * body_force(get<VALUE>(X), t, params...), zero{}};
         },
         domain);
   }
