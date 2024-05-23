@@ -70,5 +70,10 @@ if(ENABLE_CUDA)
 endif()
 
 add_executable(enzyme_test enzyme_test.cpp)
-
 target_link_libraries(enzyme_test PUBLIC serac_functional)
+
+add_executable(enzyme_reproducer enzyme_reproducer.cpp)
+target_link_libraries(enzyme_reproducer PUBLIC serac_functional)
+
+add_executable(enzyme_reproducer_rbr enzyme_reproducer_rbr.cpp)
+target_link_libraries(enzyme_reproducer_rbr PUBLIC serac_functional)
