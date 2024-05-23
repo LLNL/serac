@@ -16,6 +16,8 @@
 #include "serac/infrastructure/profiling.hpp"
 #include "serac/mesh/mesh_utils.hpp"
 
+#if defined(SERAC_USE_CALIPER) && defined(SERAC_USE_ADIAK)
+
 namespace serac {
 
 TEST(Profiling, MeshRefinement)
@@ -153,6 +155,8 @@ TEST(Profiling, TempRvalueReferenceExpr)
 }
 
 }  // namespace serac
+
+#endif
 
 int main(int argc, char* argv[])
 {
