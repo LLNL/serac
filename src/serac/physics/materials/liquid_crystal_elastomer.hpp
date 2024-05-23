@@ -504,7 +504,7 @@ struct LiquidCrystalElastomerZhang {
                              orderParamType inst_order_param_tuple, GammaAngleType gamma_tuple,
                              EtaAngleType eta_tuple) const
   {
-    using std::cos, std::sin;
+    using std::cos, std::sin, std::pow, std::log;
 
     // Compute the normal
     auto   gamma = get<0>(gamma_tuple);

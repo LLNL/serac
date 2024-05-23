@@ -36,8 +36,8 @@ int main(int argc, char* argv[])
   serac::StateManager::initialize(datastore, "LCE_free_swelling_zhang");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  int nElem = 2;
-  double lx = (10.0e-3)/2, ly = (0.2e-3)/2, lz = (0.2e-3);
+  int nElem = 3;
+  double lx = (10.0e-3)/2, lz = (0.2e-3)/2, ly = (0.2e-3);
   ::mfem::Mesh cuboid =
       // mfem::Mesh(mfem::Mesh::MakeCartesian3D(20 * nElem, 10 * nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
       mfem::Mesh(mfem::Mesh::MakeCartesian3D(50 * nElem, 2 * nElem, 2 *nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
@@ -81,11 +81,11 @@ int main(int argc, char* argv[])
   // -------------------
 
   double density         = 1.0;
-  double shear_mod       = 4476171.852; // 3.113e4; //  young_modulus_ / 2.0 / (1.0 + poisson_ratio_);
-  double ini_order_param = 0.2; // 0.28544; // 0.40;
-  double min_order_param = 0.001;
+  double shear_mod       = 4.4762e6; // 4476171.852e-6; // 3.113e4; //  young_modulus_ / 2.0 / (1.0 + poisson_ratio_);
+  double ini_order_param = 0.28544; // 0.4; //  0.40;
+  double min_order_param = 0.00001;
   double omega_param     = 0.1151; // 1.0e2;
-  double bulk_mod        = 1.0e1*shear_mod;
+  double bulk_mod        = 1.0e2*shear_mod; 
   // -------------------
 
   // Set material
@@ -96,19 +96,17 @@ int main(int argc, char* argv[])
   orderParam = ini_order_param;
 
   // Parameter 2
-  FiniteElementState gammaParam(
-      pmesh, L2<0>{}, "gammaParam");
+  FiniteElementState gammaParam(pmesh, L2<0>{}, "gammaParam");
 
   auto gammaFunc         = [](const mfem::Vector&, double) -> double {
-    return 0.0;  // M_PI_2; 
+    return 0.0 * M_PI_2; // 0.0;  // 
   };
 
   mfem::FunctionCoefficient gammaCoef(gammaFunc);
   gammaParam.project(gammaCoef);
 
   // Paremetr 3
-  FiniteElementState etaParam(
-      pmesh, L2<0>{}, "etaParam");
+  FiniteElementState etaParam(pmesh, L2<0>{}, "etaParam");
   auto                      etaFunc = [](const mfem::Vector& /*x*/, double) -> double { return 0.0; };
   mfem::FunctionCoefficient etaCoef(etaFunc);
   etaParam.project(etaCoef);
@@ -139,7 +137,7 @@ int main(int argc, char* argv[])
   };
   solid_solver.setDisplacement(ini_displacement);
 
-  double loadVal = 1.0e4;
+  double loadVal = 0.0e5;
   solid_solver.setTraction([&loadVal, lx](auto x, auto /*n*/, auto /*t*/) {
     return tensor<double, 3>{loadVal * (x[0] > 0.975 * lx), 0.0, 0.0};
   });
@@ -161,7 +159,7 @@ int main(int argc, char* argv[])
               << "\n... Using two gamma angles" << std::endl;
   }
   solid_solver.advanceTimestep(dt);
-  std::string outputFilename = "sol_free_swelling_zhang_Dans_test";
+  std::string outputFilename = "sol_tension_zhang_Dans_test_00_degrees_";
   solid_solver.outputStateToDisk(outputFilename);
 
   for (int i = 0; i < num_steps; i++) {    
