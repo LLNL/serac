@@ -192,6 +192,8 @@ public:
                        "EquationSolver argument is nullptr in SolidMechanics constructor. It is possible that it was "
                        "previously moved.");
 
+    const int true_size = velocity_.space().TrueVSize();
+
     // Check for dynamic mode
     if (timestepping_opts.timestepper != TimestepMethod::QuasiStatic) {
       ode2_.SetTimestepper(timestepping_opts.timestepper);
@@ -199,12 +201,12 @@ public:
       is_quasistatic_ = false;
 
       time_stepper_ = std::make_unique<SecondOrderTimeStepper>(nonlin_solver_.get(), timestepping_opts);
-      time_stepper_->set_states({&displacement_, &velocity_, &acceleration_}, bcs_);
+      time_stepper_->set_states({&displacement, &velocity}, {&acceleration_} bcs_);
 
     } else {
       is_quasistatic_ = true;
       time_stepper_   = std::make_unique<QuasiStaticStepper>(nonlin_solver_.get(), timestepping_opts);
-      time_stepper_->set_states({&displacement_, &velocity_, &acceleration_}, bcs_);
+      time_stepper_->set_states({&displacement}, bcs_);
     }
 
     states_.push_back(&displacement_);
@@ -253,8 +255,6 @@ public:
       // around as it will decrease the effectiveness of the preconditioner.
       amg_prec->SetSystemsOptions(dim, true);
     }
-
-    int true_size = velocity_.space().TrueVSize();
 
     u_.SetSize(true_size);
     v_.SetSize(true_size);
@@ -1213,6 +1213,7 @@ public:
     if (is_quasistatic_) {
       quasiStaticSolve(dt);
     } else {
+      time_stepper_->advance(time_, dt);
       ode2_.Step(displacement_, velocity_, time_, dt);
 
       cycle_ += 1;
