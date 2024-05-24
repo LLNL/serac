@@ -42,7 +42,6 @@ class SecondOrderIntegrator : public TimeIntegrator {
 
 protected:
 
-
    /// The value of time at which the ODE solver wants to evaluate the residual
   double ode_time_point;
 
