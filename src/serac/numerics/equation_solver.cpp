@@ -164,7 +164,7 @@ public:
 
 struct TrustRegionSettings {
   double cgTol                  = 1e-8;
-  size_t maxCgIterations        = 5000;
+  size_t maxCgIterations        = 10000; // should be around # of system dofs
   size_t maxCumulativeIteration = 1;
   double min_tr_size            = 1e-13;
   double t1                     = 0.25;
@@ -205,6 +205,13 @@ struct TrustRegionResults {
   Status       interiorStatus    = Status::Interior;
   size_t       cgIterationsCount = 0;
 };
+
+void print_trust_region_info(double realObjective, double modelObjective, size_t cgIters, double trSize, bool willAccept)
+{
+  mfem::out << "real energy = " << std::setw(13) << realObjective << ", model energy = " << std::setw(13)
+            << modelObjective << ", cg iter = " << std::setw(7) << cgIters
+            << ", next tr size = " << std::setw(8) << trSize << ", accepting = " << willAccept << std::endl;
+}
 
 class TrustRegion : public mfem::NewtonSolver {
 protected:
@@ -308,7 +315,7 @@ public:
 
       auto& zPred = Hd;  // re-use Hd, this is where bugs come from
       add(z, alphaCg, d, zPred);
-      double zzNp1 = Dot(zPred, zPred);
+      double zzNp1 = Dot(zPred, zPred); // can optimize this eventually
 
       if (curvature <= 0) {
         // mfem::out << "negative curvature found.\n";
@@ -359,6 +366,7 @@ public:
     if (print_options.first_and_last && !print_options.iterations) {
       mfem::out << "Newton iteration " << std::setw(3) << 0 << " : ||r|| = " << std::setw(13) << norm << "...\n";
     }
+    prec->iterative_mode = false;
     trPrecond.iterative_mode = false;
 
     // local arrays
@@ -473,6 +481,9 @@ public:
           r                = rPred;
           norm             = normPred;
           happyAboutTrSize = true;
+          if (print_options.iterations) {
+            print_trust_region_info(realObjective, modelObjective, trResults.cgIterationsCount, trSize, true);
+          }
           break;
         }
 
@@ -500,9 +511,7 @@ public:
         bool willAccept = rho >= settings.eta1;  // or (rho >= -0 and realResNorm <= gNorm)
 
         if (print_options.iterations) {
-          mfem::out << "real energy = " << std::setw(13) << realObjective << ", model energy = " << std::setw(13)
-                    << modelObjective << ", cg iter = " << std::setw(7) << trResults.cgIterationsCount
-                    << ", tr size = " << std::setw(10) << trSize << ", accepting = " << willAccept << std::endl;
+          print_trust_region_info(realObjective, modelObjective, trResults.cgIterationsCount, trSize, willAccept);
         }
 
         if (willAccept) {

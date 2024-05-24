@@ -70,9 +70,7 @@ void functional_solid_test_nonlinear_buckle()
                                                .preconditioner = Preconditioner::HypreJacobi,
                                                .relative_tol   = 1.0e-6,
                                                .absolute_tol   = 1.0e-12,
-                                               .max_iterations = 2};
-
-  linear_options = serac::solid_mechanics::direct_linear_options;
+                                               .max_iterations = 3*Nx*Ny*Nz};
 
   auto seracSolid = std::make_unique<seracSolidType>(
       nonlinear_options, linear_options, serac::solid_mechanics::default_quasistatic_options,
