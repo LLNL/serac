@@ -164,7 +164,7 @@ public:
 
 struct TrustRegionSettings {
   double cgTol                  = 1e-8;
-  size_t maxCgIterations        = 10000; // should be around # of system dofs
+  size_t maxCgIterations        = 10000;  // should be around # of system dofs
   size_t maxCumulativeIteration = 1;
   double min_tr_size            = 1e-13;
   double t1                     = 0.25;
@@ -206,11 +206,12 @@ struct TrustRegionResults {
   size_t       cgIterationsCount = 0;
 };
 
-void print_trust_region_info(double realObjective, double modelObjective, size_t cgIters, double trSize, bool willAccept)
+void print_trust_region_info(double realObjective, double modelObjective, size_t cgIters, double trSize,
+                             bool willAccept)
 {
   mfem::out << "real energy = " << std::setw(13) << realObjective << ", model energy = " << std::setw(13)
-            << modelObjective << ", cg iter = " << std::setw(7) << cgIters
-            << ", next tr size = " << std::setw(8) << trSize << ", accepting = " << willAccept << std::endl;
+            << modelObjective << ", cg iter = " << std::setw(7) << cgIters << ", next tr size = " << std::setw(8)
+            << trSize << ", accepting = " << willAccept << std::endl;
 }
 
 class TrustRegion : public mfem::NewtonSolver {
@@ -220,12 +221,16 @@ protected:
   mutable mfem::Vector scratch;
 
   NonlinearSolverOptions nonlinear_options;
-  LinearSolverOptions linear_options;
-  Solver& trPrecond;
+  LinearSolverOptions    linear_options;
+  Solver&                trPrecond;
 
 public:
 #ifdef MFEM_USE_MPI
-  TrustRegion(MPI_Comm comm_, const NonlinearSolverOptions& nonlinear_opts, const LinearSolverOptions& linear_opts, Solver& tPrec) : mfem::NewtonSolver(comm_), nonlinear_options(nonlinear_opts), linear_options(linear_opts), trPrecond(tPrec) {}
+  TrustRegion(MPI_Comm comm_, const NonlinearSolverOptions& nonlinear_opts, const LinearSolverOptions& linear_opts,
+              Solver& tPrec)
+      : mfem::NewtonSolver(comm_), nonlinear_options(nonlinear_opts), linear_options(linear_opts), trPrecond(tPrec)
+  {
+  }
 #endif
 
   void project_to_boundary_with_coefs(mfem::Vector& z, const mfem::Vector& d, double trSize, double zz, double zd,
@@ -311,11 +316,11 @@ public:
     for (cgIter = 1; cgIter <= settings.maxCgIterations; ++cgIter) {
       hess_vec_func(d, Hd);
       const double curvature = Dot(d, Hd);
-      const double alphaCg = rPr / curvature;
+      const double alphaCg   = rPr / curvature;
 
       auto& zPred = Hd;  // re-use Hd, this is where bugs come from
       add(z, alphaCg, d, zPred);
-      double zzNp1 = Dot(zPred, zPred); // can optimize this eventually
+      double zzNp1 = Dot(zPred, zPred);  // can optimize this eventually
 
       if (curvature <= 0) {
         // mfem::out << "negative curvature found.\n";
@@ -366,7 +371,7 @@ public:
     if (print_options.first_and_last && !print_options.iterations) {
       mfem::out << "Newton iteration " << std::setw(3) << 0 << " : ||r|| = " << std::setw(13) << norm << "...\n";
     }
-    prec->iterative_mode = false;
+    prec->iterative_mode     = false;
     trPrecond.iterative_mode = false;
 
     // local arrays
@@ -388,7 +393,7 @@ public:
     for (; true; it++) {
       MFEM_ASSERT(mfem::IsFinite(norm), "norm = " << norm);
       if (print_options.iterations) {
-        mfem::out << "Newton iteration " << std::setw(3) << it << " : ||r|| = " << std::setw(13)  << norm;
+        mfem::out << "Newton iteration " << std::setw(3) << it << " : ||r|| = " << std::setw(13) << norm;
         if (it > 0) {
           mfem::out << ", ||r||/||r_0|| = " << std::setw(13) << norm / initial_norm;
         }
@@ -405,7 +410,7 @@ public:
 
       auto K = &oper->GetGradient(X);
       if (it == 0 || (trResults.cgIterationsCount >= settings.maxCgIterations ||
-        cumulativeCgIters >= settings.maxCumulativeIteration)) {
+                      cumulativeCgIters >= settings.maxCumulativeIteration)) {
         trPrecond.SetOperator(*K);
         cumulativeCgIters = 0;
         if (print_options.iterations) {
@@ -415,7 +420,7 @@ public:
       }
 
       auto hess_vec_func = [=](const mfem::Vector& x_, mfem::Vector& v_) { K->Mult(x_, v_); };
-      auto precond_func = [=](const mfem::Vector& x_, mfem::Vector& v_) { trPrecond.Mult(x_, v_); };
+      auto precond_func  = [=](const mfem::Vector& x_, mfem::Vector& v_) { trPrecond.Mult(x_, v_); };
 
       double cauchyPointNormSquared = trSize * trSize;
       trResults.reset();
@@ -451,8 +456,8 @@ public:
       cumulativeCgIters += trResults.cgIterationsCount;
 
       bool happyAboutTrSize = false;
-      int lineSearchIter = 0;
-      while (!happyAboutTrSize && lineSearchIter<=nonlinear_options.max_line_search_iterations) {
+      int  lineSearchIter   = 0;
+      while (!happyAboutTrSize && lineSearchIter <= nonlinear_options.max_line_search_iterations) {
         ++lineSearchIter;
         auto& d  = trResults.d;   // reuse, dangerous!
         auto& Hd = trResults.Hd;  // reuse, dangerous!
@@ -686,8 +691,8 @@ void StrumpackSolver::SetOperator(const mfem::Operator& op)
 #endif
 
 std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(const NonlinearSolverOptions& nonlinear_opts,
-                                                         const LinearSolverOptions& linear_opts,
-                                                         mfem::Solver& prec, MPI_Comm comm)
+                                                         const LinearSolverOptions& linear_opts, mfem::Solver& prec,
+                                                         MPI_Comm comm)
 {
   std::unique_ptr<mfem::NewtonSolver> nonlinear_solver;
 
