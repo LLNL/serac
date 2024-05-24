@@ -208,7 +208,7 @@ struct LinearSolverOptions {
 /// Nonlinear solution scheme parameters
 struct NonlinearSolverOptions {
   /// Nonlinear solver selection
-  NonlinearSolver nonlin_solver = NonlinearSolver::Newton;
+  NonlinearSolver nonlin_solver = NonlinearSolver::NewtonLineSearch;
 
   /// Relative tolerance
   double relative_tol = 1.0e-8;

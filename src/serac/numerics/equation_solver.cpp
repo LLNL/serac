@@ -37,7 +37,7 @@ public:
     try {
       oper->Mult(x, rOut);
       normEval = Norm(rOut);
-    } catch (std::exception) {
+    } catch (const std::exception&) {
       normEval = std::numeric_limits<double>::max();
     }
     return normEval;
@@ -55,7 +55,7 @@ public:
 
     norm = initial_norm = Norm(r);
     if (print_options.first_and_last && !print_options.iterations) {
-      mfem::out << "Newton iteration " << std::setw(2) << 0 << " : ||r|| = " << norm << "...\n";
+      mfem::out << "Newton iteration " << std::setw(3) << 0 << " : ||r|| = " << std::setw(13) << norm << "...\n";
     }
 
     norm_goal            = std::max(rel_tol * initial_norm, abs_tol);
@@ -65,9 +65,9 @@ public:
     for (; true; it++) {
       MFEM_ASSERT(mfem::IsFinite(norm), "norm = " << norm);
       if (print_options.iterations) {
-        mfem::out << "Newton iteration " << std::setw(2) << it << " : ||r|| = " << norm;
+        mfem::out << "Newton iteration " << std::setw(3) << it << " : ||r|| = " << std::setw(13) << norm;
         if (it > 0) {
-          mfem::out << ", ||r||/||r_0|| = " << norm / initial_norm;
+          mfem::out << ", ||r||/||r_0|| = " << std::setw(13) << norm / initial_norm;
         }
         mfem::out << '\n';
       }
@@ -75,9 +75,7 @@ public:
       if (norm <= norm_goal && it >= nonlinear_options.min_iterations) {
         converged = true;
         break;
-      }
-
-      if (it >= max_iter) {
+      } else if (it >= max_iter) {
         converged = false;
         break;
       }
@@ -94,8 +92,8 @@ public:
       x0 = 0.0;
       x0.Add(1.0, x);
 
-      real_t c_scale = 1.0;
-      add(x0, -c_scale, c, x);
+      real_t stepScale = 1.0;
+      add(x0, -stepScale, c, x);
       norm = evaluate_norm(x, r);
 
       const int               max_ls_iters = nonlinear_options.max_line_search_iterations;
@@ -111,38 +109,38 @@ public:
       // back-track linesearch
       int ls_iter     = 0;
       int ls_iter_sum = 0;
-      for (; !is_improved(norm, c_scale) && ls_iter < max_ls_iters; ++ls_iter, ++ls_iter_sum) {
-        c_scale *= reduction;
-        add(x0, -c_scale, c, x);
+      for (; !is_improved(norm, stepScale) && ls_iter < max_ls_iters; ++ls_iter, ++ls_iter_sum) {
+        stepScale *= reduction;
+        add(x0, -stepScale, c, x);
         norm = evaluate_norm(x, r);
       }
 
       // try the opposite direction and linesearch back from there
-      if (ls_iter == max_ls_iters && !is_improved(norm, c_scale)) {
-        c_scale = 1.0;
-        add(x0, c_scale, c, x);
+      if (ls_iter == max_ls_iters && !is_improved(norm, stepScale)) {
+        stepScale = 1.0;
+        add(x0, stepScale, c, x);
         norm = evaluate_norm(x, r);
 
         ls_iter = 0;
-        for (; !is_improved(norm, c_scale) && ls_iter < max_ls_iters; ++ls_iter, ++ls_iter_sum) {
-          c_scale *= reduction;
-          add(x0, c_scale, c, x);
+        for (; !is_improved(norm, stepScale) && ls_iter < max_ls_iters; ++ls_iter, ++ls_iter_sum) {
+          stepScale *= reduction;
+          add(x0, stepScale, c, x);
           norm = evaluate_norm(x, r);
         }
 
         // ok, the opposite direction was also terrible, lets go back, cut in half 1 last time and accept it hoping for
         // the best
-        if (ls_iter == max_ls_iters && !is_improved(norm, c_scale)) {
+        if (max_ls_iters > 0 && ls_iter == max_ls_iters && !is_improved(norm, stepScale)) {
           ++ls_iter_sum;
-          c_scale *= reduction;
-          add(x0, -c_scale, c, x);
+          stepScale *= reduction;
+          add(x0, -stepScale, c, x);
           norm = evaluate_norm(x, r);
         }
       }
 
       if (ls_iter_sum) {
         if (print_options.iterations) {
-          mfem::out << "Number of line search steps taken = : " << ls_iter_sum << std::endl;
+          mfem::out << "Number of line search steps taken = " << ls_iter_sum << std::endl;
         }
         if (print_options.warnings && (ls_iter_sum == 2 * max_ls_iters + 1)) {
           mfem::out << "The maximum number of line search cut back have occurred, the resulting residual may not have "
@@ -164,150 +162,11 @@ public:
   }
 };
 
-class Nesterov : public mfem::NewtonSolver {
-protected:
-  mutable mfem::Vector v;
-  mutable mfem::Vector a;
-  mutable mfem::Vector xPred;
-  mutable mfem::Vector Ks;
-  mutable mfem::Vector rOld;
-  mutable mfem::Vector rPred;
-  mutable double       dt;
-
-public:
-  Nesterov() {}
-
-#ifdef MFEM_USE_MPI
-  Nesterov(MPI_Comm comm_) : mfem::NewtonSolver(comm_) {}
-#endif
-
-  void Mult(const mfem::Vector&, mfem::Vector& x) const
-  {
-    MFEM_ASSERT(oper != NULL, "the Operator is not set (use SetOperator).");
-    MFEM_ASSERT(prec != NULL, "the Solver is not set (use SetSolver).");
-
-    using real_t = mfem::real_t;
-
-    real_t norm, norm_goal;
-    oper->Mult(x, r);
-
-    mfem::out << "initial residual norm = " << Norm(r) << std::endl;
-
-    norm = initial_norm = Norm(r);
-    norm_goal           = std::max(rel_tol * initial_norm, abs_tol);
-    if (print_options.first_and_last && !print_options.iterations) {
-      mfem::out << "Newton iteration " << std::setw(2) << 0 << " : ||r|| = " << norm << "...\n";
-    }
-    prec->iterative_mode = false;
-
-    // local arrays
-    v.SetSize(x.Size());
-    v = 0.0;
-    a.SetSize(x.Size());
-    a = 0.0;
-    xPred.SetSize(x.Size());
-    xPred = 0.0;
-    Ks.SetSize(x.Size());
-    Ks = 0.0;
-    rPred.SetSize(x.Size());
-    rPred = 0.0;
-    rOld.SetSize(x.Size());
-    rOld = 0.0;
-
-    int it = 0;
-    for (; true; it++) {
-      MFEM_ASSERT(mfem::IsFinite(norm), "norm = " << norm);
-      if (print_options.iterations) {
-        mfem::out << "Newton iteration " << std::setw(2) << it << " : ||r|| = " << norm;
-        if (it > 0) {
-          mfem::out << ", ||r||/||r_0|| = " << norm / initial_norm;
-        }
-        mfem::out << '\n';
-      }
-
-      if (norm <= norm_goal) {
-        converged = true;
-        break;
-      } else if (it >= max_iter) {
-        converged = false;
-        break;
-      }
-
-      auto K = &oper->GetGradient(x);
-      if (it == 0) {
-        printf("setting preconditioner\n");
-        prec->SetOperator(*K);
-      }
-
-      std::cout << "r a " << Norm(r) << std::endl;
-      prec->Mult(r, c);  // c = [DF(x_i)]^{-1} [F(x_i)-b]
-      std::cout << "c a " << Norm(c) << std::endl;
-
-      real_t c_scale = 0.9;  // 0.1; //1.0; //1e-2;//1.0;
-      K->Mult(c, Ks);
-      double alpha = Dot(Ks, c) / Dot(c, c);
-      c_scale      = 1.0 / (alpha * std::sqrt(Dot(c, c)));
-      std::cout << "initial c scale = " << c_scale << std::endl;
-
-      rOld           = r;
-      double normOld = norm;
-
-      add(x, -c_scale, c, xPred);
-      add(rOld, -c_scale, Ks, rPred);
-
-      double normPred = Norm(rPred);
-
-      oper->Mult(xPred, r);
-      norm = Norm(r);
-
-      std::cout << "nrm , pre = " << norm - normOld << " " << normPred - normOld << std::endl;
-
-      static constexpr int    max_ls_iters = 30;
-      static constexpr real_t reduction    = 0.5;
-
-      auto is_progress = [=](real_t currentNorm, real_t) {
-        return ((currentNorm < 1.001 * normPred) || currentNorm < normOld);
-      };
-
-      // back-track linesearch
-      int ls_iter     = 0;
-      int ls_iter_sum = 0;
-      for (; !is_progress(norm, c_scale) && ls_iter < max_ls_iters; ++ls_iter, ++ls_iter_sum) {
-        c_scale *= reduction;
-        add(x, -c_scale, c, xPred);
-        add(rOld, -c_scale, Ks, rPred);
-        normPred = Norm(rPred);
-        oper->Mult(xPred, r);
-        norm = Norm(r);
-        std::cout << "nrm , pre = " << norm - normOld << " " << normPred - normOld << std::endl;
-      }
-
-      x = xPred;
-
-      if (ls_iter_sum) {
-        if (print_options.summary || (!converged && print_options.warnings) || print_options.first_and_last) {
-          mfem::out << "Number of line search steps taken = : " << ls_iter_sum << std::endl;
-        }
-      }
-    }
-
-    final_iter = it;
-    final_norm = norm;
-
-    if (print_options.summary || (!converged && print_options.warnings) || print_options.first_and_last) {
-      mfem::out << "Newton: Number of iterations: " << final_iter << '\n' << "   ||r|| = " << final_norm << '\n';
-    }
-    if (!converged && (print_options.summary || print_options.warnings)) {
-      mfem::out << "Newton: No convergence!\n";
-    }
-  }
-};
-
 struct TrustRegionSettings {
   double cgTol                  = 1e-8;
   size_t maxCgIterations        = 5000;
   size_t maxCumulativeIteration = 1;
-  double min_tr_size            = 1e-9;
+  double min_tr_size            = 1e-13;
   double t1                     = 0.25;
   double t2                     = 1.75;
   double eta1                   = 1e-9;
@@ -353,11 +212,13 @@ protected:
   mutable mfem::Vector rPred;
   mutable mfem::Vector scratch;
 
-  Solver& trPrec;
+  NonlinearSolverOptions nonlinear_options;
+  LinearSolverOptions linear_options;
+  Solver& trPrecond;
 
 public:
 #ifdef MFEM_USE_MPI
-  TrustRegion(MPI_Comm comm_, Solver& tPrec) : mfem::NewtonSolver(comm_), trPrec(tPrec) {}
+  TrustRegion(MPI_Comm comm_, const NonlinearSolverOptions& nonlinear_opts, const LinearSolverOptions& linear_opts, Solver& tPrec) : mfem::NewtonSolver(comm_), nonlinear_options(nonlinear_opts), linear_options(linear_opts), trPrecond(tPrec) {}
 #endif
 
   void project_to_boundary_with_coefs(mfem::Vector& z, const mfem::Vector& d, double trSize, double zz, double zd,
@@ -379,9 +240,9 @@ public:
     z.Add(tau, y);
   }
 
-  double update_step_length_squared(double alpha, double zz, double zd, double dd) const
+  double update_step_length_squared(double alpha_, double zz, double zd, double dd) const
   {
-    return zz + 2 * alpha * zd + alpha * alpha * dd;
+    return zz + 2 * alpha_ * zd + alpha_ * alpha_ * dd;
   }
 
   void dogleg_step(const mfem::Vector& cp, const mfem::Vector& newtonP, double trSize, mfem::Vector& s) const
@@ -442,12 +303,12 @@ public:
 
     for (cgIter = 1; cgIter <= settings.maxCgIterations; ++cgIter) {
       hess_vec_func(d, Hd);
-      double curvature = Dot(d, Hd);
-      double alpha     = rPr / curvature;
+      const double curvature = Dot(d, Hd);
+      const double alphaCg = rPr / curvature;
 
       auto& zPred = Hd;  // re-use Hd, this is where bugs come from
-      add(z, alpha, d, zPred);
-      double zzNp1 = Dot(zPred, zPred);  // update_step_length_squared(alpha, zz, zd, dd); MRT, perf optimization
+      add(z, alphaCg, d, zPred);
+      double zzNp1 = Dot(zPred, zPred);
 
       if (curvature <= 0) {
         // mfem::out << "negative curvature found.\n";
@@ -464,16 +325,12 @@ public:
       z = zPred;
 
       hess_vec_func(d, Hd);
-      add(rCurrent, alpha, Hd, rCurrent);
+      add(rCurrent, alphaCg, Hd, rCurrent);
 
       precond(rCurrent, Pr);
       double rPrNp1 = Dot(rCurrent, Pr);
 
       if (Dot(rCurrent, rCurrent) <= cgTolSquared) {
-        // Hd = 0.0;
-        // hess_vec_func(z, Hd);
-        // double energy = Dot(r0, z) + 0.5 * Dot(z, Hd);
-        // std::cout << "converged cg with energy drop = " << energy << std::endl;
         return;
       }
 
@@ -487,7 +344,7 @@ public:
     }
   }
 
-  void Mult(const mfem::Vector&, mfem::Vector& x) const
+  void Mult(const mfem::Vector&, mfem::Vector& X) const
   {
     MFEM_ASSERT(oper != NULL, "the Operator is not set (use SetOperator).");
     MFEM_ASSERT(prec != NULL, "the Solver is not set (use SetSolver).");
@@ -495,26 +352,26 @@ public:
     using real_t = mfem::real_t;
 
     real_t norm, norm_goal;
-    oper->Mult(x, r);
+    oper->Mult(X, r);
 
     norm = initial_norm = Norm(r);
     norm_goal           = std::max(rel_tol * initial_norm, abs_tol);
     if (print_options.first_and_last && !print_options.iterations) {
-      mfem::out << "Newton iteration " << std::setw(2) << 0 << " : ||r|| = " << norm << "...\n";
+      mfem::out << "Newton iteration " << std::setw(3) << 0 << " : ||r|| = " << std::setw(13) << norm << "...\n";
     }
-    prec->iterative_mode  = false;
-    trPrec.iterative_mode = false;
+    trPrecond.iterative_mode = false;
 
     // local arrays
-    xPred.SetSize(x.Size());
+    xPred.SetSize(X.Size());
     xPred = 0.0;
-    rPred.SetSize(x.Size());
+    rPred.SetSize(X.Size());
     rPred = 0.0;
-    scratch.SetSize(x.Size());
+    scratch.SetSize(X.Size());
     scratch = 0.0;
 
-    TrustRegionResults  trResults(x.Size());
-    TrustRegionSettings settings;  // MRT, read these in please
+    TrustRegionResults  trResults(X.Size());
+    TrustRegionSettings settings;
+    settings.maxCgIterations = static_cast<size_t>(linear_options.max_iterations);
     settings.cgTol           = 0.2 * norm_goal;
     double trSize            = 10.0;
     size_t cumulativeCgIters = 0;
@@ -523,14 +380,14 @@ public:
     for (; true; it++) {
       MFEM_ASSERT(mfem::IsFinite(norm), "norm = " << norm);
       if (print_options.iterations) {
-        mfem::out << "Newton iteration " << std::setw(2) << it << " : ||r|| = " << norm;
+        mfem::out << "Newton iteration " << std::setw(3) << it << " : ||r|| = " << std::setw(13)  << norm;
         if (it > 0) {
-          mfem::out << ", ||r||/||r_0|| = " << norm / initial_norm;
+          mfem::out << ", ||r||/||r_0|| = " << std::setw(13) << norm / initial_norm;
         }
         mfem::out << '\n';
       }
 
-      if (norm <= norm_goal) {
+      if (norm <= norm_goal && it >= nonlinear_options.min_iterations) {
         converged = true;
         break;
       } else if (it >= max_iter) {
@@ -538,10 +395,10 @@ public:
         break;
       }
 
-      auto K = &oper->GetGradient(x);
+      auto K = &oper->GetGradient(X);
       if (it == 0 || (trResults.cgIterationsCount >= settings.maxCgIterations ||
-                      cumulativeCgIters >= settings.maxCumulativeIteration)) {
-        trPrec.SetOperator(*K);
+        cumulativeCgIters >= settings.maxCumulativeIteration)) {
+        trPrecond.SetOperator(*K);
         cumulativeCgIters = 0;
         if (print_options.iterations) {
           // currently it will always be updated
@@ -549,31 +406,30 @@ public:
         }
       }
 
-      auto hess_vec_func = [=](const mfem::Vector& x, mfem::Vector& v) { K->Mult(x, v); };
-
-      auto precond_func = [=](const mfem::Vector& x, mfem::Vector& v) { trPrec.Mult(x, v); };
+      auto hess_vec_func = [=](const mfem::Vector& x_, mfem::Vector& v_) { K->Mult(x_, v_); };
+      auto precond_func = [=](const mfem::Vector& x_, mfem::Vector& v_) { trPrecond.Mult(x_, v_); };
 
       double cauchyPointNormSquared = trSize * trSize;
       trResults.reset();
 
       hess_vec_func(r, trResults.Hd);
-      double gKg = Dot(r, trResults.Hd);
+      const double gKg = Dot(r, trResults.Hd);
       if (gKg > 0) {
-        double alpha = -Dot(r, r) / gKg;
-        add(trResults.cauchyPoint, alpha, r, trResults.cauchyPoint);
+        const double alphaCp = -Dot(r, r) / gKg;
+        add(trResults.cauchyPoint, alphaCp, r, trResults.cauchyPoint);
         cauchyPointNormSquared = Dot(trResults.cauchyPoint, trResults.cauchyPoint);
       } else {
-        double alpha = -trSize / std::sqrt(Dot(r, r));
-        add(trResults.cauchyPoint, alpha, r, trResults.cauchyPoint);
+        const double alphaTr = -trSize / std::sqrt(Dot(r, r));
+        add(trResults.cauchyPoint, alphaTr, r, trResults.cauchyPoint);
         if (print_options.iterations) {
-          mfem::out << "Negative curvature unpreconditioned cauchy point direction found."
+          mfem::out << "Negative curvature un-preconditioned cauchy point direction found."
                     << "\n";
         }
       }
 
       if (cauchyPointNormSquared >= trSize * trSize) {
         if (print_options.iterations) {
-          mfem::out << "Unpreconditioned gradient cauchy point outside trust region, step size = "
+          mfem::out << "Un-preconditioned gradient cauchy point outside trust region, step size = "
                     << std::sqrt(cauchyPointNormSquared) << "\n";
         }
         trResults.cauchyPoint *= (trSize / std::sqrt(cauchyPointNormSquared));
@@ -581,15 +437,15 @@ public:
         trResults.cgIterationsCount = 1;
         trResults.interiorStatus    = TrustRegionResults::Status::OnBoundary;
       } else {
+        settings.cgTol = std::max(0.2 * norm_goal, 1e-3 * norm);
         solve_trust_region_minimization(r, scratch, hess_vec_func, precond_func, settings, trSize, trResults);
-        // if (print_options.iterations) {
-        // mfem::out << "Trust region linear solve took " << trResults.cgIterationsCount << " cg iterations.\n";
-        //}
       }
       cumulativeCgIters += trResults.cgIterationsCount;
 
       bool happyAboutTrSize = false;
-      while (!happyAboutTrSize) {
+      int lineSearchIter = 0;
+      while (!happyAboutTrSize && lineSearchIter<=nonlinear_options.max_line_search_iterations) {
+        ++lineSearchIter;
         auto& d  = trResults.d;   // reuse, dangerous!
         auto& Hd = trResults.Hd;  // reuse, dangerous!
 
@@ -599,7 +455,7 @@ public:
         double dHd            = Dot(d, Hd);
         double modelObjective = Dot(r, d) + 0.5 * dHd;
 
-        add(x, d, xPred);
+        add(X, d, xPred);
 
         double realObjective = std::numeric_limits<double>::max();
         double normPred      = std::numeric_limits<double>::max();
@@ -607,13 +463,13 @@ public:
           oper->Mult(xPred, rPred);
           realObjective = 0.5 * (Dot(r, d) + Dot(rPred, d));
           normPred      = Norm(rPred);
-        } catch (std::exception) {
+        } catch (const std::exception&) {
           realObjective = std::numeric_limits<double>::max();
           normPred      = std::numeric_limits<double>::max();
         }
 
         if (normPred <= norm_goal) {
-          x                = xPred;
+          X                = xPred;
           r                = rPred;
           norm             = normPred;
           happyAboutTrSize = true;
@@ -637,7 +493,7 @@ public:
           trSize *= settings.t2;
         }
 
-        // eventually extend to handle this case
+        // eventually extend to handle this case to handle occasional roundoff issues
         // modelRes = g + Jd
         // modelResNorm = np.linalg.norm(modelRes)
         // realResNorm = np.linalg.norm(gy)
@@ -650,7 +506,7 @@ public:
         }
 
         if (willAccept) {
-          x                = xPred;
+          X                = xPred;
           r                = rPred;
           norm             = normPred;
           happyAboutTrSize = true;
@@ -685,7 +541,7 @@ EquationSolver::EquationSolver(NonlinearSolverOptions nonlinear_opts, LinearSolv
 
   lin_solver_     = std::move(lin_solver);
   preconditioner_ = std::move(preconditioner);
-  nonlin_solver_  = buildNonlinearSolver(nonlinear_opts, *preconditioner_, comm);
+  nonlin_solver_  = buildNonlinearSolver(nonlinear_opts, lin_opts, *preconditioner_, comm);
 }
 
 EquationSolver::EquationSolver(std::unique_ptr<mfem::NewtonSolver> nonlinear_solver,
@@ -821,24 +677,30 @@ void StrumpackSolver::SetOperator(const mfem::Operator& op)
 #endif
 
 std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(const NonlinearSolverOptions& nonlinear_opts,
+                                                         const LinearSolverOptions& linear_opts,
                                                          mfem::Solver& prec, MPI_Comm comm)
 {
   std::unique_ptr<mfem::NewtonSolver> nonlinear_solver;
 
   if (nonlinear_opts.nonlin_solver == NonlinearSolver::Newton) {
+    SLIC_ERROR_ROOT_IF(nonlinear_opts.min_iterations != 0 || nonlinear_opts.max_line_search_iterations != 0,
+                       "Newton's method does not support min_iterations or max_line_search_iterations");
     nonlinear_solver = std::make_unique<mfem::NewtonSolver>(comm);
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::LBFGS) {
+    SLIC_ERROR_ROOT_IF(nonlinear_opts.min_iterations != 0 || nonlinear_opts.max_line_search_iterations != 0,
+                       "LBFGS does not support min_iterations or max_line_search_iterations");
     nonlinear_solver = std::make_unique<mfem::LBFGSSolver>(comm);
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::NewtonLineSearch) {
     nonlinear_solver = std::make_unique<NewtonSolver>(comm, nonlinear_opts);
-  } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::Nesterov) {
-    nonlinear_solver = std::make_unique<Nesterov>(comm);
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::TrustRegion) {
-    nonlinear_solver = std::make_unique<TrustRegion>(comm, prec);
+    nonlinear_solver = std::make_unique<TrustRegion>(comm, nonlinear_opts, linear_opts, prec);
   }
   // KINSOL
   else {
 #ifdef SERAC_USE_SUNDIALS
+
+    SLIC_ERROR_ROOT_IF(nonlinear_opts.min_iterations != 0 || nonlinear_opts.max_line_search_iterations != 0,
+                       "kinsol solvers do not support min_iterations or max_line_search_iterations");
 
     int kinsol_strat = KIN_NONE;
 
@@ -1137,7 +999,7 @@ serac::EquationSolver FromInlet<serac::EquationSolver>::operator()(const axom::i
 
   auto [linear_solver, preconditioner] = serac::buildLinearSolverAndPreconditioner(lin, MPI_COMM_WORLD);
 
-  serac::EquationSolver eq_solver(serac::buildNonlinearSolver(nonlin, *preconditioner, MPI_COMM_WORLD),
+  serac::EquationSolver eq_solver(serac::buildNonlinearSolver(nonlin, lin, *preconditioner, MPI_COMM_WORLD),
                                   std::move(linear_solver), std::move(preconditioner));
 
   return eq_solver;
