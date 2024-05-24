@@ -253,10 +253,12 @@ private:
  * @brief Build a nonlinear solver using the nonlinear option struct
  *
  * @param nonlinear_opts The options to configure the nonlinear solution scheme
+ * @param linear_opts The options to configure the linear solution scheme
  * @param comm The MPI communicator for the supplied nonlinear operators and HypreParVectors
  * @return The constructed nonlinear solver
  */
 std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(const NonlinearSolverOptions& nonlinear_opts,
+                                                         const LinearSolverOptions& linear_opts,
                                                          mfem::Solver& Preconditioner, MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
