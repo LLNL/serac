@@ -698,11 +698,11 @@ std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(const NonlinearSolverOp
 
   if (nonlinear_opts.nonlin_solver == NonlinearSolver::Newton) {
     SLIC_ERROR_ROOT_IF(nonlinear_opts.min_iterations != 0 || nonlinear_opts.max_line_search_iterations != 0,
-                       "Newton's method does not support min_iterations or max_line_search_iterations");
-    nonlinear_solver = std::make_unique<mfem::NewtonSolver>(comm);
+                       "Newton's method does not support nonzero min_iterations or max_line_search_iterations");
+    nonlinear_solver = std::make_unique<NewtonSolver>(comm, nonlinear_opts);
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::LBFGS) {
     SLIC_ERROR_ROOT_IF(nonlinear_opts.min_iterations != 0 || nonlinear_opts.max_line_search_iterations != 0,
-                       "LBFGS does not support min_iterations or max_line_search_iterations");
+                       "LBFGS does not support nonzero min_iterations or max_line_search_iterations");
     nonlinear_solver = std::make_unique<mfem::LBFGSSolver>(comm);
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::NewtonLineSearch) {
     nonlinear_solver = std::make_unique<NewtonSolver>(comm, nonlinear_opts);
