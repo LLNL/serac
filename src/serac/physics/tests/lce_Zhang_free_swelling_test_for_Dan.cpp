@@ -37,10 +37,13 @@ int main(int argc, char* argv[])
 
   // Construct the appropriate dimension mesh and give it to the data store
   int nElem = 3;
+  int Nx = 50 * nElem;
+  int Ny = 2 * nElem;
+  int Nz = 2 * nElem;
   double lx = (10.0e-3)/2, lz = (0.2e-3)/2, ly = (0.2e-3);
   ::mfem::Mesh cuboid =
       // mfem::Mesh(mfem::Mesh::MakeCartesian3D(20 * nElem, 10 * nElem, nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
-      mfem::Mesh(mfem::Mesh::MakeCartesian3D(50 * nElem, 2 * nElem, 2 *nElem, mfem::Element::HEXAHEDRON, lx, ly, lz));
+      mfem::Mesh(mfem::Mesh::MakeCartesian3D(Nx, Ny, Nz, mfem::Element::HEXAHEDRON, lx, ly, lz));
   auto mesh = mesh::refineAndDistribute(std::move(cuboid), serial_refinement, parallel_refinement);
   std::string mesh_tag{"mesh"}; 
   auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
@@ -67,10 +70,20 @@ int main(int argc, char* argv[])
   // LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
   const LinearSolverOptions linear_options = {.linear_solver = LinearSolver::Strumpack, .print_level = 0};
 
-  NonlinearSolverOptions nonlinear_options = {.nonlin_solver  = serac::NonlinearSolver::Newton,
+  // const LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::CG,
+  //                                              .preconditioner = Preconditioner::HypreJacobi,
+  //                                              .relative_tol   = 1.0e-6,
+  //                                              .absolute_tol   = 1.0e-12,
+  //                                              .max_iterations = 3 * Nx * Ny * Nz};
+  NonlinearSolverOptions nonlinear_options = {
+                                              // .nonlin_solver  = serac::NonlinearSolver::Newton,
+                                              // .nonlin_solver  = serac::NonlinearSolver::TrustRegion,
+                                              .nonlin_solver  = serac::NonlinearSolver::NewtonLineSearch,
                                               .relative_tol   = 1.0e-8,
                                               .absolute_tol   = 1.0e-14,
+                                              .min_iterations = 0,
                                               .max_iterations = 10,
+                                              .max_line_search_iterations = 4,
                                               .print_level    = 1};
   SolidMechanics<p, dim, Parameters<L2<0>, L2<0>, L2<0> > > solid_solver(
       nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, 
