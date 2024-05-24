@@ -14,8 +14,6 @@
 
 #include <variant>
 
-#include "mfem.hpp"
-
 namespace serac {
 
 /**

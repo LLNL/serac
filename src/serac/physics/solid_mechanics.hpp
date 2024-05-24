@@ -197,8 +197,14 @@ public:
       ode2_.SetTimestepper(timestepping_opts.timestepper);
       ode2_.SetEnforcementMethod(timestepping_opts.enforcement_method);
       is_quasistatic_ = false;
+
+      time_stepper_ = std::make_unique<SecondOrderTimeStepper>(nonlin_solver_.get(), timestepping_opts);
+      time_stepper_->set_states({&displacement_, &velocity_, &acceleration_}, bcs_);
+
     } else {
       is_quasistatic_ = true;
+      time_stepper_   = std::make_unique<QuasiStaticStepper>(nonlin_solver_.get(), timestepping_opts);
+      time_stepper_->set_states({&displacement_, &velocity_, &acceleration_}, bcs_);
     }
 
     states_.push_back(&displacement_);
@@ -1550,6 +1556,8 @@ protected:
 
   /// coefficient used to calculate predicted velocity: dudt_p := dudt + c1 * d2u_dt2
   double c1_;
+
+  std::unique_ptr<TimeStepper> time_stepper_;
 
   /// @brief A flag denoting whether to compute geometric nonlinearities in the residual
   GeometricNonlinearities geom_nonlin_;
