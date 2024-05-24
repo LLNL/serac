@@ -11,6 +11,7 @@ if(ENABLE_TESTS)
 endif()
 
 set(numerics_headers
+    time_stepper.hpp
     equation_solver.hpp
     odes.hpp
     solver_config.hpp
@@ -18,6 +19,7 @@ set(numerics_headers
     )
 
 set(numerics_sources
+    time_stepper.cpp
     equation_solver.cpp
     odes.cpp
     )

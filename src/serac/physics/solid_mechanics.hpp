@@ -14,6 +14,8 @@
 
 #include "mfem.hpp"
 
+#include "serac/numerics/time_stepper.hpp"
+
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/physics/common.hpp"
 #include "serac/physics/solid_mechanics_input.hpp"
