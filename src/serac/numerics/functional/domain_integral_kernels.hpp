@@ -9,6 +9,7 @@
 #include "serac/numerics/functional/quadrature_data.hpp"
 #include "serac/numerics/functional/function_signature.hpp"
 #include "serac/numerics/functional/differentiate_wrt.hpp"
+#include "serac/numerics/functional/enzyme_wrapper.hpp"
 
 #include <RAJA/index/RangeSegment.hpp>
 #include <RAJA/RAJA.hpp>
@@ -90,24 +91,36 @@ template <typename lambda, typename coords_type, typename... T, typename qpt_dat
 SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, double t, coords_type&& x_q, qpt_data_type&& qpt_data,
                                 const serac::tuple<T...>& arg_tuple)
 {
-  return apply_qf_helper(qf, t, x_q, qpt_data, arg_tuple,
-                         std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>{});
+  return apply_qf_helper(qf, t, x_q, qpt_data, arg_tuple, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>{});
 }
 
 template <int i, int dim, typename... trials, typename lambda, typename qpt_data_type>
 auto get_derivative_type(lambda qf, qpt_data_type&& qpt_data)
 {
   using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim> >::type...>;
-  return get_gradient(apply_qf(qf, double{}, serac::tuple<tensor<double, dim>, tensor<double, dim, dim> >{}, qpt_data,
-                               make_dual_wrt<i>(qf_arguments{})));
+  using output_type = decltype(apply_qf(qf, double{}, serac::tuple<tensor<double, dim>, tensor<double, dim, dim> >{}, qpt_data, qf_arguments{}));
+  return typename impl::nested< output_type, decltype(type<i>(qf_arguments{})) >::type{};
 };
 
-template <typename lambda, int dim, int n, typename... T>
+
+template <typename T1, typename T2, int dim>
+SERAC_HOST_DEVICE auto parent_to_physical(const tuple<T1, T2>& qf_input, const tensor<double, dim, dim> & invJ) {
+  return tuple{get<0>(qf_input), dot(get<1>(qf_input), invJ)};
+}
+
+template <typename T1, typename T2, int dim>
+SERAC_HOST_DEVICE auto physical_to_parent(const tuple<T1, T2>& qf_output, const tensor<double, dim, dim> & invJ, double detJ) {
+  // assumes family == Family::H1 for now
+  return tuple{get<0>(qf_output) * detJ, dot(get<1>(qf_output), transpose(invJ)) * detJ};
+}
+
+template < typename lambda, int dim, int n, typename... T>
 SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(lambda qf, double t, const tensor<double, dim, n>& x,
                                                const tensor<double, dim, dim, n>& J, const T&... inputs)
 {
   using position_t  = serac::tuple<tensor<double, dim>, tensor<double, dim, dim> >;
   using return_type = decltype(qf(double{}, position_t{}, T{}[0]...));
+
   tensor<return_type, n> outputs{};
   for (int i = 0; i < n; i++) {
     tensor<double, dim>      x_q;
@@ -118,9 +131,53 @@ SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(lambda qf, double t, const tensor
       }
       x_q[j] = x(j, i);
     }
-    outputs[i] = qf(t, serac::tuple{x_q, J_q}, inputs[i]...);
+    double detJ_q = det(J_q);
+    tensor<double, dim, dim > invJ_q = inv(J_q);
+    auto qf_output = qf(t, serac::tuple{x_q, J_q}, parent_to_physical(inputs[i], invJ_q) ...);
+    physical_to_parent(qf_output, invJ_q, detJ_q);
+    outputs[i] = qf_output;
   }
   return outputs;
+}
+
+template < uint32_t differentiation_index, typename derivative_type, typename lambda, int dim, int n, typename... T>
+SERAC_HOST_DEVICE auto batch_apply_qf_derivative(derivative_type * doutputs, lambda qf, double t, const tensor<double, dim, n>& x,
+                                               const tensor<double, dim, dim, n>& J, const tensor<T, n> &... inputs)
+{
+  for (int i = 0; i < n; i++) {
+    tensor<double, dim>      x_q;
+    tensor<double, dim, dim> J_q;
+    for (int j = 0; j < dim; j++) {
+      for (int k = 0; k < dim; k++) {
+        J_q[j][k] = J(k, j, i);
+      }
+      x_q[j] = x(j, i);
+    }
+    double detJ_q = det(J_q);
+    tensor<double, dim, dim > invJ_q = inv(J_q);
+    auto func = [&](const auto & ... input){
+      return physical_to_parent(qf(t, serac::tuple{x_q, J_q}, parent_to_physical(input, invJ_q) ...), invJ_q, detJ_q);
+    };
+
+    doutputs[i] = jacfwd<differentiation_index>(func, inputs[i]...);
+
+    std::cout << doutputs[i] << std::endl;
+    std::cout << get_gradient(func(make_dual(inputs[i]...))) << std::endl;
+
+    #if 0
+    tuple{
+      tuple{0.1309, {-0.0013125, 0.265717, 0.484116}}, 
+      tuple{{-0.004375, 0.510588, 1.58955}, {{3.4324, 0.536657, 1.05022}, {2.15217, 4.00694, 1.96279}, {1.47173, 2.55073, 4.34394}}}
+    }
+    tuple{
+      tuple{0.1309, {-0.0013125, 0.265717, 0.484116}}, 
+      tuple{{-0.004375, 0.536657, 1.96279}, {{0.510588, 1.58955, 3.4324}, {1.05022, 2.15217, 4.00694}, {1.47173, 2.55073, 4.34394}}}}
+    }
+    #endif
+
+  }
+
+  return doutputs;
 }
 
 template <typename lambda, int dim, int n, typename qpt_data_type, typename... T>
@@ -179,37 +236,21 @@ void evaluation_kernel_impl(trial_element_tuple trial_elements, test_element, do
 
     //[[maybe_unused]] static constexpr trial_element_tuple trial_element_tuple{};
     // batch-calculate values / derivatives of each trial space, at each quadrature point
-    [[maybe_unused]] tuple qf_inputs = {promote_each_to_dual_when<indices == differentiation_index>(
-        get<indices>(trial_elements).interpolate(get<indices>(u)[elements[e]], rule))...};
-
-    // use J_e to transform values / derivatives on the parent element
-    // to the to the corresponding values / derivatives on the physical element
-    (parent_to_physical<get<indices>(trial_elements).family>(get<indices>(qf_inputs), J_e), ...);
+    tuple qf_inputs = {get<indices>(trial_elements).interpolate(get<indices>(u)[elements[e]], rule)...};
 
     // (batch) evalute the q-function at each quadrature point
     //
     // note: the weird immediately-invoked lambda expression is
     // a workaround for a bug in GCC(<12.0) where it fails to
     // decide which function overload to use, and crashes
-    auto qf_outputs = [&]() {
-      if constexpr (std::is_same_v<state_type, Nothing>) {
-        return batch_apply_qf_no_qdata(qf, t, x_e, J_e, get<indices>(qf_inputs)...);
-      } else {
-        return batch_apply_qf(qf, t, x_e, J_e, &qf_state(e, 0), update_state, get<indices>(qf_inputs)...);
-      }
-    }();
-
-    // use J to transform sources / fluxes on the physical element
-    // back to the corresponding sources / fluxes on the parent element
-    physical_to_parent<test_element::family>(qf_outputs, J_e);
+    // TODO: reenable internal_variables
+    auto qf_outputs = batch_apply_qf_no_qdata(qf, t, x_e, J_e, get<indices>(qf_inputs)...);
 
     // write out the q-function derivatives after applying the
     // physical_to_parent transformation, so that those transformations
     // won't need to be applied in the action_of_gradient and element_gradient kernels
     if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
-      for (int q = 0; q < leading_dimension(qf_outputs); q++) {
-        qf_derivatives[e * uint32_t(qpts_per_elem) + uint32_t(q)] = get_gradient(qf_outputs[q]);
-      }
+      batch_apply_qf_derivative<differentiation_index>(qf_derivatives + e * uint32_t(qpts_per_elem), qf, t, x_e, J_e, get<indices>(qf_inputs)...);
     }
 
     // (batch) integrate the material response against the test-space basis functions
@@ -229,6 +270,14 @@ SERAC_HOST_DEVICE auto chain_rule(const S& dfdx, const T& dx)
   }
 
   if constexpr (!is_QOI) {
+#if 0
+    serac::tuple<
+      serac::tuple< double, serac::tensor<double, 2> >, 
+      serac::tensor< serac::tuple<double, serac::tensor<double, 2> >, 2> >, 3, serac::tuple<double, serac::tensor<double, 2>
+
+#endif
+
+
     return serac::tuple{serac::chain_rule(serac::get<0>(serac::get<0>(dfdx)), serac::get<0>(dx)) +
                             serac::chain_rule(serac::get<1>(serac::get<0>(dfdx)), serac::get<1>(dx)),
                         serac::chain_rule(serac::get<0>(serac::get<1>(dfdx)), serac::get<0>(dx)) +

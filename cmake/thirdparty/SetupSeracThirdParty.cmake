@@ -564,6 +564,7 @@ endif()
 #------------------------------------------------------------------------------
 # Enzyme
 #------------------------------------------------------------------------------
+if (FALSE) 
 include(FetchContent)                                                            
                                                                                  
 FetchContent_Declare(                                                            
@@ -572,3 +573,6 @@ FetchContent_Declare(
   SOURCE_SUBDIR enzyme                                                           
 )                                                                                
 FetchContent_MakeAvailable(enzyme)   
+else()
+add_subdirectory("/home/sam/code/Enzyme/official/enzyme" ${PROJECT_BINARY_DIR}/tmp/enzyme)
+endif ()

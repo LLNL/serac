@@ -69,8 +69,13 @@ if(ENABLE_CUDA)
 
 endif()
 
+target_compile_options(functional_basic_h1_scalar PUBLIC -mllvm -enzyme-loose-types)
+
 add_executable(enzyme_test enzyme_test.cpp)
 target_link_libraries(enzyme_test PUBLIC serac_functional)
+
+add_executable(enzyme_jvp_test enzyme_jvp_test.cpp)
+target_link_libraries(enzyme_jvp_test PUBLIC serac_functional)
 
 add_executable(enzyme_reproducer enzyme_reproducer.cpp)
 target_link_libraries(enzyme_reproducer PUBLIC serac_functional)

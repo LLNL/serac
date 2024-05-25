@@ -1815,6 +1815,20 @@ SERAC_HOST_DEVICE constexpr auto chain_rule(const tensor<double, n...>& df_dx, c
  * @note for a vector-valued function of a tensor, the chain rule contracts over all indices of dx
  */
 template <int m, int... n>
+SERAC_HOST_DEVICE constexpr auto chain_rule(const tensor< tensor< double, n ... >, m >& df_dx, const tensor<double, n...>& dx)
+{
+  tensor<double, m> total{};
+  for (int i = 0; i < m; i++) {
+    total[i] = chain_rule(df_dx[i], dx);
+  }
+  return total;
+}
+
+/**
+ * @overload
+ * @note for a vector-valued function of a tensor, the chain rule contracts over all indices of dx
+ */
+template <int m, int... n>
 SERAC_HOST_DEVICE constexpr auto chain_rule(const tensor<double, m, n...>& df_dx, const tensor<double, n...>& dx)
 {
   tensor<double, m> total{};
