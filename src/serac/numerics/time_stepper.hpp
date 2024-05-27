@@ -28,6 +28,7 @@ class SecondOrderODE;
 
 class TimeStepper {
 public:
+  TimeStepper(EquationSolver* nonlinear_solver) : nonlinear_solver_(nonlinear_solver) {}
   virtual ~TimeStepper() {}
 
   using FieldVec = std::vector<FiniteElementState*>;
@@ -53,21 +54,24 @@ public:
                                               std::unique_ptr<mfem::HypreParMatrix>& J)>;
 
   void setResidualFunc(const ResidualFuncType& f) {
-    residual_func = f;
+    residual_func_ = f;
   }
 
   void setJacobianFunc(const JacobianFuncType& f) {
-    jacobian_func = f;
+    jacobian_func_ = f;
   }
 
-  void setFuncs() {
-    //nonlin_solver_->setOperator(*residual_with_bcs_);
+  virtual void finalizeFuncs() {
   }
 
-  private:
+  protected:
 
-  ResidualFuncType residual_func;
-  JacobianFuncType jacobian_func;
+  ResidualFuncType residual_func_;
+  JacobianFuncType jacobian_func_;
+
+  /// the specific methods and tolerances specified to solve the nonlinear residual equations
+  EquationSolver* nonlinear_solver_;
+
 };
 
 class SecondOrderTimeStepper : public TimeStepper {
@@ -79,8 +83,12 @@ public:
   void reset() override;
   void step(double t, double dt) override;
   void vjpStep(double t, double dt) override;
-
+  void finalizeFuncs() override;
+  
 protected:
+
+  int true_size_;
+
   /// The value of time at which the ODE solver wants to evaluate the residual
   double ode_time_point_;
 
@@ -93,14 +101,16 @@ protected:
   /// @brief used to communicate the ODE solver's predicted displacement to the residual operator
   mfem::Vector u_;
 
+  /// @brief used to communicate the ODE solver's predicted displacement to the residual operator
+  mfem::Vector u_pred_;
+
   /// @brief used to communicate the ODE solver's predicted velocity to the residual operator
   mfem::Vector v_;
 
-  /// the specific methods and tolerances specified to solve the nonlinear residual equations
-  EquationSolver* nonlinear_solver_;
-
   /// The timestepping options for the solid mechanics time evolution operator
   const TimesteppingOptions timestepping_options_;
+
+  BoundaryConditionManager* bcManagerPtr_;
 
   /**
    * @brief the ordinary differential equation that describes
@@ -108,6 +118,8 @@ protected:
    * the current displacement, velocity, and source terms
    */
   std::unique_ptr<mfem_ext::SecondOrderODE> ode2_;
+
+  std::unique_ptr<mfem::HypreParMatrix> J_;
 
   FieldVec independentStates_;
   FieldVec states_;
@@ -130,8 +142,6 @@ protected:
   /// @brief used to communicate the ODE solver's predicted displacement to the residual operator
   mfem::Vector u_;
 
-  /// the specific methods and tolerances specified to solve the nonlinear residual equations
-  std::unique_ptr<EquationSolver> nonlinear_solver_;
 };
 
 }  // namespace serac

@@ -1112,6 +1112,7 @@ public:
 
     if (is_quasistatic_) {
       residual_with_bcs_ = buildQuasistaticOperator();
+      nonlin_solver_->setOperator(*residual_with_bcs_);
     } else {
 
       TimeStepper::ResidualFuncType residual_function = [this](double time,
@@ -1122,7 +1123,7 @@ public:
                          *u_dot_dot[0], *parameters_[parameter_indices].state...);
       };
 
-      auto jacobian_function = [this](double time,
+      TimeStepper::JacobianFuncType jacobian_function = [this](double time,
                                       const TimeStepper::VectorVec& u_and_u_dot,
                                       const TimeStepper::ConstVectorVec& u_dot_dot,
                                       std::unique_ptr<mfem::HypreParMatrix>& J) {
@@ -1142,38 +1143,14 @@ public:
 
         // J = M + c0 * K
         J.reset(mfem::Add(1.0, *m_mat, c0_, *k_mat));
+        J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
       };
 
       time_stepper_->setResidualFunc(residual_function);
       time_stepper_->setJacobianFunc(jacobian_function);
-      time_stepper_->setFuncs();
-
-      // the dynamic case is described by a residual function and a second order
-      // ordinary differential equation. Here, we define the residual function in
-      // terms of an acceleration.
-      residual_with_bcs_ = std::make_unique<mfem_ext::StdFunctionOperator>(
-        displacement_.space().TrueVSize(),
-
-        [this, residual_function](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
-          add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
-          residual_function(ode_time_point_,
-                            TimeStepper::VectorVec{&predicted_displacement_, &v_},
-                            TimeStepper::ConstVectorVec{&d2u_dt2}, r);
-          r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
-        },
-
-        [this, jacobian_function](const mfem::Vector& d2u_dt2) -> mfem::Operator& {
-          add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
-          jacobian_function(ode_time_point_,
-                            TimeStepper::VectorVec{&predicted_displacement_, &v_},
-                            TimeStepper::ConstVectorVec{&d2u_dt2}, J_);
-          J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
-          return *J_;
-        }
-      );
+      time_stepper_->finalizeFuncs();
     }
 
-    nonlin_solver_->setOperator(*residual_with_bcs_);
 
     if (checkpoint_to_disk_) {
       outputStateToDisk();
@@ -1233,8 +1210,10 @@ public:
     if (is_quasistatic_) {
       quasiStaticSolve(dt);
     } else {
-      //time_stepper_->advance(time_, dt);
-      ode2_.Step(displacement_, velocity_, time_, dt);
+      printf("a0\n");
+      time_stepper_->step(time_, dt);
+      printf("a\n");
+      //ode2_.Step(displacement_, velocity_, time_, dt);
 
       cycle_ += 1;
 
@@ -1264,6 +1243,7 @@ public:
       max_cycle_ = cycle_;
       max_time_  = time_;
     }
+    printf("b\n");
   }
 
   /**
@@ -1316,6 +1296,7 @@ public:
    */
   void reverseAdjointTimestep() override
   {
+    printf("adj\n");
     auto& lin_solver = nonlin_solver_->linearSolver();
 
     // By default, use a homogeneous essential boundary condition
