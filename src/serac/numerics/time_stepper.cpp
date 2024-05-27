@@ -13,87 +13,86 @@ namespace serac {
 
 SecondOrderTimeStepper::SecondOrderTimeStepper(EquationSolver*                   solver,
                                                const serac::TimesteppingOptions& timestepping_opts)
-    : nonlinear_solver(solver), timestepping_options(timestepping_opts)
+  : nonlinear_solver_(solver), timestepping_options_(timestepping_opts)
 {
 }
 
-void SecondOrderTimeStepper::set_states(const std::vector<FiniteElementState*>& inputStates,
-                                        const std::vector<FiniteElementState*>& outputStates, 
-                                        BoundaryConditionManager& bcs)
+void SecondOrderTimeStepper::setStates(const FieldVec& independentStates,
+                                       const FieldVec& states,
+                                       BoundaryConditionManager& bcs)
 {
   SLIC_ERROR_ROOT_IF(
-    inputStates.size() != 2,
-    axom::fmt::format("Second order time integrator must have exactly 2 states, u, u_dot, u_dot_dot."));
+      independentStates.size() != 2,
+      axom::fmt::format("Second order time integrator must have exactly 2 input states, u, u_dot."));
   SLIC_ERROR_ROOT_IF(
-    outputStates.size() != 1,
-    axom::fmt::format("Second order time integrator must have exactly 2 states, u, u_dot, u_dot_dot."));
-  SLIC_ERROR_ROOT_IF(
-    inputStates[0]->space().TrueVSize() != inputStates[1]->space().TrueVSize(),
-    axom::fmt::format("Second order time integrator states must have same true size."));
-  SLIC_ERROR_ROOT_IF(
-    inputStates[0]->space().TrueVSize() != outputStates[0]->space().TrueVSize(),
-    axom::fmt::format("Second order time integrator states must have same true size."));
+      states.size() != 1,
+      axom::fmt::format("Second order time integrator must have exactly 1 output state, u_dot_dot."));
+  SLIC_ERROR_ROOT_IF(independentStates[0]->space().TrueVSize() != independentStates[1]->space().TrueVSize(),
+                     axom::fmt::format("Second order time integrator states must have same true size."));
+  SLIC_ERROR_ROOT_IF(independentStates[0]->space().TrueVSize() != states[0]->space().TrueVSize(),
+                     axom::fmt::format("Second order time integrator states must have same true size."));
 
-  inputStates_ = inputStates;
-  outputStates_ = outputStates;
+  independentStates_  = independentStates;
+  states_ = states;
 
-  int true_size = inputStates[0]->space().TrueVSize()
+  int true_size = independentStates_[0]->space().TrueVSize();
   u_.SetSize(true_size);
   v_.SetSize(true_size);
   ode2_ = std::make_unique<mfem_ext::SecondOrderODE>(
-      states[0]->space().TrueVSize(),
-      mfem_ext::SecondOrderODE::State{.time = ode_time_point, .c0 = c0, .c1 = c1, .u = u, .du_dt = v, .d2u_dt2 = *outputStates[0]},
-      *nonlinear_solver, bcs);
-  ode2->SetTimestepper(timestepping_options.timestepper);
-  ode2->SetEnforcementMethod(timestepping_options.enforcement_method);
+      independentStates_[0]->space().TrueVSize(),
+      mfem_ext::SecondOrderODE::State{
+          .time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = v_, .d2u_dt2 = *states_[0]},
+      *nonlinear_solver_, bcs);
+  ode2_->SetTimestepper(timestepping_options_.timestepper);
+  ode2_->SetEnforcementMethod(timestepping_options_.enforcement_method);
 }
 
 void SecondOrderTimeStepper::reset()
 {
-  u              = 0.0;
-  v              = 0.0;
-  c0             = 0.0;
-  c1             = 0.0;
-  ode_time_point = 0.0;
+  u_              = 0.0;
+  v_              = 0.0;
+  c0_             = 0.0;
+  c1_             = 0.0;
+  ode_time_point_ = 0.0;
 }
 
-void SecondOrderTimeStepper::advance(double t, double dt)
+void SecondOrderTimeStepper::step(double t, double dt)
 {
-  ode2->Step(u, v, t, dt);
-  // printf("%g %g\n", t, dt);
+  ode2_->Step(*independentStates_[0], *independentStates_[1], t, dt);
 }
 
-void SecondOrderTimeStepper::reverse_vjp(double t, double dt) { printf("%g %g\n", t, dt); }
+void SecondOrderTimeStepper::vjpStep(double t, double dt) { printf("%g %g\n", t, dt); }
 
 QuasiStaticStepper::QuasiStaticStepper(serac::EquationSolver*            solver,
-                                       const serac::TimesteppingOptions& timestepping_opts)
-    : nonlinear_solver(solver), timestepping_options(timestepping_opts)
+                                       const serac::TimesteppingOptions&)
+    : nonlinear_solver_(solver)
 {
 }
 
-void QuasiStaticStepper::set_states(const std::vector<FiniteElementState*>& states, BoundaryConditionManager&)
+void QuasiStaticStepper::setStates(const FieldVec& independentStates,
+                                   const FieldVec& states,
+                                   BoundaryConditionManager&)
 {
   SLIC_ERROR_ROOT_IF(
-      states.size() != 3,
-      axom::fmt::format("Second order time integrators must have exactly 3 states, u, u_dot, u_dot_dot."));
+      independentStates.size() != 0,
+      axom::fmt::format("Quasi-static steppers have 0 independent state."));
+  SLIC_ERROR_ROOT_IF(
+      states.size() != 1,
+      axom::fmt::format("Quasi-static steppers have 1 state."));
 }
 
 void QuasiStaticStepper::reset()
 {
-  u              = 0.0;
-  v              = 0.0;
-  a              = 0.0;
-  c0             = 0.0;
-  c1             = 0.0;
-  ode_time_point = 0.0;
+  u_              = 0.0;
+  ode_time_point_ = 0.0;
 }
 
-void QuasiStaticStepper::advance(double t, double dt)
+void QuasiStaticStepper::step(double t, double dt)
 {
   // ode2->Step(u, v, t, dt);
   printf("%g %g\n", t, dt);
 }
 
-void QuasiStaticStepper::reverse_vjp(double t, double dt) { printf("%g %g\n", t, dt); }
+void QuasiStaticStepper::vjpStep(double t, double dt) { printf("%g %g\n", t, dt); }
 
 }  // namespace serac

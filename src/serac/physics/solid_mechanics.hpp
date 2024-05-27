@@ -201,12 +201,12 @@ public:
       is_quasistatic_ = false;
 
       time_stepper_ = std::make_unique<SecondOrderTimeStepper>(nonlin_solver_.get(), timestepping_opts);
-      time_stepper_->set_states({&displacement, &velocity}, {&acceleration_} bcs_);
+      time_stepper_->setStates({&displacement_, &velocity_}, {&acceleration_}, bcs_);
 
     } else {
       is_quasistatic_ = true;
       time_stepper_   = std::make_unique<QuasiStaticStepper>(nonlin_solver_.get(), timestepping_opts);
-      time_stepper_->set_states({&displacement}, bcs_);
+      time_stepper_->setStates({&displacement_}, {}, bcs_);
     }
 
     states_.push_back(&displacement_);
@@ -409,6 +409,7 @@ public:
   {
     BasePhysics::initializeBasePhysicsStates(cycle, time);
     initializeSolidMechanicsStates();
+    time_stepper_->reset();
   }
 
   /**
@@ -1112,45 +1113,64 @@ public:
     if (is_quasistatic_) {
       residual_with_bcs_ = buildQuasistaticOperator();
     } else {
+
+      TimeStepper::ResidualFuncType residual_function = [this](double time,
+                                      const TimeStepper::VectorVec& u_and_u_dot,
+                                      const TimeStepper::ConstVectorVec& u_dot_dot,
+                                      mfem::Vector& r) {
+        r = (*residual_)(time, shape_displacement_, *u_and_u_dot[0],
+                         *u_dot_dot[0], *parameters_[parameter_indices].state...);
+      };
+
+      auto jacobian_function = [this](double time,
+                                      const TimeStepper::VectorVec& u_and_u_dot,
+                                      const TimeStepper::ConstVectorVec& u_dot_dot,
+                                      std::unique_ptr<mfem::HypreParMatrix>& J) {
+        // K := dR/du
+        auto& u = *u_and_u_dot[0];
+        auto& d2u_dt2 = *u_dot_dot[0];
+        auto K = serac::get<DERIVATIVE>((*residual_)(time, shape_displacement_,
+                                                     differentiate_wrt(u), d2u_dt2,
+                                                     *parameters_[parameter_indices].state...));
+        std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
+
+        // M := dR/da
+        auto M = serac::get<DERIVATIVE>((*residual_)(time, shape_displacement_, u,
+                                                     differentiate_wrt(d2u_dt2),
+                                                     *parameters_[parameter_indices].state...));
+        std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
+
+        // J = M + c0 * K
+        J.reset(mfem::Add(1.0, *m_mat, c0_, *k_mat));
+      };
+
+      time_stepper_->setResidualFunc(residual_function);
+      time_stepper_->setJacobianFunc(jacobian_function);
+      time_stepper_->setFuncs();
+
       // the dynamic case is described by a residual function and a second order
       // ordinary differential equation. Here, we define the residual function in
       // terms of an acceleration.
       residual_with_bcs_ = std::make_unique<mfem_ext::StdFunctionOperator>(
-          displacement_.space().TrueVSize(),
+        displacement_.space().TrueVSize(),
 
-          [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
-            add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
-            const mfem::Vector res = (*residual_)(ode_time_point_, shape_displacement_, predicted_displacement_,
-                                                  d2u_dt2, *parameters_[parameter_indices].state...);
+        [this, residual_function](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
+          add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
+          residual_function(ode_time_point_,
+                            TimeStepper::VectorVec{&predicted_displacement_, &v_},
+                            TimeStepper::ConstVectorVec{&d2u_dt2}, r);
+          r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
+        },
 
-            // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
-            // tracking strategy
-            // See https://github.com/mfem/mfem/issues/3531
-            r = res;
-            r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
-          },
-
-          [this](const mfem::Vector& d2u_dt2) -> mfem::Operator& {
-            add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
-
-            // K := dR/du
-            auto K = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_,
-                                                         differentiate_wrt(predicted_displacement_), d2u_dt2,
-                                                         *parameters_[parameter_indices].state...));
-            std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
-
-            // M := dR/da
-            auto M = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_, predicted_displacement_,
-                                                         differentiate_wrt(d2u_dt2),
-                                                         *parameters_[parameter_indices].state...));
-            std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
-
-            // J = M + c0 * K
-            J_.reset(mfem::Add(1.0, *m_mat, c0_, *k_mat));
-            J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
-
-            return *J_;
-          });
+        [this, jacobian_function](const mfem::Vector& d2u_dt2) -> mfem::Operator& {
+          add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
+          jacobian_function(ode_time_point_,
+                            TimeStepper::VectorVec{&predicted_displacement_, &v_},
+                            TimeStepper::ConstVectorVec{&d2u_dt2}, J_);
+          J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+          return *J_;
+        }
+      );
     }
 
     nonlin_solver_->setOperator(*residual_with_bcs_);
@@ -1213,7 +1233,7 @@ public:
     if (is_quasistatic_) {
       quasiStaticSolve(dt);
     } else {
-      time_stepper_->advance(time_, dt);
+      //time_stepper_->advance(time_, dt);
       ode2_.Step(displacement_, velocity_, time_, dt);
 
       cycle_ += 1;

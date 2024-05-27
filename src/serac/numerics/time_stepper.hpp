@@ -29,28 +29,58 @@ class SecondOrderODE;
 class TimeStepper {
 public:
   virtual ~TimeStepper() {}
-  virtual void set_states(const std::vector<FiniteElementState*>& inputStates,
-                          const std::vector<FiniteElementState*>& outputStates,
-                          BoundaryConditionManager& bcs) = 0;
 
-  virtual void reset()                                                                                   = 0;
-  virtual void advance(double t, double dt)                                                              = 0;
-  virtual void reverse_vjp(double t, double dt)                                                          = 0;
+  using FieldVec = std::vector<FiniteElementState*>;
+  using VectorVec = std::vector<mfem::Vector*>;
+  using ConstVectorVec = std::vector<const mfem::Vector*>;
+
+  virtual void setStates(const FieldVec& independentStates,
+                         const FieldVec& states,
+                         BoundaryConditionManager& bcs) = 0;
+
+  virtual void reset()                      = 0;
+  virtual void step(double t, double dt)    = 0;
+  virtual void vjpStep(double t, double dt) = 0;
+
+  using ResidualFuncType = std::function<void(double time,
+                                              const VectorVec& independentStates,
+                                              const ConstVectorVec& states,
+                                              mfem::Vector& residual)>;
+
+  using JacobianFuncType = std::function<void(double time,
+                                              const VectorVec& independentStates,
+                                              const ConstVectorVec& states,
+                                              std::unique_ptr<mfem::HypreParMatrix>& J)>;
+
+  void setResidualFunc(const ResidualFuncType& f) {
+    residual_func = f;
+  }
+
+  void setJacobianFunc(const JacobianFuncType& f) {
+    jacobian_func = f;
+  }
+
+  void setFuncs() {
+    //nonlin_solver_->setOperator(*residual_with_bcs_);
+  }
+
+  private:
+
+  ResidualFuncType residual_func;
+  JacobianFuncType jacobian_func;
 };
 
 class SecondOrderTimeStepper : public TimeStepper {
 public:
   SecondOrderTimeStepper(EquationSolver* solver, const TimesteppingOptions& timestepping_opts);
 
-  void set_states(const std::vector<FiniteElementState*>& inputStates,
-                  const std::vector<FiniteElementState*>& outputStates, 
-                  BoundaryConditionManager& bcs) override;
+  void setStates(const FieldVec& independentStates,
+                 const FieldVec& states, BoundaryConditionManager& bcs) override;
   void reset() override;
-  void advance(double t, double dt) override;
-  void reverse_vjp(double t, double dt) override;
+  void step(double t, double dt) override;
+  void vjpStep(double t, double dt) override;
 
 protected:
-
   /// The value of time at which the ODE solver wants to evaluate the residual
   double ode_time_point_;
 
@@ -79,30 +109,29 @@ protected:
    */
   std::unique_ptr<mfem_ext::SecondOrderODE> ode2_;
 
-  std::vector<FiniteElementState*> inputStates_;
-  std::vector<FiniteElementState*> outputStates_;
+  FieldVec independentStates_;
+  FieldVec states_;
 };
 
 class QuasiStaticStepper : public TimeStepper {
 public:
   QuasiStaticStepper(EquationSolver* solver, const TimesteppingOptions& timestepping_opts);
 
-  void set_states(const std::vector<FiniteElementState*>& inputStates,
-                  const std::vector<FiniteElementState*>& outputStates, 
-                  BoundaryConditionManager& bcs) override;
+  void setStates(const FieldVec& independentStates,
+                 const FieldVec& states, BoundaryConditionManager& bcs) override;
   void reset() override;
-  void advance(double t, double dt) override;
-  void reverse_vjp(double t, double dt) override;
+  void step(double t, double dt) override;
+  void vjpStep(double t, double dt) override;
 
 protected:
   /// The value of time at which the ODE solver wants to evaluate the residual
-  double ode_time_point;
+  double ode_time_point_;
 
   /// @brief used to communicate the ODE solver's predicted displacement to the residual operator
-  mfem::Vector u;
+  mfem::Vector u_;
 
   /// the specific methods and tolerances specified to solve the nonlinear residual equations
-  std::unique_ptr<EquationSolver> nonlinear_solver;
+  std::unique_ptr<EquationSolver> nonlinear_solver_;
 };
 
 }  // namespace serac
