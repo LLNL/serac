@@ -144,10 +144,10 @@ spack:
       - spec: doxygen@1.8.17
         prefix: /usr
     llvm:
-      version: [10.0.0]
+      version: [14.0.6]
       buildable: false
       externals:
-      - spec: llvm@10.0.0+clang
+      - spec: llvm@14.0.6+clang
         prefix: /usr
     python:
       version: [3.8.5]
