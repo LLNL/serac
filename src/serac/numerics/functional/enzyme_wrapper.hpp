@@ -39,25 +39,22 @@ namespace impl {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-  //template < int ... n, typename T > 
-  //struct nested< tensor<double, n...>, T >{ using type = tensor<T, n ...>; };
+  //  sam: with tuples-of-tuples, figuring out which indices correspond to the directional
+  //       derivatives gets pretty nasty, so I'm commenting these out to prevent jacfwd from
+  //       compiling in that case
+  // 
+  template < typename S0, typename S1, typename T > 
+  struct nested< tuple< S0, S1 >, T >{ 
+    using type = tuple< typename nested<S0, T>::type, typename nested<S1, T>::type >; 
+  };
 
-//  sam: with tuples-of-tuples, figuring out which indices correspond to the directional
-//       derivatives gets pretty nasty, so I'm commenting these out to prevent jacfwd from
-//       compiling in that case
-// 
-//  template < typename S0, typename S1, typename T > 
-//  struct nested< tuple< S0, S1 >, T >{ 
-//    using type = tuple< typename nested<S0, T>::type, typename nested<S1, T>::type >; 
-//  };
-//
-//  template < typename S0, typename S1, typename T0, typename T1 > 
-//  struct nested< tuple< S0, S1 >, tuple< T0, T1 > >{ 
-//    using type = tuple< 
-//        tuple< typename nested<S0, T0>::type, typename nested<S0, T1>::type >,
-//        tuple< typename nested<S1, T0>::type, typename nested<S1, T1>::type >
-//    >; 
-//  };
+  template < typename S0, typename S1, typename T0, typename T1 > 
+  struct nested< tuple< S0, S1 >, tuple< T0, T1 > >{ 
+    using type = tuple< 
+        tuple< typename nested<S0, T0>::type, typename nested<S0, T1>::type >,
+        tuple< typename nested<S1, T0>::type, typename nested<S1, T1>::type >
+    >; 
+  };
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -93,41 +90,108 @@ namespace impl {
     using output_type = decltype(f(x));
     using jac_type = typename impl::nested<output_type, input_type>::type;
     void * func_ptr = reinterpret_cast<void*>(wrapper< output_type, function, input_type >);
-  
-    constexpr int m = impl::vsize(output_type{});
+
     jac_type J{};
-    double * J_ptr = reinterpret_cast<double *>(&J);
-  
-    constexpr int n = impl::vsize(input_type{});
     input_type dx{};
+
     double * dx_ptr = reinterpret_cast<double *>(&dx);
-  
-    for (int j = 0; j < n; j++) {
-      dx_ptr[j] = 1.0;
 
-      std::cout << dx << std::endl;
-  
-      output_type unused{};
-      output_type df_dxj{};
-      __enzyme_fwddiff<void>(func_ptr,
-        enzyme_dupnoneed, &unused, &df_dxj,
-        enzyme_const, reinterpret_cast<const void*>(&f), 
-        enzyme_dup, &x, &dx
-      );
+    // tuple input and tuple output
+    if constexpr (is_tuple<output_type>{} && is_tuple<input_type>{}) {
 
-      std::cout << df_dxj << std::endl;
+      static_assert((tuple_size<output_type>{} == 2) && (tuple_size<input_type>{} == 2), "error: jacfwd() currently only supports tuples of 2 values");
+
+      constexpr int m0 = impl::vsize(get<0>(output_type{}));
+      constexpr int m1 = impl::vsize(get<1>(output_type{}));
+      constexpr int n0 = impl::vsize(get<0>(input_type{}));
+      constexpr int n1 = impl::vsize(get<1>(input_type{}));
+ 
+      for (int j = 0; j < (n0 + n1); j++) {
+        dx_ptr[j] = 1.0;
+
+        std::cout << dx << std::endl;
   
-      double * df_dxj_ptr = reinterpret_cast<double *>(&df_dxj);
-      for (int i = 0; i < m; i++) {
-        J_ptr[i * n + j] = df_dxj_ptr[i];
+        output_type unused{};
+        output_type df_dxj{};
+        __enzyme_fwddiff<void>(func_ptr,
+          enzyme_dupnoneed, &unused, &df_dxj,
+          enzyme_const, reinterpret_cast<const void*>(&f), 
+          enzyme_dup, &x, &dx
+        );
+
+        std::cout << df_dxj << std::endl;
+
+        double * df0_dxj_ptr = reinterpret_cast<double *>(&get<0>(df_dxj));
+        double * df1_dxj_ptr = reinterpret_cast<double *>(&get<1>(df_dxj));
+
+        if (j < n0) {
+          int j0 = j;
+          double * J00_ptr = reinterpret_cast<double *>(&get<0>(get<0>(J)));
+          double * J10_ptr = reinterpret_cast<double *>(&get<0>(get<1>(J)));
+          for (int i0 = 0; i0 < m0; i0++) {
+            J00_ptr[i0 * n0 + j0] = df0_dxj_ptr[i0];
+          }
+
+          for (int i1 = 0; i1 < m1; i1++) {
+            J10_ptr[i1 * n0 + j0] = df1_dxj_ptr[i1];
+          }
+        } else {
+          int j1 = j - n0;
+          double * J01_ptr = reinterpret_cast<double *>(&get<1>(get<0>(J)));
+          double * J11_ptr = reinterpret_cast<double *>(&get<1>(get<1>(J)));
+          for (int i0 = 0; i0 < m0; i0++) {
+            J01_ptr[i0 * n1 + j1] = df0_dxj_ptr[i0];
+          }
+
+          for (int i1 = 0; i1 < m1; i1++) {
+            J11_ptr[i1 * n1 + j1] = df1_dxj_ptr[i1];
+          }
+        }
+ 
+        std::cout << J << std::endl;
+
+        dx_ptr[j] = 0.0;
       }
   
-      std::cout << J << std::endl;
+      return J;
 
-      dx_ptr[j] = 0.0;
+    } else {
+
+      constexpr int m = impl::vsize(output_type{});
+      constexpr int n = impl::vsize(input_type{});
+
+      double * J_ptr = reinterpret_cast<double *>(&J);
+
+      for (int j = 0; j < n; j++) {
+        dx_ptr[j] = 1.0;
+
+        std::cout << dx << std::endl;
+  
+        output_type unused{};
+        output_type df_dxj{};
+        __enzyme_fwddiff<void>(func_ptr,
+          enzyme_dupnoneed, &unused, &df_dxj,
+          enzyme_const, reinterpret_cast<const void*>(&f), 
+          enzyme_dup, &x, &dx
+        );
+
+        std::cout << df_dxj << std::endl;
+  
+        double * df_dxj_ptr = reinterpret_cast<double *>(&df_dxj);
+        for (int i = 0; i < m; i++) {
+          J_ptr[i * n + j] = df_dxj_ptr[i];
+        }
+  
+        std::cout << J << std::endl;
+
+        dx_ptr[j] = 0.0;
+      }
+  
+      return J;
+
     }
   
-    return J;
+
   }
   
 }

@@ -1,11 +1,23 @@
 #include <iostream>
 
-#include "serac/numerics/functional/dual.hpp"
 #include "serac/numerics/functional/tuple.hpp"
 #include "serac/numerics/functional/tensor.hpp"
+#include "serac/physics/materials/solid_material.hpp"
 #include "serac/numerics/functional/enzyme_wrapper.hpp"
 
 using namespace serac;
+
+template < int i, typename material_model, typename ... arg_types >
+auto precompute_gradient(material_model mat, const std::vector< arg_types > & ... args) {
+  using output_type = decltype(mat(args[0] ...));
+  uint32_t n = 
+
+}
+
+template < int i, typename material_model, typename ... arg_types, typename darg_type >
+double jvp_precomputed_gradient( std::vector< arg_types > & ) {
+
+}
 
 int main() {
 

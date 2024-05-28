@@ -164,16 +164,7 @@ SERAC_HOST_DEVICE auto batch_apply_qf_derivative(derivative_type * doutputs, lam
     std::cout << doutputs[i] << std::endl;
     std::cout << get_gradient(func(make_dual(inputs[i]...))) << std::endl;
 
-    #if 0
-    tuple{
-      tuple{0.1309, {-0.0013125, 0.265717, 0.484116}}, 
-      tuple{{-0.004375, 0.510588, 1.58955}, {{3.4324, 0.536657, 1.05022}, {2.15217, 4.00694, 1.96279}, {1.47173, 2.55073, 4.34394}}}
-    }
-    tuple{
-      tuple{0.1309, {-0.0013125, 0.265717, 0.484116}}, 
-      tuple{{-0.004375, 0.536657, 1.96279}, {{0.510588, 1.58955, 3.4324}, {1.05022, 2.15217, 4.00694}, {1.47173, 2.55073, 4.34394}}}}
-    }
-    #endif
+    //doutputs[i] = get_gradient(func(make_dual(inputs[i]...)));
 
   }
 
@@ -210,7 +201,9 @@ template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, type
           typename trial_element_tuple, typename lambda_type, typename state_type, typename derivative_type,
           int... indices>
 void evaluation_kernel_impl(trial_element_tuple trial_elements, test_element, double t,
-                            const std::vector<const double*>& inputs, double* outputs, const double* positions,
+                            const std::vector<const double*>& inputs_e, 
+                            double* outputs, 
+                            const double* positions,
                             const double* jacobians, lambda_type qf,
                             [[maybe_unused]] axom::ArrayView<state_type, 2> qf_state,
                             [[maybe_unused]] derivative_type* qf_derivatives, const int* elements,
@@ -226,7 +219,7 @@ void evaluation_kernel_impl(trial_element_tuple trial_elements, test_element, do
   [[maybe_unused]] auto qpts_per_elem = num_quadrature_points(geom, Q);
 
   [[maybe_unused]] tuple u = {
-      reinterpret_cast<const typename decltype(type<indices>(trial_elements))::dof_type*>(inputs[indices])...};
+      reinterpret_cast<const typename decltype(type<indices>(trial_elements))::dof_type*>(inputs_e[indices])...};
 
   // for each element in the domain
   for (uint32_t e = 0; e < num_elements; ++e) {
@@ -271,9 +264,12 @@ SERAC_HOST_DEVICE auto chain_rule(const S& dfdx, const T& dx)
 
   if constexpr (!is_QOI) {
 #if 0
-    serac::tuple<
-      serac::tuple< double, serac::tensor<double, 2> >, 
-      serac::tensor< serac::tuple<double, serac::tensor<double, 2> >, 2> >, 3, serac::tuple<double, serac::tensor<double, 2>
+
+serac::tuple<
+  serac::tuple< serac::tensor<serac::tensor<double, 2>, 2>, serac::tensor<serac::tensor<double, 2, 2>, 2> >, 
+  serac::tuple< serac::tensor<serac::tensor<double, 2>, 2, 2>, serac::tensor<serac::tensor<double, 2, 2>, 2, 2>>
+>, 
+serac::tuple< serac::tensor<double, 2>, serac::tensor<double, 2, 2> >
 
 #endif
 
