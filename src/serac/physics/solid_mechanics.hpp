@@ -950,10 +950,10 @@ public:
      * @return The calculated material response (tuple of volumetric heat capacity and thermal flux) for a linear
      * isotropic material
      */
-    template <typename T, typename X, typename Displacement, typename Acceleration, typename... Params>
-    auto SERAC_HOST_DEVICE operator()(T t, X x, Displacement, Acceleration, Params... params) const
+    template <typename T, typename Position, typename Displacement, typename Acceleration, typename... Params>
+    auto SERAC_HOST_DEVICE operator()(T t, Position position, Displacement, Acceleration, Params... params) const
     {
-      return serac::tuple{-1.0 * body_force_(x, t, params...), zero{}};
+      return serac::tuple{-1.0 * body_force_(get<VALUE>(position), t, params...), zero{}};
     }
   };
 

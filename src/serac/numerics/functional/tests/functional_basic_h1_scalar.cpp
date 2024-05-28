@@ -25,16 +25,18 @@ using namespace serac::profiling;
 
 template <int dim>
 struct TestThermalModelOne {
-  template <typename X, typename Temp>
-  SERAC_HOST_DEVICE auto operator()(double, [[maybe_unused]] X x, [[maybe_unused]] Temp temperature)
+  template <typename P, typename Temp>
+  SERAC_HOST_DEVICE auto operator()(double, [[maybe_unused]] P position, [[maybe_unused]] Temp temperature)
   {
     double                d00 = 1.0;
     constexpr static auto d01 = 1.0 * make_tensor<dim>([](int i) { return i; });
     constexpr static auto d10 = 1.0 * make_tensor<dim>([](int i) { return 2 * i * i; });
     constexpr static auto d11 = 1.0 * make_tensor<dim, dim>([](int i, int j) { return i + j * (j + 1) + 1; });
+    auto [X, dX_dxi]          = position;
     auto [u, du_dx]           = temperature;
-    auto source               = d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]);
+    auto source               = d00 * u + dot(d01, du_dx) - 0.0 * (100 * X[0] * X[1]);
     auto flux                 = d10 * u + dot(d11, du_dx);
+
     return serac::tuple{source, flux};
   }
 };

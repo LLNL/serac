@@ -37,15 +37,16 @@ struct hcurl_qfunction {
 };
 
 struct test_qfunction {
-  template <typename X, typename Temperature>
-  SERAC_HOST_DEVICE auto operator()(double, X x, Temperature temperature) const
+  template <typename P, typename Temperature>
+  SERAC_HOST_DEVICE auto operator()(double, P position, Temperature temperature) const
   {
     static constexpr double a = 1.7;
     static constexpr double b = 0.0;
     // get the value and the gradient from the input tuple
-    auto [u, du_dx] = temperature;
-    auto source     = a * u - (100 * x[0] * x[1]);
-    auto flux       = b * du_dx;
+    auto [X, dX_dxi] = position;
+    auto [u, du_dx]  = temperature;
+    auto source      = a * u - (100 * X[0] * X[1]);
+    auto flux        = b * du_dx;
     return serac::tuple{source, flux};
   }
 };

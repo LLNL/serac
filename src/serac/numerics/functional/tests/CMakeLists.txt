@@ -20,12 +20,15 @@ set(functional_tests_serial
     domain_tests.cpp
     geometric_factors_tests.cpp
     hcurl_unit_tests.cpp
+    functional_tet_quality.cpp
     test_tensor_ad.cpp
     tuple_arithmetic_unit_tests.cpp
     test_newton.cpp)
 
 serac_add_tests( SOURCES ${functional_tests_serial}
                  DEPENDS_ON gtest serac_functional ${functional_depends})
+
+set_source_files_properties(functional_tet_quality PROPERTIES LANGUAGE CXX)
 
 # Then add the examples/tests
 set(functional_tests_mpi

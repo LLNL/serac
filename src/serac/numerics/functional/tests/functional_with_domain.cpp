@@ -28,39 +28,44 @@ namespace {
 
 };
 
-template <int dim, bool apply_mask>
+template <int dim, bool apply_mask = false>
 struct TestThermalIntegratorOne {
   template <typename Position, typename Temperature>
-  SERAC_HOST_DEVICE auto operator()(double, Position x, Temperature temperature) const
+  SERAC_HOST_DEVICE auto operator()(double, Position position, Temperature temperature) const
   {
-    double mask = 1.0;
-    if constexpr (apply_mask) {
-      mask = (x[0] < 4.0);
-    }
     constexpr static double d00 = 1.0;
     constexpr static auto   d01 = 1.0 * make_tensor<dim>([](int i) { return i; });
     constexpr static auto   d10 = 1.0 * make_tensor<dim>([](int i) { return 2 * i * i; });
     constexpr static auto   d11 = 1.0 * make_tensor<dim, dim>([](int i, int j) { return i + j * (j + 1) + 1; });
 
-    auto [u, du_dx] = temperature;
-    auto source     = mask * (d00 * u + dot(d01, du_dx) - 0.0 * (100 * x[0] * x[1]));
-    auto flux       = mask * (d10 * u + dot(d11, du_dx));
+    auto [X, dX_dxi] = position;
+    auto [u, du_dx]  = temperature;
+
+    double mask = 1.0;
+    if constexpr (apply_mask) {
+      mask = (X[0] < 4.0);
+    }
+
+    auto source = mask * (d00 * u + dot(d01, du_dx) - 0.0 * (100 * X[0] * X[1]));
+    auto flux   = mask * (d10 * u + dot(d11, du_dx));
     return serac::tuple{source, flux};
   }
 };
 
-template <bool apply_mask>
+template <bool apply_mask = false>
 struct TestThermalIntegratorTwo {
   template <typename Position, typename Temperature>
   SERAC_HOST_DEVICE auto operator()(double, Position position, Temperature temperature) const
   {
     auto [X, dX_dxi] = position;
-    double mask      = 1.0;
+    auto [u, du_dxi] = temperature;
+
+    double mask = 1.0;
     if constexpr (apply_mask) {
       mask = (X[1] >= 0.99);
     }
-    auto [u, du_dxi] = temperature;
-    return (X[0] + X[1] - cos(u)) * mask;
+
+    return mask * (X[0] + X[1] - cos(u));
   }
 };
 
@@ -121,14 +126,13 @@ void whole_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
   Domain bottom_boundary = Domain::ofBoundaryElements(*mesh, on_bottom);
   Domain top_boundary    = Domain::ofBoundaryElements(*mesh, on_top);
 
-  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, TestThermalIntegratorOne<dim, false>{}, left);
+  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, TestThermalIntegratorOne<dim>{}, left);
 
-  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, TestThermalIntegratorOne<dim, false>{}, right);
+  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, TestThermalIntegratorOne<dim>{}, right);
 
-  residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, TestThermalIntegratorTwo<false>{},
-                               bottom_boundary);
+  residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, TestThermalIntegratorTwo{}, bottom_boundary);
 
-  residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, TestThermalIntegratorTwo<false>{}, top_boundary);
+  residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, TestThermalIntegratorTwo{}, top_boundary);
 
   double t = 0.0;
   check_gradient(residual, t, U);
@@ -137,10 +141,9 @@ void whole_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 
   //////////////
 
-  residual_comparison.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, TestThermalIntegratorOne<dim, false>{},
-                                        whole_mesh);
+  residual_comparison.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, TestThermalIntegratorOne<dim>{}, whole_mesh);
 
-  residual_comparison.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, TestThermalIntegratorTwo<false>{},
+  residual_comparison.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, TestThermalIntegratorTwo{},
                                           whole_boundary);
 
   auto r1 = residual_comparison(t, U);
@@ -216,9 +219,9 @@ void partial_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
   auto   on_top       = [](std::vector<tensor<double, dim>> X, int /* attr */) { return average(X)[1] >= 0.99; };
   Domain top_boundary = Domain::ofBoundaryElements(*mesh, on_top);
 
-  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, TestThermalIntegratorOne<dim, false>{}, left);
+  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, TestThermalIntegratorOne<dim>{}, left);
 
-  residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, TestThermalIntegratorTwo<false>{}, top_boundary);
+  residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, TestThermalIntegratorTwo{}, top_boundary);
 
   double t = 0.0;
   check_gradient(residual, t, U);

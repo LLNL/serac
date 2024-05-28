@@ -48,10 +48,10 @@ struct TrivialVariadicIntegrator {
 };
 
 struct ZeroIndexIntegrator {
-  template <typename X>
-  SERAC_HOST_DEVICE auto operator()(double /*t*/, X x) const
+  template <typename P>
+  SERAC_HOST_DEVICE auto operator()(double /*t*/, P position) const
   {
-    return x[0];
+    return get<VALUE>(position)[0];
   }
 };
 
@@ -64,11 +64,12 @@ struct GetZeroIntegrator {
 };
 
 struct SineIntegrator {
-  template <typename X, typename Temperature>
-  SERAC_HOST_DEVICE auto operator()(double /*t*/, X x, Temperature temperature) const
+  template <typename Position, typename Temperature>
+  SERAC_HOST_DEVICE auto operator()(double /*t*/, Position position, Temperature temperature) const
   {
+    auto X           = get<VALUE>(position);
     auto [u, grad_u] = temperature;
-    return x[0] * x[0] + sin(x[1]) + x[0] * u * u * u;
+    return X[0] * X[0] + sin(X[1]) + X[0] * u * u * u;
   }
 };
 
@@ -83,13 +84,14 @@ struct CosineIntegrator {
 };
 
 struct FourArgSineIntegrator {
-  template <typename X, typename Temperature, typename TimeDerivativeTemp>
-  SERAC_HOST_DEVICE auto operator()(double /*t*/, X x, Temperature temperature,
+  template <typename Position, typename Temperature, typename TimeDerivativeTemp>
+  SERAC_HOST_DEVICE auto operator()(double /*t*/, Position position, Temperature temperature,
                                     TimeDerivativeTemp dtemperature_dt) const
   {
+    auto [X, dX_dxi]     = position;
     auto [u, grad_u]     = temperature;
     auto [du_dt, unused] = dtemperature_dt;
-    return x[0] * x[0] + sin(du_dt) + x[0] * u * u * u;
+    return X[0] * X[0] + sin(du_dt) + X[0] * u * u * u;
   }
 };
 
