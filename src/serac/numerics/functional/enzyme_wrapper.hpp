@@ -9,6 +9,8 @@ namespace serac {
 
 namespace impl {
 
+  constexpr int vsize(const zero &) { return 0; }
+
   constexpr int vsize(const double &) { return 1; }
 
   template < int n >
@@ -25,6 +27,9 @@ namespace impl {
 
   template <> 
   struct nested< double, double >{ using type = double; };
+
+  template < typename T > 
+  struct nested< zero, T >{ using type = zero; };
 
   template < int ... n > 
   struct nested< double, tensor<double,n...> >{ using type = tensor<double,n...>; };
@@ -112,7 +117,7 @@ namespace impl {
       for (int j = 0; j < (n0 + n1); j++) {
         dx_ptr[j] = 1.0;
 
-        std::cout << dx << std::endl;
+        //std::cout << dx << std::endl;
   
         output_type unused{};
         output_type df_dxj{};
@@ -122,7 +127,7 @@ namespace impl {
           enzyme_dup, &x, &dx
         );
 
-        std::cout << df_dxj << std::endl;
+        //std::cout << df_dxj << std::endl;
 
         double * df0_dxj_ptr = reinterpret_cast<double *>(&get<0>(df_dxj));
         double * df1_dxj_ptr = reinterpret_cast<double *>(&get<1>(df_dxj));
@@ -151,7 +156,7 @@ namespace impl {
           }
         }
  
-        std::cout << J << std::endl;
+        //std::cout << J << std::endl;
 
         dx_ptr[j] = 0.0;
       }
@@ -168,7 +173,7 @@ namespace impl {
       for (int j = 0; j < n; j++) {
         dx_ptr[j] = 1.0;
 
-        std::cout << dx << std::endl;
+        //std::cout << dx << std::endl;
   
         output_type unused{};
         output_type df_dxj{};
@@ -178,14 +183,14 @@ namespace impl {
           enzyme_dup, &x, &dx
         );
 
-        std::cout << df_dxj << std::endl;
+        //std::cout << df_dxj << std::endl;
   
         double * df_dxj_ptr = reinterpret_cast<double *>(&df_dxj);
         for (int i = 0; i < m; i++) {
           J_ptr[i * n + j] = df_dxj_ptr[i];
         }
   
-        std::cout << J << std::endl;
+        //std::cout << J << std::endl;
 
         dx_ptr[j] = 0.0;
       }

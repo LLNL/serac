@@ -134,8 +134,7 @@ SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(lambda qf, double t, const tensor
     double detJ_q = det(J_q);
     tensor<double, dim, dim > invJ_q = inv(J_q);
     auto qf_output = qf(t, serac::tuple{x_q, J_q}, parent_to_physical(inputs[i], invJ_q) ...);
-    physical_to_parent(qf_output, invJ_q, detJ_q);
-    outputs[i] = qf_output;
+    outputs[i] = physical_to_parent(qf_output, invJ_q, detJ_q);
   }
   return outputs;
 }
@@ -162,7 +161,7 @@ SERAC_HOST_DEVICE auto batch_apply_qf_derivative(derivative_type * doutputs, lam
     doutputs[i] = jacfwd<differentiation_index>(func, inputs[i]...);
 
     std::cout << doutputs[i] << std::endl;
-    std::cout << get_gradient(func(make_dual(inputs[i]...))) << std::endl;
+    //std::cout << get_gradient(func(make_dual(inputs[i]...))) << std::endl;
 
     //doutputs[i] = get_gradient(func(make_dual(inputs[i]...)));
 

@@ -55,11 +55,12 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](double /*t*/, auto position, auto temperature) {
+      [=](double /*t*/, tuple< tensor<double,dim>, tensor<double,dim,dim> > position, tuple< double, tensor<double,dim> > temperature) {
         auto [X, dX_dxi] = position;
         auto [u, du_dx]  = temperature;
-        auto source      = d00 * u + dot(d01, du_dx) - 0.0 * (100 * X[0] * X[1]);
-        auto flux        = d10 * u + dot(d11, du_dx);
+        double source           = d00 * u + dot(d01, du_dx) - 0.0 * (100 * X[0] * X[1]);
+        tensor<double,dim> flux = d10 * u + dot(d11, du_dx);
+        flux[0] += X[1];
         return serac::tuple{source, flux};
       },
       *mesh);
