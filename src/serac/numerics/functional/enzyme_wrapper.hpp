@@ -34,8 +34,11 @@ namespace impl {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-  template < int ... n, typename T > 
-  struct nested< tensor<double, n...>, T >{ using type = tensor<T, n ...>; };
+  template < int ... n > 
+  struct nested< tensor<double, n...>, double >{ using type = tensor<double, n ...>; };
+
+  template < int ... m, int ... n > 
+  struct nested< tensor<double, m...>, tensor<double, n...> >{ using type = tensor<double, m..., n...>; };
 
 ////////////////////////////////////////////////////////////////////////////////
 
