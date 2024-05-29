@@ -1601,7 +1601,6 @@ protected:
    */
   void warmStartDisplacement()
   {
-    printf("warm start\n");
     // Update the linearized Jacobian matrix
     auto [r, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
                                   *parameters_[parameter_indices].state...);

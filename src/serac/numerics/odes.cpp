@@ -78,10 +78,8 @@ void SecondOrderODE::Step(mfem::Vector& x, mfem::Vector& dxdt, double& time, dou
 {
   if (second_order_ode_solver_) {
     // if we used a 2nd order method
-    printf("a\n");
     second_order_ode_solver_->Step(x, dxdt, time, dt);
 
-    printf("b\n");
     if (enforcement_method_ == DirichletEnforcementMethod::FullControl) {
       U_minus_ = 0.0;
       U_       = 0.0;
@@ -98,7 +96,6 @@ void SecondOrderODE::Step(mfem::Vector& x, mfem::Vector& dxdt, double& time, dou
         dxdt[i] = (U_plus_[i] - U_minus_[i]) / (2.0 * epsilon);
       }
     }
-    printf("c\n");
 
   } else if (first_order_system_ode_solver_) {
     // Would be better if displacement and velocity were from a block vector?
