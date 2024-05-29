@@ -25,49 +25,40 @@ struct TimesteppingOptions;
 namespace mfem_ext {
 class StdFunctionOperator;
 class SecondOrderODE;
-}
+}  // namespace mfem_ext
 
 class TimeStepper {
 public:
   TimeStepper(std::unique_ptr<EquationSolver> nonlinear_solver) : nonlinear_solver_(std::move(nonlinear_solver)) {}
   virtual ~TimeStepper() {}
 
-  using FieldVec = std::vector<FiniteElementState*>;
-  using VectorVec = std::vector<mfem::Vector*>;
+  using FieldVec       = std::vector<FiniteElementState*>;
+  using VectorVec      = std::vector<mfem::Vector*>;
   using ConstVectorVec = std::vector<const mfem::Vector*>;
 
-  virtual void setStates(const FieldVec& independentStates,
-                         const FieldVec& states,
-                         BoundaryConditionManager& bcs) = 0;
+  virtual void setStates(const FieldVec& independentStates, const FieldVec& states, BoundaryConditionManager& bcs) = 0;
 
   virtual void reset()                      = 0;
   virtual void step(double t, double dt)    = 0;
   virtual void vjpStep(double t, double dt) = 0;
 
-  using ResidualFuncType = std::function<void(double time,
-                                              const VectorVec& independentStates,
-                                              const ConstVectorVec& states,
-                                              mfem::Vector& residual)>;
+  using ResidualFuncType = std::function<void(double time, const VectorVec& independentStates,
+                                              const ConstVectorVec& states, mfem::Vector& residual)>;
 
-  using JacobianFuncType = std::function<void(double time, double stiffnessCoef,
-                                              const VectorVec& independentStates,
-                                              const ConstVectorVec& states,
-                                              std::unique_ptr<mfem::HypreParMatrix>& J)>;
+  using JacobianFuncType = std::function<void(double time, double stiffnessCoef, const VectorVec& independentStates,
+                                              const ConstVectorVec& states, std::unique_ptr<mfem::HypreParMatrix>& J)>;
 
-  void setResidualFunc(const ResidualFuncType& f) {
-    residual_func_ = f;
-  }
+  void setResidualFunc(const ResidualFuncType& f) { residual_func_ = f; }
 
-  void setJacobianFunc(const JacobianFuncType& f) {
-    jacobian_func_ = f;
-  }
+  void setJacobianFunc(const JacobianFuncType& f) { jacobian_func_ = f; }
 
   virtual void finalizeFuncs() = 0;
 
   mfem::Solver& linearSolver();
 
-  protected:
+  std::pair<const mfem::HypreParMatrix&, const mfem::HypreParMatrix&> stiffnessMatrix() const;
 
+protected:
   ResidualFuncType residual_func_;
   JacobianFuncType jacobian_func_;
 
@@ -76,21 +67,26 @@ public:
 
   std::unique_ptr<mfem_ext::StdFunctionOperator> residual_with_bcs_;
 
+  /// Assembled sparse matrix for the Jacobian df/du
+  std::unique_ptr<mfem::HypreParMatrix> J_;
+
+  /// rows and columns of J_ that have been separated out
+  /// because are associated with essential boundary conditions
+  std::unique_ptr<mfem::HypreParMatrix> J_e_;
 };
 
 class SecondOrderTimeStepper : public TimeStepper {
 public:
-  SecondOrderTimeStepper(std::unique_ptr<EquationSolver> nonlinear_solver, const TimesteppingOptions& timestepping_opts);
+  SecondOrderTimeStepper(std::unique_ptr<EquationSolver> nonlinear_solver,
+                         const TimesteppingOptions&      timestepping_opts);
 
-  void setStates(const FieldVec& independentStates,
-                 const FieldVec& states, BoundaryConditionManager& bcs) override;
+  void setStates(const FieldVec& independentStates, const FieldVec& states, BoundaryConditionManager& bcs) override;
   void reset() override;
   void step(double t, double dt) override;
   void vjpStep(double t, double dt) override;
   void finalizeFuncs() override;
-  
-protected:
 
+protected:
   int true_size_;
 
   /// The value of time at which to evaluate the residual
@@ -133,15 +129,13 @@ class QuasiStaticStepper : public TimeStepper {
 public:
   QuasiStaticStepper(std::unique_ptr<EquationSolver> nonlinear_solver, const TimesteppingOptions& timestepping_opts);
 
-  void setStates(const FieldVec& independentStates,
-                 const FieldVec& states, BoundaryConditionManager& bcs) override;
+  void setStates(const FieldVec& independentStates, const FieldVec& states, BoundaryConditionManager& bcs) override;
   void reset() override;
   void step(double t, double dt) override;
   void vjpStep(double t, double dt) override;
   void finalizeFuncs() override;
 
 protected:
-
   int true_size_;
 
   /// The value of time at which to evaluate the residual
@@ -154,10 +148,8 @@ protected:
 
   std::unique_ptr<mfem::HypreParMatrix> J_;
 
-
   FieldVec independentStates_;
   FieldVec states_;
-
 };
 
 }  // namespace serac
