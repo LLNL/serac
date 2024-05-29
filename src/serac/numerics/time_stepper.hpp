@@ -141,9 +141,6 @@ protected:
   /// The value of time at which to evaluate the residual
   double ode_time_point_;
 
-  /// @brief used to communicate a zero acceleration vector to the residual operator
-  mfem::Vector a_;
-
   BoundaryConditionManager* bcManagerPtr_;
 
   std::unique_ptr<mfem::HypreParMatrix> J_;

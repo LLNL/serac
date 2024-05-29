@@ -111,14 +111,9 @@ void QuasiStaticStepper::setStates(const FieldVec& independentStates, const Fiel
   bcManagerPtr_      = &bcs;
 
   true_size_ = states[0]->space().TrueVSize();
-  a_.SetSize(true_size_);
 }
 
-void QuasiStaticStepper::reset()
-{
-  a_              = 0.0;
-  ode_time_point_ = 0.0;
-}
+void QuasiStaticStepper::reset() { ode_time_point_ = 0.0; }
 
 void QuasiStaticStepper::step(double time, double dt)
 {
@@ -133,15 +128,16 @@ void QuasiStaticStepper::finalizeFuncs()
   residual_with_bcs_ = std::make_unique<mfem_ext::StdFunctionOperator>(
       true_size_,
       [this](const mfem::Vector& u, mfem::Vector& r) {
-        residual_func_(ode_time_point_, TimeStepper::VectorVec{&a_}, TimeStepper::ConstVectorVec{&u}, r);
+        residual_func_(ode_time_point_, TimeStepper::VectorVec{independentStates_[0]}, TimeStepper::ConstVectorVec{&u},
+                       r);
         r.SetSubVector(bcManagerPtr_->allEssentialTrueDofs(), 0.0);
       },
       [this](const mfem::Vector& u) -> mfem::Operator& {
-        jacobian_func_(ode_time_point_, 1.0, TimeStepper::VectorVec{&a_}, TimeStepper::ConstVectorVec{&u}, J_);
-        return *J_;
+        jacobian_func_(ode_time_point_, 1.0, TimeStepper::VectorVec{independentStates_[0]},
+                       TimeStepper::ConstVectorVec{&u}, J_);
         J_e_ = bcManagerPtr_->eliminateAllEssentialDofsFromMatrix(*J_);
+        return *J_;
       });
-
   nonlinear_solver_->setOperator(*residual_with_bcs_);
 }
 
