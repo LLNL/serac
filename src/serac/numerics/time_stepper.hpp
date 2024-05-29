@@ -23,12 +23,13 @@ class EquationSolver;
 class BoundaryConditionManager;
 struct TimesteppingOptions;
 namespace mfem_ext {
+class StdFunctionOperator;
 class SecondOrderODE;
 }
 
 class TimeStepper {
 public:
-  TimeStepper(EquationSolver* nonlinear_solver) : nonlinear_solver_(nonlinear_solver) {}
+  TimeStepper(std::unique_ptr<EquationSolver> nonlinear_solver) : nonlinear_solver_(std::move(nonlinear_solver)) {}
   virtual ~TimeStepper() {}
 
   using FieldVec = std::vector<FiniteElementState*>;
@@ -48,7 +49,7 @@ public:
                                               const ConstVectorVec& states,
                                               mfem::Vector& residual)>;
 
-  using JacobianFuncType = std::function<void(double time,
+  using JacobianFuncType = std::function<void(double time, double stiffnessCoef,
                                               const VectorVec& independentStates,
                                               const ConstVectorVec& states,
                                               std::unique_ptr<mfem::HypreParMatrix>& J)>;
@@ -61,8 +62,9 @@ public:
     jacobian_func_ = f;
   }
 
-  virtual void finalizeFuncs() {
-  }
+  virtual void finalizeFuncs() = 0;
+
+  mfem::Solver& linearSolver();
 
   protected:
 
@@ -70,13 +72,15 @@ public:
   JacobianFuncType jacobian_func_;
 
   /// the specific methods and tolerances specified to solve the nonlinear residual equations
-  EquationSolver* nonlinear_solver_;
+  std::unique_ptr<EquationSolver> nonlinear_solver_;
+
+  std::unique_ptr<mfem_ext::StdFunctionOperator> residual_with_bcs_;
 
 };
 
 class SecondOrderTimeStepper : public TimeStepper {
 public:
-  SecondOrderTimeStepper(EquationSolver* solver, const TimesteppingOptions& timestepping_opts);
+  SecondOrderTimeStepper(std::unique_ptr<EquationSolver> nonlinear_solver, const TimesteppingOptions& timestepping_opts);
 
   void setStates(const FieldVec& independentStates,
                  const FieldVec& states, BoundaryConditionManager& bcs) override;
@@ -89,7 +93,7 @@ protected:
 
   int true_size_;
 
-  /// The value of time at which the ODE solver wants to evaluate the residual
+  /// The value of time at which to evaluate the residual
   double ode_time_point_;
 
   /// coefficient used to calculate predicted displacement: u_p := u + c0 * d2u_dt2
@@ -127,20 +131,32 @@ protected:
 
 class QuasiStaticStepper : public TimeStepper {
 public:
-  QuasiStaticStepper(EquationSolver* solver, const TimesteppingOptions& timestepping_opts);
+  QuasiStaticStepper(std::unique_ptr<EquationSolver> nonlinear_solver, const TimesteppingOptions& timestepping_opts);
 
   void setStates(const FieldVec& independentStates,
                  const FieldVec& states, BoundaryConditionManager& bcs) override;
   void reset() override;
   void step(double t, double dt) override;
   void vjpStep(double t, double dt) override;
+  void finalizeFuncs() override;
 
 protected:
-  /// The value of time at which the ODE solver wants to evaluate the residual
+
+  int true_size_;
+
+  /// The value of time at which to evaluate the residual
   double ode_time_point_;
 
-  /// @brief used to communicate the ODE solver's predicted displacement to the residual operator
-  mfem::Vector u_;
+  /// @brief used to communicate a zero acceleration vector to the residual operator
+  mfem::Vector a_;
+
+  BoundaryConditionManager* bcManagerPtr_;
+
+  std::unique_ptr<mfem::HypreParMatrix> J_;
+
+
+  FieldVec independentStates_;
+  FieldVec states_;
 
 };
 

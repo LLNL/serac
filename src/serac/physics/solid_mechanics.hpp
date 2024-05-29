@@ -178,17 +178,13 @@ public:
         implicit_sensitivity_displacement_start_of_step_(displacement_.space(), "total_deriv_wrt_displacement."),
         implicit_sensitivity_velocity_start_of_step_(displacement_.space(), "total_deriv_wrt_velocity."),
         reactions_(StateManager::newDual(H1<order, dim>{}, detail::addPrefix(physics_name, "reactions"), mesh_tag_)),
-        nonlin_solver_(std::move(solver)),
-        ode2_(displacement_.space().TrueVSize(),
-              {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = v_, .d2u_dt2 = acceleration_},
-              *nonlin_solver_, bcs_),
         geom_nonlin_(geom_nonlin)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension, {0}, and runtime mesh dimension, {1}, mismatch", dim,
                                          mesh_.Dimension()));
 
-    SLIC_ERROR_ROOT_IF(!nonlin_solver_,
+    SLIC_ERROR_ROOT_IF(!solver,
                        "EquationSolver argument is nullptr in SolidMechanics constructor. It is possible that it was "
                        "previously moved.");
 
@@ -196,17 +192,14 @@ public:
 
     // Check for dynamic mode
     if (timestepping_opts.timestepper != TimestepMethod::QuasiStatic) {
-      ode2_.SetTimestepper(timestepping_opts.timestepper);
-      ode2_.SetEnforcementMethod(timestepping_opts.enforcement_method);
       is_quasistatic_ = false;
-
-      time_stepper_ = std::make_unique<SecondOrderTimeStepper>(nonlin_solver_.get(), timestepping_opts);
+      time_stepper_ = std::make_unique<SecondOrderTimeStepper>(std::move(solver), timestepping_opts);
       time_stepper_->setStates({&displacement_, &velocity_}, {&acceleration_}, bcs_);
 
     } else {
       is_quasistatic_ = true;
-      time_stepper_   = std::make_unique<QuasiStaticStepper>(nonlin_solver_.get(), timestepping_opts);
-      time_stepper_->setStates({&displacement_}, {}, bcs_);
+      time_stepper_   = std::make_unique<QuasiStaticStepper>(std::move(solver), timestepping_opts);
+      time_stepper_->setStates({&acceleration_}, {&displacement_}, bcs_);
     }
 
     states_.push_back(&displacement_);
@@ -244,24 +237,19 @@ public:
     residual_ = std::make_unique<ShapeAwareFunctional<shape_trial, test(trial, trial, parameter_space...)>>(
         shape_space, test_space, trial_spaces);
 
-    // If the user wants the AMG preconditioner with a linear solver, set the pfes
-    // to be the displacement
-    auto* amg_prec = dynamic_cast<mfem::HypreBoomerAMG*>(nonlin_solver_->preconditioner());
-    if (amg_prec) {
+    // MRT, comment for now.  Must restore in the new interface eventually
+    //auto* amg_prec = dynamic_cast<mfem::HypreBoomerAMG*>(nonlin_solver_->preconditioner());
+    //if (amg_prec) {
       // amg_prec->SetElasticityOptions(&displacement_.space());
 
       // TODO: The above call was seg faulting in the HYPRE_BoomerAMGSetInterpRefine(amg_precond, interp_refine)
       // method as of Hypre version v2.26.0. Instead, we just set the system size for Hypre. This is a temporary work
       // around as it will decrease the effectiveness of the preconditioner.
-      amg_prec->SetSystemsOptions(dim, true);
-    }
-
-    u_.SetSize(true_size);
-    v_.SetSize(true_size);
+    //  amg_prec->SetSystemsOptions(dim, true);
+    //}
 
     du_.SetSize(true_size);
     dr_.SetSize(true_size);
-    predicted_displacement_.SetSize(true_size);
 
     shape_displacement_ = 0.0;
     initializeSolidMechanicsStates();
@@ -367,9 +355,6 @@ public:
    */
   void initializeSolidMechanicsStates()
   {
-    c0_ = 0.0;
-    c1_ = 0.0;
-
     displacement_ = 0.0;
     velocity_     = 0.0;
     acceleration_ = 0.0;
@@ -384,11 +369,8 @@ public:
 
     reactions_ = 0.0;
 
-    u_                      = 0.0;
-    v_                      = 0.0;
     du_                     = 0.0;
     dr_                     = 0.0;
-    predicted_displacement_ = 0.0;
 
     if (!checkpoint_to_disk_) {
       checkpoint_states_.clear();
@@ -1053,33 +1035,69 @@ public:
   }
 
   /// @brief Build the quasi-static operator corresponding to the total Lagrangian formulation
-  virtual std::unique_ptr<mfem_ext::StdFunctionOperator> buildQuasistaticOperator()
+  virtual void buildQuasistaticOperator()
   {
     // the quasistatic case is entirely described by the residual,
     // there is no ordinary differential equation
-    return std::make_unique<mfem_ext::StdFunctionOperator>(
-        displacement_.space().TrueVSize(),
+    TimeStepper::ResidualFuncType residual_function = [this](double time,
+                                    const TimeStepper::VectorVec& a,
+                                    const TimeStepper::ConstVectorVec& u,
+                                    mfem::Vector& r) {
+      r = (*residual_)(time, shape_displacement_, *u[0],
+                        *a[0], *parameters_[parameter_indices].state...);
+    };
 
-        // residual function
-        [this](const mfem::Vector& u, mfem::Vector& r) {
-          const mfem::Vector res = (*residual_)(ode_time_point_, shape_displacement_, u, acceleration_,
-                                                *parameters_[parameter_indices].state...);
+    TimeStepper::JacobianFuncType jacobian_function = [this](double time, double /*stiffnessCoef*/,
+                                    const TimeStepper::VectorVec& a,
+                                    const TimeStepper::ConstVectorVec& u,
+                                    std::unique_ptr<mfem::HypreParMatrix>& J) {
+      // K := dR/du
+      auto [_, drdu] = (*residual_)(time, shape_displacement_, differentiate_wrt(*u[0]), *a[0],
+                                    *parameters_[parameter_indices].state...);
+      J              = assemble(drdu);
+      J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J);
+    };
 
-          // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
-          // tracking strategy
-          // See https://github.com/mfem/mfem/issues/3531
-          r = res;
-          r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
-        },
+    time_stepper_->setResidualFunc(residual_function);
+    time_stepper_->setJacobianFunc(jacobian_function);
+    time_stepper_->finalizeFuncs();
+  }
 
-        // gradient of residual function
-        [this](const mfem::Vector& u) -> mfem::Operator& {
-          auto [r, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(u), acceleration_,
-                                        *parameters_[parameter_indices].state...);
-          J_             = assemble(drdu);
-          J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
-          return *J_;
-        });
+  /// @brief Build the dynamic operator corresponding to the total Lagrangian formulation
+  void buildDynamicOperator()
+  {
+    TimeStepper::ResidualFuncType residual_function = [this](double time,
+                                    const TimeStepper::VectorVec& u_and_u_dot,
+                                    const TimeStepper::ConstVectorVec& u_dot_dot,
+                                    mfem::Vector& r) {
+      r = (*residual_)(time, shape_displacement_, *u_and_u_dot[0],
+                        *u_dot_dot[0], *parameters_[parameter_indices].state...);
+    };
+
+    TimeStepper::JacobianFuncType jacobian_function = [this](double time, double stiffnessCoef,
+                                    const TimeStepper::VectorVec& u_and_u_dot,
+                                    const TimeStepper::ConstVectorVec& u_dot_dot,
+                                    std::unique_ptr<mfem::HypreParMatrix>& J) {
+      // K := dR/du
+      auto& u = *u_and_u_dot[0];
+      auto& d2u_dt2 = *u_dot_dot[0];
+      auto K = serac::get<DERIVATIVE>((*residual_)(time, shape_displacement_,
+                                                    differentiate_wrt(u), d2u_dt2,
+                                                    *parameters_[parameter_indices].state...));
+      std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
+      // M := dR/da
+      auto M = serac::get<DERIVATIVE>((*residual_)(time, shape_displacement_, u,
+                                                    differentiate_wrt(d2u_dt2),
+                                                    *parameters_[parameter_indices].state...));
+      std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
+      // J = M + c0 * K
+      J.reset(mfem::Add(1.0, *m_mat, stiffnessCoef, *k_mat));
+      J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J);
+    };
+
+    time_stepper_->setResidualFunc(residual_function);
+    time_stepper_->setJacobianFunc(jacobian_function);
+    time_stepper_->finalizeFuncs();
   }
 
   /**
@@ -1096,7 +1114,6 @@ public:
   std::pair<const mfem::HypreParMatrix&, const mfem::HypreParMatrix&> stiffnessMatrix() const
   {
     SLIC_ERROR_ROOT_IF(!J_ || !J_e_, "Stiffness matrix has not yet been assembled.");
-
     return {*J_, *J_e_};
   }
 
@@ -1111,46 +1128,11 @@ public:
     displacement_.space().BuildDofToArrays();
 
     if (is_quasistatic_) {
-      residual_with_bcs_ = buildQuasistaticOperator();
-      nonlin_solver_->setOperator(*residual_with_bcs_);
+      buildQuasistaticOperator();
+      // nonlin_solver_->setOperator(*residual_with_bcs_); MRT BROKE
     } else {
-
-      TimeStepper::ResidualFuncType residual_function = [this](double time,
-                                      const TimeStepper::VectorVec& u_and_u_dot,
-                                      const TimeStepper::ConstVectorVec& u_dot_dot,
-                                      mfem::Vector& r) {
-        r = (*residual_)(time, shape_displacement_, *u_and_u_dot[0],
-                         *u_dot_dot[0], *parameters_[parameter_indices].state...);
-      };
-
-      TimeStepper::JacobianFuncType jacobian_function = [this](double time,
-                                      const TimeStepper::VectorVec& u_and_u_dot,
-                                      const TimeStepper::ConstVectorVec& u_dot_dot,
-                                      std::unique_ptr<mfem::HypreParMatrix>& J) {
-        // K := dR/du
-        auto& u = *u_and_u_dot[0];
-        auto& d2u_dt2 = *u_dot_dot[0];
-        auto K = serac::get<DERIVATIVE>((*residual_)(time, shape_displacement_,
-                                                     differentiate_wrt(u), d2u_dt2,
-                                                     *parameters_[parameter_indices].state...));
-        std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
-
-        // M := dR/da
-        auto M = serac::get<DERIVATIVE>((*residual_)(time, shape_displacement_, u,
-                                                     differentiate_wrt(d2u_dt2),
-                                                     *parameters_[parameter_indices].state...));
-        std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
-
-        // J = M + c0 * K
-        J.reset(mfem::Add(1.0, *m_mat, c0_, *k_mat));
-        J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
-      };
-
-      time_stepper_->setResidualFunc(residual_function);
-      time_stepper_->setJacobianFunc(jacobian_function);
-      time_stepper_->finalizeFuncs();
+      buildDynamicOperator();
     }
-
 
     if (checkpoint_to_disk_) {
       outputStateToDisk();
@@ -1183,7 +1165,7 @@ public:
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
     warmStartDisplacement();
 
-    nonlin_solver_->solve(displacement_);
+    time_stepper_->step(time_, dt);
 
     cycle_ += 1;
   }
@@ -1210,10 +1192,7 @@ public:
     if (is_quasistatic_) {
       quasiStaticSolve(dt);
     } else {
-      printf("a0\n");
       time_stepper_->step(time_, dt);
-      printf("a\n");
-      //ode2_.Step(displacement_, velocity_, time_, dt);
 
       cycle_ += 1;
 
@@ -1243,7 +1222,6 @@ public:
       max_cycle_ = cycle_;
       max_time_  = time_;
     }
-    printf("b\n");
   }
 
   /**
@@ -1296,8 +1274,8 @@ public:
    */
   void reverseAdjointTimestep() override
   {
-    printf("adj\n");
-    auto& lin_solver = nonlin_solver_->linearSolver();
+    //auto& lin_solver = nonlin_solver_->linearSolver(); // MRT BROKE
+    auto& lin_solver = time_stepper_->linearSolver();
 
     // By default, use a homogeneous essential boundary condition
     mfem::HypreParVector adjoint_essential(displacement_adjoint_load_);
@@ -1317,13 +1295,13 @@ public:
       lin_solver.Mult(displacement_adjoint_load_, adjoint_displacement_);
 
       // Reset the equation solver to use the full nonlinear residual operator.  MRT, is this needed?
-      nonlin_solver_->setOperator(*residual_with_bcs_);
+      // nonlin_solver_->setOperator(*residual_with_bcs_);
 
       return;
     }
 
-    SLIC_ERROR_ROOT_IF(ode2_.GetTimestepper() != TimestepMethod::Newmark,
-                       "Only Newmark implemented for transient adjoint solid mechanics.");
+    //SLIC_ERROR_ROOT_IF(ode2_.GetTimestepper() != TimestepMethod::Newmark,
+    //                   "Only Newmark implemented for transient adjoint solid mechanics.");
 
     SLIC_ERROR_ROOT_IF(cycle_ <= min_cycle_,
                        "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
@@ -1522,14 +1500,7 @@ protected:
   std::unique_ptr<mfem_ext::StdFunctionOperator> residual_with_bcs_;
 
   /// the specific methods and tolerances specified to solve the nonlinear residual equations
-  std::unique_ptr<EquationSolver> nonlin_solver_;
-
-  /**
-   * @brief the ordinary differential equation that describes
-   * how to solve for the second time derivative of displacement, given
-   * the current displacement, velocity, and source terms
-   */
-  mfem_ext::SecondOrderODE ode2_;
+  //std::unique_ptr<EquationSolver> nonlin_solver_;
 
   /// Assembled sparse matrix for the Jacobian df/du (11 block if using Lagrange multiplier contact)
   std::unique_ptr<mfem::HypreParMatrix> J_;
@@ -1538,26 +1509,11 @@ protected:
   /// because are associated with essential boundary conditions
   std::unique_ptr<mfem::HypreParMatrix> J_e_;
 
-  /// an intermediate variable used to store the predicted end-step displacement
-  mfem::Vector predicted_displacement_;
-
   /// vector used to store the change in essential bcs between timesteps
   mfem::Vector du_;
 
   /// vector used to store forces arising from du_ when applying time-dependent bcs
   mfem::Vector dr_;
-
-  /// @brief used to communicate the ODE solver's predicted displacement to the residual operator
-  mfem::Vector u_;
-
-  /// @brief used to communicate the ODE solver's predicted velocity to the residual operator
-  mfem::Vector v_;
-
-  /// coefficient used to calculate predicted displacement: u_p := u + c0 * d2u_dt2
-  double c0_;
-
-  /// coefficient used to calculate predicted velocity: dudt_p := dudt + c1 * d2u_dt2
-  double c1_;
 
   std::unique_ptr<TimeStepper> time_stepper_;
 
@@ -1645,6 +1601,7 @@ protected:
    */
   void warmStartDisplacement()
   {
+    printf("warm start\n");
     // Update the linearized Jacobian matrix
     auto [r, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
                                   *parameters_[parameter_indices].state...);
@@ -1690,7 +1647,7 @@ protected:
       dr_[j] = du_[j];
     }
 
-    auto& lin_solver = nonlin_solver_->linearSolver();
+    auto& lin_solver = time_stepper_->linearSolver();
 
     lin_solver.SetOperator(*J_);
 

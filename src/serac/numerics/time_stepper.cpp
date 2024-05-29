@@ -11,9 +11,11 @@
 
 namespace serac {
 
-SecondOrderTimeStepper::SecondOrderTimeStepper(EquationSolver*                   solver,
+mfem::Solver& TimeStepper::linearSolver() { return nonlinear_solver_->linearSolver(); }
+
+SecondOrderTimeStepper::SecondOrderTimeStepper(std::unique_ptr<EquationSolver> nonlinear_solver,
                                                const serac::TimesteppingOptions& timestepping_opts)
-  : TimeStepper(solver), timestepping_options_(timestepping_opts)
+  : TimeStepper(std::move(nonlinear_solver)), timestepping_options_(timestepping_opts)
 {
 }
 
@@ -37,7 +39,7 @@ void SecondOrderTimeStepper::setStates(const FieldVec& independentStates,
   states_ = states;
   bcManagerPtr_ = &bcs;
 
-  true_size_ = independentStates_[0]->space().TrueVSize();
+  true_size_ = states_[0]->space().TrueVSize();
   u_.SetSize(true_size_);
   v_.SetSize(true_size_);
   u_pred_.SetSize(true_size_);
@@ -62,33 +64,26 @@ void SecondOrderTimeStepper::reset()
 
 void SecondOrderTimeStepper::step(double t, double dt)
 {
-  std::cout << "sizs = " << independentStates_[0]->space().TrueVSize() << " "  << independentStates_[1]->space().TrueVSize() << std::endl;
-  printf("steo before\n");
   ode2_->Step(*independentStates_[0], *independentStates_[1], t, dt);
-  printf("steo after\n");
 }
 
 void SecondOrderTimeStepper::vjpStep(double t, double dt) { printf("%g %g\n", t, dt); }
 
 void SecondOrderTimeStepper::finalizeFuncs() {
-  auto residual_with_bcs_ = std::make_unique<mfem_ext::StdFunctionOperator>(
+  residual_with_bcs_ = std::make_unique<mfem_ext::StdFunctionOperator>(
     true_size_,
     [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
-      printf("a1\n");
       add(1.0, u_, c0_, d2u_dt2, u_pred_);
       residual_func_(ode_time_point_,
                          TimeStepper::VectorVec{&u_pred_, &v_},
                          TimeStepper::ConstVectorVec{&d2u_dt2}, r);
       r.SetSubVector(bcManagerPtr_->allEssentialTrueDofs(), 0.0);
-      printf("a2\n");
     },
     [this](const mfem::Vector& d2u_dt2) -> mfem::Operator& {
-      printf("a3\n");
       add(1.0, u_, c0_, d2u_dt2, u_pred_);
-      jacobian_func_(ode_time_point_,
-                         TimeStepper::VectorVec{&u_pred_, &v_},
-                         TimeStepper::ConstVectorVec{&d2u_dt2}, J_);
-      printf("a4\n");
+      jacobian_func_(ode_time_point_, c0_,
+                      TimeStepper::VectorVec{&u_pred_, &v_},
+                      TimeStepper::ConstVectorVec{&d2u_dt2}, J_);
       return *J_;
     }
   );
@@ -96,36 +91,63 @@ void SecondOrderTimeStepper::finalizeFuncs() {
   nonlinear_solver_->setOperator(*residual_with_bcs_);
 }
 
-QuasiStaticStepper::QuasiStaticStepper(serac::EquationSolver*            solver,
+QuasiStaticStepper::QuasiStaticStepper(std::unique_ptr<EquationSolver> nonlinear_solver,
                                        const serac::TimesteppingOptions&)
-    : TimeStepper(solver)
+    : TimeStepper(std::move(nonlinear_solver))
 {
 }
 
 void QuasiStaticStepper::setStates(const FieldVec& independentStates,
                                    const FieldVec& states,
-                                   BoundaryConditionManager&)
+                                   BoundaryConditionManager& bcs)
 {
   SLIC_ERROR_ROOT_IF(
-      independentStates.size() != 0,
-      axom::fmt::format("Quasi-static steppers have 0 independent state."));
+      independentStates.size() != 1,
+      axom::fmt::format("Quasi-static steppers have 1 independent state."));
   SLIC_ERROR_ROOT_IF(
       states.size() != 1,
       axom::fmt::format("Quasi-static steppers have 1 state."));
+
+  independentStates_  = independentStates;
+  states_ = states;
+  bcManagerPtr_ = &bcs;
+
+  true_size_ = states[0]->space().TrueVSize();
+  a_.SetSize(true_size_);
 }
 
 void QuasiStaticStepper::reset()
 {
-  u_              = 0.0;
+  a_              = 0.0;
   ode_time_point_ = 0.0;
 }
 
-void QuasiStaticStepper::step(double t, double dt)
+void QuasiStaticStepper::step(double time, double dt)
 {
-  // ode2->Step(u, v, t, dt);
-  printf("%g %g\n", t, dt);
+  ode_time_point_ = time + dt;
+  nonlinear_solver_->solve(*states_[0]);
 }
 
 void QuasiStaticStepper::vjpStep(double t, double dt) { printf("%g %g\n", t, dt); }
+
+void QuasiStaticStepper::finalizeFuncs() {
+  residual_with_bcs_ = std::make_unique<mfem_ext::StdFunctionOperator>(
+    true_size_,
+    [this](const mfem::Vector& u, mfem::Vector& r) {
+      residual_func_(ode_time_point_,
+                         TimeStepper::VectorVec{&a_},
+                         TimeStepper::ConstVectorVec{&u}, r);
+      r.SetSubVector(bcManagerPtr_->allEssentialTrueDofs(), 0.0);
+    },
+    [this](const mfem::Vector& u) -> mfem::Operator& {
+      jacobian_func_(ode_time_point_, 1.0,
+                      TimeStepper::VectorVec{&a_},
+                      TimeStepper::ConstVectorVec{&u}, J_);
+      return *J_;
+    }
+  );
+  
+  nonlinear_solver_->setOperator(*residual_with_bcs_);
+}
 
 }  // namespace serac
