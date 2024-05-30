@@ -418,6 +418,58 @@ public:
   }
 
   /**
+   * @brief Set essential displacement boundary conditions (strongly enforced)
+   *
+   * @param is_node_constrained A callback function that returns true if displacement nodes at a certain position should
+   * be constrained by this boundary condition
+   * @param disp The scalar function containing the prescribed component displacement values
+   */
+  void setDisplacementBCs(std::function<bool(const mfem::Vector&)>                is_node_constrained,
+                          std::function<void(const mfem::Vector&, mfem::Vector&)> disp)
+  {
+    solid_.setDisplacementBCs(is_node_constrained, disp);
+  }
+
+  /**
+   * @brief Set essential displacement boundary conditions (strongly enforced)
+   *
+   * @param is_node_constrained A callback function that returns true if displacement nodes at a certain position should
+   * be constrained by this boundary condition
+   * @param disp The scalar function containing the prescribed component displacement values
+   * @param component The component of the displacement vector that should be set by this boundary condition. The other
+   * components of displacement are unconstrained.
+   */
+  void setDisplacementBCs(std::function<bool(const mfem::Vector&)>           is_node_constrained,
+                          std::function<double(const mfem::Vector&, double)> disp, int component)
+  {
+    solid_.setDisplacementBCs(is_node_constrained, disp, component);
+  }
+
+  /**
+   * @brief Set essential displacement boundary conditions (strongly enforced)
+   *
+   * @param is_node_constrained A callback function that returns true if displacement nodes at a certain position should
+   * be constrained by this boundary condition
+   * @param disp The scalar function containing the prescribed component displacement values
+   * @param component The component of the displacement vector that should be set by this boundary condition. The other
+   * components of displacement are unconstrained.
+   */
+  void setDisplacementBCs(std::function<bool(const mfem::Vector& x)>   is_node_constrained,
+                          std::function<double(const mfem::Vector& x)> disp, int component)
+  {
+    solid_.setDisplacementBCs(is_node_constrained, disp, component);
+  }
+
+  /**/
+  //  template <int... active_parameters, typename TractionType>
+  //  void setTraction(DependsOn<active_parameters...>,
+  template <typename TractionType>
+  void setTraction(TractionType traction_function, const std::optional<Domain>& optional_domain = std::nullopt)
+  {
+    solid_.setTraction(traction_function, optional_domain);
+  }
+
+  /**
    * @brief Set the thermal flux boundary condition
    *
    * @tparam FluxType The type of the thermal flux object
@@ -441,9 +493,9 @@ public:
    * shape sensitivities for boundary integrals.
    */
   template <typename FluxType>
-  void setHeatFluxBCs(FluxType flux_function)
+  void setHeatFluxBCs(FluxType flux_function, const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    thermal_.setFluxBCs(flux_function);
+    thermal_.setFluxBCs(flux_function, optional_domain);
   }
 
   /**
