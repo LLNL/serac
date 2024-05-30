@@ -2,9 +2,9 @@
 # This is the share configuration of jobs for lassen
 .on_lassen:
   variables:
-    ALLOC_COMMAND: lalloc ${ALLOC_NODES} -W ${ALLOC_TIME} -q pci -G ${ALLOC_BANK}
+    SCHEDULER_PARAMETERS: -nnodes ${ALLOC_NODES} -W ${ALLOC_TIME} -q pci -G ${ALLOC_BANK}
   tags:
-    - shell
+    - batch
     - lassen
   rules:
     - if: '$CI_COMMIT_BRANCH =~ /_lnone/ || $ON_LASSEN == "OFF"' #run except if ...
