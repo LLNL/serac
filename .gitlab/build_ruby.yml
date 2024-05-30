@@ -5,7 +5,7 @@
     SCHEDULER_PARAMETERS: "--res=ci --exclusive=user -A ${ALLOC_BANK} --deadline=now+1hour -N ${ALLOC_NODES} -t ${ALLOC_TIME}"
   tags:
     - batch
-    - quartz
+    - ruby
   rules:
     - if: '$CI_COMMIT_BRANCH =~ /_qnone/ || $ON_QUARTZ == "OFF"' #run except if ...
       when: never
