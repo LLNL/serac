@@ -68,6 +68,6 @@ variables:
 # This is where jobs are included for each machine
 include:
   - local: .gitlab/build_lassen.yml
-  - local: .gitlab/build_quartz.yml
+  - local: .gitlab/build_ruby.yml
   - project: 'lc-templates/id_tokens'
     file: 'id_tokens.yml'
