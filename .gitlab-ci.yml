@@ -68,6 +68,7 @@ variables:
 # This is where jobs are included for each machine
 include:
   - local: .gitlab/build_lassen.yml
-  - local: .gitlab/build_ruby.yml
+  # Note: Cannot move to ruby until the eng bank exists there
+  - local: .gitlab/build_quartz.yml
   - project: 'lc-templates/id_tokens'
     file: 'id_tokens.yml'
