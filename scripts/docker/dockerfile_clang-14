@@ -11,7 +11,7 @@ RUN sudo useradd -m -s /bin/bash -G sudo serac
 # Install proper doxygen version (should match version in LC host configs)
 RUN sudo wget https://github.com/doxygen/doxygen/releases/download/Release_1_9_8/doxygen-1.9.8.linux.bin.tar.gz
 RUN sudo tar -xf doxygen-1.9.8.linux.bin.tar.gz
-RUN sudo cd doxygen-1.9.8 && make && make install && doxygen --version
+RUN cd doxygen-1.9.8 && make && make install && doxygen --version
 
 # Remove flags from mpich
 RUN sudo sed -i "s/ -flto=auto//g" /usr/bin/mpicxx.mpich
