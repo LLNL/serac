@@ -159,12 +159,6 @@ SERAC_HOST_DEVICE auto batch_apply_qf_derivative(derivative_type * doutputs, lam
     };
 
     doutputs[i] = jacfwd<differentiation_index>(func, inputs[i]...);
-
-    std::cout << doutputs[i] << std::endl;
-    //std::cout << get_gradient(func(make_dual(inputs[i]...))) << std::endl;
-
-    //doutputs[i] = get_gradient(func(make_dual(inputs[i]...)));
-
   }
 
   return doutputs;

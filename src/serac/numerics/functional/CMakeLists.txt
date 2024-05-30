@@ -77,6 +77,8 @@ blt_add_library(
 target_link_libraries(serac_functional PUBLIC OpenMP::OpenMP_CXX)
 target_link_libraries(serac_functional PUBLIC ClangEnzymeFlags)
 
+target_compile_options(serac_functional PUBLIC -mllvm -enzyme-loose-types)
+
 install(FILES ${functional_headers} DESTINATION include/serac/numerics/functional )
 install(FILES ${functional_detail_headers} DESTINATION include/serac/numerics/functional/detail )
 
