@@ -149,7 +149,7 @@ set(TRIBOL_DIR "${TPL_ROOT}/tribol-0.1.0.15-c44szmtrekul2ioyefca4lha6a33uhhh" CA
 # Devtools
 #------------------------------------------------------------------------------
 
-set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/2023_06_21_09_34_17/._view/iuliigu5ipj34ftvmykbpuxc3juyhch4" CACHE PATH "")
+set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest" CACHE PATH "")
 
 set(ATS_EXECUTABLE "${DEVTOOLS_ROOT}/python-3.11.7/bin/ats" CACHE PATH "")
 
