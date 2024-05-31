@@ -34,11 +34,17 @@ void stress_extrapolation_test(mfem::ParMesh& mesh) {
 
   FiniteElementState u(mesh, input_space{}, "displacement");
 
+  // TODO
+  // set u := u(x, y)
+
   FiniteElementState sigma_01 = fit< dim, output_space(input_space) >([&](double /*t*/, auto /*x*/, auto displacement){ 
     auto du_dx = get<1>(displacement);
     auto stress = lambda * tr(du_dx) * Identity<dim>() + mu * (du_dx + transpose(du_dx));
     return tuple{stress[0][1], zero{}};
   }, mesh, u);
+
+  // TODO:
+  // verify sigma_01 := f(x, y)
 
 }
 
