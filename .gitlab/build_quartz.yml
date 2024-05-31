@@ -16,6 +16,8 @@
     # like we do in config-build
     - module load cmake/3.23.1
     - module load texlive
+    - which dot
+    - dot -V
 
 
 ####
