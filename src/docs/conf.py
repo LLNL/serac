@@ -36,7 +36,7 @@ if read_the_docs_build:
 
     # Call doxygen
     from subprocess import call
-    call(['doxygen', "./doxygen/Doxyfile.in"])
+    call(['doxygen', "./doxygen/Doxyfile.in"], shell=True)
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
