@@ -2,9 +2,9 @@
 # This is the share configuration of jobs for lassen
 .on_lassen:
   variables:
-    ALLOC_COMMAND: lalloc ${ALLOC_NODES} -W ${ALLOC_TIME} -q pci -G ${ALLOC_BANK}
+    SCHEDULER_PARAMETERS: -nnodes ${ALLOC_NODES} -W ${ALLOC_TIME} -q pci -G ${ALLOC_BANK}
   tags:
-    - shell
+    - batch
     - lassen
   rules:
     - if: '$CI_COMMIT_BRANCH =~ /_lnone/ || $ON_LASSEN == "OFF"' #run except if ...
@@ -43,8 +43,9 @@ lassen-clang_10_0_1-src:
   variables:
     COMPILER: "clang@10.0.1"
     HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}.cmake"
+    EXTRA_BUILD_OPTIONS: "--extra-cmake-options='-DENABLE_BENCHMARKS=ON'"
     ALLOC_NODES: "1"
-    ALLOC_TIME: "20"
+    ALLOC_TIME: "30"
   extends: [.src_build_on_lassen, .with_cuda]
 
 # Note: to reduce duplication SPEC is not defined here, if we move to more than one
@@ -53,6 +54,7 @@ lassen-clang_10_0_1-full:
   variables:
     COMPILER: "clang@10.0.1"
     HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}.cmake"
+    EXTRA_BUILD_OPTIONS: "--extra-cmake-options='-DENABLE_BENCHMARKS=ON'"
     ALLOC_NODES: "1"
     ALLOC_TIME: "55"
   extends: [.full_build_on_lassen, .with_cuda]
