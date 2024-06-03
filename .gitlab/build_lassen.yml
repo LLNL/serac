@@ -45,7 +45,7 @@ lassen-clang_10_0_1-src:
     HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}.cmake"
     EXTRA_BUILD_OPTIONS: "--extra-cmake-options='-DENABLE_BENCHMARKS=ON'"
     ALLOC_NODES: "1"
-    ALLOC_TIME: "30"
+    ALLOC_TIME: "45"
   extends: [.src_build_on_lassen, .with_cuda]
 
 # Note: to reduce duplication SPEC is not defined here, if we move to more than one
