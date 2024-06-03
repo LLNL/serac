@@ -39,6 +39,41 @@
 #define SERAC_SET_METADATA(name, data)
 #endif
 
+/**
+ * @def CALI_CXX_MARK_FUNCTION
+ * No-op macro in case Serac is not built with Caliper
+ */
+
+/**
+ * @def CALI_CXX_MARK_LOOP_BEGIN(id, name)
+ * No-op macro in case Serac is not built with Caliper
+ */
+
+/**
+ * @def CALI_CXX_MARK_LOOP_ITERATION(id, i)
+ * No-op macro in case Serac is not built with Caliper
+ */
+
+/**
+ * @def CALI_CXX_MARK_LOOP_END(id)
+ * No-op macro in case Serac is not built with Caliper
+ */
+
+/**
+ * @def CALI_MARK_BEGIN(name)
+ * No-op macro in case Serac is not built with Caliper
+ */
+
+/**
+ * @def CALI_MARK_END(name)
+ * No-op macro in case Serac is not built with Caliper
+ */
+
+/**
+ * @def CALI_CXX_MARK_SCOPE(name)
+ * No-op macro in case Serac is not built with Caliper
+ */
+
 #ifndef SERAC_USE_CALIPER
 #define CALI_CXX_MARK_FUNCTION
 #define CALI_CXX_MARK_LOOP_BEGIN(id, name)
