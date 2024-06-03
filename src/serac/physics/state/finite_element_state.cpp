@@ -73,6 +73,23 @@ void FiniteElementState::projectOnBoundary(mfem::VectorCoefficient& coef, const 
   setFromGridFunction(grid_function);
 }
 
+void FiniteElementState::project(mfem::Coefficient& coef, const Domain & domain)
+{
+  mfem::Array<int> uniq_dof_ids = domain.dof_list(gridFunction().FESpace());
+  std::cout << uniq_dof_ids << std::endl;
+  mfem::ParGridFunction& grid_function = gridFunction();
+  grid_function.ProjectCoefficient(coef, uniq_dof_ids);
+  setFromGridFunction(grid_function);
+}
+
+void FiniteElementState::project(mfem::VectorCoefficient& coef, const Domain & domain)
+{
+  mfem::Array<int> uniq_dof_ids = domain.dof_list(gridFunction().FESpace());
+  mfem::ParGridFunction& grid_function = gridFunction();
+  grid_function.ProjectCoefficient(coef, uniq_dof_ids);
+  setFromGridFunction(grid_function);
+}
+
 mfem::ParGridFunction& FiniteElementState::gridFunction() const
 {
   if (!grid_func_) {
