@@ -802,6 +802,55 @@ public:
   }
 
   /**
+   * @brief Functor representing a material stress.  A functor is used here instead of an
+   * extended, generic lambda for compatibility with NVCC.
+   */
+  template <typename Material>
+  struct MaterialStressFunctor {
+    /// @brief Constructor for the functor
+    MaterialStressFunctor(Material material, GeometricNonlinearities gn) : material_(material), geom_nonlin_(gn) {}
+    /// @brief Material model
+    Material material_;
+    /// @brief Enum value for geometric nonlinearities
+    GeometricNonlinearities geom_nonlin_;
+
+    /**
+     * @brief Material stress response call
+     *
+     * @tparam X Spatial position type
+     * @tparam State state
+     * @tparam Displacement displacement
+     * @tparam Acceleration acceleration
+     * @tparam Params variadic parameters for call
+     * @param[in] state state
+     * @param[in] displacement displacement
+     * @param[in] acceleration acceleration
+     * @param[in] params parameter pack
+     * @return The calculated material response (tuple of volumetric heat capacity and thermal flux) for a linear
+     * isotropic material
+     */
+    template <typename X, typename State, typename Displacement, typename Acceleration, typename... Params>
+    auto SERAC_HOST_DEVICE operator()(double, X, State& state, Displacement displacement, Acceleration acceleration,
+                                      Params... params) const
+    {
+      auto du_dX   = get<DERIVATIVE>(displacement);
+      auto d2u_dt2 = get<VALUE>(acceleration);
+
+      auto stress = material_(state, du_dX, params...);
+
+      auto dx_dX = 0.0 * du_dX + I;
+
+      if (geom_nonlin_ == GeometricNonlinearities::On) {
+        dx_dX += du_dX;
+      }
+
+      auto flux = dot(stress, transpose(inv(dx_dX))) * det(dx_dX);
+
+      return serac::tuple{material_.density * d2u_dt2, flux};
+    }
+  };
+
+  /**
    * @brief Set the material stress response and mass properties for the physics module
    *
    * @tparam MaterialType The solid material type
@@ -826,8 +875,9 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename MaterialType, typename StateType = Empty>
-  void setMaterial(DependsOn<active_parameters...>, MaterialType material, qdata_type<StateType> qdata = EmptyQData)
+  void setMaterial(DependsOn<active_parameters...>, MaterialType&& material, qdata_type<StateType> qdata = EmptyQData)
   {
+    MaterialStressFunctor<MaterialType> material_functor(material, geom_nonlin_);
     residual_->AddDomainIntegral(
         Dimension<dim>{},
         DependsOn<0, 1,
@@ -835,31 +885,14 @@ public:
                                                              // fact that the displacement, acceleration, and shape
                                                              // fields are always-on and come first, so the `n`th
                                                              // parameter will actually be argument `n + NUM_STATE_VARS`
-        [material, geom_nonlin = geom_nonlin_](double /*t*/, auto /*x*/, auto& state, auto displacement,
-                                               auto acceleration, auto... params) {
-          auto du_dX   = get<DERIVATIVE>(displacement);
-          auto d2u_dt2 = get<VALUE>(acceleration);
-
-          auto stress = material(state, du_dX, params...);
-
-          auto dx_dX = 0.0 * du_dX + I;
-
-          if (geom_nonlin == GeometricNonlinearities::On) {
-            dx_dX += du_dX;
-          }
-
-          auto flux = dot(stress, transpose(inv(dx_dX))) * det(dx_dX);
-
-          return serac::tuple{material.density * d2u_dt2, flux};
-        },
-        mesh_, qdata);
+        std::move(material_functor), mesh_, qdata);
   }
 
   /// @overload
   template <typename MaterialType, typename StateType = Empty>
   void setMaterial(MaterialType material, std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
   {
-    setMaterial(DependsOn<>{}, material, qdata);
+    setMaterial(DependsOn<>{}, std::move(material), qdata);
   }
 
   /**
@@ -893,6 +926,38 @@ public:
   void setVelocity(const FiniteElementState& temp) { velocity_ = temp; }
 
   /**
+   * @brief Functor representing a body force integrand.  A functor is necessary instead
+   * of an extended, generic lambda for compatibility with NVCC.
+   */
+  template <typename BodyForceType>
+  struct BodyForceIntegrand {
+    /// @brief Body force model
+    BodyForceType body_force_;
+    /// @brief Constructor for the functor
+    BodyForceIntegrand(BodyForceType body_force) : body_force_(body_force) {}
+
+    /**
+     * @brief Body force call
+     *
+     * @tparam T temperature
+     * @tparam X Spatial position type
+     * @tparam Displacement displacement
+     * @tparam Acceleration acceleration
+     * @tparam Params variadic parameters for call
+     * @param[in] t temperature
+     * @param[in] x position
+     * @param[in] params parameter pack
+     * @return The calculated material response (tuple of volumetric heat capacity and thermal flux) for a linear
+     * isotropic material
+     */
+    template <typename T, typename Position, typename Displacement, typename Acceleration, typename... Params>
+    auto SERAC_HOST_DEVICE operator()(T t, Position position, Displacement, Acceleration, Params... params) const
+    {
+      return serac::tuple{-1.0 * body_force_(get<VALUE>(position), t, params...), zero{}};
+    }
+  };
+
+  /**
    * @brief Set the body forcefunction
    *
    * @tparam BodyForceType The type of the body force load
@@ -915,14 +980,10 @@ public:
   void addBodyForce(DependsOn<active_parameters...>, BodyForceType body_force,
                     const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    Domain domain = (optional_domain) ? *optional_domain : EntireDomain(mesh_);
-
-    residual_->AddDomainIntegral(
-        Dimension<dim>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
-        [body_force](double t, auto X, auto /* displacement */, auto /* acceleration */, auto... params) {
-          return serac::tuple{-1.0 * body_force(get<VALUE>(X), t, params...), zero{}};
-        },
-        domain);
+    Domain                               domain = (optional_domain) ? *optional_domain : EntireDomain(mesh_);
+    BodyForceIntegrand<BodyForceType> force_integrand(body_force);
+    residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
+                                 std::move(force_integrand), domain);
   }
 
   /// @overload

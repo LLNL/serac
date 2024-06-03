@@ -280,8 +280,8 @@ public:
    * and @a spatial_dim template parameter
    * @param[inout] qdata The data for each quadrature point
    */
-  template <int dim, int... args, typename lambda, typename qpt_data_type = Nothing>
-  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain,
+  template <int dim, int... args, typename Integrand, typename qpt_data_type = Nothing>
+  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, Integrand&& integrand, mfem::Mesh& domain,
                          std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
   {
     if (domain.GetNE() == 0) return;
@@ -322,8 +322,8 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
    */
-  template <int dim, int... args, typename lambda>
-  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, mfem::Mesh& domain)
+  template <int dim, int... args, typename Integrand>
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, Integrand&& integrand, mfem::Mesh& domain)
   {
     auto num_bdr_elements = domain.GetNBE();
     if (num_bdr_elements == 0) return;

@@ -176,7 +176,7 @@ double solution_error(const ExactSolution& exact_temperature, PatchBoundaryCondi
   HeatTransfer<p, dim> thermal(nonlinear_opts, heat_transfer::direct_linear_options, heat_transfer::default_static_options, "thermal", mesh_tag);
 
   heat_transfer::LinearIsotropicConductor mat(1.0,1.0,1.0);
-  thermal.setMaterial(mat);
+  thermal.setMaterial(std::move(mat));
 
   exact_temperature.applyLoads(mat, thermal, essentialBoundaryAttributes<dim>(bc));
 
