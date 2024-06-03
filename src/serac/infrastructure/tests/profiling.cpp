@@ -16,6 +16,8 @@
 #include "serac/infrastructure/profiling.hpp"
 #include "serac/mesh/mesh_utils.hpp"
 
+#if defined(SERAC_USE_CALIPER) && defined(SERAC_USE_ADIAK)
+
 namespace serac {
 
 TEST(Profiling, MeshRefinement)
@@ -31,7 +33,7 @@ TEST(Profiling, MeshRefinement)
   std::string test_name = "_profiling";
 
   CALI_MARK_BEGIN(profiling::concat("RefineAndLoadMesh", test_name).c_str());
-  auto pmesh = mesh::refineAndDistribute(buildMeshFromFile(mesh_file));
+  auto pmesh = mesh::refineAndDistribute(SERAC_PROFILE_EXPR("LOAD_MESH", buildMeshFromFile(mesh_file)), 0, 0);
   CALI_MARK_END(profiling::concat("RefineAndLoadMesh", test_name).c_str());
 
   CALI_CXX_MARK_LOOP_BEGIN(refinement_loop, "refinement_loop");
@@ -47,12 +49,12 @@ TEST(Profiling, MeshRefinement)
     pmesh->UniformRefinement();
   }
 
-  SERAC_SET_METADATA("mesh_file", mesh_file.c_str());
-  SERAC_SET_METADATA("number_mesh_elements", pmesh->GetNE());
+  adiak::value("mesh_file", mesh_file.c_str());
+  adiak::value("number_mesh_elements", pmesh->GetNE());
 
   // this number represents "llnl" as an unsigned integer
   unsigned int magic_uint = 1819176044;
-  SERAC_SET_METADATA("magic_uint", magic_uint);
+  adiak::value("magic_uint", magic_uint);
 
   // decode unsigned int back into char[4]
   std::array<char, sizeof(magic_uint) + 1> uint_string;
@@ -63,7 +65,7 @@ TEST(Profiling, MeshRefinement)
   // encode double with "llnl" bytes
   double magic_double;
   std::memcpy(&magic_double, "llnl", 4);
-  SERAC_SET_METADATA("magic_double", magic_double);
+  adiak::value("magic_double", magic_double);
 
   // decode the double and print
   std::array<char, sizeof(magic_double) + 1> double_string;
@@ -97,7 +99,64 @@ TEST(Profiling, Exception)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
+struct NonCopyableOrMovable {
+  int value                                         = 0;
+  NonCopyableOrMovable()                            = default;
+  NonCopyableOrMovable(const NonCopyableOrMovable&) = delete;
+  NonCopyableOrMovable(NonCopyableOrMovable&&)      = delete;
+};
+
+TEST(Profiling, LvalueReferenceExpr)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+  serac::profiling::initialize();
+  NonCopyableOrMovable foo;
+  // This statement requires that the RHS be *exactly* a non-const lvalue
+  // reference - of course a const lvalue reference cannot be bound here,
+  // but also an rvalue reference would also cause compilation to fail
+  NonCopyableOrMovable& bar = SERAC_PROFILE_EXPR("lvalue_reference_assign", foo);
+  serac::profiling::finalize();
+  bar.value = 6;
+  EXPECT_EQ(foo.value, 6);
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+struct MovableOnly {
+  int value                       = 0;
+  MovableOnly()                   = default;
+  MovableOnly(const MovableOnly&) = delete;
+  MovableOnly(MovableOnly&&)      = default;
+};
+
+TEST(Profiling, RvalueReferenceExpr)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+  serac::profiling::initialize();
+  MovableOnly foo;
+  foo.value = 6;
+  // This statement requires that the RHS be *exactly* an rvalue reference
+  // An lvalue reference cannot be used to construct here (copy ctor deleted)
+  MovableOnly bar = SERAC_PROFILE_EXPR("rvalue_reference_assign", std::move(foo));
+  serac::profiling::finalize();
+  EXPECT_EQ(bar.value, 6);
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+TEST(Profiling, TempRvalueReferenceExpr)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+  serac::profiling::initialize();
+  // This statement requires that the RHS be *exactly* an rvalue reference
+  // An lvalue reference cannot be used to construct here (copy ctor deleted)
+  MovableOnly bar = SERAC_PROFILE_EXPR("rvalue_reference_assign", MovableOnly{6});
+  serac::profiling::finalize();
+  EXPECT_EQ(bar.value, 6);
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
 }  // namespace serac
+
+#endif
 
 int main(int argc, char* argv[])
 {
