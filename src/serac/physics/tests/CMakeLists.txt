@@ -26,6 +26,7 @@ set(solver_tests
     lce_Bertoldi_lattice.cpp
     parameterized_thermomechanics_example.cpp
     parameterized_thermal.cpp
+    finite_element_vector_set_over_domain.cpp
     solid.cpp
     solid_periodic.cpp
     solid_shape.cpp

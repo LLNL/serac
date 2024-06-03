@@ -255,6 +255,7 @@ static Domain domain_of_elems(const mfem::Mesh&                                 
       case 3:
         if (add) {
           output.tri_ids_.push_back(tri_id);
+          output.mfem_tri_ids_.push_back(i);
         }
         tri_id++;
         break;
@@ -262,12 +263,14 @@ static Domain domain_of_elems(const mfem::Mesh&                                 
         if constexpr (d == 2) {
           if (add) {
             output.quad_ids_.push_back(quad_id);
+            output.mfem_quad_ids_.push_back(i);
           }
           quad_id++;
         }
         if constexpr (d == 3) {
           if (add) {
             output.tet_ids_.push_back(tet_id);
+            output.mfem_tet_ids_.push_back(i);
           }
           tet_id++;
         }
@@ -275,6 +278,7 @@ static Domain domain_of_elems(const mfem::Mesh&                                 
       case 8:
         if (add) {
           output.hex_ids_.push_back(hex_id);
+          output.mfem_hex_ids_.push_back(i);
         }
         hex_id++;
         break;
@@ -374,10 +378,71 @@ Domain Domain::ofBoundaryElements(const mfem::Mesh& mesh, std::function<bool(std
   return domain_of_boundary_elems<3>(mesh, func);
 }
 
+mfem::Array<int> Domain::dof_list(mfem::FiniteElementSpace * fes) const
+{
+  std::set<int> dof_ids;
+  mfem::Array<int> elem_dofs;
+
+  if (dim_ == 0) {
+  // sam: what to do with vertex sets?
+  }
+
+  if (dim_ == 1) {
+    for (auto elem_id : mfem_edge_ids_) {
+      fes->GetElementVDofs(elem_id, elem_dofs);
+      for (int i = 0; i < elem_dofs.Size(); i++) {
+        dof_ids.insert(elem_dofs[i]);
+      }
+    }
+  }
+
+  if (dim_ == 2) {
+    for (auto elem_id : mfem_tri_ids_) {
+      fes->GetElementVDofs(elem_id, elem_dofs);
+      for (int i = 0; i < elem_dofs.Size(); i++) {
+        dof_ids.insert(elem_dofs[i]);
+      }
+    }
+
+    for (auto elem_id : mfem_quad_ids_) {
+      fes->GetElementVDofs(elem_id, elem_dofs);
+      for (int i = 0; i < elem_dofs.Size(); i++) {
+        dof_ids.insert(elem_dofs[i]);
+      }
+    }
+  }
+
+  if (dim_ == 3) {
+    for (auto elem_id : mfem_tet_ids_) {
+      fes->GetElementVDofs(elem_id, elem_dofs);
+      for (int i = 0; i < elem_dofs.Size(); i++) {
+        dof_ids.insert(elem_dofs[i]);
+      }
+    }
+
+    for (auto elem_id : mfem_hex_ids_) {
+      fes->GetElementVDofs(elem_id, elem_dofs);
+      for (int i = 0; i < elem_dofs.Size(); i++) {
+        dof_ids.insert(elem_dofs[i]);
+      }
+    }
+  }
+
+  mfem::Array<int> uniq_dof_ids(int(dof_ids.size()));
+  int i = 0;
+  for (auto id : dof_ids) {
+    uniq_dof_ids[i++] = id;
+  }
+
+  return uniq_dof_ids;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
+
+
 
 Domain EntireDomain(const mfem::Mesh& mesh)
 {
