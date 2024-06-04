@@ -1463,14 +1463,16 @@ public:
   /**
    * @brief computes the adjoint load due to reaction load sensitivities
    *
-   * @param reactionDirection A FiniteElementState which specifies how the reactions dofs were weighted for the reaction qoi
+   * @param reactionDirection A FiniteElementState which specifies how the reactions dofs were weighted for the reaction
+   * qoi
    * @return A reference to the adjoint load to be set before calling reverseAdjointTimestep()
    */
-  const serac::FiniteElementDual& computeReactionsAdjointLoad(const serac::FiniteElementState& reactionDirection) {
+  const serac::FiniteElementDual& computeReactionsAdjointLoad(const serac::FiniteElementState& reactionDirection)
+  {
     auto [_, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
                                   *parameters_[parameter_indices].state...);
     std::unique_ptr<mfem::HypreParMatrix> jacobian = assemble(drdu);
-    reactions_adjoint_load_ = 0.0;
+    reactions_adjoint_load_                        = 0.0;
     jacobian->MultTranspose(reactionDirection, reactions_adjoint_load_);
     return reactions_adjoint_load_;
   }
@@ -1478,10 +1480,12 @@ public:
   /**
    * @brief computes the partial sensitivity of the reaction loads (in specified direction)  with respect to parameter
    *
-   * @param reactionDirection A FiniteElementState which specifies how the reactions dofs were weighted for the reaction qoi
+   * @param reactionDirection A FiniteElementState which specifies how the reactions dofs were weighted for the reaction
+   * qoi
    * @return A reference sensitivity field
    */
-  const serac::FiniteElementDual& computeReactionsSensitivity(const serac::FiniteElementState& reactionDirection, size_t parameter_field)
+  const serac::FiniteElementDual& computeReactionsSensitivity(const serac::FiniteElementState& reactionDirection,
+                                                              size_t                           parameter_field)
   {
     SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
                     axom::fmt::format("Invalid parameter index '{}' requested for reaction sensitivity."));
@@ -1497,10 +1501,12 @@ public:
   /**
    * @brief computes the partial sensitivity of the reaction loads (in specified direction)  with respect to shape
    *
-   * @param reactionDirection A FiniteElementState which specifies how the reactions dofs were weighted for the reaction qoi
+   * @param reactionDirection A FiniteElementState which specifies how the reactions dofs were weighted for the reaction
+   * qoi
    * @return A reference sensitivity field
    */
-  const serac::FiniteElementDual& computeReactionsShapeSensitivity(const serac::FiniteElementState& reactionDirection) {
+  const serac::FiniteElementDual& computeReactionsShapeSensitivity(const serac::FiniteElementState& reactionDirection)
+  {
     auto drdshape =
         serac::get<DERIVATIVE>((*residual_)(ode_time_point_, differentiate_wrt(shape_displacement_), displacement_,
                                             acceleration_, *parameters_[parameter_indices].state...));
@@ -1619,7 +1625,6 @@ protected:
       }...};
 
 public:
-
   /**
    * @brief Calculate a list of constrained dofs in the true displacement vector from a function that
    * returns true if a physical coordinate is in the constrained set
@@ -1633,7 +1638,8 @@ public:
                                             std::optional<int>                       component = {}) const
   {
     // Get the nodal positions for the displacement vector in grid function form
-    mfem::ParGridFunction nodal_positions(const_cast<mfem::ParFiniteElementSpace*>(&displacement_.space())); // MRT mfem const correctness issue
+    mfem::ParGridFunction nodal_positions(
+        const_cast<mfem::ParFiniteElementSpace*>(&displacement_.space()));  // MRT mfem const correctness issue
     mesh_.GetNodes(nodal_positions);
 
     const int        num_nodes = nodal_positions.Size() / dim;
@@ -1680,7 +1686,6 @@ public:
   }
 
 protected:
-
   /**
    * @brief Sets the Dirichlet BCs for the current time and computes an initial guess for parameters and displacement
    */

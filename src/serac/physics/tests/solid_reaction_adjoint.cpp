@@ -29,21 +29,22 @@ using SolidMechanicsType = SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>>;
 const std::string mesh_tag       = "mesh";
 const std::string physics_prefix = "solid";
 
-using SolidMaterial = solid_mechanics::ParameterizedNeoHookeanSolid<dim>; //NeoHookean;
+using SolidMaterial = solid_mechanics::ParameterizedNeoHookeanSolid<dim>;  // NeoHookean;
 auto geoNonlinear   = GeometricNonlinearities::On;
 
-constexpr double boundary_disp = 0.013;
+constexpr double boundary_disp       = 0.013;
 constexpr double shear_modulus_value = 1.0;
-constexpr double bulk_modulus_value = 1.0;
+constexpr double bulk_modulus_value  = 1.0;
 
-std::unique_ptr<SolidMechanicsType> createNonlinearSolidMechanicsSolver(
-    mfem::ParMesh&, const NonlinearSolverOptions& nonlinear_opts,
-    const SolidMaterial& mat)
+std::unique_ptr<SolidMechanicsType> createNonlinearSolidMechanicsSolver(mfem::ParMesh&,
+                                                                        const NonlinearSolverOptions& nonlinear_opts,
+                                                                        const SolidMaterial&          mat)
 {
-  static int iter = 0;
-  auto solid =
-      std::make_unique<SolidMechanicsType>(nonlinear_opts, solid_mechanics::direct_linear_options, solid_mechanics::default_quasistatic_options,
-                                           geoNonlinear, physics_prefix + std::to_string(iter++), mesh_tag, std::vector<std::string>{"shear modulus", "bulk modulus"});
+  static int iter  = 0;
+  auto       solid = std::make_unique<SolidMechanicsType>(nonlinear_opts, solid_mechanics::direct_linear_options,
+                                                    solid_mechanics::default_quasistatic_options, geoNonlinear,
+                                                    physics_prefix + std::to_string(iter++), mesh_tag,
+                                                    std::vector<std::string>{"shear modulus", "bulk modulus"});
 
   // Construct and initialized the user-defined moduli to be used as a differentiable parameter in
   // the solid physics module.
@@ -57,9 +58,7 @@ std::unique_ptr<SolidMechanicsType> createNonlinearSolidMechanicsSolver(
   solid->setParameter(1, user_defined_shear_modulus);
 
   solid->setMaterial(DependsOn<0, 1>{}, mat);
-  solid->setDisplacementBCs({1}, [](const mfem::Vector&, mfem::Vector& disp) {
-    disp = boundary_disp;
-  });
+  solid->setDisplacementBCs({1}, [](const mfem::Vector&, mfem::Vector& disp) { disp = boundary_disp; });
   solid->addBodyForce([](auto X, auto /* t */) {
     auto Y = X;
     Y[0]   = 0.1 + 0.1 * X[0] + 0.3 * X[1];
@@ -71,15 +70,14 @@ std::unique_ptr<SolidMechanicsType> createNonlinearSolidMechanicsSolver(
   return solid;
 }
 
-FiniteElementState createReactionDirection(const SolidMechanicsType& solid_solver,  int direction) 
+FiniteElementState createReactionDirection(const SolidMechanicsType& solid_solver, int direction)
 {
   const FiniteElementDual& reactions = solid_solver.reactions();
-  FiniteElementState reactionDirections(reactions.space(), "reaction_directions");
+  FiniteElementState       reactionDirections(reactions.space(), "reaction_directions");
   reactionDirections = 0.0;
 
-  auto reactionTrueDofs = solid_solver.calculateConstrainedDofs([&](const mfem::Vector& x) {
-    return x[0] < 1e-14;
-  }, direction);
+  auto reactionTrueDofs =
+      solid_solver.calculateConstrainedDofs([&](const mfem::Vector& x) { return x[0] < 1e-14; }, direction);
 
   reactionDirections.SetSubVector(reactionTrueDofs, 1.0);
   return reactionDirections;
@@ -88,23 +86,23 @@ FiniteElementState createReactionDirection(const SolidMechanicsType& solid_solve
 double computeSolidMechanicsQoi(BasePhysics& solid_solver)
 {
   solid_solver.advanceTimestep(0.0);
-  auto& solidS = dynamic_cast<SolidMechanicsType&>(solid_solver);
-  const FiniteElementDual& reactions = solidS.reactions();
-  auto reactionDirections = createReactionDirection(solidS, 0);
+  auto&                    solidS             = dynamic_cast<SolidMechanicsType&>(solid_solver);
+  const FiniteElementDual& reactions          = solidS.reactions();
+  auto                     reactionDirections = createReactionDirection(solidS, 0);
   return innerProduct(reactions, reactionDirections);
 }
 
 auto computeSolidMechanicsQoiSensitivities(BasePhysics& solid_solver)
 {
-  double qoi = computeSolidMechanicsQoi(solid_solver);
+  double            qoi = computeSolidMechanicsQoi(solid_solver);
   FiniteElementDual shape_sensitivity(solid_solver.shapeDisplacement().space(), "shape sensitivity");
   shape_sensitivity = 0.0;
 
   FiniteElementDual shear_modulus_sensitivity(StateManager::mesh(mesh_tag), H1<p>{}, "shear modulus sensitivity");
   shear_modulus_sensitivity = 0.0;
 
-  auto& solidS = dynamic_cast<SolidMechanicsType&>(solid_solver);
-  auto reactionDirections = createReactionDirection(solidS, 0);
+  auto& solidS             = dynamic_cast<SolidMechanicsType&>(solid_solver);
+  auto  reactionDirections = createReactionDirection(solidS, 0);
 
   auto reactionAdjointLoad = solidS.computeReactionsAdjointLoad(reactionDirections);
   solid_solver.setAdjointLoad({{"displacement", reactionAdjointLoad}});
@@ -119,7 +117,8 @@ auto computeSolidMechanicsQoiSensitivities(BasePhysics& solid_solver)
   return std::make_tuple(qoi, shear_modulus_sensitivity, shape_sensitivity);
 }
 
-double computeSolidMechanicsQoiAdjustingShape(BasePhysics& solid_solver, const FiniteElementState& shape_derivative_direction, double pertubation)
+double computeSolidMechanicsQoiAdjustingShape(BasePhysics&              solid_solver,
+                                              const FiniteElementState& shape_derivative_direction, double pertubation)
 {
   FiniteElementState shape_disp(StateManager::mesh(mesh_tag), H1<SHAPE_ORDER, dim>{}, "input_shape_displacement");
   SLIC_ASSERT_MSG(shape_disp.Size() == shape_derivative_direction.Size(),
@@ -131,7 +130,9 @@ double computeSolidMechanicsQoiAdjustingShape(BasePhysics& solid_solver, const F
   return computeSolidMechanicsQoi(solid_solver);
 }
 
-double computeSolidMechanicsQoiAdjustingShearModulus(BasePhysics& solid_solver, const FiniteElementState& shear_modulus_derivative_direction, double pertubation)
+double computeSolidMechanicsQoiAdjustingShearModulus(BasePhysics&              solid_solver,
+                                                     const FiniteElementState& shear_modulus_derivative_direction,
+                                                     double                    pertubation)
 {
   FiniteElementState user_defined_shear_modulus(StateManager::mesh(mesh_tag), H1<p>{}, "parameterized_shear");
   user_defined_shear_modulus = shear_modulus_value;
@@ -144,7 +145,6 @@ double computeSolidMechanicsQoiAdjustingShearModulus(BasePhysics& solid_solver, 
 
   return computeSolidMechanicsQoi(solid_solver);
 }
-
 
 struct SolidMechanicsSensitivityFixture : public ::testing::Test {
   void SetUp() override
@@ -167,7 +167,7 @@ struct SolidMechanicsSensitivityFixture : public ::testing::Test {
   }
 
   axom::sidre::DataStore dataStore;
-  mfem::ParMesh* mesh;
+  mfem::ParMesh*         mesh;
 
   NonlinearSolverOptions nonlinear_opts{.relative_tol = 1.0e-15, .absolute_tol = 1.0e-15};
 
@@ -180,14 +180,14 @@ struct SolidMechanicsSensitivityFixture : public ::testing::Test {
 
 TEST_F(SolidMechanicsSensitivityFixture, ReactionShapeSensitivities)
 {
-  auto solid_solver = createNonlinearSolidMechanicsSolver(*mesh, nonlinear_opts, mat);
+  auto solid_solver                     = createNonlinearSolidMechanicsSolver(*mesh, nonlinear_opts, mat);
   auto [qoi_base, _, shape_sensitivity] = computeSolidMechanicsQoiSensitivities(*solid_solver);
 
   solid_solver->resetStates();
   FiniteElementState derivative_direction(shape_sensitivity.space(), "derivative_direction");
   fillDirection(derivative_direction);
 
-  double qoi_plus = computeSolidMechanicsQoiAdjustingShape(*solid_solver, derivative_direction, eps);
+  double qoi_plus          = computeSolidMechanicsQoiAdjustingShape(*solid_solver, derivative_direction, eps);
   double directional_deriv = innerProduct(derivative_direction, shape_sensitivity);
 
   EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, eps);
@@ -195,14 +195,14 @@ TEST_F(SolidMechanicsSensitivityFixture, ReactionShapeSensitivities)
 
 TEST_F(SolidMechanicsSensitivityFixture, ReactionParameterSensitivities)
 {
-  auto solid_solver = createNonlinearSolidMechanicsSolver(*mesh, nonlinear_opts, mat);
+  auto solid_solver                             = createNonlinearSolidMechanicsSolver(*mesh, nonlinear_opts, mat);
   auto [qoi_base, shear_modulus_sensitivity, _] = computeSolidMechanicsQoiSensitivities(*solid_solver);
 
   solid_solver->resetStates();
   FiniteElementState derivative_direction(shear_modulus_sensitivity.space(), "derivative_direction");
   fillDirection(derivative_direction);
 
-  double qoi_plus = computeSolidMechanicsQoiAdjustingShearModulus(*solid_solver, derivative_direction, eps);
+  double qoi_plus          = computeSolidMechanicsQoiAdjustingShearModulus(*solid_solver, derivative_direction, eps);
   double directional_deriv = innerProduct(derivative_direction, shear_modulus_sensitivity);
 
   EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, eps);
