@@ -118,10 +118,12 @@ static Domain domain_of_edges(const mfem::Mesh& mesh, std::function<T> predicate
       int attr   = (bdr_id > 0) ? mesh.GetBdrAttribute(bdr_id) : -1;
       if (predicate(x, attr)) {
         output.edge_ids_.push_back(i);
+        output.mfem_edge_ids_.push_back(i);
       }
     } else {
       if (predicate(x)) {
         output.edge_ids_.push_back(i);
+        output.mfem_edge_ids_.push_back(i);
       }
     }
   }
@@ -193,9 +195,11 @@ static Domain domain_of_faces(const mfem::Mesh&                                 
     if (predicate(x, attr)) {
       if (x.size() == 3) {
         output.tri_ids_.push_back(tri_id);
+        output.mfem_tri_ids_.push_back(i);
       }
       if (x.size() == 4) {
         output.quad_ids_.push_back(quad_id);
+        output.mfem_quad_ids_.push_back(i);
       }
     }
 
@@ -344,18 +348,21 @@ static Domain domain_of_boundary_elems(const mfem::Mesh&                        
       case mfem::Geometry::SEGMENT:
         if (add) {
           output.edge_ids_.push_back(edge_id);
+          output.mfem_edge_ids_.push_back(f);
         }
         edge_id++;
         break;
       case mfem::Geometry::TRIANGLE:
         if (add) {
           output.tri_ids_.push_back(tri_id);
+          output.mfem_tri_ids_.push_back(f);
         }
         tri_id++;
         break;
       case mfem::Geometry::SQUARE:
         if (add) {
           output.quad_ids_.push_back(quad_id);
+          output.mfem_quad_ids_.push_back(f);
         }
         quad_id++;
         break;
@@ -383,13 +390,22 @@ mfem::Array<int> Domain::dof_list(mfem::FiniteElementSpace * fes) const
   std::set<int> dof_ids;
   mfem::Array<int> elem_dofs;
 
+  std::function< void(int i, mfem::Array<int> &) > GetVDofs;
+  if (type_ == Type::Elements) {
+    GetVDofs = [&](int i, mfem::Array<int> & vdofs) { return fes->GetElementVDofs(i, vdofs); };
+  }
+
+  if (type_ == Type::BoundaryElements) {
+    GetVDofs = [&](int i, mfem::Array<int> & vdofs) { return fes->GetFaceVDofs(i, vdofs); };
+  }
+
   if (dim_ == 0) {
   // sam: what to do with vertex sets?
   }
 
   if (dim_ == 1) {
     for (auto elem_id : mfem_edge_ids_) {
-      fes->GetElementVDofs(elem_id, elem_dofs);
+      GetVDofs(elem_id, elem_dofs);
       for (int i = 0; i < elem_dofs.Size(); i++) {
         dof_ids.insert(elem_dofs[i]);
       }
@@ -398,14 +414,14 @@ mfem::Array<int> Domain::dof_list(mfem::FiniteElementSpace * fes) const
 
   if (dim_ == 2) {
     for (auto elem_id : mfem_tri_ids_) {
-      fes->GetElementVDofs(elem_id, elem_dofs);
+      GetVDofs(elem_id, elem_dofs);
       for (int i = 0; i < elem_dofs.Size(); i++) {
         dof_ids.insert(elem_dofs[i]);
       }
     }
 
     for (auto elem_id : mfem_quad_ids_) {
-      fes->GetElementVDofs(elem_id, elem_dofs);
+      GetVDofs(elem_id, elem_dofs);
       for (int i = 0; i < elem_dofs.Size(); i++) {
         dof_ids.insert(elem_dofs[i]);
       }
@@ -414,14 +430,14 @@ mfem::Array<int> Domain::dof_list(mfem::FiniteElementSpace * fes) const
 
   if (dim_ == 3) {
     for (auto elem_id : mfem_tet_ids_) {
-      fes->GetElementVDofs(elem_id, elem_dofs);
+      GetVDofs(elem_id, elem_dofs);
       for (int i = 0; i < elem_dofs.Size(); i++) {
         dof_ids.insert(elem_dofs[i]);
       }
     }
 
     for (auto elem_id : mfem_hex_ids_) {
-      fes->GetElementVDofs(elem_id, elem_dofs);
+      GetVDofs(elem_id, elem_dofs);
       for (int i = 0; i < elem_dofs.Size(); i++) {
         dof_ids.insert(elem_dofs[i]);
       }
