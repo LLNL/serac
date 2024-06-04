@@ -176,6 +176,7 @@ public:
         implicit_sensitivity_displacement_start_of_step_(displacement_.space(), "total_deriv_wrt_displacement."),
         implicit_sensitivity_velocity_start_of_step_(displacement_.space(), "total_deriv_wrt_velocity."),
         reactions_(StateManager::newDual(H1<order, dim>{}, detail::addPrefix(physics_name, "reactions"), mesh_tag_)),
+        reactions_adjoint_load_(reactions_.space(), "reactions_shape_sensitivity"),
         nonlin_solver_(std::move(solver)),
         ode2_(displacement_.space().TrueVSize(),
               {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = v_, .d2u_dt2 = acceleration_},
@@ -1459,7 +1460,26 @@ public:
   const serac::FiniteElementState& acceleration() const { return acceleration_; };
 
   /// @brief getter for nodal forces (before zeroing-out essential dofs)
-  const serac::FiniteElementDual& reactions() { return reactions_; };
+  const serac::FiniteElementDual& reactions() const { return reactions_; };
+
+  const serac::FiniteElementDual& computeReactionsAdjointLoad(const serac::FiniteElementState& v) {
+    auto [_, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
+                                  *parameters_[parameter_indices].state...);
+    std::unique_ptr<mfem::HypreParMatrix> jacobian = assemble(drdu);
+    reactions_adjoint_load_ = 0.0;
+    jacobian->MultTranspose(v, reactions_adjoint_load_);
+    return reactions_adjoint_load_;
+  }
+
+  /// @brief getter for nodal forces (before zeroing-out essential dofs)
+  const serac::FiniteElementDual& computeReactionsShapeSensitivity(const serac::FiniteElementState& v) {
+    auto drdshape =
+        serac::get<DERIVATIVE>((*residual_)(ode_time_point_, differentiate_wrt(shape_displacement_), displacement_,
+                                            acceleration_, *parameters_[parameter_indices].state...));
+    auto drdshape_mat = assemble(drdshape);
+    drdshape_mat->MultTranspose(v, *shape_displacement_sensitivity_);
+    return *shape_displacement_sensitivity_;
+  };
 
 protected:
   /// The compile-time finite element trial space for displacement and velocity (H1 of order p)
@@ -1500,8 +1520,11 @@ protected:
   /// The total/implicit sensitivity of the qoi with respect to the start of the previous timestep's velocity
   FiniteElementDual implicit_sensitivity_velocity_start_of_step_;
 
-  /// nodal forces
+  /// nodal reaction forces
   FiniteElementDual reactions_;
+
+  /// sensitivity of qoi with respect to reaction forces
+  FiniteElementDual reactions_adjoint_load_;
 
   /// serac::Functional that is used to calculate the residual and its derivatives
   std::unique_ptr<ShapeAwareFunctional<shape_trial, test(trial, trial, parameter_space...)>> residual_;
@@ -1567,6 +1590,8 @@ protected:
                             displacement_, acceleration_, *parameters_[parameter_indices].state...);
       }...};
 
+public:
+
   /**
    * @brief Calculate a list of constrained dofs in the true displacement vector from a function that
    * returns true if a physical coordinate is in the constrained set
@@ -1577,10 +1602,10 @@ protected:
    * @return An array of the constrained true dofs
    */
   mfem::Array<int> calculateConstrainedDofs(std::function<bool(const mfem::Vector&)> is_node_constrained,
-                                            std::optional<int>                       component = {})
+                                            std::optional<int>                       component = {}) const
   {
     // Get the nodal positions for the displacement vector in grid function form
-    mfem::ParGridFunction nodal_positions(&displacement_.space());
+    mfem::ParGridFunction nodal_positions(const_cast<mfem::ParFiniteElementSpace*>(&displacement_.space())); // MRT mfem const correctness issue
     mesh_.GetNodes(nodal_positions);
 
     const int        num_nodes = nodal_positions.Size() / dim;
@@ -1625,6 +1650,8 @@ protected:
     }
     return constrained_dofs;
   }
+
+protected:
 
   /**
    * @brief Sets the Dirichlet BCs for the current time and computes an initial guess for parameters and displacement

@@ -35,6 +35,7 @@ set(solver_tests
     thermal_mechanics.cpp
     thermal_robin_condition.cpp
     dynamic_thermal_adjoint.cpp
+    solid_reaction_adjoint.cpp
     )
 blt_list_append(TO solver_tests ELEMENTS contact_patch.cpp contact_beam.cpp IF TRIBOL_FOUND)
 
