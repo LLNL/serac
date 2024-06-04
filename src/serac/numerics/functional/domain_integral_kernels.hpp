@@ -5,13 +5,13 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 #pragma once
 
+#include "serac/serac_config.hpp"
 #include "serac/infrastructure/accelerator.hpp"
 #include "serac/numerics/functional/quadrature_data.hpp"
 #include "serac/numerics/functional/function_signature.hpp"
 #include "serac/numerics/functional/differentiate_wrt.hpp"
+#include "RAJA/RAJA.hpp"
 
-#include <RAJA/index/RangeSegment.hpp>
-#include <RAJA/RAJA.hpp>
 #include <array>
 #include <cstdint>
 
@@ -27,41 +27,41 @@ namespace domain_integral {
  * trial space
  */
 template <typename space, typename dimension>
-SERAC_HOST_DEVICE struct QFunctionArgument;
+struct QFunctionArgument;
 
 /// @overload
 template <int p, int dim>
-SERAC_HOST_DEVICE struct QFunctionArgument<H1<p, 1>, Dimension<dim> > {
-  using type = tuple<double, tensor<double, dim> >;  ///< what will be passed to the q-function
+struct QFunctionArgument<H1<p, 1>, Dimension<dim>> {
+  using type = tuple<double, tensor<double, dim>>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p, int c, int dim>
-SERAC_HOST_DEVICE struct QFunctionArgument<H1<p, c>, Dimension<dim> > {
-  using type = tuple<tensor<double, c>, tensor<double, c, dim> >;  ///< what will be passed to the q-function
+struct QFunctionArgument<H1<p, c>, Dimension<dim>> {
+  using type = tuple<tensor<double, c>, tensor<double, c, dim>>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p, int dim>
-SERAC_HOST_DEVICE struct QFunctionArgument<L2<p, 1>, Dimension<dim> > {
-  using type = tuple<double, tensor<double, dim> >;  ///< what will be passed to the q-function
+struct QFunctionArgument<L2<p, 1>, Dimension<dim>> {
+  using type = tuple<double, tensor<double, dim>>;  ///< what will be passed to the q-function
 };
 /// @overload
 template <int p, int c, int dim>
-SERAC_HOST_DEVICE struct QFunctionArgument<L2<p, c>, Dimension<dim> > {
-  using type = tuple<tensor<double, c>, tensor<double, c, dim> >;  ///< what will be passed to the q-function
+struct QFunctionArgument<L2<p, c>, Dimension<dim>> {
+  using type = tuple<tensor<double, c>, tensor<double, c, dim>>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p>
-SERAC_HOST_DEVICE struct QFunctionArgument<Hcurl<p>, Dimension<2> > {
+struct QFunctionArgument<Hcurl<p>, Dimension<2>> {
   using type = tuple<tensor<double, 2>, double>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p>
-SERAC_HOST_DEVICE struct QFunctionArgument<Hcurl<p>, Dimension<3> > {
-  using type = tuple<tensor<double, 3>, tensor<double, 3> >;  ///< what will be passed to the q-function
+struct QFunctionArgument<Hcurl<p>, Dimension<3>> {
+  using type = tuple<tensor<double, 3>, tensor<double, 3>>;  ///< what will be passed to the q-function
 };
 
 /// @brief layer of indirection needed to unpack the entries of the argument tuple
