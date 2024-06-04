@@ -1394,8 +1394,6 @@ public:
     SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
                     axom::fmt::format("Invalid parameter index '{}' requested for sensitivity."));
 
-    // TODO: the time is likely not being handled correctly on the reverse pass, but we don't
-    //       have tests to confirm.
     auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](ode_time_point_));
     auto drdparam_mat = assemble(drdparam);
 
@@ -1462,22 +1460,52 @@ public:
   /// @brief getter for nodal forces (before zeroing-out essential dofs)
   const serac::FiniteElementDual& reactions() const { return reactions_; };
 
-  const serac::FiniteElementDual& computeReactionsAdjointLoad(const serac::FiniteElementState& v) {
+  /**
+   * @brief computes the adjoint load due to reaction load sensitivities
+   *
+   * @param reactionDirection A FiniteElementState which specifies how the reactions dofs were weighted for the reaction qoi
+   * @return A reference to the adjoint load to be set before calling reverseAdjointTimestep()
+   */
+  const serac::FiniteElementDual& computeReactionsAdjointLoad(const serac::FiniteElementState& reactionDirection) {
     auto [_, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
                                   *parameters_[parameter_indices].state...);
     std::unique_ptr<mfem::HypreParMatrix> jacobian = assemble(drdu);
     reactions_adjoint_load_ = 0.0;
-    jacobian->MultTranspose(v, reactions_adjoint_load_);
+    jacobian->MultTranspose(reactionDirection, reactions_adjoint_load_);
     return reactions_adjoint_load_;
   }
 
-  /// @brief getter for nodal forces (before zeroing-out essential dofs)
-  const serac::FiniteElementDual& computeReactionsShapeSensitivity(const serac::FiniteElementState& v) {
+  /**
+   * @brief computes the partial sensitivity of the reaction loads (in specified direction)  with respect to parameter
+   *
+   * @param reactionDirection A FiniteElementState which specifies how the reactions dofs were weighted for the reaction qoi
+   * @return A reference sensitivity field
+   */
+  const serac::FiniteElementDual& computeReactionsSensitivity(const serac::FiniteElementState& reactionDirection, size_t parameter_field)
+  {
+    SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
+                    axom::fmt::format("Invalid parameter index '{}' requested for reaction sensitivity."));
+
+    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](ode_time_point_));
+    auto drdparam_mat = assemble(drdparam);
+
+    drdparam_mat->MultTranspose(reactionDirection, *parameters_[parameter_field].sensitivity);
+
+    return *parameters_[parameter_field].sensitivity;
+  };
+
+  /**
+   * @brief computes the partial sensitivity of the reaction loads (in specified direction)  with respect to shape
+   *
+   * @param reactionDirection A FiniteElementState which specifies how the reactions dofs were weighted for the reaction qoi
+   * @return A reference sensitivity field
+   */
+  const serac::FiniteElementDual& computeReactionsShapeSensitivity(const serac::FiniteElementState& reactionDirection) {
     auto drdshape =
         serac::get<DERIVATIVE>((*residual_)(ode_time_point_, differentiate_wrt(shape_displacement_), displacement_,
                                             acceleration_, *parameters_[parameter_indices].state...));
     auto drdshape_mat = assemble(drdshape);
-    drdshape_mat->MultTranspose(v, *shape_displacement_sensitivity_);
+    drdshape_mat->MultTranspose(reactionDirection, *shape_displacement_sensitivity_);
     return *shape_displacement_sensitivity_;
   };
 

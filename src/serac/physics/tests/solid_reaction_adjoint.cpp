@@ -8,7 +8,8 @@
 #include <string>
 
 #include "serac/physics/solid_mechanics.hpp"
-#include "serac/physics/materials/solid_material.hpp"
+//#include "serac/physics/materials/solid_material.hpp"
+#include "serac/physics/materials/parameterized_solid_material.hpp"
 
 #include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
@@ -23,30 +24,41 @@ namespace serac {
 constexpr int dim = 2;
 constexpr int p   = 1;
 
-using SolidMechanicsType = SolidMechanics<p, dim>;
+using SolidMechanicsType = SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>>;
 
 const std::string mesh_tag       = "mesh";
 const std::string physics_prefix = "solid";
 
-using SolidMaterial = solid_mechanics::NeoHookean;
+using SolidMaterial = solid_mechanics::ParameterizedNeoHookeanSolid<dim>; //NeoHookean;
 auto geoNonlinear   = GeometricNonlinearities::On;
 
-// constexpr double dispTarget   = -0.34;
-constexpr double boundaryDisp = 0.013;
+constexpr double boundary_disp = 0.013;
+constexpr double shear_modulus_value = 1.0;
+constexpr double bulk_modulus_value = 1.0;
 
 std::unique_ptr<SolidMechanicsType> createNonlinearSolidMechanicsSolver(
-    axom::sidre::DataStore& /*data_store*/, const NonlinearSolverOptions& nonlinear_opts,
+    mfem::ParMesh&, const NonlinearSolverOptions& nonlinear_opts,
     const SolidMaterial& mat)
 {
   static int iter = 0;
-  auto       solid =
-      std::make_unique<SolidMechanicsType>(nonlinear_opts, solid_mechanics::direct_linear_options, TimesteppingOptions(),
-                                           geoNonlinear, physics_prefix + std::to_string(iter++), mesh_tag);
-  solid->setMaterial(mat);
-  solid->setDisplacementBCs({1}, [](const mfem::Vector& x, mfem::Vector& disp) {
-    disp = boundaryDisp;
-    std::cout << x.Size() << ", x = " << x[0] << " " << x[1] << std::endl;
+  auto solid =
+      std::make_unique<SolidMechanicsType>(nonlinear_opts, solid_mechanics::direct_linear_options, solid_mechanics::default_quasistatic_options,
+                                           geoNonlinear, physics_prefix + std::to_string(iter++), mesh_tag, std::vector<std::string>{"shear modulus", "bulk modulus"});
 
+  // Construct and initialized the user-defined moduli to be used as a differentiable parameter in
+  // the solid physics module.
+  FiniteElementState user_defined_shear_modulus(StateManager::mesh(mesh_tag), H1<p>{}, "parameterized_shear");
+  user_defined_shear_modulus = shear_modulus_value;
+
+  FiniteElementState user_defined_bulk_modulus(StateManager::mesh(mesh_tag), H1<p>{}, "parameterized_bulk");
+  user_defined_bulk_modulus = bulk_modulus_value;
+
+  solid->setParameter(0, user_defined_bulk_modulus);
+  solid->setParameter(1, user_defined_shear_modulus);
+
+  solid->setMaterial(DependsOn<0, 1>{}, mat);
+  solid->setDisplacementBCs({1}, [](const mfem::Vector&, mfem::Vector& disp) {
+    disp = boundary_disp;
   });
   solid->addBodyForce([](auto X, auto /* t */) {
     auto Y = X;
@@ -82,24 +94,29 @@ double computeSolidMechanicsQoi(BasePhysics& solid_solver)
   return innerProduct(reactions, reactionDirections);
 }
 
-std::tuple<double, FiniteElementDual> computeSolidMechanicsQoiAndShapeSensitivity(BasePhysics& solid_solver)
+auto computeSolidMechanicsQoiSensitivities(BasePhysics& solid_solver)
 {
   double qoi = computeSolidMechanicsQoi(solid_solver);
   FiniteElementDual shape_sensitivity(solid_solver.shapeDisplacement().space(), "shape sensitivity");
   shape_sensitivity = 0.0;
 
-  auto& solidS = dynamic_cast<SolidMechanicsType&>(solid_solver);
+  FiniteElementDual shear_modulus_sensitivity(StateManager::mesh(mesh_tag), H1<p>{}, "shear modulus sensitivity");
+  shear_modulus_sensitivity = 0.0;
 
+  auto& solidS = dynamic_cast<SolidMechanicsType&>(solid_solver);
   auto reactionDirections = createReactionDirection(solidS, 0);
 
   auto reactionAdjointLoad = solidS.computeReactionsAdjointLoad(reactionDirections);
-  shape_sensitivity += solidS.computeReactionsShapeSensitivity(reactionDirections);
-
   solid_solver.setAdjointLoad({{"displacement", reactionAdjointLoad}});
   solid_solver.reverseAdjointTimestep();
+
   shape_sensitivity += solid_solver.computeTimestepShapeSensitivity();
-  
-  return std::make_pair(qoi, shape_sensitivity);
+  shape_sensitivity += solidS.computeReactionsShapeSensitivity(reactionDirections);
+
+  shear_modulus_sensitivity += solid_solver.computeTimestepSensitivity(0);
+  shear_modulus_sensitivity += solidS.computeReactionsSensitivity(reactionDirections, 0);
+
+  return std::make_tuple(qoi, shear_modulus_sensitivity, shape_sensitivity);
 }
 
 double computeSolidMechanicsQoiAdjustingShape(BasePhysics& solid_solver, const FiniteElementState& shape_derivative_direction, double pertubation)
@@ -114,6 +131,20 @@ double computeSolidMechanicsQoiAdjustingShape(BasePhysics& solid_solver, const F
   return computeSolidMechanicsQoi(solid_solver);
 }
 
+double computeSolidMechanicsQoiAdjustingShearModulus(BasePhysics& solid_solver, const FiniteElementState& shear_modulus_derivative_direction, double pertubation)
+{
+  FiniteElementState user_defined_shear_modulus(StateManager::mesh(mesh_tag), H1<p>{}, "parameterized_shear");
+  user_defined_shear_modulus = shear_modulus_value;
+
+  SLIC_ASSERT_MSG(user_defined_shear_modulus.Size() == shear_modulus_derivative_direction.Size(),
+                  "Shape displacement and intended derivative direction FiniteElementState sizes do not agree.");
+
+  user_defined_shear_modulus.Add(pertubation, shear_modulus_derivative_direction);
+  solid_solver.setParameter(0, user_defined_shear_modulus);
+
+  return computeSolidMechanicsQoi(solid_solver);
+}
+
 
 struct SolidMechanicsSensitivityFixture : public ::testing::Test {
   void SetUp() override
@@ -123,8 +154,8 @@ struct SolidMechanicsSensitivityFixture : public ::testing::Test {
     std::string filename = std::string(SERAC_REPO_DIR) + "/data/meshes/patch2D_quads.mesh";  //"/data/meshes/star.mesh";
     mesh                 = &StateManager::setMesh(mesh::refineAndDistribute(buildMeshFromFile(filename), 0), mesh_tag);
     mat.density          = 1.0;
-    mat.K                = 1.0;
-    mat.G                = 0.1;
+    mat.K0               = 1.0;
+    mat.G0               = 0.1;
   }
 
   void fillDirection(FiniteElementState& direction) const
@@ -149,18 +180,31 @@ struct SolidMechanicsSensitivityFixture : public ::testing::Test {
 
 TEST_F(SolidMechanicsSensitivityFixture, ReactionShapeSensitivities)
 {
-  auto solid_solver = createNonlinearSolidMechanicsSolver(dataStore, nonlinear_opts, mat);
-  auto [qoi_base, shape_sensitivity] = computeSolidMechanicsQoiAndShapeSensitivity(*solid_solver);
-
-  std::cout << "qoi = " << qoi_base << std::endl;
+  auto solid_solver = createNonlinearSolidMechanicsSolver(*mesh, nonlinear_opts, mat);
+  auto [qoi_base, _, shape_sensitivity] = computeSolidMechanicsQoiSensitivities(*solid_solver);
 
   solid_solver->resetStates();
   FiniteElementState derivative_direction(shape_sensitivity.space(), "derivative_direction");
   fillDirection(derivative_direction);
 
   double qoi_plus = computeSolidMechanicsQoiAdjustingShape(*solid_solver, derivative_direction, eps);
-
   double directional_deriv = innerProduct(derivative_direction, shape_sensitivity);
+
+  EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, eps);
+}
+
+TEST_F(SolidMechanicsSensitivityFixture, ReactionParameterSensitivities)
+{
+  auto solid_solver = createNonlinearSolidMechanicsSolver(*mesh, nonlinear_opts, mat);
+  auto [qoi_base, shear_modulus_sensitivity, _] = computeSolidMechanicsQoiSensitivities(*solid_solver);
+
+  solid_solver->resetStates();
+  FiniteElementState derivative_direction(shear_modulus_sensitivity.space(), "derivative_direction");
+  fillDirection(derivative_direction);
+
+  double qoi_plus = computeSolidMechanicsQoiAdjustingShearModulus(*solid_solver, derivative_direction, eps);
+  double directional_deriv = innerProduct(derivative_direction, shear_modulus_sensitivity);
+
   EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, eps);
 }
 
