@@ -102,6 +102,7 @@ TEST(FiniteElementVector, SetVectorFieldOver2DDomain)
   u = 0.0;
   u.project(func, essential_boundary);
 
+  // check x-component values 
   EXPECT_NEAR(u[0], 1.0, 1.0e-15);
   EXPECT_NEAR(u[1], 1.5, 1.0e-15);
   EXPECT_NEAR(u[2], 2.0, 1.0e-15);
@@ -109,6 +110,7 @@ TEST(FiniteElementVector, SetVectorFieldOver2DDomain)
     EXPECT_NEAR(u[i], 0.0, 1.0e-15);
   }
 
+  // check y-component values 
   EXPECT_NEAR(u[9], 2.0, 1.0e-15);
   EXPECT_NEAR(u[10], 2.5, 1.0e-15);
   EXPECT_NEAR(u[11], 3.0, 1.0e-15);
