@@ -18,6 +18,7 @@ set(functional_tests_serial
     simplex_basis_function_unit_tests.cpp
     bug_boundary_qoi.cpp
     domain_tests.cpp
+    fbar_unit_test.cpp
     geometric_factors_tests.cpp
     hcurl_unit_tests.cpp
     functional_tet_quality.cpp
