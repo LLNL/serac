@@ -47,7 +47,6 @@ enum class ElementType
  * containing the true degrees of freedom for the field.
  */
 class FiniteElementVector : public mfem::HypreParVector {
-
 public:
   /**
    * @brief Minimal constructor for a FiniteElementVector given a finite element space
@@ -193,7 +192,6 @@ public:
    * @brief Destroy the Finite Element Vector object
    */
   virtual ~FiniteElementVector() {}
-
 
 protected:
   /**

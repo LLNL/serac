@@ -71,7 +71,7 @@ std::unique_ptr<SolidMechanicsType> createNonlinearSolidMechanicsSolver(mfem::Pa
 }
 
 template <int dim>
-tensor<double, dim> average(std::vector<tensor<double, dim> >& positions)
+tensor<double, dim> average(std::vector<tensor<double, dim>>& positions)
 {
   tensor<double, dim> total{};
   for (auto x : positions) {
@@ -92,7 +92,7 @@ FiniteElementState createReactionDirection(const SolidMechanicsType& solid_solve
     Domain essential_boundary = Domain::ofBoundaryElements(StateManager::mesh(mesh_tag), by_attr<dim>(1));
 
     mfem::VectorFunctionCoefficient func(dim, [](const mfem::Vector& /*x*/, mfem::Vector& u) {
-      u[0] = 1.0; //1.234;
+      u[0] = 1.0;  // 1.234;
       u[1] = 0.0;
     });
 
@@ -100,9 +100,9 @@ FiniteElementState createReactionDirection(const SolidMechanicsType& solid_solve
 
     auto sz = reactionDirections.Size();
     std::cout << "size = " << sz << std::endl;
-    for (int i=0; i < sz/2; ++i) {
-      if (reactionDirections[2*i] == 1.234) {
-        std::cout << "x = " << reactionDirections[2*i+1] << std::endl;
+    for (int i = 0; i < sz / 2; ++i) {
+      if (reactionDirections[2 * i] == 1.234) {
+        std::cout << "x = " << reactionDirections[2 * i + 1] << std::endl;
       }
     }
   } else {

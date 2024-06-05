@@ -764,8 +764,8 @@ public:
       return reactions_adjoint_load_;
     }
 
-    SLIC_ERROR_ROOT(axom::fmt::format("dualAdjoint '{}' requested from solid mechanics module '{}', but it doesn't exist",
-                                      dual_name, name_));
+    SLIC_ERROR_ROOT(axom::fmt::format(
+        "dualAdjoint '{}' requested from solid mechanics module '{}', but it doesn't exist", dual_name, name_));
     return reactions_adjoint_load_;
   }
 

@@ -385,22 +385,22 @@ Domain Domain::ofBoundaryElements(const mfem::Mesh& mesh, std::function<bool(std
   return domain_of_boundary_elems<3>(mesh, func);
 }
 
-mfem::Array<int> Domain::dof_list(mfem::FiniteElementSpace * fes) const
+mfem::Array<int> Domain::dof_list(mfem::FiniteElementSpace* fes) const
 {
-  std::set<int> dof_ids;
+  std::set<int>    dof_ids;
   mfem::Array<int> elem_dofs;
 
-  std::function< void(int i, mfem::Array<int> &) > GetDofs;
+  std::function<void(int i, mfem::Array<int>&)> GetDofs;
   if (type_ == Type::Elements) {
-    GetDofs = [&](int i, mfem::Array<int> & vdofs) { return fes->GetElementDofs(i, vdofs); };
+    GetDofs = [&](int i, mfem::Array<int>& vdofs) { return fes->GetElementDofs(i, vdofs); };
   }
 
   if (type_ == Type::BoundaryElements) {
-    GetDofs = [&](int i, mfem::Array<int> & vdofs) { return fes->GetFaceDofs(i, vdofs); };
+    GetDofs = [&](int i, mfem::Array<int>& vdofs) { return fes->GetFaceDofs(i, vdofs); };
   }
 
   if (dim_ == 0) {
-  // sam: what to do with vertex sets?
+    // sam: what to do with vertex sets?
   }
 
   if (dim_ == 1) {
@@ -445,7 +445,7 @@ mfem::Array<int> Domain::dof_list(mfem::FiniteElementSpace * fes) const
   }
 
   mfem::Array<int> uniq_dof_ids(int(dof_ids.size()));
-  int i = 0;
+  int              i = 0;
   for (auto id : dof_ids) {
     uniq_dof_ids[i++] = id;
   }
@@ -457,8 +457,6 @@ mfem::Array<int> Domain::dof_list(mfem::FiniteElementSpace * fes) const
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
-
-
 
 Domain EntireDomain(const mfem::Mesh& mesh)
 {

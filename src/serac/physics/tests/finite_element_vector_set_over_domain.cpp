@@ -45,13 +45,12 @@ TEST(FiniteElementVector, SetScalarFieldOver2DDomain)
 
   auto pmesh = mesh::refineAndDistribute(std::move(mesh), 0, 0);
 
-  constexpr int p   = 1;
+  constexpr int p = 1;
 
   FiniteElementState u(*pmesh, H1<p, 1>{});
 
-  Domain essential_boundary = Domain::ofBoundaryElements(*pmesh, [](std::vector<serac::vec2> x, int /*attr*/){ 
-    return average(x)[1] < 0.1; 
-  }); 
+  Domain essential_boundary =
+      Domain::ofBoundaryElements(*pmesh, [](std::vector<serac::vec2> x, int /*attr*/) { return average(x)[1] < 0.1; });
 
   mfem::FunctionCoefficient func([](const mfem::Vector& x, double) -> double { return x[0] + 1.0; });
 
@@ -64,7 +63,6 @@ TEST(FiniteElementVector, SetScalarFieldOver2DDomain)
   for (int i = 3; i < 9; i++) {
     EXPECT_NEAR(u[i], 0.0, 1.0e-15);
   }
-
 }
 
 TEST(FiniteElementVector, SetVectorFieldOver2DDomain)
@@ -89,11 +87,10 @@ TEST(FiniteElementVector, SetVectorFieldOver2DDomain)
 
   FiniteElementState u(*pmesh, H1<p, dim>{});
 
-  Domain essential_boundary = Domain::ofBoundaryElements(*pmesh, [](std::vector<serac::vec2> x, int /*attr*/){ 
-    return average(x)[1] < 0.1; 
-  }); 
+  Domain essential_boundary =
+      Domain::ofBoundaryElements(*pmesh, [](std::vector<serac::vec2> x, int /*attr*/) { return average(x)[1] < 0.1; });
 
-  mfem::VectorFunctionCoefficient func(dim, [](const mfem::Vector& x, mfem::Vector& u) { 
+  mfem::VectorFunctionCoefficient func(dim, [](const mfem::Vector& x, mfem::Vector& u) {
     u[0] = x[0] + 1.0;
     u[1] = x[0] + 2.0;
   });
@@ -114,7 +111,6 @@ TEST(FiniteElementVector, SetVectorFieldOver2DDomain)
   for (int i = 3; i < 9; i++) {
     EXPECT_NEAR(u[i + 9], 0.0, 1.0e-15);
   }
-
 }
 
 }  // namespace serac

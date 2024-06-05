@@ -130,8 +130,7 @@ struct Domain {
     exit(1);
   }
 
-  mfem::Array<int> dof_list(mfem::FiniteElementSpace * fes) const;
-
+  mfem::Array<int> dof_list(mfem::FiniteElementSpace* fes) const;
 };
 
 /// @brief constructs a domain from all the elements in a mesh

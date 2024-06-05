@@ -201,10 +201,10 @@ public:
   void projectOnBoundary(mfem::VectorCoefficient& coef, const mfem::Array<int>& markers);
 
   /// \overload
-  void project(mfem::Coefficient& coef, const Domain & d);
+  void project(mfem::Coefficient& coef, const Domain& d);
 
   /// \overload
-  void project(mfem::VectorCoefficient& coef, const Domain & d);
+  void project(mfem::VectorCoefficient& coef, const Domain& d);
 
   /**
    * @brief Construct a grid function from the finite element state true vector
