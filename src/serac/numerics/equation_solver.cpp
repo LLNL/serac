@@ -214,6 +214,15 @@ void print_trust_region_info(double realObjective, double modelObjective, size_t
             << trSize << ", accepting = " << willAccept << std::endl;
 }
 
+/**
+* @brief Equation solver class based on a standard preconditioned trust-region algorithm
+*
+* This is a fairly standard implementation of 'The Conjugate Gradient Method and Trust Regions in Large Scale Optimization' by T. Steihaug
+* It is also called the Steihaug-Toint CG trust region algorithm (see also Trust Region Methods by Conn, Gould, and Toint).
+* One important difference is we do not compute an explicit energy.  Instead we rely on an incremental
+* work approximation: 0.5 (f^n + f^{n+1}) dot (u^{n+1} - u^n).  While less theoretically sound, it appears 
+* to be very effective in practice.
+*/
 class TrustRegion : public mfem::NewtonSolver {
 protected:
   mutable mfem::Vector xPred;
