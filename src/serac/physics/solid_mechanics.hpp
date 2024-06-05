@@ -764,7 +764,7 @@ public:
       return reactions_adjoint_load_;
     }
 
-    SLIC_ERROR_ROOT(axom::fmt::format("dual '{}' requested from solid mechanics module '{}', but it doesn't exist",
+    SLIC_ERROR_ROOT(axom::fmt::format("dualAdjoint '{}' requested from solid mechanics module '{}', but it doesn't exist",
                                       dual_name, name_));
     return reactions_adjoint_load_;
   }
@@ -1428,7 +1428,7 @@ public:
   void computeDualAdjointLoad(const std::string&               dual_name,
                               const serac::FiniteElementState& reaction_direction) override
   {
-    SLIC_ERROR_ROOT_IF(dual_name != "reactions", "Solid mechanics has reactions as its only duel");
+    SLIC_ERROR_ROOT_IF(dual_name != "reactions", "Solid mechanics has reactions as its only dual");
 
     auto [_, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
                                   *parameters_[parameter_indices].state...);
