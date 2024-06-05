@@ -96,7 +96,6 @@ double dth_root(double x) {
 template < int dim >
 void fbar(std::vector< mat<dim> > & dubar_dx, // actual output
           double & Jbar,                      // output for the sake of testing
-          //std::vector< double > & scale,      // output for the sake of testing
           std::vector< double > & J,          // output for the sake of testing
           std::vector< mat<dim> > & F,        // output for the sake of testing
           const std::vector< mat<dim> > & du_dx, 
@@ -115,15 +114,9 @@ void fbar(std::vector< mat<dim> > & dubar_dx, // actual output
         Jbar += w[q] * J[q];
     }
 
-    //scale.resize(num_qpts);
     dubar_dx.resize(num_qpts);
     for (uint32_t q = 0; q < num_qpts; q++) {
-        //scale[q] = dth_root<dim>(Jbar / J[q]);
-        #if 0
         dubar_dx[q] = dth_root<dim>(Jbar / J[q]) * F[q] - I;
-        #else
-        dubar_dx[q] = dth_root<dim>(Jbar / J[q]) * I;
-        #endif
     }
 
 }
@@ -165,25 +158,6 @@ void Jbar_jvp(                   double   & dJbar,
 
 }
 
-//template < int dim >
-//void scale_jvp(                   double   & dscale, 
-//              const std::vector< mat<dim> > & du_dx, 
-//              const std::vector< mat<dim> > & ddu_dx,
-//              const std::vector< double > & w) {
-//
-//    constexpr mat<dim> I = serac::DenseIdentity<dim>();
-//
-//    uint32_t num_qpts = uint32_t(du_dx.size());
-//
-//    dJbar = 0.0;
-//    for (uint32_t q = 0; q < num_qpts; q++) {
-//        mat<dim> F = I + du_dx[q];
-//        double J = det(F);
-//        dJbar += inner(inv(transpose(F)), ddu_dx[q]) * J * w[q]; 
-//    }
-//
-//}
-
 template < int dim >
 void dubar_dx_jvp(std::vector< mat<dim> > & ddubar_dx,
                   const std::vector< mat<dim> > & du_dx, 
@@ -200,36 +174,19 @@ void dubar_dx_jvp(std::vector< mat<dim> > & ddubar_dx,
 
     // calculate Jbar and intermediate quantities
     double Jbar = 0.0;
+    double z = 0.0;
     for (uint32_t q = 0; q < num_qpts; q++) {
         F[q] = I + du_dx[q];
         invFT[q] = transpose(inv(F[q]));
         J[q] = det(F[q]);
         Jbar += J[q] * w[q];
+        z += J[q] * w[q] * inner(invFT[q], ddu_dx[q]);
     }
+    z /= Jbar;
 
     ddubar_dx.resize(num_qpts);
     for (uint32_t q = 0; q < num_qpts; q++) {
-        double invJ_q = 1.0 / J[q];
-        double alpha = Jbar * invJ_q;
-        double scale = dth_root<dim>(alpha);
-
-    #if 0
-        mat<dim> weighted_sum{};
-        for (uint32_t p = 0; p < num_qpts; p++) {
-            weighted_sum += ddu_dx[p] * ((J[p] * w[p] - Jbar * (p == q)) * invJ_q);
-        }
-        double F_scale = (1.0 / dim) * (scale / alpha) * inner(invFT[q], weighted_sum);
-
-        ddubar_dx[q] = scale * ddu_dx[q] + F_scale * F[q];
-    #else
-        mat<dim> weighted_sum{};
-        for (uint32_t p = 0; p < num_qpts; p++) {
-            weighted_sum += ddu_dx[p] * ((J[p] * w[p] - Jbar * (p == q)) * invJ_q);
-        }
-        double F_scale = (1.0 / dim) * (scale / alpha) * inner(invFT[q], weighted_sum);
-
-        ddubar_dx[q] = F_scale * I;
-    #endif
+        ddubar_dx[q] = dth_root<dim>(Jbar / J[q]) * (ddu_dx[q] + (1.0 / dim) * (z - inner(invFT[q], ddu_dx[q])) * F[q]);
     }
 
 }
@@ -282,7 +239,6 @@ void directional_derivatives_test() {
 
         for (uint32_t i = 0; i < num_quadrature_points; i++) {
             EXPECT_NEAR(norm(ddubar_dx1[i] - ddubar_dx0[i]), 0.0, 1.0e-9);
-            std::cout << ddubar_dx0[i] << " " << ddubar_dx1[i] << std::endl;
         }
     }
 
