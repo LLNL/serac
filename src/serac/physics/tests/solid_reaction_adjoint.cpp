@@ -29,7 +29,7 @@ using SolidMechanicsType = SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>>;
 const std::string mesh_tag       = "mesh";
 const std::string physics_prefix = "solid";
 
-using SolidMaterial = solid_mechanics::ParameterizedNeoHookeanSolid<dim>;  // NeoHookean;
+using SolidMaterial = solid_mechanics::ParameterizedNeoHookeanSolid<dim>;
 auto geoNonlinear   = GeometricNonlinearities::On;
 
 constexpr double boundary_disp       = 0.013;
@@ -62,7 +62,7 @@ std::unique_ptr<SolidMechanicsType> createNonlinearSolidMechanicsSolver(mfem::Pa
   solid->addBodyForce([](auto X, auto /* t */) {
     auto Y = X;
     Y[0]   = 0.1 + 0.1 * X[0] + 0.3 * X[1];
-    Y[1]   = -0.05 - 0.08 * X[0] + 0.15 * X[1];
+    Y[1]   = -0.05 - 0.2 * X[0] + 0.15 * X[1];
     return 0.1 * X + Y;
   });
   solid->completeSetup();
@@ -70,17 +70,47 @@ std::unique_ptr<SolidMechanicsType> createNonlinearSolidMechanicsSolver(mfem::Pa
   return solid;
 }
 
+template <int dim>
+tensor<double, dim> average(std::vector<tensor<double, dim> >& positions)
+{
+  tensor<double, dim> total{};
+  for (auto x : positions) {
+    total += x;
+  }
+  return total / double(positions.size());
+}
+
 FiniteElementState createReactionDirection(const SolidMechanicsType& solid_solver, int direction)
 {
+  (void)direction;
   const FiniteElementDual& reactions = solid_solver.dual("reactions");
 
   FiniteElementState reactionDirections(reactions.space(), "reaction_directions");
   reactionDirections = 0.0;
 
-  auto reactionTrueDofs =
-      solid_solver.calculateConstrainedDofs([&](const mfem::Vector& x) { return x[0] < 1e-14; }, direction);
+  if (true) {
+    Domain essential_boundary = Domain::ofBoundaryElements(StateManager::mesh(mesh_tag), by_attr<dim>(1));
 
-  reactionDirections.SetSubVector(reactionTrueDofs, 1.0);
+    mfem::VectorFunctionCoefficient func(dim, [](const mfem::Vector& /*x*/, mfem::Vector& u) {
+      u[0] = 1.0; //1.234;
+      u[1] = 0.0;
+    });
+
+    reactionDirections.project(func, essential_boundary);
+
+    auto sz = reactionDirections.Size();
+    std::cout << "size = " << sz << std::endl;
+    for (int i=0; i < sz/2; ++i) {
+      if (reactionDirections[2*i] == 1.234) {
+        std::cout << "x = " << reactionDirections[2*i+1] << std::endl;
+      }
+    }
+  } else {
+    auto reactionTrueDofs =
+        solid_solver.calculateConstrainedDofs([&](const mfem::Vector& x) { return x[0] < 1e-14; }, direction);
+
+    reactionDirections.SetSubVector(reactionTrueDofs, 1.0);
+  }
   return reactionDirections;
 }
 
@@ -153,8 +183,8 @@ struct SolidMechanicsSensitivityFixture : public ::testing::Test {
   {
     MPI_Barrier(MPI_COMM_WORLD);
     StateManager::initialize(dataStore, "solid_mechanics_solve");
-    std::string filename = std::string(SERAC_REPO_DIR) + "/data/meshes/patch2D_quads.mesh";  //"/data/meshes/star.mesh";
-    mesh                 = &StateManager::setMesh(mesh::refineAndDistribute(buildMeshFromFile(filename), 0), mesh_tag);
+    std::string filename = std::string(SERAC_REPO_DIR) + "/data/meshes/patch2D_quads.mesh";
+    mesh                 = &StateManager::setMesh(mesh::refineAndDistribute(buildMeshFromFile(filename), 1), mesh_tag);
     mat.density          = 1.0;
     mat.K0               = 1.0;
     mat.G0               = 0.1;
@@ -192,6 +222,7 @@ TEST_F(SolidMechanicsSensitivityFixture, ReactionShapeSensitivities)
   double qoi_plus          = computeSolidMechanicsQoiAdjustingShape(*solid_solver, derivative_direction, eps);
   double directional_deriv = innerProduct(derivative_direction, shape_sensitivity);
 
+  std::cout << "qoi, qoi = " << qoi_base << " " << qoi_plus << std::endl;
   EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, eps);
 }
 
