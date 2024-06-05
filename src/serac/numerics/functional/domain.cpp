@@ -390,13 +390,13 @@ mfem::Array<int> Domain::dof_list(mfem::FiniteElementSpace * fes) const
   std::set<int> dof_ids;
   mfem::Array<int> elem_dofs;
 
-  std::function< void(int i, mfem::Array<int> &) > GetVDofs;
+  std::function< void(int i, mfem::Array<int> &) > GetDofs;
   if (type_ == Type::Elements) {
-    GetVDofs = [&](int i, mfem::Array<int> & vdofs) { return fes->GetElementVDofs(i, vdofs); };
+    GetDofs = [&](int i, mfem::Array<int> & vdofs) { return fes->GetElementDofs(i, vdofs); };
   }
 
   if (type_ == Type::BoundaryElements) {
-    GetVDofs = [&](int i, mfem::Array<int> & vdofs) { return fes->GetFaceVDofs(i, vdofs); };
+    GetDofs = [&](int i, mfem::Array<int> & vdofs) { return fes->GetFaceDofs(i, vdofs); };
   }
 
   if (dim_ == 0) {
@@ -405,7 +405,7 @@ mfem::Array<int> Domain::dof_list(mfem::FiniteElementSpace * fes) const
 
   if (dim_ == 1) {
     for (auto elem_id : mfem_edge_ids_) {
-      GetVDofs(elem_id, elem_dofs);
+      GetDofs(elem_id, elem_dofs);
       for (int i = 0; i < elem_dofs.Size(); i++) {
         dof_ids.insert(elem_dofs[i]);
       }
@@ -414,14 +414,14 @@ mfem::Array<int> Domain::dof_list(mfem::FiniteElementSpace * fes) const
 
   if (dim_ == 2) {
     for (auto elem_id : mfem_tri_ids_) {
-      GetVDofs(elem_id, elem_dofs);
+      GetDofs(elem_id, elem_dofs);
       for (int i = 0; i < elem_dofs.Size(); i++) {
         dof_ids.insert(elem_dofs[i]);
       }
     }
 
     for (auto elem_id : mfem_quad_ids_) {
-      GetVDofs(elem_id, elem_dofs);
+      GetDofs(elem_id, elem_dofs);
       for (int i = 0; i < elem_dofs.Size(); i++) {
         dof_ids.insert(elem_dofs[i]);
       }
@@ -430,14 +430,14 @@ mfem::Array<int> Domain::dof_list(mfem::FiniteElementSpace * fes) const
 
   if (dim_ == 3) {
     for (auto elem_id : mfem_tet_ids_) {
-      GetVDofs(elem_id, elem_dofs);
+      GetDofs(elem_id, elem_dofs);
       for (int i = 0; i < elem_dofs.Size(); i++) {
         dof_ids.insert(elem_dofs[i]);
       }
     }
 
     for (auto elem_id : mfem_hex_ids_) {
-      GetVDofs(elem_id, elem_dofs);
+      GetDofs(elem_id, elem_dofs);
       for (int i = 0; i < elem_dofs.Size(); i++) {
         dof_ids.insert(elem_dofs[i]);
       }
