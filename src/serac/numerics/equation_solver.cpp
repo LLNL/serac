@@ -16,21 +16,25 @@
 
 namespace serac {
 
+/// Newton solver with a 2-way line-search.  Reverts to regular Newton if max_line_search_iterations is set to 0.
 class NewtonSolver : public mfem::NewtonSolver {
 protected:
   mutable mfem::Vector   x0;
   NonlinearSolverOptions nonlinear_options;
 
 public:
+  ///
   NewtonSolver(const NonlinearSolverOptions& nonlinear_opts) : nonlinear_options(nonlinear_opts) {}
 
 #ifdef MFEM_USE_MPI
+  ///
   NewtonSolver(MPI_Comm comm_, const NonlinearSolverOptions& nonlinear_opts)
       : mfem::NewtonSolver(comm_), nonlinear_options(nonlinear_opts)
   {
   }
 #endif
 
+  /// Evaluate the residual, put in rOut and return its norm.
   double evaluate_norm(const mfem::Vector& x, mfem::Vector& rOut) const
   {
     double normEval = std::numeric_limits<double>::max();
@@ -43,6 +47,7 @@ public:
     return normEval;
   }
 
+  /// @overload
   void Mult(const mfem::Vector&, mfem::Vector& x) const
   {
     MFEM_ASSERT(oper != NULL, "the Operator is not set (use SetOperator).");
@@ -162,6 +167,7 @@ public:
   }
 };
 
+/// Internal structure for storing trust region settings
 struct TrustRegionSettings {
   double cgTol                  = 1e-8;
   size_t maxCgIterations        = 10000;  // should be around # of system dofs
@@ -174,6 +180,7 @@ struct TrustRegionSettings {
   double eta3                   = 0.6;
 };
 
+/// Internal structure for storing trust region stateful data
 struct TrustRegionResults {
   TrustRegionResults(int size)
   {
@@ -206,6 +213,7 @@ struct TrustRegionResults {
   size_t       cgIterationsCount = 0;
 };
 
+/// trust region printing utility function
 void print_trust_region_info(double realObjective, double modelObjective, size_t cgIters, double trSize,
                              bool willAccept)
 {
@@ -235,6 +243,7 @@ protected:
 
 public:
 #ifdef MFEM_USE_MPI
+  ///
   TrustRegion(MPI_Comm comm_, const NonlinearSolverOptions& nonlinear_opts, const LinearSolverOptions& linear_opts,
               Solver& tPrec)
       : mfem::NewtonSolver(comm_), nonlinear_options(nonlinear_opts), linear_options(linear_opts), trPrecond(tPrec)
@@ -242,6 +251,7 @@ public:
   }
 #endif
 
+  ///
   void project_to_boundary_with_coefs(mfem::Vector& z, const mfem::Vector& d, double trSize, double zz, double zd,
                                       double dd) const
   {
@@ -250,6 +260,7 @@ public:
     z.Add(tau, d);
   }
 
+  ///
   void project_to_boundary_between_with_coefs(mfem::Vector& z, const mfem::Vector& y, double trSize, double zz,
                                               double zy, double yy) const
   {
@@ -261,11 +272,13 @@ public:
     z.Add(tau, y);
   }
 
+  ///
   double update_step_length_squared(double alpha_, double zz, double zd, double dd) const
   {
     return zz + 2 * alpha_ * zd + alpha_ * alpha_ * dd;
   }
 
+  ///
   void dogleg_step(const mfem::Vector& cp, const mfem::Vector& newtonP, double trSize, mfem::Vector& s) const
   {
     // MRT, could optimize some of these eventually, compute on the outside and save
@@ -290,6 +303,7 @@ public:
     }
   }
 
+  /// Minimize quadratic sub-problem given residual vector, the action of the stiffness and a preconditioner
   template <typename HessVecFunc, typename PrecondFunc>
   void solve_trust_region_minimization(const mfem::Vector& r0, mfem::Vector& rCurrent, HessVecFunc hess_vec_func,
                                        PrecondFunc precond, const TrustRegionSettings& settings, double& trSize,
@@ -365,6 +379,7 @@ public:
     }
   }
 
+  /// @overload
   void Mult(const mfem::Vector&, mfem::Vector& X) const
   {
     MFEM_ASSERT(oper != NULL, "the Operator is not set (use SetOperator).");
@@ -549,14 +564,6 @@ public:
     }
   }
 };
-
-bool usePreconditionerInsteadOfLinearSolve(const mfem::NewtonSolver* const nonlinearSolver)
-{
-  if (dynamic_cast<const TrustRegion*>(nonlinearSolver)) {
-    return true;
-  }
-  return false;
-}
 
 EquationSolver::EquationSolver(NonlinearSolverOptions nonlinear_opts, LinearSolverOptions lin_opts, MPI_Comm comm)
 {
