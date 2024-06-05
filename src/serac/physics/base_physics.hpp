@@ -346,6 +346,7 @@ public:
    *
    * @param reaction_direction A FiniteElementState which specifies how the reactions dofs are weighted for the reaction
    * qoi
+   * @param parameter_index the index of the parameter
    * @return A reference sensitivity field
    *
    * @pre `computeDualAdjointLoad' for the desired dual (reaction) and `reverseAdjointTimestep` must be called before

@@ -130,6 +130,7 @@ struct Domain {
     exit(1);
   }
 
+  /// @brief get mfem degree of freedom list for a given FiniteElementSpace
   mfem::Array<int> dof_list(mfem::FiniteElementSpace* fes) const;
 };
 

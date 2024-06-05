@@ -90,9 +90,9 @@ TEST(FiniteElementVector, SetVectorFieldOver2DDomain)
   Domain essential_boundary =
       Domain::ofBoundaryElements(*pmesh, [](std::vector<serac::vec2> x, int /*attr*/) { return average(x)[1] < 0.1; });
 
-  mfem::VectorFunctionCoefficient func(dim, [](const mfem::Vector& x, mfem::Vector& u) {
-    u[0] = x[0] + 1.0;
-    u[1] = x[0] + 2.0;
+  mfem::VectorFunctionCoefficient func(dim, [](const mfem::Vector& x, mfem::Vector& v) {
+    v[0] = x[0] + 1.0;
+    v[1] = x[0] + 2.0;
   });
 
   u = 0.0;
