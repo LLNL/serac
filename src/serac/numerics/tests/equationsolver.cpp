@@ -115,7 +115,8 @@ TEST_P(EquationSolverSuite, All)
 #ifdef SERAC_USE_SUNDIALS
 INSTANTIATE_TEST_SUITE_P(
     AllEquationSolverTests, EquationSolverSuite,
-    testing::Combine(testing::Values(NonlinearSolver::Newton, NonlinearSolver::NewtonLineSearch, NonlinearSolver::TrustRegion, NonlinearSolver::LBFGS, NonlinearSolver::KINFullStep,
+    testing::Combine(testing::Values(NonlinearSolver::Newton, NonlinearSolver::NewtonLineSearch,
+                                     NonlinearSolver::TrustRegion, NonlinearSolver::LBFGS, NonlinearSolver::KINFullStep,
                                      NonlinearSolver::KINBacktrackingLineSearch, NonlinearSolver::KINPicard),
                      testing::Values(LinearSolver::CG, LinearSolver::GMRES, LinearSolver::SuperLU),
                      testing::Values(Preconditioner::HypreJacobi, Preconditioner::HypreL1Jacobi,
