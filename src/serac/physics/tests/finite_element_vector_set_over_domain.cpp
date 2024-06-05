@@ -46,7 +46,6 @@ TEST(FiniteElementVector, SetScalarFieldOver2DDomain)
   auto pmesh = mesh::refineAndDistribute(std::move(mesh), 0, 0);
 
   constexpr int p   = 1;
-  constexpr int dim = 2;
 
   FiniteElementState u(*pmesh, H1<p, 1>{});
 
