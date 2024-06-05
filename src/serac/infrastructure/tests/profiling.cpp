@@ -21,6 +21,7 @@ namespace serac {
 TEST(Profiling, MeshRefinement)
 {
   // profile mesh refinement
+  CALI_CXX_MARK_FUNCTION;
   MPI_Barrier(MPI_COMM_WORLD);
   serac::profiling::initialize();
 
@@ -29,20 +30,20 @@ TEST(Profiling, MeshRefinement)
   // the following string is a proxy for templated test names
   std::string test_name = "_profiling";
 
-  SERAC_MARK_BEGIN(profiling::concat("RefineAndLoadMesh", test_name).c_str());
-  auto pmesh = mesh::refineAndDistribute(SERAC_PROFILE_EXPR("LOAD_MESH", buildMeshFromFile(mesh_file)), 0, 0);
-  SERAC_MARK_END(profiling::concat("RefineAndLoadMesh", test_name).c_str());
+  CALI_MARK_BEGIN(profiling::concat("RefineAndLoadMesh", test_name).c_str());
+  auto pmesh = mesh::refineAndDistribute(buildMeshFromFile(mesh_file));
+  CALI_MARK_END(profiling::concat("RefineAndLoadMesh", test_name).c_str());
 
-  SERAC_MARK_LOOP_BEGIN(refinement_loop, "refinement_loop");
+  CALI_CXX_MARK_LOOP_BEGIN(refinement_loop, "refinement_loop");
   for (int i = 0; i < 2; i++) {
-    SERAC_MARK_LOOP_ITER(refinement_loop, i);
+    CALI_CXX_MARK_LOOP_ITERATION(refinement_loop, i);
     pmesh->UniformRefinement();
   }
-  SERAC_MARK_LOOP_END(refinement_loop);
+  CALI_CXX_MARK_LOOP_END(refinement_loop);
 
-  // Refine once more and utilize SERAC_PROFILE_SCOPE
+  // Refine once more and utilize CALI_CXX_MARK_SCOPE
   {
-    SERAC_PROFILE_SCOPE("RefineOnceMore");
+    CALI_CXX_MARK_SCOPE("RefineOnceMore");
     pmesh->UniformRefinement();
   }
 
@@ -82,9 +83,9 @@ TEST(Profiling, Exception)
   serac::profiling::initialize();
 
   {
-    SERAC_PROFILE_SCOPE("Non-exceptionScope");
+    CALI_CXX_MARK_SCOPE("Non-exceptionScope");
     try {
-      SERAC_PROFILE_SCOPE("Exception scope");
+      CALI_CXX_MARK_SCOPE("Exception scope");
       throw std::runtime_error("Caliper to verify RAII");
     } catch (std::exception& e) {
       std::cout << e.what() << "\n";
@@ -93,61 +94,6 @@ TEST(Profiling, Exception)
 
   serac::profiling::finalize();
 
-  MPI_Barrier(MPI_COMM_WORLD);
-}
-
-struct NonCopyableOrMovable {
-  int value                                         = 0;
-  NonCopyableOrMovable()                            = default;
-  NonCopyableOrMovable(const NonCopyableOrMovable&) = delete;
-  NonCopyableOrMovable(NonCopyableOrMovable&&)      = delete;
-};
-
-TEST(Profiling, LvalueReferenceExpr)
-{
-  MPI_Barrier(MPI_COMM_WORLD);
-  serac::profiling::initialize();
-  NonCopyableOrMovable foo;
-  // This statement requires that the RHS be *exactly* a non-const lvalue
-  // reference - of course a const lvalue reference cannot be bound here,
-  // but also an rvalue reference would also cause compilation to fail
-  NonCopyableOrMovable& bar = SERAC_PROFILE_EXPR("lvalue_reference_assign", foo);
-  serac::profiling::finalize();
-  bar.value = 6;
-  EXPECT_EQ(foo.value, 6);
-  MPI_Barrier(MPI_COMM_WORLD);
-}
-
-struct MovableOnly {
-  int value                       = 0;
-  MovableOnly()                   = default;
-  MovableOnly(const MovableOnly&) = delete;
-  MovableOnly(MovableOnly&&)      = default;
-};
-
-TEST(Profiling, RvalueReferenceExpr)
-{
-  MPI_Barrier(MPI_COMM_WORLD);
-  serac::profiling::initialize();
-  MovableOnly foo;
-  foo.value = 6;
-  // This statement requires that the RHS be *exactly* an rvalue reference
-  // An lvalue reference cannot be used to construct here (copy ctor deleted)
-  MovableOnly bar = SERAC_PROFILE_EXPR("rvalue_reference_assign", std::move(foo));
-  serac::profiling::finalize();
-  EXPECT_EQ(bar.value, 6);
-  MPI_Barrier(MPI_COMM_WORLD);
-}
-
-TEST(Profiling, TempRvalueReferenceExpr)
-{
-  MPI_Barrier(MPI_COMM_WORLD);
-  serac::profiling::initialize();
-  // This statement requires that the RHS be *exactly* an rvalue reference
-  // An lvalue reference cannot be used to construct here (copy ctor deleted)
-  MovableOnly bar = SERAC_PROFILE_EXPR("rvalue_reference_assign", MovableOnly{6});
-  serac::profiling::finalize();
-  EXPECT_EQ(bar.value, 6);
   MPI_Barrier(MPI_COMM_WORLD);
 }
 

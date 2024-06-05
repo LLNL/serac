@@ -113,7 +113,7 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
 
   // Assemble the bilinear form into a matrix
   {
-    SERAC_PROFILE_SCOPE(concat("mfem_localAssemble", postfix));
+    CALI_CXX_MARK_SCOPE(concat("mfem_localAssemble", postfix));
     A.Assemble(0);
   }
 
@@ -229,7 +229,7 @@ void functional_test(H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
   mfem::ConstantCoefficient mu_coef(b);
   A.AddDomainIntegrator(new mfem::ElasticityIntegrator(lambda_coef, mu_coef));
   {
-    SERAC_PROFILE_SCOPE(concat("mfem_localAssemble", postfix));
+    CALI_CXX_MARK_SCOPE(concat("mfem_localAssemble", postfix));
     A.Assemble(0);
   }
   A.Finalize();
@@ -245,7 +245,7 @@ void functional_test(H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
 
   f.AddDomainIntegrator(new mfem::VectorDomainLFIntegrator(load_func));
   {
-    SERAC_PROFILE_SCOPE(concat("mfem_fAssemble", postfix));
+    CALI_CXX_MARK_SCOPE(concat("mfem_fAssemble", postfix));
     f.Assemble();
   }
 
@@ -321,7 +321,7 @@ void functional_test(Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
   mfem::ConstantCoefficient b_coef(b);
   B.AddDomainIntegrator(new mfem::CurlCurlIntegrator(b_coef));
   {
-    SERAC_PROFILE_SCOPE(concat("mfem_localAssemble", postfix));
+    CALI_CXX_MARK_SCOPE(concat("mfem_localAssemble", postfix));
     B.Assemble(0);
   }
   B.Finalize();
@@ -339,7 +339,7 @@ void functional_test(Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
 
   f.AddDomainIntegrator(new mfem::VectorFEDomainLFIntegrator(load_func));
   {
-    SERAC_PROFILE_SCOPE(concat("mfem_fAssemble", postfix));
+    CALI_CXX_MARK_SCOPE(concat("mfem_fAssemble", postfix));
     f.Assemble();
   }
   std::unique_ptr<mfem::HypreParVector> F(
@@ -363,7 +363,7 @@ void functional_test(Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
   // Compute the residual using standard MFEM methods
   mfem::Vector r1(U.Size());
   {
-    SERAC_PROFILE_SCOPE(concat("mfem_Apply", postfix));
+    CALI_CXX_MARK_SCOPE(concat("mfem_Apply", postfix));
     J->Mult(U, r1);
     r1 -= *F;
   }
