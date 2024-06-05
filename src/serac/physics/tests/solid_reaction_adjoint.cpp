@@ -80,62 +80,46 @@ tensor<double, dim> average(std::vector<tensor<double, dim>>& positions)
   return total / double(positions.size());
 }
 
-FiniteElementState createReactionDirection(const SolidMechanicsType& solid_solver, int direction)
+FiniteElementState createReactionDirection(const BasePhysics& solid_solver, int direction)
 {
-  (void)direction;
   const FiniteElementDual& reactions = solid_solver.dual("reactions");
 
   FiniteElementState reactionDirections(reactions.space(), "reaction_directions");
   reactionDirections = 0.0;
 
-  if (true) {
-    Domain essential_boundary = Domain::ofBoundaryElements(StateManager::mesh(mesh_tag), by_attr<dim>(1));
+  Domain essential_boundary = Domain::ofBoundaryElements(StateManager::mesh(mesh_tag), by_attr<dim>(1));
 
-    mfem::VectorFunctionCoefficient func(dim, [](const mfem::Vector& /*x*/, mfem::Vector& u) {
-      u[0] = 1.0;  // 1.234;
-      u[1] = 0.0;
-    });
+  mfem::VectorFunctionCoefficient func(dim, [direction](const mfem::Vector& /*x*/, mfem::Vector& u) {
+    u            = 0.0;
+    u[direction] = 1.0;
+  });
 
-    reactionDirections.project(func, essential_boundary);
+  reactionDirections.project(func, essential_boundary);
 
-    auto sz = reactionDirections.Size();
-    std::cout << "size = " << sz << std::endl;
-    for (int i = 0; i < sz / 2; ++i) {
-      if (reactionDirections[2 * i] == 1.234) {
-        std::cout << "x = " << reactionDirections[2 * i + 1] << std::endl;
-      }
-    }
-  } else {
-    auto reactionTrueDofs =
-        solid_solver.calculateConstrainedDofs([&](const mfem::Vector& x) { return x[0] < 1e-14; }, direction);
-
-    reactionDirections.SetSubVector(reactionTrueDofs, 1.0);
-  }
   return reactionDirections;
 }
 
 double computeSolidMechanicsQoi(BasePhysics& solid_solver)
 {
   solid_solver.advanceTimestep(0.0);
-  auto& solidS = dynamic_cast<SolidMechanicsType&>(solid_solver);
 
   const FiniteElementDual& reactions = solid_solver.dual("reactions");
 
-  auto reactionDirections = createReactionDirection(solidS, 0);
+  auto reactionDirections = createReactionDirection(solid_solver, 0);
   return innerProduct(reactions, reactionDirections);
 }
 
 auto computeSolidMechanicsQoiSensitivities(BasePhysics& solid_solver)
 {
-  double            qoi = computeSolidMechanicsQoi(solid_solver);
+  double qoi = computeSolidMechanicsQoi(solid_solver);
+
   FiniteElementDual shape_sensitivity(solid_solver.shapeDisplacement().space(), "shape sensitivity");
   shape_sensitivity = 0.0;
 
   FiniteElementDual shear_modulus_sensitivity(StateManager::mesh(mesh_tag), H1<p>{}, "shear modulus sensitivity");
   shear_modulus_sensitivity = 0.0;
 
-  auto& solidS             = dynamic_cast<SolidMechanicsType&>(solid_solver);
-  auto  reactionDirections = createReactionDirection(solidS, 0);
+  auto reactionDirections = createReactionDirection(solid_solver, 0);
 
   solid_solver.computeDualAdjointLoad(solid_solver.dualNames()[0], reactionDirections);
   solid_solver.reverseAdjointTimestep();
@@ -184,15 +168,16 @@ struct SolidMechanicsSensitivityFixture : public ::testing::Test {
     MPI_Barrier(MPI_COMM_WORLD);
     StateManager::initialize(dataStore, "solid_mechanics_solve");
     std::string filename = std::string(SERAC_REPO_DIR) + "/data/meshes/patch2D_quads.mesh";
-    mesh                 = &StateManager::setMesh(mesh::refineAndDistribute(buildMeshFromFile(filename), 1), mesh_tag);
-    mat.density          = 1.0;
-    mat.K0               = 1.0;
-    mat.G0               = 0.1;
+    mesh        = &StateManager::setMesh(mesh::refineAndDistribute(buildMeshFromFile(filename), 2, 1), mesh_tag);
+    mat.density = 1.0;
+    mat.K0      = 1.0;
+    mat.G0      = 0.1;
   }
 
   void fillDirection(FiniteElementState& direction) const
   {
     auto sz = direction.Size();
+    std::cout << "sizes = " << sz << std::endl;
     for (int i = 0; i < sz; ++i) {
       direction(i) = -1.2 + 2.02 * (double(i) / sz);
     }
@@ -222,7 +207,7 @@ TEST_F(SolidMechanicsSensitivityFixture, ReactionShapeSensitivities)
   double qoi_plus          = computeSolidMechanicsQoiAdjustingShape(*solid_solver, derivative_direction, eps);
   double directional_deriv = innerProduct(derivative_direction, shape_sensitivity);
 
-  std::cout << "qoi, qoi = " << qoi_base << " " << qoi_plus << std::endl;
+  EXPECT_NEAR(qoi_base, -0.35, 1e-14);
   EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, eps);
 }
 
@@ -238,6 +223,7 @@ TEST_F(SolidMechanicsSensitivityFixture, ReactionParameterSensitivities)
   double qoi_plus          = computeSolidMechanicsQoiAdjustingShearModulus(*solid_solver, derivative_direction, eps);
   double directional_deriv = innerProduct(derivative_direction, shear_modulus_sensitivity);
 
+  EXPECT_NEAR(qoi_base, -0.35, 1e-14);
   EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, eps);
 }
 

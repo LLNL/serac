@@ -1574,7 +1574,6 @@ protected:
                             displacement_, acceleration_, *parameters_[parameter_indices].state...);
       }...};
 
-public:
   /**
    * @brief Calculate a list of constrained dofs in the true displacement vector from a function that
    * returns true if a physical coordinate is in the constrained set
@@ -1635,7 +1634,6 @@ public:
     return constrained_dofs;
   }
 
-protected:
   /**
    * @brief Sets the Dirichlet BCs for the current time and computes an initial guess for parameters and displacement
    */
