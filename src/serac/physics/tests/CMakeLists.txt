@@ -15,6 +15,7 @@ set(serial_solver_tests
     solid_statics_patch.cpp
     solid_dynamics_patch.cpp
     dynamic_solid_adjoint.cpp
+    finite_element_vector_set_over_domain.cpp
     )
 
 serac_add_tests( SOURCES ${serial_solver_tests}
@@ -26,7 +27,6 @@ set(solver_tests
     lce_Bertoldi_lattice.cpp
     parameterized_thermomechanics_example.cpp
     parameterized_thermal.cpp
-    finite_element_vector_set_over_domain.cpp
     solid.cpp
     solid_periodic.cpp
     solid_shape.cpp
