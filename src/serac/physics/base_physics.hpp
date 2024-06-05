@@ -301,15 +301,16 @@ public:
   /**
    * @brief Compute the implicit sensitivity of the quantity of interest used in defining the adjoint load with respect
    * to the parameter field (d QOI/d state * d state/d parameter).
+   * @param parameter_index the index of the parameter
    *
    * @return The sensitivity of the QOI (given implicitly by the adjoint load) with respect to the parameter
    *
    * @pre completeSetup(), advanceTimestep(), and reverseAdjointTimestep() must be called prior to this method.
    */
-  virtual const FiniteElementDual& computeTimestepSensitivity(size_t /* parameter_index */)
+  virtual const FiniteElementDual& computeTimestepSensitivity(size_t parameter_index)
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Parameter sensitivities not enabled in physics module {}", name_));
-    return *parameters_[0].sensitivity;
+    return *parameters_[parameter_index].sensitivity;
   }
 
   /**
@@ -353,11 +354,11 @@ public:
    * this
    */
   virtual const serac::FiniteElementDual& computeDualSensitivity(const serac::FiniteElementState& reaction_direction,
-                                                                 size_t                           parameter_field)
+                                                                 size_t                           parameter_index)
   {
     (void)reaction_direction;
     SLIC_ERROR_ROOT(axom::fmt::format("computeDualSensitivity not enabled in physics module {}", name_));
-    return *parameters_[parameter_field].sensitivity;
+    return *parameters_[parameter_index].sensitivity;
   };
 
   /**
