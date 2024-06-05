@@ -99,11 +99,11 @@ public:
       const int               max_ls_iters = nonlinear_options.max_line_search_iterations;
       static constexpr real_t reduction    = 0.5;
 
-      const double cMagnitudeInR         = std::abs(Dot(c, r)) / norm_nm1;
-      const double sufficientDegreeParam = 0.0;  // 1e-15;
+      const double sufficientDecreaseParam = 0.0;  // 1e-15;
+      const double cMagnitudeInR           = sufficientDecreaseParam != 0.0 ? std::abs(Dot(c, r)) / norm_nm1 : 0.0;
 
       auto is_improved = [=](real_t currentNorm, real_t c_scale) {
-        return currentNorm < norm_nm1 - sufficientDegreeParam * c_scale * cMagnitudeInR;
+        return currentNorm < norm_nm1 - sufficientDecreaseParam * c_scale * cMagnitudeInR;
       };
 
       // back-track linesearch
@@ -116,7 +116,7 @@ public:
       }
 
       // try the opposite direction and linesearch back from there
-      if (ls_iter == max_ls_iters && !is_improved(norm, stepScale)) {
+      if (max_ls_iters > 0 && ls_iter == max_ls_iters && !is_improved(norm, stepScale)) {
         stepScale = 1.0;
         add(x0, stepScale, c, x);
         norm = evaluate_norm(x, r);
@@ -130,7 +130,7 @@ public:
 
         // ok, the opposite direction was also terrible, lets go back, cut in half 1 last time and accept it hoping for
         // the best
-        if (max_ls_iters > 0 && ls_iter == max_ls_iters && !is_improved(norm, stepScale)) {
+        if (ls_iter == max_ls_iters && !is_improved(norm, stepScale)) {
           ++ls_iter_sum;
           stepScale *= reduction;
           add(x0, -stepScale, c, x);
@@ -709,6 +709,7 @@ std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(const NonlinearSolverOp
     SLIC_ERROR_ROOT_IF(nonlinear_opts.min_iterations != 0 || nonlinear_opts.max_line_search_iterations != 0,
                        "Newton's method does not support nonzero min_iterations or max_line_search_iterations");
     nonlinear_solver = std::make_unique<NewtonSolver>(comm, nonlinear_opts);
+    // nonlinear_solver = std::make_unique<mfem::NewtonSolver>(comm);
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::LBFGS) {
     SLIC_ERROR_ROOT_IF(nonlinear_opts.min_iterations != 0 || nonlinear_opts.max_line_search_iterations != 0,
                        "LBFGS does not support nonzero min_iterations or max_line_search_iterations");
