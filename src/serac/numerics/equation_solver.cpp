@@ -19,15 +19,17 @@ namespace serac {
 /// Newton solver with a 2-way line-search.  Reverts to regular Newton if max_line_search_iterations is set to 0.
 class NewtonSolver : public mfem::NewtonSolver {
 protected:
+  /// initial solution vector to do line-search off of
   mutable mfem::Vector   x0;
+  /// nonlinear solver options
   NonlinearSolverOptions nonlinear_options;
 
 public:
-  ///
+  /// constructor
   NewtonSolver(const NonlinearSolverOptions& nonlinear_opts) : nonlinear_options(nonlinear_opts) {}
 
 #ifdef MFEM_USE_MPI
-  ///
+  /// parallel constructor
   NewtonSolver(MPI_Comm comm_, const NonlinearSolverOptions& nonlinear_opts)
       : mfem::NewtonSolver(comm_), nonlinear_options(nonlinear_opts)
   {
@@ -169,14 +171,23 @@ public:
 
 /// Internal structure for storing trust region settings
 struct TrustRegionSettings {
+  ///
   double cgTol                  = 1e-8;
-  size_t maxCgIterations        = 10000;  // should be around # of system dofs
+  /// max cg iters should be around # of system dofs
+  size_t maxCgIterations        = 10000;  // 
+  ///
   size_t maxCumulativeIteration = 1;
+  ///
   double min_tr_size            = 1e-13;
+  ///
   double t1                     = 0.25;
+  ///
   double t2                     = 1.75;
+  ///
   double eta1                   = 1e-9;
+  ///
   double eta2                   = 0.1;
+  ///
   double eta3                   = 0.6;
 };
 
@@ -204,13 +215,20 @@ struct TrustRegionResults {
     OnBoundary,
   };
 
-  mfem::Vector z;   // step direction
-  mfem::Vector d;   // incrementalCG direction
-  mfem::Vector Pr;  // preconditioned residual
-  mfem::Vector Hd;  // action of hessian on direction d
+  /// step direction
+  mfem::Vector z;
+  /// incrementalCG direction
+  mfem::Vector d;
+  /// preconditioned residual
+  mfem::Vector Pr;
+  /// action of hessian on direction d
+  mfem::Vector Hd;
+  /// cauchy point
   mfem::Vector cauchyPoint;
-  Status       interiorStatus    = Status::Interior;
-  size_t       cgIterationsCount = 0;
+  /// specifies if step is interior, exterior, negative curvature, etc.
+  Status interiorStatus = Status::Interior;
+  /// iteration counter
+  size_t cgIterationsCount = 0;
 };
 
 /// trust region printing utility function
@@ -233,17 +251,23 @@ void print_trust_region_info(double realObjective, double modelObjective, size_t
  */
 class TrustRegion : public mfem::NewtonSolver {
 protected:
+  /// predicted solution
   mutable mfem::Vector xPred;
+  /// predicted residual
   mutable mfem::Vector rPred;
+  /// extra vector of scratch space for doing temporary calculations
   mutable mfem::Vector scratch;
 
+  /// nonlinear solution options
   NonlinearSolverOptions nonlinear_options;
+  /// linear solution options
   LinearSolverOptions    linear_options;
+  /// handle to the preconditioner used by the trust region, it ignores the linear solver as a SPD preconditioner is currently required
   Solver&                trPrecond;
 
 public:
 #ifdef MFEM_USE_MPI
-  ///
+  /// constructor
   TrustRegion(MPI_Comm comm_, const NonlinearSolverOptions& nonlinear_opts, const LinearSolverOptions& linear_opts,
               Solver& tPrec)
       : mfem::NewtonSolver(comm_), nonlinear_options(nonlinear_opts), linear_options(linear_opts), trPrecond(tPrec)
@@ -251,20 +275,18 @@ public:
   }
 #endif
 
-  ///
+  /// finds tau s.t. (z + tau*d)^2 = trSize^2 
   void project_to_boundary_with_coefs(mfem::Vector& z, const mfem::Vector& d, double trSize, double zz, double zd,
                                       double dd) const
   {
-    // find tau s.t. (z + tau*d)^2 = trSize^2
     double tau = (std::sqrt((trSize * trSize - zz) * dd + zd * zd) - zd) / dd;
     z.Add(tau, d);
   }
 
-  ///
+  /// finds tau s.t. (z + tau*(y-z))^2 = trSize^2
   void project_to_boundary_between_with_coefs(mfem::Vector& z, const mfem::Vector& y, double trSize, double zz,
                                               double zy, double yy) const
   {
-    // find tau s.t. (z + tau*(y-z))^2 = trSize^2
     double dd  = yy - 2 * zy + zz;
     double zd  = zy - zz;
     double tau = (std::sqrt((trSize * trSize - zz) * dd + zd * zd) - zd) / dd;
@@ -272,13 +294,7 @@ public:
     z.Add(tau, y);
   }
 
-  ///
-  double update_step_length_squared(double alpha_, double zz, double zd, double dd) const
-  {
-    return zz + 2 * alpha_ * zd + alpha_ * alpha_ * dd;
-  }
-
-  ///
+  /// take a dogleg step in direction s, solution norm must be within trSize
   void dogleg_step(const mfem::Vector& cp, const mfem::Vector& newtonP, double trSize, mfem::Vector& s) const
   {
     // MRT, could optimize some of these eventually, compute on the outside and save
