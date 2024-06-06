@@ -4,9 +4,14 @@ ARG branch=develop
 
 SHELL ["/bin/bash", "-c"]
 RUN sudo apt-get update -y
-RUN sudo apt-get install doxygen gettext gfortran-$(gcc -dumpversion) graphviz libomp-13-dev libopenblas-dev \
+RUN sudo apt-get install gettext gfortran-$(gcc -dumpversion) graphviz libomp-13-dev libopenblas-dev \
                          lsb-release lua5.2 lua5.2-dev mpich python3-sphinx ssh texlive-full -fy
 RUN sudo useradd -m -s /bin/bash -G sudo serac
+
+# Install proper doxygen version (should match version in LC host configs)
+RUN sudo wget https://github.com/doxygen/doxygen/releases/download/Release_1_9_8/doxygen-1.9.8.linux.bin.tar.gz
+RUN sudo tar -xf doxygen-1.9.8.linux.bin.tar.gz
+RUN cd doxygen-1.9.8 && sudo make && sudo make install && doxygen --version
 
 # Remove flags from mpich
 RUN sudo sed -i "s/ -flto=auto//g" /usr/bin/mpicxx.mpich

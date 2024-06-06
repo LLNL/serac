@@ -34,6 +34,11 @@ def parse_args():
                       dest="short_path",
                       default=False,
                       help="Does not add sys_type or timestamp to tpl directory (useful for CI and debugging).")
+    parser.add_option("-v", "--verbose",
+                      action="store_true",
+                      dest="verbose",
+                      default=False,
+                      help="Output logs to screen as well as to files")
     ###############
     # parse args
     ###############
@@ -62,7 +67,7 @@ def main():
         original_wd = os.getcwd()
         os.chdir(repo_dir)
 
-        res = build_devtools(build_dir, get_timestamp(), args["short_path"])
+        res = build_devtools(build_dir, get_timestamp(), args["short_path"], args["verbose"])
     finally:
         os.chdir(original_wd)
 
