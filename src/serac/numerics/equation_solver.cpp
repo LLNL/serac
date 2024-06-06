@@ -20,7 +20,7 @@ namespace serac {
 class NewtonSolver : public mfem::NewtonSolver {
 protected:
   /// initial solution vector to do line-search off of
-  mutable mfem::Vector   x0;
+  mutable mfem::Vector x0;
   /// nonlinear solver options
   NonlinearSolverOptions nonlinear_options;
 
@@ -172,28 +172,27 @@ public:
 /// Internal structure for storing trust region settings
 struct TrustRegionSettings {
   /// cg tol
-  double cgTol                  = 1e-8;
+  double cgTol = 1e-8;
   /// max cg iters should be around # of system dofs
-  size_t maxCgIterations        = 10000;  // 
+  size_t maxCgIterations = 10000;  //
   /// max cumulative iterations
   size_t maxCumulativeIteration = 1;
   /// minimum trust region size
-  double min_tr_size            = 1e-13;
+  double min_tr_size = 1e-13;
   /// trust region decrease factor
-  double t1                     = 0.25;
+  double t1 = 0.25;
   /// trust region increase factor
-  double t2                     = 1.75;
+  double t2 = 1.75;
   /// worse case energy drop ratio.  trust region accepted if energy drop is better than this.
-  double eta1                   = 1e-9;
+  double eta1 = 1e-9;
   /// non-ideal energy drop ratio.  trust region decreases if energy drop is worse than this.
-  double eta2                   = 0.1;
+  double eta2 = 0.1;
   /// ideal energy drop ratio.  trust region increases if energy drop is better than this.
-  double eta3                   = 0.6;
+  double eta3 = 0.6;
 };
 
 /// Internal structure for storing trust region stateful data
 struct TrustRegionResults {
-
   /// Constructor takes the size of the solution vector
   TrustRegionResults(int size)
   {
@@ -265,9 +264,10 @@ protected:
   /// nonlinear solution options
   NonlinearSolverOptions nonlinear_options;
   /// linear solution options
-  LinearSolverOptions    linear_options;
-  /// handle to the preconditioner used by the trust region, it ignores the linear solver as a SPD preconditioner is currently required
-  Solver&                trPrecond;
+  LinearSolverOptions linear_options;
+  /// handle to the preconditioner used by the trust region, it ignores the linear solver as a SPD preconditioner is
+  /// currently required
+  Solver& trPrecond;
 
 public:
 #ifdef MFEM_USE_MPI
@@ -279,7 +279,7 @@ public:
   }
 #endif
 
-  /// finds tau s.t. (z + tau*d)^2 = trSize^2 
+  /// finds tau s.t. (z + tau*d)^2 = trSize^2
   void project_to_boundary_with_coefs(mfem::Vector& z, const mfem::Vector& d, double trSize, double zz, double zd,
                                       double dd) const
   {
