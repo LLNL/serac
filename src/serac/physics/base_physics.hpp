@@ -348,7 +348,7 @@ public:
    * @param reaction_direction A FiniteElementState which specifies how the reactions dofs are weighted for the reaction
    * qoi
    * @param parameter_index the index of the parameter
-   * @return A reference sensitivity field
+   * @return reaction sensitivity field
    *
    * @pre `computeDualAdjointLoad' for the desired dual (reaction) and `reverseAdjointTimestep` must be called before
    * this
@@ -362,11 +362,11 @@ public:
   };
 
   /**
-   * @brief computes the partial sensitivity of the reaction loads (in specified direction)  with respect to shape
+   * @brief computes the partial sensitivity of the reaction loads (in specified direction) with respect to shape
    *
    * @param reaction_direction A FiniteElementState which specifies how the reactions dofs are weighted for the reaction
    * qoi
-   * @return A reference sensitivity field
+   * @return reaction sensitivity field
    *
    * @pre `computeDualAdjointLoad' for the desired dual (reaction) and `reverseAdjointTimestep` must be called before
    * this
