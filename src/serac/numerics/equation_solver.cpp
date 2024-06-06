@@ -193,6 +193,8 @@ struct TrustRegionSettings {
 
 /// Internal structure for storing trust region stateful data
 struct TrustRegionResults {
+
+  /// Constructor takes the size of the solution vector
   TrustRegionResults(int size)
   {
     z.SetSize(size);
@@ -202,14 +204,14 @@ struct TrustRegionResults {
     cauchyPoint.SetSize(size);
   }
 
-  // resets trust region results for a new outer iteration
+  /// resets trust region results for a new outer iteration
   void reset()
   {
     z           = 0.0;
     cauchyPoint = 0.0;
   }
 
-  // enumerates the possible final status of the trust region steps
+  /// enumerates the possible final status of the trust region steps
   enum class Status
   {
     Interior,
