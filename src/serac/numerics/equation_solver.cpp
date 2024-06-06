@@ -171,23 +171,23 @@ public:
 
 /// Internal structure for storing trust region settings
 struct TrustRegionSettings {
-  ///
+  /// cg tol
   double cgTol                  = 1e-8;
   /// max cg iters should be around # of system dofs
   size_t maxCgIterations        = 10000;  // 
-  ///
+  /// max cumulative iterations
   size_t maxCumulativeIteration = 1;
-  ///
+  /// minimum trust region size
   double min_tr_size            = 1e-13;
-  ///
+  /// trust region decrease factor
   double t1                     = 0.25;
-  ///
+  /// trust region increase factor
   double t2                     = 1.75;
-  ///
+  /// worse case energy drop ratio.  trust region accepted if energy drop is better than this.
   double eta1                   = 1e-9;
-  ///
+  /// non-ideal energy drop ratio.  trust region decreases if energy drop is worse than this.
   double eta2                   = 0.1;
-  ///
+  /// ideal energy drop ratio.  trust region increases if energy drop is better than this.
   double eta3                   = 0.6;
 };
 
@@ -202,12 +202,14 @@ struct TrustRegionResults {
     cauchyPoint.SetSize(size);
   }
 
+  // resets trust region results for a new outer iteration
   void reset()
   {
     z           = 0.0;
     cauchyPoint = 0.0;
   }
 
+  // enumerates the possible final status of the trust region steps
   enum class Status
   {
     Interior,
