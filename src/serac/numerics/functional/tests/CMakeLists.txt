@@ -68,3 +68,23 @@ if(ENABLE_CUDA)
                      DEPENDS_ON gtest serac_functional serac_state ${functional_depends})
 
 endif()
+
+target_compile_options(functional_basic_h1_scalar PUBLIC -mllvm -enzyme-loose-types)
+
+add_executable(enzyme_test enzyme_test.cpp)
+target_link_libraries(enzyme_test PUBLIC serac_functional)
+
+add_executable(enzyme_jvp_test enzyme_jvp_test.cpp)
+target_link_libraries(enzyme_jvp_test PUBLIC serac_functional)
+
+add_executable(enzyme_test_tuples enzyme_test_tuples.cpp)
+target_link_libraries(enzyme_test_tuples PUBLIC serac_functional)
+
+add_executable(enzyme_test_tuples_of_tuples enzyme_test_tuples_of_tuples.cpp)
+target_link_libraries(enzyme_test_tuples_of_tuples PUBLIC serac_functional)
+
+add_executable(enzyme_reproducer enzyme_reproducer.cpp)
+target_link_libraries(enzyme_reproducer PUBLIC serac_functional)
+
+add_executable(enzyme_reproducer_rbr enzyme_reproducer_rbr.cpp)
+target_link_libraries(enzyme_reproducer_rbr PUBLIC serac_functional)

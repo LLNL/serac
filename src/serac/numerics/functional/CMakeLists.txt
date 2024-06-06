@@ -69,8 +69,15 @@ blt_add_library(
       HEADERS     ${functional_headers} ${functional_detail_headers} 
       SOURCES     ${functional_sources}
       DEPENDS_ON  ${functional_depends}
-      )
+)
 
+# without this, I get 
+# "error while loading shared libraries: libomp.so: cannot open 
+#    shared object file: No such file or directory"
+target_link_libraries(serac_functional PUBLIC OpenMP::OpenMP_CXX)
+target_link_libraries(serac_functional PUBLIC ClangEnzymeFlags)
+
+target_compile_options(serac_functional PUBLIC -mllvm -enzyme-loose-types)
 
 install(FILES ${functional_headers} DESTINATION include/serac/numerics/functional )
 install(FILES ${functional_detail_headers} DESTINATION include/serac/numerics/functional/detail )
