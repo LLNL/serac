@@ -182,6 +182,7 @@ enum class Family
 {
   QOI,
   H1,
+  H1BAR,
   HCURL,
   HDIV,
   L2
@@ -194,6 +195,18 @@ enum class Family
  */
 template <int p, int c = 1>
 struct H1 {
+  static constexpr int    order      = p;           ///< the polynomial order of the elements
+  static constexpr int    components = c;           ///< the number of components at each node
+  static constexpr Family family     = Family::H1;  ///< the family of the basis functions
+};
+
+/**
+ * @brief H1 elements of order @p p, with a gradient modification suitable for nearly-incompressible
+ * @tparam p The order of the elements
+ * @tparam c The vector dimension
+ */
+template <int p, int c = 1>
+struct H1Bar {
   static constexpr int    order      = p;           ///< the polynomial order of the elements
   static constexpr int    components = c;           ///< the number of components at each node
   static constexpr Family family     = Family::H1;  ///< the family of the basis functions

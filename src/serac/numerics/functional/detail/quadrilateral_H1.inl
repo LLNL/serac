@@ -16,10 +16,12 @@
 // note: mfem assumes the parent element domain is [0,1]x[0,1]
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
-template <int p, int c>
-struct finite_element<mfem::Geometry::SQUARE, H1<p, c> > {
+namespace impl {
+
+template < serac::Family f, int p, int c >
+struct QuadH1 {
   static constexpr auto geometry   = mfem::Geometry::SQUARE;
-  static constexpr auto family     = Family::H1;
+  static constexpr auto family     = f;
   static constexpr int  components = c;
   static constexpr int  dim        = 2;
   static constexpr int  order      = p;
@@ -432,4 +434,13 @@ struct finite_element<mfem::Geometry::SQUARE, H1<p, c> > {
 
 #endif
 };
+
+}
+
+template <int p, int c>
+struct finite_element<mfem::Geometry::SQUARE, H1<p, c> > : public impl::QuadH1< Family::H1, p, c >{};
+
+template <int p, int c>
+struct finite_element<mfem::Geometry::SQUARE, H1Bar<p, c> > : public impl::QuadH1< Family::H1BAR, p, c >{};
+
 /// @endcond
