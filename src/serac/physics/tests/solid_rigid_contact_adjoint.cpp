@@ -40,7 +40,7 @@ std::unique_ptr<SolidMechanicsType> createNonlinearSolidMechanicsSolver(mfem::Pa
                                                                         const NonlinearSolverOptions& nonlinear_opts,
                                                                         const SolidMaterial&          mat)
 {
-  static int iter  = 0;
+  static int iter = 0;
 
   auto solid = std::make_unique<SolidMechanicsType>(nonlinear_opts, solid_mechanics::direct_linear_options,
                                                     solid_mechanics::default_quasistatic_options, geoNonlinear,
@@ -197,15 +197,15 @@ TEST_F(SolidMechanicsSensitivityFixture, ReactionShapeSensitivities)
 
   std::cout << "qoi = " << qoi_base << std::endl;
 
-  //solid_solver->resetStates();
-  //FiniteElementState derivative_direction(shape_sensitivity.space(), "derivative_direction");
-  //fillDirection(derivative_direction);
+  // solid_solver->resetStates();
+  // FiniteElementState derivative_direction(shape_sensitivity.space(), "derivative_direction");
+  // fillDirection(derivative_direction);
 
-  //double qoi_plus          = computeSolidMechanicsQoiAdjustingShape(*solid_solver, derivative_direction, eps);
-  //double directional_deriv = innerProduct(derivative_direction, shape_sensitivity);
+  // double qoi_plus          = computeSolidMechanicsQoiAdjustingShape(*solid_solver, derivative_direction, eps);
+  // double directional_deriv = innerProduct(derivative_direction, shape_sensitivity);
 
-  //EXPECT_NEAR(qoi_base, -0.35, 1e-14);
-  //EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, eps);
+  // EXPECT_NEAR(qoi_base, -0.35, 1e-14);
+  // EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, eps);
 }
 
 }  // namespace serac
