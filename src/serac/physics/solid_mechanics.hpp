@@ -1243,7 +1243,8 @@ public:
 
             // J = M + c0 * K
             J_.reset(mfem::Add(1.0, *m_mat, c0_, *k_mat));
-
+            J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            
             return *J_;
           });
     }
