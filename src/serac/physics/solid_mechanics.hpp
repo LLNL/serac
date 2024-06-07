@@ -875,7 +875,7 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename MaterialType, typename StateType = Empty>
-  void setMaterial(DependsOn<active_parameters...>, MaterialType&& material, qdata_type<StateType> qdata = EmptyQData)
+  void setMaterial(DependsOn<active_parameters...>, MaterialType material, qdata_type<StateType> qdata = EmptyQData)
   {
     MaterialStressFunctor<MaterialType> material_functor(material, geom_nonlin_);
     residual_->AddDomainIntegral(
@@ -892,7 +892,7 @@ public:
   template <typename MaterialType, typename StateType = Empty>
   void setMaterial(MaterialType material, std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
   {
-    setMaterial(DependsOn<>{}, std::move(material), qdata);
+    setMaterial(DependsOn<>{}, material, qdata);
   }
 
   /**
