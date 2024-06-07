@@ -23,6 +23,7 @@
 #include "serac/numerics/functional/shape_aware_functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/materials/solid_material.hpp"
+#include "serac/physics/inequality_constraint.hpp"
 
 namespace serac {
 
@@ -181,7 +182,8 @@ public:
         ode2_(displacement_.space().TrueVSize(),
               {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = v_, .d2u_dt2 = acceleration_},
               *nonlin_solver_, bcs_),
-        geom_nonlin_(geom_nonlin)
+        geom_nonlin_(geom_nonlin),
+        x_current_(StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "current_coordinates"), mesh_tag_))
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension, {0}, and runtime mesh dimension, {1}, mismatch", dim,
@@ -260,6 +262,9 @@ public:
 
     shape_displacement_ = 0.0;
     initializeSolidMechanicsStates();
+
+    // MRT, temporarily add these in here
+    //inequality_constraints.push_back(std::make_unique<InequalityConstraint<order,dim>>(physics_name, mesh_tag_));
   }
 
   /**
@@ -1115,6 +1120,20 @@ public:
     setPressure(DependsOn<>{}, pressure_function, optional_domain);
   }
 
+
+  void updateConstraintMultipliers()
+  {
+    mfem::VectorFunctionCoefficient getCoords(dim, [](const mfem::Vector& x, mfem::Vector& xn) {
+      xn = x;
+    });
+    x_current_.project(getCoords);
+    x_current_ += displacement_;
+    x_current_ += shape_displacement_;
+    for (auto& constraint : inequality_constraints) {
+      constraint->updateMultipliers(x_current_);
+    }
+  }
+
   /// @brief Build the quasi-static operator corresponding to the total Lagrangian formulation
   virtual std::unique_ptr<mfem_ext::StdFunctionOperator> buildQuasistaticOperator()
   {
@@ -1125,13 +1144,25 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          const mfem::Vector res = (*residual_)(ode_time_point_, shape_displacement_, u, acceleration_,
-                                                *parameters_[parameter_indices].state...);
 
+          const mfem::Vector res = (*residual_)(ode_time_point_, shape_displacement_, u, acceleration_,
+                                          *parameters_[parameter_indices].state...);
           // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
           // tracking strategy
           // See https://github.com/mfem/mfem/issues/3531
+
           r = res;
+
+          mfem::VectorFunctionCoefficient getCoords(dim, [](const mfem::Vector& x, mfem::Vector& xn) {
+            xn = x;
+          });
+          x_current_.project(getCoords);
+          x_current_ += u;
+          x_current_ += shape_displacement_;
+          for (auto& constraint : inequality_constraints) {
+            constraint->sumConstraintResidual(x_current_, r);
+          }
+
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
@@ -1140,6 +1171,18 @@ public:
           auto [r, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(u), acceleration_,
                                         *parameters_[parameter_indices].state...);
           J_             = assemble(drdu);
+
+          mfem::VectorFunctionCoefficient getCoords(dim, [](const mfem::Vector& x, mfem::Vector& xn) {
+            xn = x;
+          });
+          x_current_.project(getCoords);
+          x_current_ += u;
+          x_current_ += shape_displacement_;
+        
+          for (auto& constraint : inequality_constraints) {
+            J_ = std::move(constraint->sumConstraintJacobian(x_current_, std::move(J_)));
+          }
+
           J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
         });
@@ -1207,7 +1250,6 @@ public:
 
             // J = M + c0 * K
             J_.reset(mfem::Add(1.0, *m_mat, c0_, *k_mat));
-            J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
 
             return *J_;
           });
@@ -1613,6 +1655,10 @@ protected:
 
   /// @brief Coefficient containing the essential boundary values
   std::shared_ptr<mfem::Coefficient> component_disp_bdr_coef_;
+
+  FiniteElementState x_current_;
+  using InequalityConstraintPtr = std::unique_ptr<InequalityConstraint<order,dim> >;
+  std::vector<InequalityConstraintPtr> inequality_constraints;
 
   /// @brief Array functions computing the derivative of the residual with respect to each given parameter
   /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
