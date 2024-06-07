@@ -375,7 +375,7 @@ public:
    * and thermal flux when operator() is called with the arguments listed above.
    */
   template <int... active_parameters, typename MaterialType, typename StateType>
-  void setMaterial(DependsOn<active_parameters...>, MaterialType material,
+  void setMaterial(DependsOn<active_parameters...>, const MaterialType & material,
                    std::shared_ptr<QuadratureData<StateType>> qdata)
   {
     // note: these parameter indices are offset by 1 since, internally, this module uses the first parameter
@@ -388,7 +388,7 @@ public:
 
   /// @overload
   template <typename MaterialType, typename StateType = Empty>
-  void setMaterial(MaterialType material, std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
+  void setMaterial(const MaterialType & material, std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
   {
     setMaterial(DependsOn<>{}, material, qdata);
   }

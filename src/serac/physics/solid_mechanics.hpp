@@ -808,9 +808,11 @@ public:
   template <typename Material>
   struct MaterialStressFunctor {
     /// @brief Constructor for the functor
-    MaterialStressFunctor(Material material, GeometricNonlinearities gn) : material_(material), geom_nonlin_(gn) {}
+    MaterialStressFunctor(const Material & material, GeometricNonlinearities gn) : material_(material), geom_nonlin_(gn) {}
+
     /// @brief Material model
-    Material material_;
+    const Material & material_;
+
     /// @brief Enum value for geometric nonlinearities
     GeometricNonlinearities geom_nonlin_;
 
@@ -875,8 +877,10 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename MaterialType, typename StateType = Empty>
-  void setMaterial(DependsOn<active_parameters...>, MaterialType material, qdata_type<StateType> qdata = EmptyQData)
+  void setMaterial(DependsOn<active_parameters...>, const MaterialType & material, qdata_type<StateType> qdata = EmptyQData)
   {
+    static_assert(std::is_same_v<StateType, Empty> || 
+                  std::is_same_v<StateType, typename MaterialType::State>, "invalid quadrature data provided in setMaterial()");
     MaterialStressFunctor<MaterialType> material_functor(material, geom_nonlin_);
     residual_->AddDomainIntegral(
         Dimension<dim>{},
@@ -890,7 +894,7 @@ public:
 
   /// @overload
   template <typename MaterialType, typename StateType = Empty>
-  void setMaterial(MaterialType material, std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
+  void setMaterial(const MaterialType & material, std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
   {
     setMaterial(DependsOn<>{}, material, qdata);
   }

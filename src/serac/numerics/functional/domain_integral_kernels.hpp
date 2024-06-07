@@ -67,7 +67,7 @@ SERAC_HOST_DEVICE struct QFunctionArgument<Hcurl<p>, Dimension<3> > {
 /// @brief layer of indirection needed to unpack the entries of the argument tuple
 SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <typename lambda, typename coords_type, typename T, typename qpt_data_type, int... i>
-SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, double t, coords_type&& x_q, qpt_data_type&& qpt_data,
+SERAC_HOST_DEVICE auto apply_qf_helper(const lambda & qf, double t, const coords_type & x_q, qpt_data_type & qpt_data,
                                        const T& arg_tuple, std::integer_sequence<int, i...>)
 {
   if constexpr (std::is_same<typename std::decay<qpt_data_type>::type, Nothing>::value) {
@@ -87,7 +87,7 @@ SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, double t, coords_type&& x_q,
  * @param[inout] qpt_data The state information at the quadrature point
  */
 template <typename lambda, typename coords_type, typename... T, typename qpt_data_type>
-SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, double t, coords_type&& x_q, qpt_data_type&& qpt_data,
+SERAC_HOST_DEVICE auto apply_qf(const lambda & qf, double t, const coords_type& x_q, qpt_data_type& qpt_data,
                                 const serac::tuple<T...>& arg_tuple)
 {
   return apply_qf_helper(qf, t, x_q, qpt_data, arg_tuple,
@@ -95,7 +95,7 @@ SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, double t, coords_type&& x_q, qpt_da
 }
 
 template <int i, int dim, typename... trials, typename lambda, typename qpt_data_type>
-auto get_derivative_type(lambda qf, qpt_data_type&& qpt_data)
+auto get_derivative_type(const lambda & qf, qpt_data_type qpt_data)
 {
   using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim> >::type...>;
   return get_gradient(apply_qf(qf, double{}, serac::tuple<tensor<double, dim>, tensor<double, dim, dim> >{}, qpt_data,
@@ -103,7 +103,7 @@ auto get_derivative_type(lambda qf, qpt_data_type&& qpt_data)
 };
 
 template <typename lambda, int dim, int n, typename... T>
-SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(lambda qf, double t, const tensor<double, dim, n>& x,
+SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(const lambda & qf, double t, const tensor<double, dim, n>& x,
                                                const tensor<double, dim, dim, n>& J, const T&... inputs)
 {
   using position_t  = serac::tuple<tensor<double, dim>, tensor<double, dim, dim> >;
@@ -124,7 +124,7 @@ SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(lambda qf, double t, const tensor
 }
 
 template <typename lambda, int dim, int n, typename qpt_data_type, typename... T>
-SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, dim, n>& x,
+SERAC_HOST_DEVICE auto batch_apply_qf(const lambda & qf, double t, const tensor<double, dim, n>& x,
                                       const tensor<double, dim, dim, n>& J, qpt_data_type* qpt_data, bool update_state,
                                       const T&... inputs)
 {
@@ -362,7 +362,7 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, d
 
 template <uint32_t wrt, int Q, mfem::Geometry::Type geom, typename signature, typename lambda_type, typename state_type,
           typename derivative_type>
-auto evaluation_kernel(signature s, lambda_type qf, const double* positions, const double* jacobians,
+auto evaluation_kernel(signature s, const lambda_type & qf, const double* positions, const double* jacobians,
                        std::shared_ptr<QuadratureData<state_type> > qf_state,
                        std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {

@@ -568,7 +568,7 @@ const ScalarSolverOptions default_solver_options{.xtol = 1e-8, .rtol = 0, .max_i
 /// search interval are updated automatically to maintain a bracket around the root. If the sign
 /// of the residual is the same at both @p lower_bound and @p upper_bound, the solver aborts.
 template <typename function, typename... ParamTypes>
-auto solve_scalar_equation(function&& f, double x0, double lower_bound, double upper_bound, ScalarSolverOptions options,
+auto solve_scalar_equation(const function& f, double x0, double lower_bound, double upper_bound, ScalarSolverOptions options,
                            ParamTypes... params)
 {
   double x, df_dx;
@@ -689,7 +689,7 @@ auto solve_scalar_equation(function&& f, double x0, double lower_bound, double u
  * @return A root of @p f.
  */
 template <typename function, int n>
-auto find_root(function&& f, tensor<double, n> x0)
+auto find_root(const function & f, tensor<double, n> x0)
 {
   static_assert(std::is_same_v<decltype(f(x0)), tensor<double, n>>,
                 "error: f(x) must have the same number of equations as unknowns");
