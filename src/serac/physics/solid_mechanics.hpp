@@ -808,10 +808,10 @@ public:
   template <typename Material>
   struct MaterialStressFunctor {
     /// @brief Constructor for the functor
-    MaterialStressFunctor(const Material & material, GeometricNonlinearities gn) : material_(material), geom_nonlin_(gn) {}
+    MaterialStressFunctor(Material material, GeometricNonlinearities gn) : material_(material), geom_nonlin_(gn) {}
 
     /// @brief Material model
-    const Material & material_;
+    Material material_;
 
     /// @brief Enum value for geometric nonlinearities
     GeometricNonlinearities geom_nonlin_;

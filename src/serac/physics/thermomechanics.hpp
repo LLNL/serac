@@ -324,7 +324,7 @@ public:
     const double density;  ///< mass density
 
     /// constructor
-    MechanicalMaterialInterface(const ThermalMechanicalMaterial& m) : mat(m), density(m.density)
+    MechanicalMaterialInterface(ThermalMechanicalMaterial m) : mat(m), density(m.density)
     {
       // empty
     }
