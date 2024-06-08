@@ -265,7 +265,7 @@ public:
     initializeSolidMechanicsStates();
 
     // MRT, temporarily add these in here
-    inequality_constraints.push_back(std::make_unique<InequalityConstraint<order,dim>>(physics_name, mesh_tag_));
+    inequality_constraints.push_back(std::make_unique<InequalityConstraint<order, dim>>(physics_name, mesh_tag_));
   }
 
   /**
