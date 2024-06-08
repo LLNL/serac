@@ -52,7 +52,7 @@ struct InequalityConstraint {
         constraint_npc_error_(
             StateManager::newState(H1<order, 1>{}, detail::addPrefix(physics_name, "constraint_npc_error"), mesh_tag)),
         constraint_diagonal_stiffness_(StateManager::newState(
-            H1<order, dim>{}, detail::addPrefix(physics_name, "constraint_diagonal_stiffness"), mesh_tag))
+            H1<order, dim*dim>{}, detail::addPrefix(physics_name, "constraint_diagonal_stiffness"), mesh_tag))
   {
     constraint_            = 0.0;
     constraint_multiplier_ = 0.0;
@@ -99,11 +99,10 @@ struct InequalityConstraint {
 
     constraint_diagonal_stiffness_ = 0.0;
 
-    // std::cout << "some norms = " << constraint_multiplier_.Norml2() << " " << constraint_penalty_.Norml2() <<
-    // std::endl;
+    mfem::Vector currentCoords(dim); // switch to stack vectors eventually
+    mfem::Vector xyz_dirs(dim);
 
     for (int n = 0; n < numNodes; ++n) {
-      mfem::Vector currentCoords(dim);
       for (int i = 0; i < dim; ++i) {
         currentCoords[i] = x_current[dim * n + i];
       }
@@ -112,28 +111,51 @@ struct InequalityConstraint {
       const double lam = constraint_multiplier_[n];
       const double k   = constraint_penalty_[n];
 
-      double* diagHess = &constraint_diagonal_stiffness_[dim * n];
+      double* diagHess = &constraint_diagonal_stiffness_[dim * dim * n];
+  
       if (lam >= k * c) {
         const mfem::Vector gradC = levelSet_.gradient(currentCoords);
         for (int i = 0; i < dim; ++i) {
-          diagHess[i] += k * gradC[i] * gradC[i];  // ignore the actually hessian term for now * (-lam + k * c);
+          for (int j = 0; j < dim; ++j) {
+            diagHess[dim*i+j] += k * gradC[i] * gradC[j];
+          }
+          xyz_dirs = 0.0;
+          xyz_dirs[i] = 1.0;
+          const mfem::Vector hessI = levelSet_.hess_vec(currentCoords, xyz_dirs);
+          for (int j = 0; j < dim; ++j) {
+            diagHess[dim*i+j] += hessI[j] * (-lam + k * c);
+          }
         }
       }
     }
 
     hypre_ParCSRMatrix* J_hype(*J);
 
-    int         size       = J->Height();
-    auto*       Adiag_data = hypre_CSRMatrixData(J_hype->diag);
-    const auto* Adiag_i    = hypre_CSRMatrixI(J_hype->diag);
+    auto*       Jdiag_data = hypre_CSRMatrixData(J_hype->diag);
+    const auto* Jdiag_i    = hypre_CSRMatrixI(J_hype->diag);
+    const auto* Jdiag_j    = hypre_CSRMatrixJ(J_hype->diag);
 
     J->Print("first.txt");
-
-    for (int i = 0; i < size; ++i) {
-      auto diagIndex = Adiag_i[i];
-      Adiag_data[diagIndex] += constraint_diagonal_stiffness_[i];
+    std::array<int,dim> nodalCols;
+    for (int n = 0; n < numNodes; ++n) {
+      for (int i = 0; i < dim; ++i) {
+        nodalCols[i] = dim * n + i;
+      }
+      for (int i = 0; i < dim; ++i) {
+        int row = 3*n+i;
+        auto rowStart = Jdiag_i[row];
+        auto rowEnd = Jdiag_i[row+1];
+        for (auto colInd=rowStart; colInd < rowEnd; ++colInd) {
+          int col = Jdiag_j[colInd];
+          auto& val = Jdiag_data[colInd];
+          for (int j=0; j < dim; ++j) {
+            if (col == nodalCols[j]) {
+              val += constraint_diagonal_stiffness_[dim*i+j];
+            }
+          }
+        }
+      }
     }
-
     J->Print("second.txt");
 
     // printf("f\n");
