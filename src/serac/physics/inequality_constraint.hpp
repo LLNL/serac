@@ -23,12 +23,12 @@ struct LevelSet {
   double y_height = 0.8;
 
   // positive mean constraint is satisfied, i.e., c(x) >= 0
-  double evaluate(const mfem::Vector& x) const { return y_height - x[1]; }
+  double evaluate(const mfem::Vector& x) const { return y_height - x[1] - 0.2*x[0]; }
 
   mfem::Vector gradient(const mfem::Vector& x) const
   {
     mfem::Vector grad = x;
-    grad              = 0.0;
+    grad              = -0.2;
     grad[1]           = -1.0;
     return grad;
   }
@@ -142,7 +142,7 @@ struct InequalityConstraint {
         nodalCols[i] = dim * n + i;
       }
       for (int i = 0; i < dim; ++i) {
-        int row = 3*n+i;
+        int row = dim*n+i;
         auto rowStart = Jdiag_i[row];
         auto rowEnd = Jdiag_i[row+1];
         for (auto colInd=rowStart; colInd < rowEnd; ++colInd) {
