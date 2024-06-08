@@ -20,15 +20,18 @@
 namespace serac {
 
 struct LevelSet {
-  double y_height = 0.8;
+  double y_height = 0.85;
 
-  // positive mean constraint is satisfied, i.e., c(x) >= 0
-  double evaluate(const mfem::Vector& x) const { return y_height - x[1] - 0.2*x[0]; }
+  static constexpr double xAlpha = 0.1;
+
+  // positive means constraint is satisfied, i.e., c(x) >= 0
+  double evaluate(const mfem::Vector& x) const { return y_height - x[1] - xAlpha * x[0]; }
 
   mfem::Vector gradient(const mfem::Vector& x) const
   {
     mfem::Vector grad = x;
-    grad              = -0.2;
+    grad              = 0.0;
+    grad[0]           = -xAlpha;
     grad[1]           = -1.0;
     return grad;
   }
@@ -52,12 +55,17 @@ struct InequalityConstraint {
         constraint_npc_error_(
             StateManager::newState(H1<order, 1>{}, detail::addPrefix(physics_name, "constraint_npc_error"), mesh_tag)),
         constraint_diagonal_stiffness_(StateManager::newState(
-            H1<order, dim*dim>{}, detail::addPrefix(physics_name, "constraint_diagonal_stiffness"), mesh_tag))
+            H1<order, dim * dim>{}, detail::addPrefix(physics_name, "constraint_diagonal_stiffness"), mesh_tag))
+  {
+    reset();
+  }
+
+  void reset()
   {
     constraint_            = 0.0;
     constraint_multiplier_ = 0.0;
-    constraint_penalty_    = 1.0;
-    constraint_npc_error_  = 0.0;
+    constraint_penalty_    = 0.125;
+    constraint_npc_error_  = 0.1 * std::numeric_limits<double>::max();
   }
 
   void sumConstraintResidual(const FiniteElementVector& x_current, mfem::Vector& res)
@@ -66,16 +74,13 @@ struct InequalityConstraint {
     const int numNodes = sz / dim;
     SLIC_ERROR_ROOT_IF(numNodes != constraint_.Size(), "Constraint size does not match system size.");
 
-    std::cout << "some norms = " << constraint_multiplier_.Norml2() << " " << constraint_penalty_.Norml2() << std::endl;
-
     for (int n = 0; n < numNodes; ++n) {
       mfem::Vector currentCoords(dim);
       for (int i = 0; i < dim; ++i) {
         currentCoords[i] = x_current[dim * n + i];
       }
 
-      const double c = levelSet_.evaluate(currentCoords);
-      // std::cout << "x = " << currentCoords[0] << " " << currentCoords[1] << " " << c << std::endl;
+      const double c           = levelSet_.evaluate(currentCoords);
       constraint_[n]           = c;
       const double       lam   = constraint_multiplier_[n];
       const double       k     = constraint_penalty_[n];
@@ -99,7 +104,7 @@ struct InequalityConstraint {
 
     constraint_diagonal_stiffness_ = 0.0;
 
-    mfem::Vector currentCoords(dim); // switch to stack vectors eventually
+    mfem::Vector currentCoords(dim);  // switch to stack vectors eventually
     mfem::Vector xyz_dirs(dim);
 
     for (int n = 0; n < numNodes; ++n) {
@@ -112,18 +117,15 @@ struct InequalityConstraint {
       const double k   = constraint_penalty_[n];
 
       double* diagHess = &constraint_diagonal_stiffness_[dim * dim * n];
-  
+
       if (lam >= k * c) {
         const mfem::Vector gradC = levelSet_.gradient(currentCoords);
         for (int i = 0; i < dim; ++i) {
-          for (int j = 0; j < dim; ++j) {
-            diagHess[dim*i+j] += k * gradC[i] * gradC[j];
-          }
-          xyz_dirs = 0.0;
-          xyz_dirs[i] = 1.0;
+          xyz_dirs                 = 0.0;
+          xyz_dirs[i]              = 1.0;
           const mfem::Vector hessI = levelSet_.hess_vec(currentCoords, xyz_dirs);
           for (int j = 0; j < dim; ++j) {
-            diagHess[dim*i+j] += hessI[j] * (-lam + k * c);
+            diagHess[dim * i + j] += k * gradC[i] * gradC[j] + hessI[j] * (-lam + k * c);
           }
         }
       }
@@ -136,21 +138,25 @@ struct InequalityConstraint {
     const auto* Jdiag_j    = hypre_CSRMatrixJ(J_hype->diag);
 
     J->Print("first.txt");
-    std::array<int,dim> nodalCols;
+
+    std::array<int, dim> nodalCols;
     for (int n = 0; n < numNodes; ++n) {
       for (int i = 0; i < dim; ++i) {
         nodalCols[i] = dim * n + i;
       }
+
+      double* diagHess = &constraint_diagonal_stiffness_[dim * dim * n];
+
       for (int i = 0; i < dim; ++i) {
-        int row = dim*n+i;
+        int  row      = dim * n + i;
         auto rowStart = Jdiag_i[row];
-        auto rowEnd = Jdiag_i[row+1];
-        for (auto colInd=rowStart; colInd < rowEnd; ++colInd) {
-          int col = Jdiag_j[colInd];
+        auto rowEnd   = Jdiag_i[row + 1];
+        for (auto colInd = rowStart; colInd < rowEnd; ++colInd) {
+          int   col = Jdiag_j[colInd];
           auto& val = Jdiag_data[colInd];
-          for (int j=0; j < dim; ++j) {
+          for (int j = 0; j < dim; ++j) {
             if (col == nodalCols[j]) {
-              val += constraint_diagonal_stiffness_[dim*i+j];
+              val += diagHess[dim * i + j];
             }
           }
         }
@@ -158,9 +164,7 @@ struct InequalityConstraint {
     }
     J->Print("second.txt");
 
-    // printf("f\n");
     // auto diagSparseMat = std::make_unique<mfem::SparseMatrix>(constraint_diagonal_stiffness_);
-    // printf("g\n");
     // auto diagHypreMat = std::make_unique<mfem::HypreParMatrix>(constraint_diagonal_stiffness_.comm(),
     // J.GetGlobalNumRows(), J.GetRowStarts(), diagSparseMat.get()); printf("h\n"); printf("i,j\n"); printf("k\n");
     return J;
@@ -173,23 +177,40 @@ struct InequalityConstraint {
     const int numNodes = rows / dim;
     SLIC_ERROR_ROOT_IF(numNodes != constraint_.Size(), "Constraint size does not match system size.");
 
+    double target_decrease_factor = 0.8;
+
+    auto fischer_burmeister_npc_error = [](double c, double lam, double k) {
+      double ck = c * k;
+      return std::sqrt(ck * ck + lam * lam) - ck - lam;
+    };
+
     for (int n = 0; n < numNodes; ++n) {
       mfem::Vector currentCoords(dim);
       for (int i = 0; i < dim; ++i) {
         currentCoords[i] = x_current[dim * n + i];
       }
-      double c       = levelSet_.evaluate(currentCoords);
+      const double c = levelSet_.evaluate(currentCoords);
       constraint_[n] = c;
 
-      double lam = constraint_multiplier_[n];
-      double k   = constraint_penalty_[n];
-
+      const double lam = constraint_multiplier_[n];
+      const double k   = constraint_penalty_[n];
       // update multiplier
       constraint_multiplier_[n] = std::max(lam - k * c, 0.0);
+
+      double oldError          = constraint_npc_error_[n];
+      double newError          = std::abs(fischer_burmeister_npc_error(c, lam, k));
+      constraint_npc_error_[n] = newError;
+
+      bool poorProgress = newError > target_decrease_factor * oldError;
+
+      if (poorProgress) constraint_penalty_[n] *= 1.1;
+
+      // if (np.any(poorProgress) and solverSuccess):
+      //   print('Poor progress on ncp detected, increasing some penalty parameters')
+      //   alObjective.kappa = kappa.at[poorProgress].set(alSettings.penalty_scaling*kappa[poorProgress])
     }
 
-    // kappa = alObjective.kappa
-    // alObjective.lam = np.maximum(alObjective.lam-kappa*c, 0.0)
+    std::cout << "npc error = " << constraint_npc_error_.Norml2() << std::endl;
 
     // ncpError = np.abs( alObjective.ncp(x) )
     //# check if each constraint is making progress, or if they are already small relative to the specificed constraint

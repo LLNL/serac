@@ -92,7 +92,10 @@ FiniteElementState createReactionDirection(const BasePhysics& solid_solver, int 
 
 double computeSolidMechanicsQoi(BasePhysics& solid_solver)
 {
-  solid_solver.advanceTimestep(0.0);
+  for (int i = 0; i < 10; ++i) {
+    solid_solver.advanceTimestep(0.0);
+    dynamic_cast<SolidMechanicsType&>(solid_solver).updateConstraintMultipliers();
+  }
 
   const FiniteElementDual& reactions = solid_solver.dual("reactions");
 

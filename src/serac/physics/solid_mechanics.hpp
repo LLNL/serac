@@ -1154,11 +1154,9 @@ public:
           x_current_.project(getCoords);
           x_current_ += u;
           x_current_ += shape_displacement_;
-          std::cout << "r in = " << r.Norml2() << std::endl;
           for (auto& constraint : inequality_constraints) {
             constraint->sumConstraintResidual(x_current_, r);
           }
-          std::cout << "r out = " << r.Norml2() << std::endl;
 
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
