@@ -265,7 +265,7 @@ public:
     initializeSolidMechanicsStates();
 
     // MRT, temporarily add these in here
-    // inequality_constraints.push_back(std::make_unique<InequalityConstraint<order,dim>>(physics_name, mesh_tag_));
+    inequality_constraints.push_back(std::make_unique<InequalityConstraint<order,dim>>(physics_name, mesh_tag_));
   }
 
   /**
@@ -1154,9 +1154,11 @@ public:
           x_current_.project(getCoords);
           x_current_ += u;
           x_current_ += shape_displacement_;
+          std::cout << "r in = " << r.Norml2() << std::endl;
           for (auto& constraint : inequality_constraints) {
             constraint->sumConstraintResidual(x_current_, r);
           }
+          std::cout << "r out = " << r.Norml2() << std::endl;
 
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
@@ -1244,7 +1246,7 @@ public:
             // J = M + c0 * K
             J_.reset(mfem::Add(1.0, *m_mat, c0_, *k_mat));
             J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
-            
+
             return *J_;
           });
     }

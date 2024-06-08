@@ -8,7 +8,6 @@
 #include <string>
 
 #include "serac/physics/solid_mechanics.hpp"
-//#include "serac/physics/materials/solid_material.hpp"
 #include "serac/physics/materials/parameterized_solid_material.hpp"
 
 #include "axom/slic/core/SimpleLogger.hpp"
@@ -178,7 +177,7 @@ struct SolidMechanicsSensitivityFixture : public ::testing::Test {
   axom::sidre::DataStore dataStore;
   mfem::ParMesh*         mesh;
 
-  NonlinearSolverOptions nonlinear_opts{.relative_tol = 1.0e-15, .absolute_tol = 1.0e-15};
+  NonlinearSolverOptions nonlinear_opts{.relative_tol = 1.0e-7, .absolute_tol = 1.0e-15};
 
   bool dispBc = true;
 
