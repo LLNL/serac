@@ -59,12 +59,12 @@ std::unique_ptr<SolidMechanicsType> createNonlinearSolidMechanicsSolver(mfem::Pa
 
   solid->setMaterial(DependsOn<0, 1>{}, mat);
   solid->setDisplacementBCs({1}, [](const mfem::Vector&, mfem::Vector& disp) { disp = boundary_disp; });
-  solid->addBodyForce([](auto X, auto /* t */) {
-    auto Y = X;
-    Y[0]   = 0.1 + 0.1 * X[0] + 0.3 * X[1];
-    Y[1]   = -0.05 - 0.2 * X[0] + 0.15 * X[1];
-    return 0.1 * X + Y;
-  });
+  //solid->addBodyForce([](auto X, auto /* t */) {
+  //  auto Y = X;
+  //  Y[0]   = 0.1 + 0.1 * X[0] + 0.3 * X[1];
+  //  Y[1]   = -0.05 - 0.2 * X[0] + 0.15 * X[1];
+  //  return 0.1 * X + Y;
+  //});
 
   solid->completeSetup();
 
@@ -92,7 +92,7 @@ FiniteElementState createReactionDirection(const BasePhysics& solid_solver, int 
 
 double computeSolidMechanicsQoi(BasePhysics& solid_solver)
 {
-  for (int i = 0; i < 10; ++i) {
+  for (int i = 0; i < 25; ++i) {
     solid_solver.advanceTimestep(0.0);
     dynamic_cast<SolidMechanicsType&>(solid_solver).updateConstraintMultipliers();
   }
@@ -195,7 +195,7 @@ TEST_F(SolidMechanicsSensitivityFixture, ReactionShapeSensitivities)
 
   auto [qoi_base, _, __] = computeSolidMechanicsQoiSensitivities(*solid_solver);
 
-  solid_solver->outputStateToDisk("problem");
+  solid_solver->outputStateToDisk("paraview_problem");
 
   std::cout << "qoi = " << qoi_base << std::endl;
 

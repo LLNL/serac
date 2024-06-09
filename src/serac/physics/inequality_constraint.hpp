@@ -20,19 +20,20 @@
 namespace serac {
 
 struct LevelSet {
-  double y_height = 0.85;
+  double y_height = 0.9;//1.9;
 
-  static constexpr double xAlpha = 0.1;
+  static constexpr double xAlpha = 0.0; //1.0;
+  static constexpr double yAlpha = 1.0;
 
   // positive means constraint is satisfied, i.e., c(x) >= 0
-  double evaluate(const mfem::Vector& x) const { return y_height - x[1] - xAlpha * x[0]; }
+  double evaluate(const mfem::Vector& x) const { return y_height - xAlpha * x[0] - yAlpha * x[1] ; }
 
   mfem::Vector gradient(const mfem::Vector& x) const
   {
     mfem::Vector grad = x;
     grad              = 0.0;
     grad[0]           = -xAlpha;
-    grad[1]           = -1.0;
+    grad[1]           = -yAlpha;
     return grad;
   }
 
@@ -66,6 +67,14 @@ struct InequalityConstraint {
     constraint_multiplier_ = 0.0;
     constraint_penalty_    = 0.125;
     constraint_npc_error_  = 0.1 * std::numeric_limits<double>::max();
+  }
+
+  void outputStateToDisk() const {
+    StateManager::updateState(constraint_);
+    StateManager::updateDual(constraint_multiplier_);
+    StateManager::updateState(constraint_penalty_);
+    StateManager::updateState(constraint_npc_error_);
+    StateManager::updateState(constraint_diagonal_stiffness_);
   }
 
   void sumConstraintResidual(const FiniteElementVector& x_current, mfem::Vector& res)
@@ -137,12 +146,15 @@ struct InequalityConstraint {
     const auto* Jdiag_i    = hypre_CSRMatrixI(J_hype->diag);
     const auto* Jdiag_j    = hypre_CSRMatrixJ(J_hype->diag);
 
-    J->Print("first.txt");
+    // J->Print("first.txt");
+
+    using array = std::array<int, dim>;
+    using arrayInt = typename array::size_type;
 
     std::array<int, dim> nodalCols;
     for (int n = 0; n < numNodes; ++n) {
       for (int i = 0; i < dim; ++i) {
-        nodalCols[i] = dim * n + i;
+        nodalCols[static_cast<arrayInt>(i)] = dim * n + i;
       }
 
       double* diagHess = &constraint_diagonal_stiffness_[dim * dim * n];
@@ -155,14 +167,15 @@ struct InequalityConstraint {
           int   col = Jdiag_j[colInd];
           auto& val = Jdiag_data[colInd];
           for (int j = 0; j < dim; ++j) {
-            if (col == nodalCols[j]) {
+            if (col == nodalCols[static_cast<arrayInt>(j)]) {
               val += diagHess[dim * i + j];
             }
           }
         }
       }
     }
-    J->Print("second.txt");
+
+    // J->Print("second.txt");
 
     // auto diagSparseMat = std::make_unique<mfem::SparseMatrix>(constraint_diagonal_stiffness_);
     // auto diagHypreMat = std::make_unique<mfem::HypreParMatrix>(constraint_diagonal_stiffness_.comm(),
@@ -177,7 +190,7 @@ struct InequalityConstraint {
     const int numNodes = rows / dim;
     SLIC_ERROR_ROOT_IF(numNodes != constraint_.Size(), "Constraint size does not match system size.");
 
-    double target_decrease_factor = 0.8;
+    double target_decrease_factor = 0.75;
 
     auto fischer_burmeister_npc_error = [](double c, double lam, double k) {
       double ck = c * k;
@@ -203,7 +216,7 @@ struct InequalityConstraint {
 
       bool poorProgress = newError > target_decrease_factor * oldError;
 
-      if (poorProgress) constraint_penalty_[n] *= 1.1;
+      if (poorProgress) constraint_penalty_[n] *= 1.5;
 
       // if (np.any(poorProgress) and solverSuccess):
       //   print('Poor progress on ncp detected, increasing some penalty parameters')
