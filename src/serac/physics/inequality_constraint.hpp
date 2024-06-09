@@ -45,6 +45,48 @@ struct LevelSet {
   }
 };
 
+
+template <int dim>
+struct View {
+  View(mfem::Vector& v_) : v(v_), offset(v.Size()/dim) {
+  }
+
+  double& operator[] (int i) { return v[i]; }
+  double& operator() (int i) { return v[i]; }
+  const double& operator[] (int i) const { return v[i]; }
+  const double& operator() (int i) const { return v[i]; }
+
+  //double& operator() (int i, int j) { return v[i + offset*j]; }
+  //const double& operator() (int i, int j) const { return v[i + offset*j]; }
+
+  double& operator() (int i, int j) { return v[dim * i + j]; }
+  const double& operator() (int i, int j) const { return v[dim * i + j]; }
+
+  int numNodes() const { return offset; }
+
+  private:
+  mfem::Vector& v;
+  int offset;
+};
+
+
+template <int dim>
+struct ConstView {
+  ConstView(const mfem::Vector& v_) : v(v_), offset(v.Size()/dim) {
+  }
+
+  const double& operator[] (int i) const { return v[i]; }
+  const double& operator() (int i) const { return v[i]; }
+  //const double& operator() (int i, int j) const { return v[i + offset*j]; }
+  const double& operator() (int i, int j) const { return v[dim * i + j]; }
+
+  int numNodes() const { return offset; }
+
+  private:
+  const mfem::Vector& v;
+  int offset;
+};
+
 template <int order, int dim>
 struct InequalityConstraint {
   InequalityConstraint(std::string physics_name, std::string mesh_tag)
@@ -53,8 +95,8 @@ struct InequalityConstraint {
             StateManager::newDual(H1<order, 1>{}, detail::addPrefix(physics_name, "constraint_multiplier"), mesh_tag)),
         constraint_penalty_(
             StateManager::newState(H1<order, 1>{}, detail::addPrefix(physics_name, "constraint_penalty"), mesh_tag)),
-        constraint_npc_error_(
-            StateManager::newState(H1<order, 1>{}, detail::addPrefix(physics_name, "constraint_npc_error"), mesh_tag)),
+        constraint_ncp_error_(
+            StateManager::newState(H1<order, 1>{}, detail::addPrefix(physics_name, "constraint_ncp_error"), mesh_tag)),
         constraint_diagonal_stiffness_(StateManager::newState(
             H1<order, dim * dim>{}, detail::addPrefix(physics_name, "constraint_diagonal_stiffness"), mesh_tag))
   {
@@ -66,14 +108,14 @@ struct InequalityConstraint {
     constraint_            = 0.0;
     constraint_multiplier_ = 0.0;
     constraint_penalty_    = 0.125;
-    constraint_npc_error_  = 0.1 * std::numeric_limits<double>::max();
+    constraint_ncp_error_  = 0.1 * std::numeric_limits<double>::max();
   }
 
   void outputStateToDisk() const {
     StateManager::updateState(constraint_);
     StateManager::updateDual(constraint_multiplier_);
     StateManager::updateState(constraint_penalty_);
-    StateManager::updateState(constraint_npc_error_);
+    StateManager::updateState(constraint_ncp_error_);
     StateManager::updateState(constraint_diagonal_stiffness_);
   }
 
@@ -83,22 +125,28 @@ struct InequalityConstraint {
     const int numNodes = sz / dim;
     SLIC_ERROR_ROOT_IF(numNodes != constraint_.Size(), "Constraint size does not match system size.");
 
+    View<1> constraint(constraint_);
+    View<1> constraint_multiplier(constraint_multiplier_);
+    View<1> constraint_penalty(constraint_penalty_);
+    ConstView<dim> x(x_current);
+    View<dim> residual(res);
+
+    mfem::Vector currentCoords(dim);
     for (int n = 0; n < numNodes; ++n) {
-      mfem::Vector currentCoords(dim);
       for (int i = 0; i < dim; ++i) {
-        currentCoords[i] = x_current[dim * n + i];
+        currentCoords[i] = x(n,i);
       }
 
-      const double c           = levelSet_.evaluate(currentCoords);
-      constraint_[n]           = c;
-      const double       lam   = constraint_multiplier_[n];
-      const double       k     = constraint_penalty_[n];
+      const double c   = levelSet_.evaluate(currentCoords);
+      constraint[n]    = c;
+      const double lam = constraint_multiplier[n];
+      const double k   = constraint_penalty[n];
+
       const mfem::Vector gradC = levelSet_.gradient(currentCoords);
 
-      double* resVec = &res[dim * n];
       if (lam >= k * c) {
         for (int i = 0; i < dim; ++i) {
-          resVec[i] += gradC[i] * (-lam + k * c);
+          residual(n,i) += gradC[i] * (-lam + k * c);
         }
       }
     }
@@ -113,19 +161,23 @@ struct InequalityConstraint {
 
     constraint_diagonal_stiffness_ = 0.0;
 
+    View<1> constraint(constraint_);
+    View<1> constraint_multiplier(constraint_multiplier_);
+    View<1> constraint_penalty(constraint_penalty_);
+    ConstView<dim> x(x_current);
+    View<dim*dim> constraint_diagonal_stiffness(constraint_diagonal_stiffness_);
+
     mfem::Vector currentCoords(dim);  // switch to stack vectors eventually
     mfem::Vector xyz_dirs(dim);
 
     for (int n = 0; n < numNodes; ++n) {
       for (int i = 0; i < dim; ++i) {
-        currentCoords[i] = x_current[dim * n + i];
+        currentCoords[i] = x(n,i);
       }
       const double c   = levelSet_.evaluate(currentCoords);
-      constraint_[n]   = c;
-      const double lam = constraint_multiplier_[n];
-      const double k   = constraint_penalty_[n];
-
-      double* diagHess = &constraint_diagonal_stiffness_[dim * dim * n];
+      constraint[n]   = c;
+      const double lam = constraint_multiplier[n];
+      const double k   = constraint_penalty[n];
 
       if (lam >= k * c) {
         const mfem::Vector gradC = levelSet_.gradient(currentCoords);
@@ -134,7 +186,7 @@ struct InequalityConstraint {
           xyz_dirs[i]              = 1.0;
           const mfem::Vector hessI = levelSet_.hess_vec(currentCoords, xyz_dirs);
           for (int j = 0; j < dim; ++j) {
-            diagHess[dim * i + j] += k * gradC[i] * gradC[j] + hessI[j] * (-lam + k * c);
+            constraint_diagonal_stiffness(n, dim*i+j) += k * gradC[i] * gradC[j] + hessI[j] * (-lam + k * c);
           }
         }
       }
@@ -154,10 +206,9 @@ struct InequalityConstraint {
     std::array<int, dim> nodalCols;
     for (int n = 0; n < numNodes; ++n) {
       for (int i = 0; i < dim; ++i) {
+        //nodalCols[static_cast<arrayInt>(i)] = n + i * numNodes;
         nodalCols[static_cast<arrayInt>(i)] = dim * n + i;
       }
-
-      double* diagHess = &constraint_diagonal_stiffness_[dim * dim * n];
 
       for (int i = 0; i < dim; ++i) {
         int  row      = dim * n + i;
@@ -168,7 +219,7 @@ struct InequalityConstraint {
           auto& val = Jdiag_data[colInd];
           for (int j = 0; j < dim; ++j) {
             if (col == nodalCols[static_cast<arrayInt>(j)]) {
-              val += diagHess[dim * i + j];
+              val += constraint_diagonal_stiffness(n, dim*i+j);
             }
           }
         }
@@ -192,38 +243,40 @@ struct InequalityConstraint {
 
     double target_decrease_factor = 0.75;
 
-    auto fischer_burmeister_npc_error = [](double c, double lam, double k) {
+    auto fischer_burmeister_ncp_error = [](double c, double lam, double k) {
       double ck = c * k;
       return std::sqrt(ck * ck + lam * lam) - ck - lam;
     };
 
+    View<1> constraint(constraint_);
+    View<1> constraint_multiplier(constraint_multiplier_);
+    View<1> constraint_penalty(constraint_penalty_);
+    View<1> constraint_ncp_error(constraint_ncp_error_);
+    ConstView<dim> x(x_current);
+
     for (int n = 0; n < numNodes; ++n) {
       mfem::Vector currentCoords(dim);
       for (int i = 0; i < dim; ++i) {
-        currentCoords[i] = x_current[dim * n + i];
+        currentCoords[i] = x(n,i);
       }
       const double c = levelSet_.evaluate(currentCoords);
-      constraint_[n] = c;
+      constraint[n] = c;
 
-      const double lam = constraint_multiplier_[n];
-      const double k   = constraint_penalty_[n];
+      const double lam = constraint_multiplier[n];
+      const double k   = constraint_penalty[n];
       // update multiplier
-      constraint_multiplier_[n] = std::max(lam - k * c, 0.0);
+      constraint_multiplier[n] = std::max(lam - k * c, 0.0);
 
-      double oldError          = constraint_npc_error_[n];
-      double newError          = std::abs(fischer_burmeister_npc_error(c, lam, k));
-      constraint_npc_error_[n] = newError;
+      double oldError         = constraint_ncp_error[n];
+      double newError         = std::abs(fischer_burmeister_ncp_error(c, lam, k));
+      constraint_ncp_error[n] = newError;
 
       bool poorProgress = newError > target_decrease_factor * oldError;
 
-      if (poorProgress) constraint_penalty_[n] *= 1.5;
-
-      // if (np.any(poorProgress) and solverSuccess):
-      //   print('Poor progress on ncp detected, increasing some penalty parameters')
-      //   alObjective.kappa = kappa.at[poorProgress].set(alSettings.penalty_scaling*kappa[poorProgress])
+      if (poorProgress) constraint_penalty[n] *= 1.5;
     }
 
-    std::cout << "npc error = " << constraint_npc_error_.Norml2() << std::endl;
+    std::cout << "ncp error = " << constraint_ncp_error_.Norml2() << std::endl;
 
     // ncpError = np.abs( alObjective.ncp(x) )
     //# check if each constraint is making progress, or if they are already small relative to the specificed constraint
@@ -237,7 +290,7 @@ protected:
   FiniteElementState constraint_;
   FiniteElementDual  constraint_multiplier_;
   FiniteElementState constraint_penalty_;
-  FiniteElementState constraint_npc_error_;
+  FiniteElementState constraint_ncp_error_;
   FiniteElementState constraint_diagonal_stiffness_;
 };
 
