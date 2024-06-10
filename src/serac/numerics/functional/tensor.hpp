@@ -1903,28 +1903,25 @@ bool isnan(const tensor<T, n...>& A)
 /// @overload
 inline bool isnan(const zero&) { return false; }
 
-}  // namespace serac
+/** Eigendecomposition for symmetric 3x3 matrix
+ *
+ * @param A Matrix for which the eigendecomposition will be computed. Must be symmetric, this is
+ * not checked.
+ * 
+ * @note based on "A robust algorithm for finding the eigenvalues and
+ * eigenvectors of 3x3 symmetric matrices", by Scherzinger & Dohrmann
+*/
+//__host__ __device__
+inline void eig_symm(const mat3 & A, vec3 & eta, mat3 & Q) {
+  using std::pow;
+  using std:: acos;
+  using std::cos;
+  using std::signum;
 
-// todo: port to current tensor class:
-#if 0
-// eigendecomposition for symmetric A
-//
-// based on "A robust algorithm for finding the eigenvalues and
-// eigenvectors of 3x3 symmetric matrices", by Scherzinger & Dohrmann
-__host__ __device__
-inline void eig(const r2tensor < 3, 3 > & A,
-                      r1tensor < 3 >    & eta,
-                      r2tensor < 3, 3 > & Q) {
-
-  for (int i = 0; i < 3; i++) {
-    eta(i) = 1.0;
-    for (int j = 0; j < 3; j++) {
-      Q(i,j) = (i == j);
-    }
-  }
+  eta *= 0.0;
+  Q = DenseIdentity<3>();
 
   auto A_dev = dev(A);
-
   double J2 = I2(A_dev);
   double J3 = I3(A_dev);
 
@@ -1936,13 +1933,13 @@ inline void eig(const r2tensor < 3, 3 > & A,
 
     // consider the most distinct eigenvalue first
     if (6.0 * alpha < M_PI) {
-      eta(0) = 2 * sqrt(J2 / 3.0) * cos(alpha);
+      eta[0] = 2 * sqrt(J2 / 3.0) * cos(alpha);
     } else {
-      eta(0) = 2 * sqrt(J2 / 3.0) * cos(alpha + 2.0 * M_PI / 3.0);
+      eta[0] = 2 * sqrt(J2 / 3.0) * cos(alpha + 2.0 * M_PI / 3.0);
     }
 
     // find the eigenvector for that eigenvalue
-    r1tensor < 3 > r[3];
+    mat3 r;
 
     int imax = -1;
     double norm_max = -1.0;
@@ -1950,7 +1947,7 @@ inline void eig(const r2tensor < 3, 3 > & A,
     for (int i = 0; i < 3; i++) {
 
       for (int j = 0; j < 3; j++) {
-        r[i](j) = A_dev(j,i) - (i == j) * eta(0);
+        r[i][j] = A_dev(j,i) - (i == j) * eta(0);
       }
 
       double norm_r = norm(r[i]);
@@ -1961,7 +1958,7 @@ inline void eig(const r2tensor < 3, 3 > & A,
 
     }
 
-    r1tensor < 3 > s0, s1, t1, t2, v0, v1, v2, w;
+    vec3 s0, s1, t1, t2, v0, v1, v2, w;
 
     s0 = normalize(r[imax]);
     t1 = r[(imax+1)%3] - dot(r[(imax+1)%3], s0) * s0;
@@ -1971,7 +1968,7 @@ inline void eig(const r2tensor < 3, 3 > & A,
     // record the first eigenvector
     v0 = cross(s0, s1);
     for (int i = 0; i < 3; i++) {
-      Q(i,0) = v0(i);
+      Q[i, 0] = v0[i];
     }
 
     // get the other two eigenvalues by solving the
@@ -1995,8 +1992,8 @@ inline void eig(const r2tensor < 3, 3 > & A,
     if (fabs(delta) <= 1.0e-15) {
       
       for (int i = 0; i < 3; i++){
-        Q(i,1) = s0(i);
-        Q(i,2) = s1(i);
+        Q[i,1] = s0(i);
+        Q[i,2] = s1(i);
       } 
       
     // otherwise compute the remaining eigenvectors
@@ -2008,21 +2005,20 @@ inline void eig(const r2tensor < 3, 3 > & A,
       w = normalize((norm(t1) > norm(t2)) ? t1 : t2);
 
       v1 = normalize(cross(w, v0));
-      for (int i = 0; i < 3; i++) Q(i,1) = v1(i);
+      for (int i = 0; i < 3; i++) Q[i,1] = v1(i);
 
       // define the last eigenvector as
       // the direction perpendicular to the
       // first two directions
       v2 = normalize(cross(v0, v1));
-      for (int i = 0; i < 3; i++) Q(i,2) = v2(i);
+      for (int i = 0; i < 3; i++) Q[i,2] = v2(i);
 
     }
-
-    // eta are actually eigenvalues of A_dev, so
-    // shift them to get eigenvalues of A
-    eta += tr(A) / 3.0;
-
   }
+  // eta are actually eigenvalues of A_dev, so
+  // shift them to get eigenvalues of A
+  eta += tr(A) / 3.0;
+}
 
 }
 
