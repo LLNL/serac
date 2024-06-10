@@ -239,7 +239,7 @@ public:
 
     // If the user wants the AMG preconditioner with a linear solver, set the pfes
     // to be the displacement
-    auto* amg_prec = dynamic_cast<mfem::HypreBoomerAMG*>(nonlin_solver_->preconditioner());
+    auto* amg_prec = dynamic_cast<mfem::HypreBoomerAMG*>(&nonlin_solver_->preconditioner());
     if (amg_prec) {
       // amg_prec->SetElasticityOptions(&displacement_.space());
 
