@@ -430,3 +430,14 @@ TEST(Tensor, DerivativeOfLinearSolveWrtAMatchesFiniteDifference)
 
   EXPECT_LT(squared_norm(dx_FD - get_gradient(x)), tolerance);
 }
+
+TEST(Tensor, EigenvaluesTriplyDegenerate) {
+  const double lambda = 2.5;
+  const auto A = lambda*DenseIdentity<3>();
+  tensor<double, 3> eigvals;
+  tensor<double, 3, 3> eigvecs;
+  eig_symm(A, eigvals, eigvecs);
+  for (i=0; i < 3; i++){
+    EXPECT_NEAR(eigvals[i], lambda, 1e-12);
+  }
+}
