@@ -2020,7 +2020,22 @@ inline void eig_symm(const mat3 & A, vec3 & eta, mat3 & Q) {
   eta += tr(A) / 3.0;
 }
 
+mat3 log_symm(vec3 eigvals, mat3 eigvecs) {
+  auto log_eigvals = make_tensor<3>([&](int i){ return log(eigvals[i]); });
+  return dot(eigvecs, dot(diag(log_eigvals), transpose(eigvecs)));
 }
+
+mat3 log_symm(mat3 A) {
+  vec3 eigvals;
+  mat3 eigvecs;
+  eig_symm(A, eigvals, eigvecs);
+  return log_symm(eigvals, eigvecs);
+}
+
+}  // namespace serac
+
+
+#if 0
 
 inline float angle_between(const vec < 2 > & a, const vec < 2 > & b) {
   return acos(clip(dot(normalize(a), normalize(b)), -1.0f, 1.0f));
