@@ -188,17 +188,6 @@ public:
                     mfem::ParFiniteElementSpace& space);
 
   /**
-   * @brief Set the natural boundary conditions from a list of boundary markers and a coefficient
-   *
-   * @param[in] nat_bdr The set of mesh attributes denoting a natural boundary
-   * @param[in] nat_bdr_coef The coefficient defining the natural boundary function
-   * @param[in] space The finite element space to which the BC should be applied
-   * @param[in] component The component to set (null implies all components are set)
-   */
-  void addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
-                  mfem::ParFiniteElementSpace& space, const std::optional<int> component = {});
-
-  /**
    * @brief Set a generic boundary condition from a list of boundary markers and a coefficient
    *
    * @tparam The type of the tag to use
