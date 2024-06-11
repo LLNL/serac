@@ -38,8 +38,8 @@ struct ParameterizedLinearIsotropicSolid {
    * @return The calculated material response (Cauchy stress) for the material
    */
   template <int dim, typename DispGradType, typename BulkType, typename ShearType>
-  SERAC_HOST_DEVICE auto operator()(State& /*state*/, const serac::tensor<DispGradType, dim, dim> & du_dX, const BulkType& DeltaK,
-                                    const ShearType& DeltaG) const
+  SERAC_HOST_DEVICE auto operator()(State& /*state*/, const serac::tensor<DispGradType, dim, dim>& du_dX,
+                                    const BulkType& DeltaK, const ShearType& DeltaG) const
   {
     constexpr auto I       = Identity<dim>();
     auto           K       = K0 + get<0>(DeltaK);
@@ -81,8 +81,8 @@ struct ParameterizedNeoHookeanSolid {
    * @return The calculated material response (Cauchy stress) for the material
    */
   template <int dim, typename DispGradType, typename BulkType, typename ShearType>
-  SERAC_HOST_DEVICE auto operator()(State& /*state*/, const serac::tensor<DispGradType, dim, dim> & du_dX, const BulkType& DeltaK,
-                                    const ShearType& DeltaG) const
+  SERAC_HOST_DEVICE auto operator()(State& /*state*/, const serac::tensor<DispGradType, dim, dim>& du_dX,
+                                    const BulkType& DeltaK, const ShearType& DeltaG) const
   {
     using std::log1p;
     constexpr auto I         = Identity<dim>();
