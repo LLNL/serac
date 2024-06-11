@@ -148,13 +148,11 @@ struct zero {
 
 /** @brief checks if a type is `zero` */
 template <typename T>
-struct is_zero : std::false_type {
-};
+struct is_zero : std::false_type {};
 
 /** @overload */
 template <>
-struct is_zero<zero> : std::true_type {
-};
+struct is_zero<zero> : std::true_type {};
 
 /** @brief the sum of two `zero`s is `zero` */
 SERAC_HOST_DEVICE constexpr auto operator+(zero, zero) { return zero{}; }
@@ -1285,6 +1283,33 @@ auto matrix_sqrt(const tensor<T, dim, dim>& A)
 }
 
 /**
+ * @brief compute the matrix exponential of a square, real-valued, possibly non-symmetric matrix
+ * using Taylor expansion to prescribed tolerance
+ *
+ * @tparam T the data type stored in each element of the matrix
+ * @param A the matrix to compute the exponential of
+ * @return a square matrix, B, approximating exp(A)
+ */
+template <typename T, int dim>
+auto matrix_exp(const tensor<T, dim, dim>& A)
+{
+  auto                       powA  = DenseIdentity<dim>();
+  auto                       expA  = DenseIdentity<dim>();
+  int                        n     = 1;
+  double                     tol   = 1e-15;
+  int                        factn = 1;
+  //
+  while ((norm(powA) / factn) > tol) {
+    factn = factn * n;
+    //
+    powA = dot(powA, A);
+    expA = expA + (1.0 / factn) * powA;
+    n++;
+  }
+  return expA;
+}
+
+/**
  * @brief a convenience function that computes a dot product between
  * two tensor, but that allows the user to specify which indices should
  * be summed over. For example:
@@ -1640,8 +1665,8 @@ inline auto& operator<<(std::ostream& out, zero)
 }
 
 /**
- * @brief print a double using `printf`, so that it is suitable for use inside cuda kernels. (used in final recursion of
- * printf(tensor<...>))
+ * @brief print a double using `printf`, so that it is suitable for use inside cuda kernels. (used in final recursion
+ * of printf(tensor<...>))
  * @param[in] value The value to write out
  */
 inline SERAC_HOST_DEVICE void print(double value) { printf("%f", value); }
