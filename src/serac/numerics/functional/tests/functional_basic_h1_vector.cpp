@@ -28,11 +28,11 @@ template <int p, int dim>
 void weird_mixed_test(std::unique_ptr<mfem::ParMesh>& mesh)
 {
   // Define vector-valued test and trial spaces of different sizes
-  using test_space  = H1<p, dim + 1>;
+  using test_space = H1<p, dim + 1>;
   using trial_space = H1<p, dim + 2>;
 
   auto [trial_fes, trial_col] = generateParFiniteElementSpace<trial_space>(mesh.get());
-  auto [test_fes, test_col]   = generateParFiniteElementSpace<test_space>(mesh.get());
+  auto [test_fes, test_col] = generateParFiniteElementSpace<test_space>(mesh.get());
 
   mfem::Vector U(trial_fes->TrueVSize());
   U.Randomize();
@@ -51,8 +51,8 @@ void weird_mixed_test(std::unique_ptr<mfem::ParMesh>& mesh)
       Dimension<dim>{}, DependsOn<0>{},
       [=](double /*t*/, auto /* x */, auto displacement) {
         auto [u, du_dx] = displacement;
-        auto source     = zero{};
-        auto flux       = double_dot(d11, du_dx);
+        auto source = zero{};
+        auto flux = double_dot(d11, du_dx);
         return serac::tuple{source, flux};
       },
       *mesh);
@@ -74,11 +74,11 @@ template <int p, int dim>
 void elasticity_test(std::unique_ptr<mfem::ParMesh>& mesh)
 {
   // Define the test and trial spaces for an elasticity-like problem
-  using test_space  = H1<p, dim>;
+  using test_space = H1<p, dim>;
   using trial_space = H1<p, dim>;
 
   auto [trial_fes, trial_col] = generateParFiniteElementSpace<trial_space>(mesh.get());
-  auto [test_fes, test_col]   = generateParFiniteElementSpace<test_space>(mesh.get());
+  auto [test_fes, test_col] = generateParFiniteElementSpace<test_space>(mesh.get());
 
   mfem::Vector U(trial_fes->TrueVSize());
   U.Randomize();
@@ -98,8 +98,8 @@ void elasticity_test(std::unique_ptr<mfem::ParMesh>& mesh)
       Dimension<dim>{}, DependsOn<0>{},
       [=](double /*t*/, auto /* x */, auto displacement) {
         auto [u, du_dx] = displacement;
-        auto source     = dot(d00, u) + double_dot(d01, du_dx);
-        auto flux       = dot(d10, u) + double_dot(d11, du_dx);
+        auto source = dot(d00, u) + double_dot(d01, du_dx);
+        auto flux = dot(d10, u) + double_dot(d11, du_dx);
         return serac::tuple{source, flux};
       },
       *mesh);

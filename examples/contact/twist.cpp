@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
   constexpr int dim = 3;
 
   // Create DataStore
-  std::string            name = "contact_twist_example";
+  std::string name = "contact_twist_example";
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, name + "_data");
 
@@ -46,16 +46,16 @@ int main(int argc, char* argv[])
   return 1;
 #endif
 
-  serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = serac::NonlinearSolver::Newton,
-                                                  .relative_tol   = 1.0e-7,
-                                                  .absolute_tol   = 1.0e-4,
+  serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver = serac::NonlinearSolver::Newton,
+                                                  .relative_tol = 1.0e-7,
+                                                  .absolute_tol = 1.0e-4,
                                                   .max_iterations = 200,
-                                                  .print_level    = 1};
+                                                  .print_level = 1};
 
-  serac::ContactOptions contact_options{.method      = serac::ContactMethod::SingleMortar,
+  serac::ContactOptions contact_options{.method = serac::ContactMethod::SingleMortar,
                                         .enforcement = serac::ContactEnforcement::Penalty,
-                                        .type        = serac::ContactType::Frictionless,
-                                        .penalty     = 1.0e5};
+                                        .type = serac::ContactType::Frictionless,
+                                        .penalty = 1.0e5};
 
   serac::SolidMechanicsContact<p, dim> solid_solver(nonlinear_options, linear_options,
                                                     serac::solid_mechanics::default_quasistatic_options,
@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
   });
 
   // Add the contact interaction
-  auto          contact_interaction_id = 0;
+  auto contact_interaction_id = 0;
   std::set<int> surface_1_boundary_attributes({4});
   std::set<int> surface_2_boundary_attributes({5});
   solid_solver.addContactInteraction(contact_interaction_id, surface_1_boundary_attributes,

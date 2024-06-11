@@ -44,7 +44,7 @@ ContactInteraction::ContactInteraction(int interaction_id, const mfem::ParMesh& 
   if (getContactOptions().type == ContactType::TiedNormal) {
     // this block essentially returns the complement of GetEssentialTrueDofsFromElementAttribute(surface 2) (def'd in
     // boundary_condition_helper)
-    auto&            pressure_space = *tribol::getMfemPressure(interaction_id).ParFESpace();
+    auto& pressure_space = *tribol::getMfemPressure(interaction_id).ParFESpace();
     mfem::Array<int> dof_markers(pressure_space.GetVSize());
     dof_markers = -1;
     mfem::Array<int> surf2_markers(pressure_space.GetMesh()->attributes.Max());
@@ -67,7 +67,7 @@ ContactInteraction::ContactInteraction(int interaction_id, const mfem::ParMesh& 
 FiniteElementDual ContactInteraction::forces() const
 {
   FiniteElementDual f(*current_coords_.ParFESpace());
-  mfem::Vector      f_tribol(current_coords_.ParFESpace()->GetVSize());
+  mfem::Vector f_tribol(current_coords_.ParFESpace()->GetVSize());
   f_tribol = 0.0;
   tribol::getMfemResponse(getInteractionId(), f_tribol);
   current_coords_.ParFESpace()->GetRestrictionMatrix()->Mult(f_tribol, f);
@@ -76,7 +76,7 @@ FiniteElementDual ContactInteraction::forces() const
 
 FiniteElementState ContactInteraction::pressure() const
 {
-  auto&              p_tribol = tribol::getMfemPressure(getInteractionId());
+  auto& p_tribol = tribol::getMfemPressure(getInteractionId());
   FiniteElementState p(*p_tribol.ParFESpace());
   p_tribol.ParFESpace()->GetRestrictionMatrix()->Mult(p_tribol, p);
   return p;
@@ -84,9 +84,9 @@ FiniteElementState ContactInteraction::pressure() const
 
 FiniteElementDual ContactInteraction::gaps() const
 {
-  auto&             pressure_fes = *tribol::getMfemPressure(getInteractionId()).ParFESpace();
+  auto& pressure_fes = *tribol::getMfemPressure(getInteractionId()).ParFESpace();
   FiniteElementDual g(pressure_fes);
-  mfem::Vector      g_tribol;
+  mfem::Vector g_tribol;
   tribol::getMfemGap(getInteractionId(), g_tribol);
   pressure_fes.GetRestrictionMatrix()->Mult(g_tribol, g);
   return g;
@@ -117,8 +117,8 @@ void ContactInteraction::setPressure(const FiniteElementState& pressure) const
 const mfem::Array<int>& ContactInteraction::inactiveDofs() const
 {
   if (getContactOptions().type == ContactType::Frictionless) {
-    auto             p = pressure();
-    auto             g = gaps();
+    auto p = pressure();
+    auto g = gaps();
     std::vector<int> inactive_tdofs_vector;
     inactive_tdofs_vector.reserve(static_cast<size_t>(p.Size()));
     for (int d{0}; d < p.Size(); ++d) {

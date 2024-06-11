@@ -207,10 +207,10 @@ void functional_test_2D(mfem::ParMesh& mesh, double tolerance)
   tensor c = make_tensor<dim, (p + 1) * (p + 2) / 2>([](int i, int j) { return double(i + 1) / (j + 1); });
 
   // Create standard MFEM bilinear and linear forms on H1
-  auto                        fec1 = mfem::H1_FECollection(p, dim);
+  auto fec1 = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace1(&mesh, &fec1);
 
-  auto                        fec2 = mfem::H1_FECollection(p, dim);
+  auto fec2 = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace2(&mesh, &fec2, dim);
 
   mfem::Vector ones(fespace1.TrueVSize());
@@ -227,7 +227,7 @@ void functional_test_2D(mfem::ParMesh& mesh, double tolerance)
   dU2.Randomize();
 
   // Define the types for the test and trial spaces using the function arguments
-  using test_space  = H1<p>;
+  using test_space = H1<p>;
   using trial_space = H1<p>;
   using shape_space = H1<p, dim>;
 
@@ -247,12 +247,12 @@ void functional_test_2D(mfem::ParMesh& mesh, double tolerance)
       Dimension<dim - 1>{}, DependsOn<>{},
       [=](double /*t*/, auto position) {
         auto [X, dX_dxi] = position;
-        auto n           = normalize(cross(dX_dxi));
+        auto n = normalize(cross(dX_dxi));
         return -dot(f(X), n);
       },
       mesh);
 
-  double t        = 0.0;
+  double t = 0.0;
   auto [r, drdU2] = residual(t, serac::differentiate_wrt(U2), U1);
   EXPECT_NEAR(mfem::InnerProduct(r, ones), 0.0, tolerance);
 
@@ -268,10 +268,10 @@ void functional_test_3D(mfem::ParMesh& mesh, double tolerance)
   tensor c = make_tensor<dim, ((p + 1) * (p + 2) * (p + 3)) / 6>([](int i, int j) { return double(i + 1) / (j + 1); });
 
   // Create standard MFEM bilinear and linear forms on H1
-  auto                        fec1 = mfem::H1_FECollection(p, dim);
+  auto fec1 = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace1(&mesh, &fec1);
 
-  auto                        fec2 = mfem::H1_FECollection(p, dim);
+  auto fec2 = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace2(&mesh, &fec2, dim);
 
   mfem::Vector ones(fespace1.TrueVSize());
@@ -288,7 +288,7 @@ void functional_test_3D(mfem::ParMesh& mesh, double tolerance)
   dU2.Randomize();
 
   // Define the types for the test and trial spaces using the function arguments
-  using test_space  = H1<p>;
+  using test_space = H1<p>;
   using trial_space = H1<p>;
   using shape_space = H1<p, dim>;
 
@@ -308,12 +308,12 @@ void functional_test_3D(mfem::ParMesh& mesh, double tolerance)
       Dimension<dim - 1>{}, DependsOn<>{},
       [=](double /*t*/, auto position) {
         auto [X, dX_dxi] = position;
-        auto n           = normalize(cross(dX_dxi));
+        auto n = normalize(cross(dX_dxi));
         return -dot(f(X), n);
       },
       mesh);
 
-  double t        = 0.0;
+  double t = 0.0;
   auto [r, drdU2] = residual(t, serac::differentiate_wrt(U2), U1);
   EXPECT_NEAR(mfem::InnerProduct(r, ones), 0.0, tolerance);
 
@@ -338,7 +338,7 @@ int main(int argc, char* argv[])
 
   axom::slic::SimpleLogger logger;
 
-  int serial_refinement   = 1;
+  int serial_refinement = 1;
   int parallel_refinement = 0;
 
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/patch2D_tris_and_quads.mesh";

@@ -27,10 +27,10 @@ void functional_solid_test_static_J2()
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  constexpr int p                   = 2;
-  constexpr int dim                 = 3;
-  int           serial_refinement   = 0;
-  int           parallel_refinement = 0;
+  constexpr int p = 2;
+  constexpr int dim = 3;
+  int serial_refinement = 0;
+  int parallel_refinement = 0;
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -48,11 +48,11 @@ void functional_solid_test_static_J2()
   // _solver_params_start
   serac::LinearSolverOptions linear_options{.linear_solver = LinearSolver::SuperLU};
 
-  serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
-                                                  .relative_tol   = 1.0e-12,
-                                                  .absolute_tol   = 1.0e-12,
+  serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver = NonlinearSolver::Newton,
+                                                  .relative_tol = 1.0e-12,
+                                                  .absolute_tol = 1.0e-12,
                                                   .max_iterations = 5000,
-                                                  .print_level    = 1};
+                                                  .print_level = 1};
 
   SolidMechanics<p, dim> solid_solver(nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options,
                                       GeometricNonlinearities::Off, "solid_mechanics", mesh_tag);
@@ -74,13 +74,13 @@ void functional_solid_test_static_J2()
   solid_solver.setMaterial(mat, state);
 
   // prescribe zero displacement at the supported end of the beam,
-  std::set<int> support           = {1};
-  auto          zero_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; };
+  std::set<int> support = {1};
+  auto zero_displacement = [](const mfem::Vector&, mfem::Vector& u) -> void { u = 0.0; };
   solid_solver.setDisplacementBCs(support, zero_displacement);
 
   // apply a displacement along z to the the tip of the beam
   auto translated_in_z = [](const mfem::Vector&, double t, mfem::Vector& u) -> void {
-    u    = 0.0;
+    u = 0.0;
     u[2] = t * (t - 1);
   };
   std::set<int> tip = {2};
@@ -94,8 +94,8 @@ void functional_solid_test_static_J2()
   solid_solver.outputStateToDisk("paraview");
 
   // Perform the quasi-static solve
-  int    num_steps = 10;
-  double tmax      = 1.0;
+  int num_steps = 10;
+  double tmax = 1.0;
   for (int i = 0; i < num_steps; i++) {
     solid_solver.advanceTimestep(tmax / num_steps);
     solid_solver.outputStateToDisk("paraview");
@@ -114,10 +114,10 @@ void functional_solid_spatial_essential_bc()
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  constexpr int p                   = 1;
-  constexpr int dim                 = 3;
-  int           serial_refinement   = 1;
-  int           parallel_refinement = 0;
+  constexpr int p = 1;
+  constexpr int dim = 3;
+  int serial_refinement = 1;
+  int parallel_refinement = 0;
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -145,7 +145,7 @@ void functional_solid_spatial_essential_bc()
 
   // We want to test both the scalar displacement functions including the time argument and the scalar displacement
   // functions without
-  auto zero_scalar   = [](const mfem::Vector&, double) { return 0.0; };
+  auto zero_scalar = [](const mfem::Vector&, double) { return 0.0; };
   auto scalar_offset = [](const mfem::Vector&) { return -0.1; };
 
   auto is_on_bottom = [](const mfem::Vector& x) {
@@ -273,7 +273,7 @@ void functional_parameterized_solid_test(double expected_disp_norm)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  int serial_refinement   = 0;
+  int serial_refinement = 0;
   int parallel_refinement = 0;
 
   // Create DataStore
@@ -339,10 +339,10 @@ void functional_parameterized_solid_test(double expected_disp_norm)
 
   // Generate a true dof set from the boundary attribute
   mfem::Array<int> bdr_attr_marker(pmesh.bdr_attributes.Max());
-  bdr_attr_marker    = 0;
+  bdr_attr_marker = 0;
   bdr_attr_marker[0] = 1;
   mfem::Array<int> true_dofs;
-  auto             fe_space = const_cast<mfem::ParFiniteElementSpace*>(&solid_solver.displacement().space());
+  auto fe_space = const_cast<mfem::ParFiniteElementSpace*>(&solid_solver.displacement().space());
   fe_space->GetEssentialTrueDofs(bdr_attr_marker, true_dofs);
 
   solid_solver.setDisplacementBCsByDofList(true_dofs, bc);

@@ -18,10 +18,10 @@ namespace serac {
 TEST(BoundaryCond, SimpleRepeatedDofs)
 {
   MPI_Barrier(MPI_COMM_WORLD);
-  constexpr int      N    = 15;
-  constexpr int      ATTR = 1;
-  auto               mesh = mfem::Mesh::MakeCartesian2D(N, N, mfem::Element::TRIANGLE);
-  mfem::ParMesh      par_mesh(MPI_COMM_WORLD, mesh);
+  constexpr int N = 15;
+  constexpr int ATTR = 1;
+  auto mesh = mfem::Mesh::MakeCartesian2D(N, N, mfem::Element::TRIANGLE);
+  mfem::ParMesh par_mesh(MPI_COMM_WORLD, mesh);
   FiniteElementState state(par_mesh, H1<1>{});
 
   for (int i = 0; i < par_mesh.GetNBE(); i++) {
@@ -29,7 +29,7 @@ TEST(BoundaryCond, SimpleRepeatedDofs)
   }
 
   BoundaryConditionManager bcs(par_mesh);
-  auto                     coef = std::make_shared<mfem::ConstantCoefficient>(1);
+  auto coef = std::make_shared<mfem::ConstantCoefficient>(1);
   bcs.addEssential({ATTR}, coef, state.space(), 1);
   const auto before_dofs = bcs.allEssentialTrueDofs();
 
@@ -45,9 +45,9 @@ TEST(BoundaryCond, SimpleRepeatedDofs)
 TEST(BoundaryCond, DirectTrueDofs)
 {
   MPI_Barrier(MPI_COMM_WORLD);
-  constexpr int      N    = 15;
-  auto               mesh = mfem::Mesh::MakeCartesian2D(N, N, mfem::Element::TRIANGLE);
-  mfem::ParMesh      par_mesh(MPI_COMM_WORLD, mesh);
+  constexpr int N = 15;
+  auto mesh = mfem::Mesh::MakeCartesian2D(N, N, mfem::Element::TRIANGLE);
+  mfem::ParMesh par_mesh(MPI_COMM_WORLD, mesh);
   FiniteElementState state(par_mesh, H1<1>{});
 
   BoundaryConditionManager bcs(par_mesh);
@@ -101,15 +101,15 @@ enum OtherTag
 TEST(BoundaryCond, FilterGenerics)
 {
   MPI_Barrier(MPI_COMM_WORLD);
-  constexpr int N    = 15;
-  auto          mesh = mfem::Mesh::MakeCartesian2D(N, N, mfem::Element::TRIANGLE);
+  constexpr int N = 15;
+  auto mesh = mfem::Mesh::MakeCartesian2D(N, N, mfem::Element::TRIANGLE);
   mfem::ParMesh par_mesh(MPI_COMM_WORLD, mesh);
 
-  mfem::H1_FECollection       coll(1, par_mesh.Dimension());
+  mfem::H1_FECollection coll(1, par_mesh.Dimension());
   mfem::ParFiniteElementSpace space(&par_mesh, &coll);
 
   BoundaryConditionManager bcs(par_mesh);
-  auto                     coef = std::make_shared<mfem::ConstantCoefficient>(1);
+  auto coef = std::make_shared<mfem::ConstantCoefficient>(1);
   for (int i = 0; i < N; i++) {
     bcs.addGeneric({}, coef, TestTag::Tag1, space, 1);
     bcs.addGeneric({}, coef, TestTag::Tag2, space, 1);
@@ -147,15 +147,15 @@ TEST(BoundaryCondHelper, ElementAttributeDofListScalar)
   mesh.SetAttributes();
 
   mfem::ParMesh pmesh(MPI_COMM_WORLD, mesh);
-  int           sdim = pmesh.SpaceDimension();
+  int sdim = pmesh.SpaceDimension();
 
   mfem::Array<int> elem_attr_is_ess(pmesh.attributes.Max());
-  elem_attr_is_ess                = 0;
+  elem_attr_is_ess = 0;
   elem_attr_is_ess[attribute - 1] = 1;
 
   mfem::Array<int> ess_tdof_list;
 
-  mfem::L2_FECollection       l2_fec(0, sdim);
+  mfem::L2_FECollection l2_fec(0, sdim);
   mfem::ParFiniteElementSpace l2_fes(&pmesh, &l2_fec, 1);
   serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(l2_fes, elem_attr_is_ess, ess_tdof_list);
 
@@ -173,7 +173,7 @@ TEST(BoundaryCondHelper, ElementAttributeDofListScalar)
     EXPECT_EQ(ess_tdof_list[1], 31);
   }
 
-  mfem::H1_FECollection       h1_fec(1, sdim);
+  mfem::H1_FECollection h1_fec(1, sdim);
   mfem::ParFiniteElementSpace h1_fes(&pmesh, &h1_fec, 1);
   serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(h1_fes, elem_attr_is_ess, ess_tdof_list, -1);
 
@@ -215,15 +215,15 @@ TEST(BoundaryCondHelper, ElementAttributeDofListVector)
   mesh.SetAttributes();
 
   mfem::ParMesh pmesh(MPI_COMM_WORLD, mesh);
-  int           sdim = pmesh.SpaceDimension();
+  int sdim = pmesh.SpaceDimension();
 
   mfem::Array<int> elem_attr_is_ess(pmesh.attributes.Max());
-  elem_attr_is_ess                = 0;
+  elem_attr_is_ess = 0;
   elem_attr_is_ess[attribute - 1] = 1;
 
   mfem::Array<int> ess_tdof_list;
 
-  mfem::H1_FECollection       h1_fec(1, sdim);
+  mfem::H1_FECollection h1_fec(1, sdim);
   mfem::ParFiniteElementSpace h1_fes(&pmesh, &h1_fec, 1);
   serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(h1_fes, elem_attr_is_ess, ess_tdof_list, 1);
 

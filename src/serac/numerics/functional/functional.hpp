@@ -48,8 +48,8 @@ struct DependsOn {
 template <typename... T>
 constexpr uint32_t index_of_differentiation()
 {
-  constexpr uint32_t n          = sizeof...(T);
-  bool               matching[] = {std::is_same_v<T, differentiate_wrt_this>...};
+  constexpr uint32_t n = sizeof...(T);
+  bool matching[] = {std::is_same_v<T, differentiate_wrt_this>...};
   for (uint32_t i = 0; i < n; i++) {
     if (matching[i]) {
       return i;
@@ -111,9 +111,9 @@ template <typename function_space>
 inline std::pair<std::unique_ptr<mfem::ParFiniteElementSpace>, std::unique_ptr<mfem::FiniteElementCollection>>
 generateParFiniteElementSpace(mfem::ParMesh* mesh)
 {
-  const int                                      dim = mesh->Dimension();
+  const int dim = mesh->Dimension();
   std::unique_ptr<mfem::FiniteElementCollection> fec;
-  const auto                                     ordering = mfem::Ordering::byNODES;
+  const auto ordering = mfem::Ordering::byNODES;
 
   switch (function_space::family) {
     case Family::H1:
@@ -188,11 +188,11 @@ class Functional;
 template <typename test, typename... trials, ExecutionSpace exec>
 class Functional<test(trials...), exec> {
   static constexpr tuple<trials...> trial_spaces{};
-  static constexpr uint32_t         num_trial_spaces = sizeof...(trials);
-  static constexpr auto             Q                = std::max({test::order, trials::order...}) + 1;
+  static constexpr uint32_t num_trial_spaces = sizeof...(trials);
+  static constexpr auto Q = std::max({test::order, trials::order...}) + 1;
 
-  static constexpr mfem::Geometry::Type elem_geom[4]    = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT,
-                                                           mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
+  static constexpr mfem::Geometry::Type elem_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT,
+                                                        mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
   static constexpr mfem::Geometry::Type simplex_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT,
                                                            mfem::Geometry::TRIANGLE, mfem::Geometry::TETRAHEDRON};
 
@@ -209,13 +209,13 @@ class Functional<test(trials...), exec> {
   };
   // clang-format on
 
-public:
+ public:
   /**
    * @brief Constructs using @p mfem::ParFiniteElementSpace objects corresponding to the test/trial spaces
    * @param[in] test_fes The (non-qoi) test space
    * @param[in] trial_fes The trial space
    */
-  Functional(const mfem::ParFiniteElementSpace*                               test_fes,
+  Functional(const mfem::ParFiniteElementSpace* test_fes,
              std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
       : update_qdata_(false), test_space_(test_fes), trial_space_(trial_fes)
   {
@@ -519,7 +519,7 @@ public:
    */
   void updateQdata(bool update_flag) { update_qdata_ = update_flag; }
 
-private:
+ private:
   /// @brief flag for denoting when a residual evaluation should update the material state buffers
   bool update_qdata_;
 
@@ -529,7 +529,7 @@ private:
    * or assemble the sparse matrix representation through implicit conversion to mfem::HypreParMatrix *
    */
   class Gradient : public mfem::Operator {
-  public:
+   public:
     /**
      * @brief Constructs a Gradient wrapper that references a parent @p Functional
      * @param[in] f The @p Functional to use for gradient calculations
@@ -580,8 +580,8 @@ private:
       std::map<mfem::Geometry::Type, ExecArray<double, 3, exec>> element_gradients[Domain::num_types];
 
       for (auto& integral : form_.integrals_) {
-        auto& K_elem             = element_gradients[integral.domain_.type_];
-        auto& test_restrictions  = form_.G_test_[integral.domain_.type_].restrictions;
+        auto& K_elem = element_gradients[integral.domain_.type_];
+        auto& test_restrictions = form_.G_test_[integral.domain_.type_].restrictions;
         auto& trial_restrictions = form_.G_trial_[integral.domain_.type_][which_argument].restrictions;
 
         if (K_elem.empty()) {
@@ -600,8 +600,8 @@ private:
       }
 
       for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
-        auto& K_elem             = element_gradients[type];
-        auto& test_restrictions  = form_.G_test_[type].restrictions;
+        auto& K_elem = element_gradients[type];
+        auto& test_restrictions = form_.G_test_[type].restrictions;
         auto& trial_restrictions = form_.G_trial_[type][which_argument].restrictions;
 
         if (!K_elem.empty()) {
@@ -660,7 +660,7 @@ private:
 
     friend auto assemble(Gradient& g) { return g.assemble(); }
 
-  private:
+   private:
     /// @brief The "parent" @p Functional to calculate gradients with
     Functional<test(trials...), exec>& form_;
 

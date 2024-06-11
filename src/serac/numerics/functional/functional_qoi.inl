@@ -59,8 +59,8 @@ template <typename... trials, ExecutionSpace exec>
 class Functional<double(trials...), exec> {
   using test = QOI;
   static constexpr tuple<trials...> trial_spaces{};
-  static constexpr uint32_t         num_trial_spaces = sizeof...(trials);
-  static constexpr auto             Q                = std::max({test::order, trials::order...}) + 1;
+  static constexpr uint32_t num_trial_spaces = sizeof...(trials);
+  static constexpr auto Q = std::max({test::order, trials::order...}) + 1;
 
   class Gradient;
 
@@ -75,7 +75,7 @@ class Functional<double(trials...), exec> {
   };
   // clang-format on
 
-public:
+ public:
   /**
    * @brief Constructs using a @p mfem::ParFiniteElementSpace object corresponding to the trial space
    * @param[in] trial_fes The trial space
@@ -123,7 +123,7 @@ public:
       mfem::Array<int> offsets(mfem::Geometry::NUM_GEOMETRIES + 1);
       offsets[0] = 0;
       for (int i = 0; i < mfem::Geometry::NUM_GEOMETRIES; i++) {
-        auto g         = mfem::Geometry::Type(i);
+        auto g = mfem::Geometry::Type(i);
         offsets[g + 1] = offsets[g] + int(counts[uint32_t(g)]);
       }
 
@@ -391,7 +391,7 @@ public:
     return (*this)(DifferentiateWRT<i>{}, t, args...);
   }
 
-private:
+ private:
   /**
    * @brief Indicates whether to obtain values or gradients from a calculation
    */
@@ -405,7 +405,7 @@ private:
    * @brief mfem::Operator that produces the gradient of a @p Functional from a @p Mult
    */
   class Gradient {
-  public:
+   public:
     /**
      * @brief Constructs a Gradient wrapper that references a parent @p Functional
      * @param[in] f The @p Functional to use for gradient calculations
@@ -430,7 +430,7 @@ private:
       std::map<mfem::Geometry::Type, ExecArray<double, 3, exec>> element_gradients[Domain::num_types];
 
       for (auto& integral : form_.integrals_) {
-        auto& K_elem             = element_gradients[integral.domain_.type_];
+        auto& K_elem = element_gradients[integral.domain_.type_];
         auto& trial_restrictions = form_.G_trial_[integral.domain_.type_][which_argument].restrictions;
 
         if (K_elem.empty()) {
@@ -446,7 +446,7 @@ private:
       }
 
       for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
-        auto& K_elem             = element_gradients[type];
+        auto& K_elem = element_gradients[type];
         auto& trial_restrictions = form_.G_trial_[type][which_argument].restrictions;
 
         if (!K_elem.empty()) {
@@ -460,7 +460,7 @@ private:
               for (axom::IndexType i = 0; i < elem_matrices.shape()[1]; i++) {
                 for (axom::IndexType j = 0; j < elem_matrices.shape()[2]; j++) {
                   int sign = trial_vdofs[uint32_t(j)].sign();
-                  int col  = int(trial_vdofs[uint32_t(j)].index());
+                  int col = int(trial_vdofs[uint32_t(j)].index());
                   gradient_L_[col] += sign * elem_matrices(e, i, j);
                 }
               }
@@ -476,7 +476,7 @@ private:
 
     friend auto assemble(Gradient& g) { return g.assemble(); }
 
-  private:
+   private:
     /**
      * @brief The "parent" @p Functional to calculate gradients with
      */
@@ -488,7 +488,7 @@ private:
   };
 
   /// @brief Manages DOFs for the test space
-  const mfem::L2_FECollection       test_fec_;
+  const mfem::L2_FECollection test_fec_;
   const mfem::ParFiniteElementSpace test_space_;
 
   /// @brief Manages DOFs for the trial space

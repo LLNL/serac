@@ -65,13 +65,13 @@ tensor<double, 3, 3> analytic_soln(double t)
 
 int main()
 {
-  double tmax      = 2.0;
+  double tmax = 2.0;
   size_t num_steps = 64;
 
   double G = 79000;
   double K = 10 * G;
 
-  double E  = 9 * K * G / (3 * K + G);
+  double E = 9 * K * G / (3 * K + G);
   double nu = (3 * K - 2 * G) / (2 * (3 * K + G));
 
   solid_mechanics::J2 material{

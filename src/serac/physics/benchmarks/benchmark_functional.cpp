@@ -33,7 +33,7 @@ void functional_test(int parallel_refinement)
       serac::mesh::refineAndDistribute(serac::buildMeshFromFile(filename), serial_refinement, parallel_refinement);
 
   // Create standard MFEM bilinear and linear forms on H1
-  auto                        fec = mfem::H1_FECollection(p, dim);
+  auto fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(mesh.get(), &fec, components);
 
   using space = serac::H1<p, components>;

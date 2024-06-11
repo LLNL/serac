@@ -360,7 +360,7 @@ TEST(SlepcSmoketest, SlepcEx1)
   std::string output = ::testing::internal::GetCapturedStdout();
 
   int num_procs = 0;
-  int rank      = 0;
+  int rank = 0;
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if (rank == 0) {

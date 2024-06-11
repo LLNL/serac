@@ -38,7 +38,7 @@ class SolidMechanicsContact<order, dim, Parameters<parameter_space...>,
   using SolidMechanicsBase =
       SolidMechanics<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>;
 
-public:
+ public:
   /**
    * @brief Construct a new SolidMechanicsContact object
    *
@@ -128,14 +128,14 @@ public:
             const mfem::Vector u_blk(const_cast<mfem::Vector&>(u), 0, displacement_.Size());
             auto [r, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(u_blk), acceleration_,
                                           *parameters_[parameter_indices].state...);
-            J_             = assemble(drdu);
+            J_ = assemble(drdu);
 
             // create block operator holding jacobian contributions
             J_constraint_ = contact_.jacobianFunction(u, J_.release());
 
             // take ownership of blocks
             J_constraint_->owns_blocks = false;
-            J_                         = std::unique_ptr<mfem::HypreParMatrix>(
+            J_ = std::unique_ptr<mfem::HypreParMatrix>(
                 static_cast<mfem::HypreParMatrix*>(&J_constraint_->GetBlock(0, 0)));
             J_12_ = std::unique_ptr<mfem::HypreParMatrix>(
                 static_cast<mfem::HypreParMatrix*>(&J_constraint_->GetBlock(0, 1)));
@@ -145,7 +145,7 @@ public:
                 static_cast<mfem::HypreParMatrix*>(&J_constraint_->GetBlock(1, 1)));
 
             // eliminate bcs and compute eliminated blocks
-            J_e_    = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             J_e_21_ = std::unique_ptr<mfem::HypreParMatrix>(J_21_->EliminateCols(bcs_.allEssentialTrueDofs()));
             J_12_->EliminateRows(bcs_.allEssentialTrueDofs());
 
@@ -164,10 +164,10 @@ public:
           displacement_.space().TrueVSize(), residual_fn, [this](const mfem::Vector& u) -> mfem::Operator& {
             auto [r, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(u), acceleration_,
                                           *parameters_[parameter_indices].state...);
-            J_             = assemble(drdu);
+            J_ = assemble(drdu);
 
             // get 11-block holding jacobian contributions
-            auto block_J         = contact_.jacobianFunction(u, J_.release());
+            auto block_J = contact_.jacobianFunction(u, J_.release());
             block_J->owns_blocks = false;
             J_ = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&block_J->GetBlock(0, 0)));
 
@@ -240,7 +240,7 @@ public:
     contact_.setPressures(mfem::Vector(augmented_solution, displacement_.Size(), contact_.numPressureDofs()));
   }
 
-protected:
+ protected:
   using BasePhysics::bcs_;
   using BasePhysics::cycle_;
   using BasePhysics::is_quasistatic_;

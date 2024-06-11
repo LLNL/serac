@@ -49,7 +49,7 @@ std::string removePrefix(const std::string& prefix, const std::string& target);
  * @brief This is the abstract base class for a generic forward solver
  */
 class BasePhysics {
-public:
+ public:
   /**
    * @brief Empty constructor
    * @param[in] physics_name Name of the physics module instance
@@ -354,7 +354,7 @@ public:
    * this
    */
   virtual const serac::FiniteElementDual& computeDualSensitivity(const serac::FiniteElementState& reaction_direction,
-                                                                 size_t                           parameter_index)
+                                                                 size_t parameter_index)
   {
     (void)reaction_direction;
     SLIC_ERROR_ROOT(axom::fmt::format("computeDualSensitivity not enabled in physics module {}", name_));
@@ -474,7 +474,7 @@ public:
   /// @overload
   mfem::ParMesh& mesh() { return mesh_; }
 
-protected:
+ protected:
   /**
    * @brief Create a paraview data collection for the physics package if requested
    */
@@ -554,9 +554,9 @@ protected:
     template <typename FunctionSpace>
     ParameterInfo(mfem::ParMesh& mesh, FunctionSpace space, const std::string& name = "")
     {
-      state          = std::make_unique<FiniteElementState>(mesh, space, name);
+      state = std::make_unique<FiniteElementState>(mesh, space, name);
       previous_state = std::make_unique<FiniteElementState>(mesh, space, "previous_" + name);
-      sensitivity    = std::make_unique<FiniteElementDual>(mesh, space, name + "_sensitivity");
+      sensitivity = std::make_unique<FiniteElementDual>(mesh, space, name + "_sensitivity");
       StateManager::storeState(*state);
       StateManager::storeDual(*sensitivity);
     }

@@ -18,9 +18,9 @@
 namespace serac {
 
 /// @cond
-constexpr int SOURCE     = 0;
-constexpr int FLUX       = 1;
-constexpr int VALUE      = 0;
+constexpr int SOURCE = 0;
+constexpr int FLUX = 1;
+constexpr int VALUE = 0;
 constexpr int DERIVATIVE = 1;
 /// @endcond
 
@@ -35,7 +35,7 @@ namespace detail {
  */
 template <int dim, typename shape_type>
 struct ShapeCorrection {
-public:
+ public:
   /**
    * @brief Construct a new Shape Correction object with the appropriate transformations for a shape field
    *
@@ -101,7 +101,7 @@ public:
       return detJ_ * v;
     } else {
       if constexpr (test_space{}.family == Family::H1 || test_space{}.family == Family::L2) {
-        auto modified_flux   = dot(get<FLUX>(v), inv_JT_) * detJ_;
+        auto modified_flux = dot(get<FLUX>(v), inv_JT_) * detJ_;
         auto modified_source = get<SOURCE>(v) * detJ_;
 
         return serac::tuple{modified_source, modified_flux};
@@ -118,12 +118,12 @@ public:
     }
   }
 
-private:
+ private:
   /// @cond
   using jacobian_type = std::remove_reference_t<decltype(get<DERIVATIVE>(std::declval<shape_type>()))>;
-  using detJ_type     = decltype(det(std::declval<jacobian_type>()));
-  using inv_J_type    = decltype(inv(std::declval<jacobian_type>()));
-  using inv_JT_type   = decltype(inv(transpose(std::declval<jacobian_type>())));
+  using detJ_type = decltype(det(std::declval<jacobian_type>()));
+  using inv_J_type = decltype(inv(std::declval<jacobian_type>()));
+  using inv_JT_type = decltype(inv(transpose(std::declval<jacobian_type>())));
   /// @endcond
 
   /// @brief The Jacobian of the shape-adjusted transformation (x = X + p, J = dx/dX)
@@ -246,8 +246,8 @@ template <typename lambda, typename coord_type, typename state_type, typename sh
           typename trial_types, typename correction_type, int... i>
 SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper_with_state(lambda&& qf, double t, const coord_type& position,
                                                               state_type& state, const shape_type& shape,
-                                                              const space_types&     space_tuple,
-                                                              const trial_types&     arg_tuple,
+                                                              const space_types& space_tuple,
+                                                              const trial_types& arg_tuple,
                                                               const correction_type& correction,
                                                               std::integer_sequence<int, i...>)
 {
@@ -302,7 +302,7 @@ class ShapeAwareFunctional<shape, test(trials...), exec> {
   /// @brief The number of input trial functions
   static constexpr uint32_t num_trial_spaces = sizeof...(trials);
 
-public:
+ public:
   /**
    * @brief Constructs using @p mfem::ParFiniteElementSpace objects corresponding to the test/trial spaces
    *
@@ -340,7 +340,7 @@ public:
    * @param[in] trial_fes The trial finite element spaces
    */
   template <typename test_type = test, typename = std::enable_if_t<std::is_same_v<double, test_type>>>
-  ShapeAwareFunctional(const mfem::ParFiniteElementSpace*                               shape_fes,
+  ShapeAwareFunctional(const mfem::ParFiniteElementSpace* shape_fes,
                        std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
   {
     static_assert(shape_space.family == Family::H1, "Only H1 spaces allowed for shape displacements");
@@ -380,7 +380,7 @@ public:
       functional_->AddDomainIntegral(
           Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
           [integrand](double time, auto x, auto shape_val, auto... qfunc_args) {
-            auto qfunc_tuple               = make_tuple(qfunc_args...);
+            auto qfunc_tuple = make_tuple(qfunc_args...);
             auto reduced_trial_space_tuple = make_tuple(get<args>(trial_spaces)...);
 
             detail::ShapeCorrection shape_correction(Dimension<dim>{}, shape_val);
@@ -395,7 +395,7 @@ public:
       functional_->AddDomainIntegral(
           Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
           [integrand](double time, auto x, auto& state, auto shape_val, auto... qfunc_args) {
-            auto qfunc_tuple               = make_tuple(qfunc_args...);
+            auto qfunc_tuple = make_tuple(qfunc_args...);
             auto reduced_trial_space_tuple = make_tuple(get<args>(trial_spaces)...);
 
             detail::ShapeCorrection shape_correction(Dimension<dim>{}, shape_val);
@@ -486,7 +486,7 @@ public:
    */
   void updateQdata(bool update_flag) { functional_->updateQdata(update_flag); }
 
-private:
+ private:
   /// @brief The underlying pure Functional object
   std::unique_ptr<Functional<test(shape, trials...), exec>> functional_;
 };

@@ -27,12 +27,12 @@ namespace serac {
  */
 template <typename Iter, typename Pred>
 class FilterView {
-public:
+ public:
   /**
    * @brief An iterator over a filtered view
    */
   class FilterViewIterator {
-  public:
+   public:
     /**
      * @brief Constructs a new iterator object
      * @param[in] curr The element in the container that should be initially "pointed to"
@@ -72,7 +72,7 @@ public:
      */
     bool operator!=(const FilterViewIterator& other) const { return curr_ != other.curr_; }
 
-  private:
+   private:
     /**
      * @brief The currently pointed to element
      */
@@ -124,7 +124,7 @@ public:
    */
   const FilterViewIterator end() const { return FilterViewIterator(end_, end_, pred_); }
 
-private:
+ private:
   /**
    * @brief begin() iterator to the underlying container
    */
@@ -154,7 +154,7 @@ FilterView(Iter, Iter, Pred&&) -> FilterView<Iter, Pred>;
  * @brief A container for the boundary condition information relating to a specific physics module
  */
 class BoundaryConditionManager {
-public:
+ public:
   /**
    * @brief Construct a new Boundary Condition Manager object
    *
@@ -282,7 +282,7 @@ public:
     return FilterView(other_bdr_.begin(), other_bdr_.end(), [tag](const auto& bc) { return bc.tagEquals(tag); });
   }
 
-private:
+ private:
   /**
    * @brief Updates the "cached" list of all DOF indices
    */

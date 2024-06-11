@@ -31,10 +31,10 @@ namespace heat_transfer {
 /**
  * @brief Reasonable defaults for most thermal linear solver options
  */
-const LinearSolverOptions default_linear_options = {.linear_solver  = LinearSolver::GMRES,
+const LinearSolverOptions default_linear_options = {.linear_solver = LinearSolver::GMRES,
                                                     .preconditioner = Preconditioner::HypreL1Jacobi,
-                                                    .relative_tol   = 1.0e-6,
-                                                    .absolute_tol   = 1.0e-12,
+                                                    .relative_tol = 1.0e-6,
+                                                    .absolute_tol = 1.0e-12,
                                                     .max_iterations = 200};
 
 /// the default direct solver option for solving the linear stiffness equations
@@ -47,11 +47,11 @@ const LinearSolverOptions direct_linear_options = {.linear_solver = LinearSolver
 /**
  * @brief Reasonable defaults for most thermal nonlinear solver options
  */
-const NonlinearSolverOptions default_nonlinear_options = {.nonlin_solver  = NonlinearSolver::Newton,
-                                                          .relative_tol   = 1.0e-4,
-                                                          .absolute_tol   = 1.0e-8,
+const NonlinearSolverOptions default_nonlinear_options = {.nonlin_solver = NonlinearSolver::Newton,
+                                                          .relative_tol = 1.0e-4,
+                                                          .absolute_tol = 1.0e-8,
                                                           .max_iterations = 500,
-                                                          .print_level    = 1};
+                                                          .print_level = 1};
 
 /**
  * @brief Reasonable defaults for dynamic heat transfer simulations
@@ -86,11 +86,11 @@ class HeatTransfer;
 template <int order, int dim, typename... parameter_space, int... parameter_indices>
 class HeatTransfer<order, dim, Parameters<parameter_space...>, std::integer_sequence<int, parameter_indices...>>
     : public BasePhysics {
-public:
+ public:
   //! @cond Doxygen_Suppress
-  static constexpr int  VALUE = 0, DERIVATIVE = 1;
-  static constexpr int  SHAPE = 0;
-  static constexpr auto I     = Identity<dim>();
+  static constexpr int VALUE = 0, DERIVATIVE = 1;
+  static constexpr int SHAPE = 0;
+  static constexpr auto I = Identity<dim>();
   //! @endcond
 
   /// @brief The total number of non-parameter state variables (temperature, dtemp_dt) passed to the FEM
@@ -184,7 +184,7 @@ public:
     adjoints_.push_back(&adjoint_temperature_);
 
     // Create a pack of the primal field and parameter finite element spaces
-    mfem::ParFiniteElementSpace* test_space  = &temperature_.space();
+    mfem::ParFiniteElementSpace* test_space = &temperature_.space();
     mfem::ParFiniteElementSpace* shape_space = &shape_displacement_.space();
 
     std::array<const mfem::ParFiniteElementSpace*, sizeof...(parameter_space) + NUM_STATE_VARS> trial_spaces;
@@ -275,16 +275,16 @@ public:
    */
   void initializeThermalStates()
   {
-    dt_          = 0.0;
+    dt_ = 0.0;
     previous_dt_ = -1.0;
 
-    u_                                              = 0.0;
-    temperature_                                    = 0.0;
-    temperature_rate_                               = 0.0;
-    adjoint_temperature_                            = 0.0;
+    u_ = 0.0;
+    temperature_ = 0.0;
+    temperature_rate_ = 0.0;
+    adjoint_temperature_ = 0.0;
     implicit_sensitivity_temperature_start_of_step_ = 0.0;
-    temperature_adjoint_load_                       = 0.0;
-    temperature_rate_adjoint_load_                  = 0.0;
+    temperature_adjoint_load_ = 0.0;
+    temperature_rate_adjoint_load_ = 0.0;
 
     if (!checkpoint_to_disk_) {
       checkpoint_states_.clear();
@@ -363,7 +363,7 @@ public:
     if (cycle_ > max_cycle_) {
       timesteps_.push_back(dt);
       max_cycle_ = cycle_;
-      max_time_  = time_;
+      max_time_ = time_;
     }
   }
 
@@ -383,13 +383,13 @@ public:
     // Due to nvcc's lack of support for extended generic lambdas (i.e. functions of the form
     // auto lambda = [] __host__ __device__ (auto) {}; ), MaterialType cannot be an extended
     // generic lambda.  The static asserts below check this.
-  private:
+   private:
     class DummyArgumentType {};
     static_assert(!std::is_invocable<MaterialType, DummyArgumentType&>::value);
     static_assert(!std::is_invocable<MaterialType, DummyArgumentType*>::value);
     static_assert(!std::is_invocable<MaterialType, DummyArgumentType>::value);
 
-  public:
+   public:
     /**
      * @brief Evaluate integrand
      */
@@ -398,14 +398,14 @@ public:
     {
       // Get the value and the gradient from the input tuple
       auto [u, du_dX] = temperature;
-      auto du_dt      = get<VALUE>(dtemp_dt);
+      auto du_dt = get<VALUE>(dtemp_dt);
 
       auto [heat_capacity, heat_flux] = material_(x, u, du_dX, params...);
 
       return serac::tuple{heat_capacity * du_dt, -1.0 * heat_flux};
     }
 
-  private:
+   private:
     MaterialType material_;
   };
 
@@ -550,7 +550,7 @@ public:
         Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
         [flux_function](double t, auto X, auto u, auto /* dtemp_dt */, auto... params) {
           auto temp = get<VALUE>(u);
-          auto n    = cross(get<DERIVATIVE>(X));
+          auto n = cross(get<DERIVATIVE>(X));
 
           return flux_function(X, normalize(n), t, temp, params...);
         },
@@ -728,8 +728,8 @@ public:
           [this](const mfem::Vector& u) -> mfem::Operator& {
             auto [r, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(u), temperature_rate_,
                                           *parameters_[parameter_indices].state...);
-            J_             = assemble(drdu);
-            J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            J_ = assemble(drdu);
+            J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
             return *J_;
           });
     } else {
@@ -800,7 +800,7 @@ public:
     SLIC_ERROR_ROOT_IF(loads.size() == 0,
                        "Adjoint load container size must be greater than 0 in the heat transfer module.");
 
-    auto temp_adjoint_load      = loads.find("temperature");
+    auto temp_adjoint_load = loads.find("temperature");
     auto temp_rate_adjoint_load = loads.find("temperature_rate");  // does not need to be specified
 
     SLIC_ERROR_ROOT_IF(temp_adjoint_load == loads.end(), "Adjoint load for \"temperature\" not found.");
@@ -858,8 +858,8 @@ public:
 
       auto [_, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(temperature_),
                                     temperature_rate_, *parameters_[parameter_indices].state...);
-      auto jacobian  = assemble(drdu);
-      auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
+      auto jacobian = assemble(drdu);
+      auto J_T = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
       for (const auto& bc : bcs_.essentials()) {
         bc.apply(*J_T, temperature_adjoint_load_, adjoint_essential);
@@ -882,11 +882,11 @@ public:
     serac::FiniteElementState temperature_n_minus_1(temperature_);
 
     {
-      auto previous_states_n         = getCheckpointedStates(cycle_);
+      auto previous_states_n = getCheckpointedStates(cycle_);
       auto previous_states_n_minus_1 = getCheckpointedStates(cycle_ - 1);
 
-      temperature_          = previous_states_n.at("temperature");
-      temperature_rate_     = previous_states_n.at("temperature_rate");
+      temperature_ = previous_states_n.at("temperature");
+      temperature_rate_ = previous_states_n.at("temperature_rate");
       temperature_n_minus_1 = previous_states_n_minus_1.at("temperature");
     }
 
@@ -972,7 +972,7 @@ public:
   {
     // TODO: the time is likely not being handled correctly on the reverse pass, but we don't
     //       have tests to confirm.
-    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](ode_time_point_));
+    auto drdparam = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](ode_time_point_));
     auto drdparam_mat = assemble(drdparam);
 
     drdparam_mat->MultTranspose(adjoint_temperature_, *parameters_[parameter_field].sensitivity);
@@ -1016,7 +1016,7 @@ public:
   /// Destroy the Thermal Solver object
   virtual ~HeatTransfer() = default;
 
-protected:
+ protected:
   /// The compile-time finite element trial space for heat transfer (H1 of order p)
   using scalar_trial = H1<order>;
 

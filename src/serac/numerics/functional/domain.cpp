@@ -38,7 +38,7 @@ namespace serac {
 template <int d>
 std::vector<tensor<double, d>> gather(const mfem::Vector& coordinates, mfem::Array<int> ids)
 {
-  int                            num_vertices = coordinates.Size() / d;
+  int num_vertices = coordinates.Size() / d;
   std::vector<tensor<double, d>> x(std::size_t(ids.Size()));
   for (int v = 0; v < ids.Size(); v++) {
     for (int j = 0; j < d; j++) {
@@ -115,7 +115,7 @@ static Domain domain_of_edges(const mfem::Mesh& mesh, std::function<T> predicate
 
     if constexpr (d == 2) {
       int bdr_id = edge_id_to_bdr_id[i];
-      int attr   = (bdr_id > 0) ? mesh.GetBdrAttribute(bdr_id) : -1;
+      int attr = (bdr_id > 0) ? mesh.GetBdrAttribute(bdr_id) : -1;
       if (predicate(x, attr)) {
         output.edge_ids_.push_back(i);
         output.mfem_edge_ids_.push_back(i);
@@ -145,7 +145,7 @@ Domain Domain::ofEdges(const mfem::Mesh& mesh, std::function<bool(std::vector<ve
 ///////////////////////////////////////////////////////////////////////////////////////
 
 template <int d>
-static Domain domain_of_faces(const mfem::Mesh&                                        mesh,
+static Domain domain_of_faces(const mfem::Mesh& mesh,
                               std::function<bool(std::vector<tensor<double, d>>, int)> predicate)
 {
   assert(mesh.SpaceDimension() == d);
@@ -170,7 +170,7 @@ static Domain domain_of_faces(const mfem::Mesh&                                 
     num_faces = mesh.GetNumFaces();
   }
 
-  int tri_id  = 0;
+  int tri_id = 0;
   int quad_id = 0;
 
   for (int i = 0; i < num_faces; i++) {
@@ -189,7 +189,7 @@ static Domain domain_of_faces(const mfem::Mesh&                                 
       attr = mesh.GetAttribute(i);
     } else {
       int bdr_id = face_id_to_bdr_id[i];
-      attr       = (bdr_id >= 0) ? mesh.GetBdrAttribute(bdr_id) : -1;
+      attr = (bdr_id >= 0) ? mesh.GetBdrAttribute(bdr_id) : -1;
     }
 
     if (predicate(x, attr)) {
@@ -228,7 +228,7 @@ Domain Domain::ofFaces(const mfem::Mesh& mesh, std::function<bool(std::vector<ve
 ///////////////////////////////////////////////////////////////////////////////////////
 
 template <int d>
-static Domain domain_of_elems(const mfem::Mesh&                                        mesh,
+static Domain domain_of_elems(const mfem::Mesh& mesh,
                               std::function<bool(std::vector<tensor<double, d>>, int)> predicate)
 {
   assert(mesh.SpaceDimension() == d);
@@ -240,10 +240,10 @@ static Domain domain_of_elems(const mfem::Mesh&                                 
   mfem::Vector vertices;
   mesh.GetVertices(vertices);
 
-  int tri_id  = 0;
+  int tri_id = 0;
   int quad_id = 0;
-  int tet_id  = 0;
-  int hex_id  = 0;
+  int tet_id = 0;
+  int hex_id = 0;
 
   // elements that satisfy the predicate are added to the domain
   int num_elems = mesh.GetNE();
@@ -309,7 +309,7 @@ Domain Domain::ofElements(const mfem::Mesh& mesh, std::function<bool(std::vector
 ///////////////////////////////////////////////////////////////////////////////////////
 
 template <int d>
-static Domain domain_of_boundary_elems(const mfem::Mesh&                                        mesh,
+static Domain domain_of_boundary_elems(const mfem::Mesh& mesh,
                                        std::function<bool(std::vector<tensor<double, d>>, int)> predicate)
 {
   assert(mesh.SpaceDimension() == d);
@@ -324,7 +324,7 @@ static Domain domain_of_boundary_elems(const mfem::Mesh&                        
   mesh.GetVertices(vertices);
 
   int edge_id = 0;
-  int tri_id  = 0;
+  int tri_id = 0;
   int quad_id = 0;
 
   // faces that satisfy the predicate are added to the domain
@@ -340,7 +340,7 @@ static Domain domain_of_boundary_elems(const mfem::Mesh&                        
     auto x = gather<d>(vertices, vertex_ids);
 
     int bdr_id = face_id_to_bdr_id[f];
-    int attr   = (bdr_id >= 0) ? mesh.GetBdrAttribute(bdr_id) : -1;
+    int attr = (bdr_id >= 0) ? mesh.GetBdrAttribute(bdr_id) : -1;
 
     bool add = predicate(x, attr);
 
@@ -387,7 +387,7 @@ Domain Domain::ofBoundaryElements(const mfem::Mesh& mesh, std::function<bool(std
 
 mfem::Array<int> Domain::dof_list(mfem::FiniteElementSpace* fes) const
 {
-  std::set<int>    dof_ids;
+  std::set<int> dof_ids;
   mfem::Array<int> elem_dofs;
 
   std::function<void(int i, mfem::Array<int>&)> GetDofs;
@@ -445,7 +445,7 @@ mfem::Array<int> Domain::dof_list(mfem::FiniteElementSpace* fes) const
   }
 
   mfem::Array<int> uniq_dof_ids(int(dof_ids.size()));
-  int              i = 0;
+  int i = 0;
   for (auto id : dof_ids) {
     uniq_dof_ids[i++] = id;
   }
@@ -462,10 +462,10 @@ Domain EntireDomain(const mfem::Mesh& mesh)
 {
   Domain output{mesh, mesh.SpaceDimension() /* elems can be 2 or 3 dimensional */};
 
-  int tri_id  = 0;
+  int tri_id = 0;
   int quad_id = 0;
-  int tet_id  = 0;
-  int hex_id  = 0;
+  int tet_id = 0;
+  int hex_id = 0;
 
   // faces that satisfy the predicate are added to the domain
   int num_elems = mesh.GetNE();
@@ -499,7 +499,7 @@ Domain EntireBoundary(const mfem::Mesh& mesh)
   Domain output{mesh, mesh.SpaceDimension() - 1, Domain::Type::BoundaryElements};
 
   int edge_id = 0;
-  int tri_id  = 0;
+  int tri_id = 0;
   int quad_id = 0;
 
   for (int f = 0; f < mesh.GetNumFaces(); f++) {
@@ -532,9 +532,9 @@ using c_iter = std::vector<int>::const_iterator;
 using b_iter = std::back_insert_iterator<std::vector<int>>;
 using set_op = std::function<b_iter(c_iter, c_iter, c_iter, c_iter, b_iter)>;
 
-set_op union_op        = std::set_union<c_iter, c_iter, b_iter>;
+set_op union_op = std::set_union<c_iter, c_iter, b_iter>;
 set_op intersection_op = std::set_intersection<c_iter, c_iter, b_iter>;
-set_op difference_op   = std::set_difference<c_iter, c_iter, b_iter>;
+set_op difference_op = std::set_difference<c_iter, c_iter, b_iter>;
 /// @endcond
 
 /// @brief return a std::vector that is the result of applying (a op b)
@@ -562,7 +562,7 @@ Domain set_operation(set_op op, const Domain& a, const Domain& b)
   }
 
   if (output.dim_ == 2) {
-    output.tri_ids_  = set_operation(op, a.tri_ids_, b.tri_ids_);
+    output.tri_ids_ = set_operation(op, a.tri_ids_, b.tri_ids_);
     output.quad_ids_ = set_operation(op, a.quad_ids_, b.quad_ids_);
   }
 

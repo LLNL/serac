@@ -39,7 +39,7 @@ constexpr H1<SHAPE_ORDER, 3> SHAPE_DIM_3;
  * from physics modules
  */
 class StateManager {
-public:
+ public:
   /**
    * @brief Initializes the StateManager with a sidre DataStore (into which state will be written/read)
    * @param[in] ds The DataStore to use
@@ -200,7 +200,7 @@ public:
     datacolls_.clear();
     output_dir_.clear();
     is_restart_ = false;
-    ds_         = nullptr;
+    ds_ = nullptr;
   };
 
   /**
@@ -235,7 +235,7 @@ public:
    * @param cycle_to_load
    * @param states_to_load
    */
-  static void loadCheckpointedStates(int                                                     cycle_to_load,
+  static void loadCheckpointedStates(int cycle_to_load,
                                      std::vector<std::reference_wrapper<FiniteElementState>> states_to_load);
 
   /**
@@ -282,7 +282,7 @@ public:
    */
   static double time(std::string mesh_tag);
 
-private:
+ private:
   /**
    * @brief Creates a new datacollection based on a registered mesh
    * @param[in] name The name of the new datacollection

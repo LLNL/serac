@@ -187,21 +187,21 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
                       std::shared_ptr<QuadratureData<qpt_data_type> > qdata)
 {
   integral.geometric_factors_[geom] = GeometricFactors(integral.domain_, Q, geom);
-  GeometricFactors& gf              = integral.geometric_factors_[geom];
+  GeometricFactors& gf = integral.geometric_factors_[geom];
   if (gf.num_elements == 0) return;
 
-  const double*  positions        = gf.X.Read();
-  const double*  jacobians        = gf.J.Read();
-  const int*     elements         = &integral.domain_.get(geom)[0];
-  const uint32_t num_elements     = uint32_t(gf.num_elements);
+  const double* positions = gf.X.Read();
+  const double* jacobians = gf.J.Read();
+  const int* elements = &integral.domain_.get(geom)[0];
+  const uint32_t num_elements = uint32_t(gf.num_elements);
   const uint32_t qpts_per_element = num_quadrature_points(geom, Q);
 
   std::shared_ptr<zero> dummy_derivatives;
   integral.evaluation_[geom] = domain_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom>(
       s, qf, positions, jacobians, qdata, dummy_derivatives, elements, num_elements);
 
-  constexpr std::size_t                 num_args = s.num_args;
-  [[maybe_unused]] static constexpr int dim      = dimension_of(geom);
+  constexpr std::size_t num_args = s.num_args;
+  [[maybe_unused]] static constexpr int dim = dimension_of(geom);
   for_constexpr<num_args>([&](auto index) {
     // allocate memory for the derivatives of the q-function at each quadrature point
     //
@@ -238,7 +238,7 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
 template <typename s, int Q, int dim, typename lambda_type, typename qpt_data_type>
 Integral MakeDomainIntegral(const Domain& domain, lambda_type&& qf,
                             std::shared_ptr<QuadratureData<qpt_data_type> > qdata,
-                            std::vector<uint32_t>                           argument_indices)
+                            std::vector<uint32_t> argument_indices)
 {
   FunctionSignature<s> signature;
 
@@ -276,21 +276,21 @@ template <mfem::Geometry::Type geom, int Q, typename test, typename... trials, t
 void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integral, lambda_type&& qf)
 {
   integral.geometric_factors_[geom] = GeometricFactors(integral.domain_, Q, geom, FaceType::BOUNDARY);
-  GeometricFactors& gf              = integral.geometric_factors_[geom];
+  GeometricFactors& gf = integral.geometric_factors_[geom];
   if (gf.num_elements == 0) return;
 
-  const double*  positions        = gf.X.Read();
-  const double*  jacobians        = gf.J.Read();
-  const uint32_t num_elements     = uint32_t(gf.num_elements);
+  const double* positions = gf.X.Read();
+  const double* jacobians = gf.J.Read();
+  const uint32_t num_elements = uint32_t(gf.num_elements);
   const uint32_t qpts_per_element = num_quadrature_points(geom, Q);
-  const int*     elements         = &gf.elements[0];
+  const int* elements = &gf.elements[0];
 
   std::shared_ptr<zero> dummy_derivatives;
   integral.evaluation_[geom] = boundary_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom>(
       s, qf, positions, jacobians, dummy_derivatives, elements, num_elements);
 
-  constexpr std::size_t                 num_args = s.num_args;
-  [[maybe_unused]] static constexpr int dim      = dimension_of(geom);
+  constexpr std::size_t num_args = s.num_args;
+  [[maybe_unused]] static constexpr int dim = dimension_of(geom);
   for_constexpr<num_args>([&](auto index) {
     // allocate memory for the derivatives of the q-function at each quadrature point
     //

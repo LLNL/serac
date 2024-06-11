@@ -43,12 +43,12 @@ struct ParameterizedThermoelasticMaterial {
     auto theta = get<VALUE>(temperature);
     auto alpha = get<VALUE>(coefficient_of_thermal_expansion);
 
-    const double          K    = E / (3.0 * (1.0 - 2.0 * nu));
-    const double          G    = 0.5 * E / (1.0 + nu);
-    static constexpr auto I    = Identity<3>();
-    auto                  F    = grad_u + I;
-    const auto            Eg   = greenStrain(grad_u);
-    const auto            trEg = tr(Eg);
+    const double K = E / (3.0 * (1.0 - 2.0 * nu));
+    const double G = 0.5 * E / (1.0 + nu);
+    static constexpr auto I = Identity<3>();
+    auto F = grad_u + I;
+    const auto Eg = greenStrain(grad_u);
+    const auto trEg = tr(Eg);
 
     const auto S = 2.0 * G * dev(Eg) + K * (trEg - 3.0 * alpha * (theta - theta_ref)) * I;
     const auto P = dot(F, S);
@@ -58,10 +58,10 @@ struct ParameterizedThermoelasticMaterial {
 
 TEST(Thermomechanics, ParameterizedMaterial)
 {
-  constexpr int p                   = 1;
-  constexpr int dim                 = 3;
-  int           serial_refinement   = 0;
-  int           parallel_refinement = 0;
+  constexpr int p = 1;
+  constexpr int dim = 3;
+  int serial_refinement = 0;
+  int parallel_refinement = 0;
 
   double time = 0.0;
 
@@ -69,13 +69,13 @@ TEST(Thermomechanics, ParameterizedMaterial)
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, "parameterized_thermomechanics");
 
-  size_t radial_divisions   = 3;
-  size_t angular_divisions  = 16;
+  size_t radial_divisions = 3;
+  size_t angular_divisions = 16;
   size_t vertical_divisions = 8;
 
   double inner_radius = 1.0;
   double outer_radius = 1.25;
-  double height       = 2.0;
+  double height = 2.0;
 
   // clang-format off
     auto mesh = mesh::refineAndDistribute(build_hollow_quarter_cylinder(radial_divisions, 
@@ -87,30 +87,30 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
   // clang-format on
   std::string mesh_tag{"mesh"};
-  auto&       pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
+  auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   SolidMechanics<p, dim, Parameters<H1<p>, H1<p>>> simulation(
       solid_mechanics::default_nonlinear_options, solid_mechanics::direct_linear_options,
       solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermomechanics_simulation", mesh_tag,
       {"theta", "alpha"});
 
-  double density   = 1.0;     ///< density
-  double E         = 1000.0;  ///< Young's modulus
-  double nu        = 0.25;    ///< Poisson's ratio
-  double theta_ref = 0.0;     ///< datum temperature for thermal expansion
+  double density = 1.0;    ///< density
+  double E = 1000.0;       ///< Young's modulus
+  double nu = 0.25;        ///< Poisson's ratio
+  double theta_ref = 0.0;  ///< datum temperature for thermal expansion
 
   ParameterizedThermoelasticMaterial material{density, E, nu, theta_ref};
 
   simulation.setMaterial(DependsOn<0, 1>{}, material);
 
-  double             deltaT = 1.0;
+  double deltaT = 1.0;
   FiniteElementState temperature(pmesh, H1<p>{}, "theta");
 
   temperature = theta_ref;
   simulation.setParameter(0, temperature);
 
-  double             alpha0    = 1.0e-3;
-  auto               alpha_fec = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::H1_FECollection(p, dim));
+  double alpha0 = 1.0e-3;
+  auto alpha_fec = std::unique_ptr<mfem::FiniteElementCollection>(new mfem::H1_FECollection(p, dim));
   FiniteElementState alpha(pmesh, H1<p>{}, "alpha");
 
   alpha = alpha0;
@@ -150,7 +150,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
       [=](double /*t*/, auto position, auto displacement) {
         auto [X, dX_dxi] = position;
         auto [u, du_dxi] = displacement;
-        auto n           = normalize(cross(dX_dxi));
+        auto n = normalize(cross(dX_dxi));
         return dot(u, n) * ((X[2] > 0.99 * height) ? 1.0 : 0.0);
       },
       pmesh);
@@ -182,8 +182,8 @@ TEST(Thermomechanics, ParameterizedMaterial)
   SLIC_INFO_ROOT(axom::fmt::format("expected average vertical displacement: {}", alpha0 * deltaT * height));
 
   serac::FiniteElementDual adjoint_load(simulation.displacement().space(), "adjoint_load");
-  auto                     dqoi_du = get<1>(qoi(DifferentiateWRT<0>{}, time, simulation.displacement()));
-  adjoint_load                     = *assemble(dqoi_du);
+  auto dqoi_du = get<1>(qoi(DifferentiateWRT<0>{}, time, simulation.displacement()));
+  adjoint_load = *assemble(dqoi_du);
 
   check_gradient(qoi, time, simulation.displacement());
 
@@ -194,8 +194,8 @@ TEST(Thermomechanics, ParameterizedMaterial)
   auto& dqoi_dalpha = simulation.computeTimestepSensitivity(1);
 
   double epsilon = 1.0e-5;
-  auto   dalpha  = alpha.CreateCompatibleVector();
-  dalpha         = 1.0;
+  auto dalpha = alpha.CreateCompatibleVector();
+  dalpha = 1.0;
   alpha.Add(epsilon, dalpha);
   simulation.setParameter(1, alpha);
 
@@ -208,7 +208,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
   double final_qoi = qoi(time, simulation.displacement());
 
   double adjoint_qoi_derivative = mfem::InnerProduct(dqoi_dalpha, dalpha);
-  double fd_qoi_derivative      = (final_qoi - initial_qoi) / epsilon;
+  double fd_qoi_derivative = (final_qoi - initial_qoi) / epsilon;
 
   // compare the expected change in the QoI to the actual change:
   SLIC_INFO_ROOT(

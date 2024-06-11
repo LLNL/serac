@@ -23,13 +23,13 @@ namespace serac {
  * lexicographically, to facilitate creating the CSR matrix graph.
  */
 struct ElemInfo {
-  uint32_t     global_row_;  ///< The global row number
-  uint32_t     global_col_;  ///< The global column number
-  uint32_t     local_row_;   ///< The local row number
-  uint32_t     local_col_;   ///< The global column number
-  uint32_t     element_id_;  ///< The element ID
-  int          sign_;        ///< The orientation of the element
-  Domain::Type type;         ///< Which kind of Integral this entry comes from
+  uint32_t global_row_;  ///< The global row number
+  uint32_t global_col_;  ///< The global column number
+  uint32_t local_row_;   ///< The local row number
+  uint32_t local_col_;   ///< The global column number
+  uint32_t element_id_;  ///< The element ID
+  int sign_;             ///< The orientation of the element
+  Domain::Type type;     ///< Which kind of Integral this entry comes from
 };
 
 /**
@@ -129,7 +129,7 @@ template <typename T, ExecutionSpace exec>
 ExecArray<T, 3, exec> allocateMemoryForBdrElementGradients(const mfem::ParFiniteElementSpace& trial_fes,
                                                            const mfem::ParFiniteElementSpace& test_fes)
 {
-  auto* test_BE  = test_fes.GetBE(0);
+  auto* test_BE = test_fes.GetBE(0);
   auto* trial_BE = trial_fes.GetBE(0);
   return {static_cast<size_t>(trial_fes.GetNFbyType(mfem::FaceType::Boundary)),
           static_cast<size_t>(test_BE->GetDof() * test_fes.GetVDim()),
@@ -170,11 +170,11 @@ struct DofNumbering {
                       static_cast<size_t>(fespace.GetFE(0)->GetDof() * fespace.GetVDim())),
         bdr_element_dofs_(allocateMemoryForBdrElementGradients<SignedIndex, ExecutionSpace::CPU>(fespace))
   {
-    int                  dim          = fespace.GetMesh()->Dimension();
+    int dim = fespace.GetMesh()->Dimension();
     mfem::Geometry::Type elem_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT, mfem::Geometry::SQUARE,
                                          mfem::Geometry::CUBE};
-    ElementRestriction   dofs(&fespace, elem_geom[dim]);
-    ElementRestriction   boundary_dofs(&fespace, elem_geom[dim - 1], FaceType::BOUNDARY);
+    ElementRestriction dofs(&fespace, elem_geom[dim]);
+    ElementRestriction boundary_dofs(&fespace, elem_geom[dim - 1], FaceType::BOUNDARY);
 
     {
       auto elem_restriction = fespace.GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC);
@@ -198,8 +198,8 @@ struct DofNumbering {
       int index = 0;
       for (axom::IndexType e = 0; e < element_dofs_.shape()[0]; e++) {
         for (axom::IndexType i = 0; i < element_dofs_.shape()[1]; i++) {
-          uint32_t dof_id     = static_cast<uint32_t>(fabs(dof_ids_h[index]));  // note: 1-based index
-          int      dof_sign   = dof_ids[index] > 0 ? +1 : -1;
+          uint32_t dof_id = static_cast<uint32_t>(fabs(dof_ids_h[index]));  // note: 1-based index
+          int dof_sign = dof_ids[index] > 0 ? +1 : -1;
           element_dofs_(e, i) = {dof_id - 1, dof_sign};  // subtract 1 to get back to 0-based index
           index++;
         }
@@ -222,8 +222,8 @@ struct DofNumbering {
       int index = 0;
       for (axom::IndexType e = 0; e < bdr_element_dofs_.shape()[0]; e++) {
         for (axom::IndexType i = 0; i < bdr_element_dofs_.shape()[1]; i++) {
-          uint32_t dof_id         = static_cast<uint32_t>(fabs(dof_ids_h[index]));  // note: 1-based index
-          int      dof_sign       = dof_ids[index] > 0 ? +1 : -1;
+          uint32_t dof_id = static_cast<uint32_t>(fabs(dof_ids_h[index]));  // note: 1-based index
+          int dof_sign = dof_ids[index] > 0 ? +1 : -1;
           bdr_element_dofs_(e, i) = {dof_id - 1, dof_sign};  // subtract 1 to get back to 0-based index
           index++;
         }
@@ -307,7 +307,7 @@ struct GradientAssemblyLookupTables {
             for (uint64_t k = 0; k < test_dofs.components; k++) {
               uint32_t test_global_id = uint32_t(test_dofs.GetVDof(test_dof, k).index());
               for (uint64_t l = 0; l < trial_dofs.components; l++) {
-                uint32_t trial_global_id                  = uint32_t(trial_dofs.GetVDof(trial_dof, l).index());
+                uint32_t trial_global_id = uint32_t(trial_dofs.GetVDof(trial_dof, l).index());
                 nz_LUT[{test_global_id, trial_global_id}] = 0;  // just store the keys initially
               }
             }
@@ -333,7 +333,7 @@ struct GradientAssemblyLookupTables {
 
     for (uint32_t i = 1; i < nnz; i++) {
       nz_LUT[entries[i]] = i;
-      col_ind[i]         = int(entries[i].column);
+      col_ind[i] = int(entries[i].column);
 
       // if the new entry has a different row, then the row_ptr offsets must be set as well
       for (uint32_t j = entries[i - 1].row; j < entries[i].row; j++) {

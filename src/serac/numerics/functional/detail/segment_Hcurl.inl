@@ -20,11 +20,11 @@
 /// @cond
 template <int p, int c>
 struct finite_element<mfem::Geometry::SEGMENT, Hcurl<p, c> > {
-  static constexpr auto geometry   = mfem::Geometry::SEGMENT;
-  static constexpr auto family     = Family::HCURL;
-  static constexpr int  components = c;
-  static constexpr int  dim        = 1;
-  static constexpr int  ndof       = (p + 1);
+  static constexpr auto geometry = mfem::Geometry::SEGMENT;
+  static constexpr auto family = Family::HCURL;
+  static constexpr int components = c;
+  static constexpr int dim = 1;
+  static constexpr int ndof = (p + 1);
 
   SERAC_HOST_DEVICE static constexpr tensor<double, ndof> shape_functions(double xi)
   {

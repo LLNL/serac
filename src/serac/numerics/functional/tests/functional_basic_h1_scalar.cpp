@@ -28,21 +28,21 @@ template <int ptest, int ptrial, int dim>
 void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 {
   // Create standard MFEM bilinear and linear forms on H1
-  auto                        test_fec = mfem::H1_FECollection(ptest, dim);
+  auto test_fec = mfem::H1_FECollection(ptest, dim);
   mfem::ParFiniteElementSpace test_fespace(mesh.get(), &test_fec);
 
-  auto                        trial_fec = mfem::H1_FECollection(ptrial, dim);
+  auto trial_fec = mfem::H1_FECollection(ptrial, dim);
   mfem::ParFiniteElementSpace trial_fespace(mesh.get(), &trial_fec);
 
   mfem::Vector U(trial_fespace.TrueVSize());
 
-  mfem::ParGridFunction     U_gf(&trial_fespace);
+  mfem::ParGridFunction U_gf(&trial_fespace);
   mfem::FunctionCoefficient x_squared([](mfem::Vector x) { return x[0] * x[0]; });
   U_gf.ProjectCoefficient(x_squared);
   U_gf.GetTrueDofs(U);
 
   // Define the types for the test and trial spaces using the function arguments
-  using test_space  = H1<ptest>;
+  using test_space = H1<ptest>;
   using trial_space = H1<ptrial>;
 
   // Construct the new functional object using the known test and trial spaces
@@ -57,9 +57,9 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
       Dimension<dim>{}, DependsOn<0>{},
       [=](double /*t*/, auto position, auto temperature) {
         auto [X, dX_dxi] = position;
-        auto [u, du_dx]  = temperature;
-        auto source      = d00 * u + dot(d01, du_dx) - 0.0 * (100 * X[0] * X[1]);
-        auto flux        = d10 * u + dot(d11, du_dx);
+        auto [u, du_dx] = temperature;
+        auto source = d00 * u + dot(d01, du_dx) - 0.0 * (100 * X[0] * X[1]);
+        auto flux = d10 * u + dot(d11, du_dx);
         return serac::tuple{source, flux};
       },
       *mesh);

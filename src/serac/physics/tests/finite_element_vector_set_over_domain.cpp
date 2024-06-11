@@ -67,7 +67,7 @@ TEST(FiniteElementVector, SetScalarFieldOver2DDomain)
 
 TEST(FiniteElementVector, SetVectorFieldOver2DDomain)
 {
-  constexpr int p   = 1;
+  constexpr int p = 1;
   constexpr int dim = 2;
 
   MPI_Barrier(MPI_COMM_WORLD);

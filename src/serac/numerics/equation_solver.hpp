@@ -40,7 +40,7 @@ namespace serac {
  * structs with the @a serac::mfem_ext::buildEquationSolver factory method.
  */
 class EquationSolver {
-public:
+ public:
   // _equationsolver_constructor_start
   /**
    * Constructs a new nonlinear equation solver
@@ -119,7 +119,7 @@ public:
    **/
   static void defineInputFileSchema(axom::inlet::Container& container);
 
-private:
+ private:
   /**
    * @brief The optional preconditioner (used for an iterative solver only)
    */
@@ -147,7 +147,7 @@ private:
  * @brief A wrapper class for using the MFEM SuperLU solver with a HypreParMatrix
  */
 class SuperLUSolver : public mfem::Solver {
-public:
+ public:
   /**
    * @brief Constructs a wrapper over an mfem::SuperLUSolver
    * @param[in] comm The MPI communicator used by the vectors and matrices in the solve
@@ -179,7 +179,7 @@ public:
    */
   void SetOperator(const mfem::Operator& op);
 
-private:
+ private:
   /**
    * @brief The owner of the SuperLU matrix for the gradient, stored
    * as a member variable for lifetime purposes
@@ -199,7 +199,7 @@ private:
  * @brief A wrapper class for using the MFEM Strumpack solver with a HypreParMatrix
  */
 class StrumpackSolver : public mfem::Solver {
-public:
+ public:
   /**
    * @brief Constructs a wrapper over an mfem::STRUMPACKSolver
    * @param[in] comm The MPI communicator used by the vectors and matrices in the solve
@@ -232,7 +232,7 @@ public:
    */
   void SetOperator(const mfem::Operator& op);
 
-private:
+ private:
   /**
    * @brief The owner of the Strumpack matrix for the gradient, stored
    * as a member variable for lifetime purposes
@@ -259,7 +259,7 @@ private:
  * @return The constructed nonlinear solver
  */
 std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(const NonlinearSolverOptions& nonlinear_opts,
-                                                         const LinearSolverOptions&    linear_opts,
+                                                         const LinearSolverOptions& linear_opts,
                                                          mfem::Solver& preconditioner, MPI_Comm comm = MPI_COMM_WORLD);
 
 /**

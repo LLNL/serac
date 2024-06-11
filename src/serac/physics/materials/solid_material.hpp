@@ -38,8 +38,8 @@ struct LinearIsotropic {
   template <typename T, int dim>
   SERAC_HOST_DEVICE auto operator()(State& /* state */, const tensor<T, dim, dim>& du_dX) const
   {
-    auto I       = Identity<dim>();
-    auto lambda  = K - (2.0 / 3.0) * G;
+    auto I = Identity<dim>();
+    auto lambda = K - (2.0 / 3.0) * G;
     auto epsilon = 0.5 * (transpose(du_dX) + du_dX);
     return lambda * tr(epsilon) * I + 2.0 * G * epsilon;
   }
@@ -75,12 +75,12 @@ struct StVenantKirchhoff {
   auto operator()(State&, const tensor<T, dim, dim>& grad_u) const
   {
     static constexpr auto I = Identity<dim>();
-    auto                  F = grad_u + I;
-    const auto            E = greenStrain(grad_u);
+    auto F = grad_u + I;
+    const auto E = greenStrain(grad_u);
 
     // stress
-    const auto S     = K * tr(E) * I + 2.0 * G * dev(E);
-    const auto P     = dot(F, S);
+    const auto S = K * tr(E) * I + 2.0 * G * dev(E);
+    const auto P = dot(F, S);
     const auto sigma = dot(P, transpose(F)) / det(F);
 
     return sigma;
@@ -113,11 +113,11 @@ struct NeoHookean {
   SERAC_HOST_DEVICE auto operator()(State& /* state */, const tensor<T, dim, dim>& du_dX) const
   {
     using std::log1p;
-    constexpr auto I         = Identity<dim>();
-    auto           lambda    = K - (2.0 / 3.0) * G;
-    auto           B_minus_I = du_dX * transpose(du_dX) + transpose(du_dX) + du_dX;
-    auto           J_minus_1 = detApIm1(du_dX);
-    auto           J         = J_minus_1 + 1;
+    constexpr auto I = Identity<dim>();
+    auto lambda = K - (2.0 / 3.0) * G;
+    auto B_minus_I = du_dX * transpose(du_dX) + transpose(du_dX) + du_dX;
+    auto J_minus_1 = detApIm1(du_dX);
+    auto J = J_minus_1 + 1;
     return (lambda * log1p(J_minus_1) * I + G * B_minus_I) / J;
   }
 
@@ -177,18 +177,18 @@ struct VoceHardening {
 /// @brief J2 material with nonlinear isotropic hardening.
 template <typename HardeningType>
 struct J2Nonlinear {
-  static constexpr int    dim = 3;      ///< spatial dimension
+  static constexpr int dim = 3;         ///< spatial dimension
   static constexpr double tol = 1e-10;  ///< relative tolerance on residual mag to judge convergence of return map
 
-  double        E;          ///< Young's modulus
-  double        nu;         ///< Poisson's ratio
+  double E;                 ///< Young's modulus
+  double nu;                ///< Poisson's ratio
   HardeningType hardening;  ///< Flow stress hardening model
-  double        density;    ///< mass density
+  double density;           ///< mass density
 
   /// @brief variables required to characterize the hysteresis response
   struct State {
-    tensor<double, dim, dim> plastic_strain;              ///< plastic strain
-    double                   accumulated_plastic_strain;  ///< uniaxial equivalent plastic strain
+    tensor<double, dim, dim> plastic_strain;  ///< plastic strain
+    double accumulated_plastic_strain;        ///< uniaxial equivalent plastic strain
   };
 
   /** @brief calculate the Cauchy stress, given the displacement gradient and previous material state */
@@ -197,18 +197,18 @@ struct J2Nonlinear {
   {
     using std::sqrt;
     constexpr auto I = Identity<dim>();
-    const double   K = E / (3.0 * (1.0 - 2.0 * nu));
-    const double   G = 0.5 * E / (1.0 + nu);
+    const double K = E / (3.0 * (1.0 - 2.0 * nu));
+    const double G = 0.5 * E / (1.0 + nu);
 
     // (i) elastic predictor
     auto el_strain = sym(du_dX) - state.plastic_strain;
-    auto p         = K * tr(el_strain);
-    auto s         = 2.0 * G * dev(el_strain);
-    auto q         = sqrt(1.5) * norm(s);
+    auto p = K * tr(el_strain);
+    auto s = 2.0 * G * dev(el_strain);
+    auto q = sqrt(1.5) * norm(s);
 
     // (ii) admissibility
     const double eqps_old = state.accumulated_plastic_strain;
-    auto         residual = [eqps_old, G, *this](auto delta_eqps, auto trial_mises) {
+    auto residual = [eqps_old, G, *this](auto delta_eqps, auto trial_mises) {
       return trial_mises - 3.0 * G * delta_eqps - this->hardening(eqps_old + delta_eqps);
     };
     if (residual(0.0, get_value(q)) > tol * hardening.sigma_y) {
@@ -218,9 +218,9 @@ struct J2Nonlinear {
       // This ensures that if the constitutive update is called again with the updated internal
       // variables, the return map won't be repeated.
       ScalarSolverOptions opts{.xtol = 0, .rtol = tol * hardening.sigma_y, .max_iter = 25};
-      double              lower_bound = 0.0;
-      double              upper_bound = (get_value(q) - hardening(eqps_old)) / (3.0 * G);
-      auto [delta_eqps, status]       = solve_scalar_equation(residual, 0.0, lower_bound, upper_bound, opts, q);
+      double lower_bound = 0.0;
+      double upper_bound = (get_value(q) - hardening(eqps_old)) / (3.0 * G);
+      auto [delta_eqps, status] = solve_scalar_equation(residual, 0.0, lower_bound, upper_bound, opts, q);
 
       auto Np = 1.5 * s / q;
 
@@ -247,9 +247,9 @@ struct J2 {
 
   /// @brief variables required to characterize the hysteresis response
   struct State {
-    tensor<double, dim, dim> beta;                        ///< back-stress tensor
-    tensor<double, dim, dim> plastic_strain;              ///< plastic strain
-    double                   accumulated_plastic_strain;  ///< incremental plastic strain
+    tensor<double, dim, dim> beta;            ///< back-stress tensor
+    tensor<double, dim, dim> plastic_strain;  ///< plastic strain
+    double accumulated_plastic_strain;        ///< incremental plastic strain
   };
 
   /** @brief calculate the Cauchy stress, given the displacement gradient and previous material state */
@@ -258,8 +258,8 @@ struct J2 {
   {
     using std::sqrt;
     constexpr auto I = Identity<3>();
-    const double   K = E / (3.0 * (1.0 - 2.0 * nu));
-    const double   G = 0.5 * E / (1.0 + nu);
+    const double K = E / (3.0 * (1.0 - 2.0 * nu));
+    const double G = 0.5 * E / (1.0 + nu);
 
     //
     // see pg. 260, box 7.5,
@@ -268,11 +268,11 @@ struct J2 {
 
     // (i) elastic predictor
     auto el_strain = sym(du_dX) - state.plastic_strain;
-    auto p         = K * tr(el_strain);
-    auto s         = 2.0 * G * dev(el_strain);
-    auto eta       = s - state.beta;
-    auto q         = sqrt(3.0 / 2.0) * norm(eta);
-    auto phi       = q - (sigma_y + Hi * state.accumulated_plastic_strain);
+    auto p = K * tr(el_strain);
+    auto s = 2.0 * G * dev(el_strain);
+    auto eta = s - state.beta;
+    auto q = sqrt(3.0 / 2.0) * norm(eta);
+    auto phi = q - (sigma_y + Hi * state.accumulated_plastic_strain);
 
     // (ii) admissibility
     if (phi > 0.0) {

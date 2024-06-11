@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
   constexpr int dim = 3;
 
   // Create DataStore
-  std::string            name = "contact_beam_example";
+  std::string name = "contact_beam_example";
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, name + "_data");
 
@@ -44,16 +44,16 @@ int main(int argc, char* argv[])
   return 1;
 #endif
 
-  serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = serac::NonlinearSolver::Newton,
-                                                  .relative_tol   = 1.0e-12,
-                                                  .absolute_tol   = 1.0e-12,
+  serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver = serac::NonlinearSolver::Newton,
+                                                  .relative_tol = 1.0e-12,
+                                                  .absolute_tol = 1.0e-12,
                                                   .max_iterations = 200,
-                                                  .print_level    = 1};
+                                                  .print_level = 1};
 
-  serac::ContactOptions contact_options{.method      = serac::ContactMethod::SingleMortar,
+  serac::ContactOptions contact_options{.method = serac::ContactMethod::SingleMortar,
                                         .enforcement = serac::ContactEnforcement::Penalty,
-                                        .type        = serac::ContactType::Frictionless,
-                                        .penalty     = 1.0e3};
+                                        .type = serac::ContactType::Frictionless,
+                                        .penalty = 1.0e3};
 
   serac::SolidMechanicsContact<p, dim, serac::Parameters<serac::L2<0>, serac::L2<0>>> solid_solver(
       nonlinear_options, linear_options, serac::solid_mechanics::default_quasistatic_options,
@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
   // each vector value corresponds to a different element attribute:
   // [0] (element attribute 1) : the beam
   // [1] (element attribute 2) : indenter block
-  mfem::Vector             K_values({10.0, 100.0});
+  mfem::Vector K_values({10.0, 100.0});
   mfem::PWConstCoefficient K_coeff(K_values);
   K_field.project(K_coeff);
   solid_solver.setParameter(0, K_field);
@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
   // each vector value corresponds to a different element attribute:
   // [0] (element attribute 1) : the beam
   // [1] (element attribute 2) : indenter block
-  mfem::Vector             G_values({0.25, 2.5});
+  mfem::Vector G_values({0.25, 2.5});
   mfem::PWConstCoefficient G_coeff(G_values);
   G_field.project(G_coeff);
   solid_solver.setParameter(1, G_field);
@@ -87,12 +87,12 @@ int main(int argc, char* argv[])
   });
   solid_solver.setDisplacementBCs({6}, [](const mfem::Vector&, double t, mfem::Vector& u) {
     u.SetSize(dim);
-    u    = 0.0;
+    u = 0.0;
     u[2] = -0.05 * t;
   });
 
   // Add the contact interaction
-  auto          contact_interaction_id = 0;
+  auto contact_interaction_id = 0;
   std::set<int> surface_1_boundary_attributes({7});
   std::set<int> surface_2_boundary_attributes({5});
   solid_solver.addContactInteraction(contact_interaction_id, surface_1_boundary_attributes,

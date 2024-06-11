@@ -27,10 +27,10 @@ void functional_solid_test_robin_condition()
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  constexpr int p                   = 2;
-  constexpr int dim                 = 3;
-  int           serial_refinement   = 0;
-  int           parallel_refinement = 0;
+  constexpr int p = 2;
+  constexpr int dim = 3;
+  int serial_refinement = 0;
+  int parallel_refinement = 0;
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -45,11 +45,11 @@ void functional_solid_test_robin_condition()
   serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // _solver_params_start
-  serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
-                                                  .relative_tol   = 1.0e-12,
-                                                  .absolute_tol   = 1.0e-12,
+  serac::NonlinearSolverOptions nonlinear_options{.nonlin_solver = NonlinearSolver::Newton,
+                                                  .relative_tol = 1.0e-12,
+                                                  .absolute_tol = 1.0e-12,
                                                   .max_iterations = 5000,
-                                                  .print_level    = 1};
+                                                  .print_level = 1};
 
   SolidMechanics<p, dim> solid_solver(nonlinear_options, solid_mechanics::default_linear_options,
                                       solid_mechanics::default_quasistatic_options, GeometricNonlinearities::Off,
@@ -66,10 +66,10 @@ void functional_solid_test_robin_condition()
 
   // prescribe zero displacement in the y- and z-directions
   // at the supported end of the beam,
-  std::set<int> support     = {1};
-  auto          zero        = [](const mfem::Vector&) -> double { return 0.0; };
-  int           y_direction = 1;
-  int           z_direction = 2;
+  std::set<int> support = {1};
+  auto zero = [](const mfem::Vector&) -> double { return 0.0; };
+  int y_direction = 1;
+  int z_direction = 2;
   solid_solver.setDisplacementBCs(support, zero, y_direction);
   solid_solver.setDisplacementBCs(support, zero, z_direction);
 
@@ -93,7 +93,7 @@ void functional_solid_test_robin_condition()
 
   // apply an axial displacement at the the tip of the beam
   auto translated_in_x = [](const mfem::Vector&, double t, mfem::Vector& u) -> void {
-    u    = 0.0;
+    u = 0.0;
     u[0] = t;
   };
   std::set<int> tip = {2};
@@ -108,9 +108,9 @@ void functional_solid_test_robin_condition()
   solid_solver.outputStateToDisk("robin_condition");
 
   // Perform the quasi-static solve
-  int    num_steps = 1;
-  double tmax      = 1.0;
-  double dt        = tmax / num_steps;
+  int num_steps = 1;
+  double tmax = 1.0;
+  double dt = tmax / num_steps;
   for (int i = 0; i < num_steps; i++) {
     solid_solver.advanceTimestep(dt);
     solid_solver.outputStateToDisk("robin_condition");

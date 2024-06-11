@@ -23,7 +23,7 @@ using namespace serac;
 int num_procs, myid;
 int nsamples = 1;  // because mfem doesn't take in unsigned int
 
-constexpr bool                 verbose = false;
+constexpr bool verbose = false;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
@@ -36,8 +36,8 @@ struct hcurl_qfunction {
   SERAC_HOST_DEVICE auto operator()(double /*t*/, x_t x, vector_potential_t vector_potential) const
   {
     auto [A, curl_A] = vector_potential;
-    auto J_term      = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
-    auto H_term      = b * curl_A;
+    auto J_term = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
+    auto H_term = b * curl_A;
     return serac::tuple{J_term, H_term};
   }
 };
@@ -51,25 +51,25 @@ template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 {
   // Create standard MFEM bilinear and linear forms on H1
-  auto                        fec = mfem::H1_FECollection(p, dim);
+  auto fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
   // by default, mfem uses a different integration rule than serac
   // so we manually specify the one that we use
-  const mfem::FiniteElement&   el = *fespace.GetFE(0);
+  const mfem::FiniteElement& el = *fespace.GetFE(0);
   const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
 
   mfem::ParBilinearForm A(&fespace);
 
   // Add the mass term using the standard MFEM method
   mfem::ConstantCoefficient a_coef(a);
-  auto*                     mass = new mfem::MassIntegrator(a_coef);
+  auto* mass = new mfem::MassIntegrator(a_coef);
   mass->SetIntRule(&ir);
   A.AddDomainIntegrator(mass);
 
   // Add the diffusion term using the standard MFEM method
   mfem::ConstantCoefficient b_coef(b);
-  auto*                     diffusion = new mfem::DiffusionIntegrator(b_coef);
+  auto* diffusion = new mfem::DiffusionIntegrator(b_coef);
   diffusion->SetIntRule(&ir);
   A.AddDomainIntegrator(diffusion);
 
@@ -80,7 +80,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   std::unique_ptr<mfem::HypreParMatrix> J_mfem(A.ParallelAssemble());
 
   // Create a linear form for the load term using the standard MFEM method
-  mfem::ParLinearForm       f(&fespace);
+  mfem::ParLinearForm f(&fespace);
   mfem::FunctionCoefficient load_func([&](const mfem::Vector& coords) { return 100 * coords(0) * coords(1); });
 
   // Create and assemble the linear load term into a vector
@@ -100,7 +100,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   // Set up the same problem using functional
 
   // Define the types for the test and trial spaces using the function arguments
-  using test_space  = decltype(test);
+  using test_space = decltype(test);
   using trial_space = decltype(trial);
 
   // Construct the new functional object using the known test and trial spaces
@@ -112,9 +112,9 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
       [=](double /*t*/, auto position, auto temperature) {
         // get the value and the gradient from the input tuple
         auto [X, dX_dxi] = position;
-        auto [u, du_dX]  = temperature;
-        auto source      = a * u - (100 * X[0] * X[1]);
-        auto flux        = b * du_dX;
+        auto [u, du_dX] = temperature;
+        auto source = a * u - (100 * X[0] * X[1]);
+        auto flux = b * du_dX;
         return serac::tuple{source, flux};
       },
       mesh);
@@ -126,7 +126,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   r1 -= (*F);
 
   // Compute the residual using functional
-  double       t  = 0.0;
+  double t = 0.0;
   mfem::Vector r2 = residual(t, U);
 
   mfem::Vector diff(r1.Size());
@@ -183,24 +183,24 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
 {
-  auto                        fec = mfem::H1_FECollection(p, dim);
+  auto fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec, dim);
 
   // by default, mfem uses a different integration rule than serac
   // so we manually specify the one that we use
-  const mfem::FiniteElement&   el = *fespace.GetFE(0);
+  const mfem::FiniteElement& el = *fespace.GetFE(0);
   const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
 
   mfem::ParBilinearForm A(&fespace);
 
   mfem::ConstantCoefficient a_coef(a);
-  auto*                     mass = new mfem::VectorMassIntegrator(a_coef);
+  auto* mass = new mfem::VectorMassIntegrator(a_coef);
   mass->SetIntRule(&ir);
   A.AddDomainIntegrator(mass);
 
   mfem::ConstantCoefficient lambda_coef(b);
   mfem::ConstantCoefficient mu_coef(b);
-  auto*                     elasticity = new mfem::ElasticityIntegrator(lambda_coef, mu_coef);
+  auto* elasticity = new mfem::ElasticityIntegrator(lambda_coef, mu_coef);
   elasticity->SetIntRule(&ir);
   A.AddDomainIntegrator(elasticity);
   A.Assemble(0);
@@ -208,9 +208,9 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 
   std::unique_ptr<mfem::HypreParMatrix> J_mfem(A.ParallelAssemble());
 
-  mfem::ParLinearForm             f(&fespace);
+  mfem::ParLinearForm f(&fespace);
   mfem::VectorFunctionCoefficient load_func(dim, [&](const mfem::Vector& /*coords*/, mfem::Vector& force) {
-    force    = 0.0;
+    force = 0.0;
     force(0) = -1.0;
   });
 
@@ -228,7 +228,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 
   [[maybe_unused]] static constexpr auto I = DenseIdentity<dim>();
 
-  using test_space  = decltype(test);
+  using test_space = decltype(test);
   using trial_space = decltype(trial);
 
   Functional<test_space(trial_space)> residual(&fespace, {&fespace});
@@ -238,8 +238,8 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
       [=](double /*t*/, auto /*x*/, auto displacement) {
         auto [u, du_dx] = displacement;
         auto body_force = a * u + I[0];
-        auto strain     = 0.5 * (du_dx + transpose(du_dx));
-        auto stress     = b * tr(strain) * I + 2.0 * b * strain;
+        auto strain = 0.5 * (du_dx + transpose(du_dx));
+        auto stress = b * tr(strain) * I + 2.0 * b * strain;
         return serac::tuple{body_force, stress};
       },
       mesh);
@@ -248,7 +248,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   mfem::Vector r1(U.Size());
   J_mfem->Mult(U, r1);
   r1 -= (*F);
-  double       t  = 0.0;
+  double t = 0.0;
   mfem::Vector r2 = residual(t, U);
 
   mfem::Vector diff(r1.Size());
@@ -302,34 +302,34 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
 {
-  auto                        fec = mfem::ND_FECollection(p, dim);
+  auto fec = mfem::ND_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
   // by default, mfem uses a different integration rule than serac
   // so we manually specify the one that we use
-  const mfem::FiniteElement&   el = *fespace.GetFE(0);
+  const mfem::FiniteElement& el = *fespace.GetFE(0);
   const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
 
   mfem::ParBilinearForm B(&fespace);
 
   mfem::ConstantCoefficient a_coef(a);
-  auto*                     mass = new mfem::VectorFEMassIntegrator(a_coef);
+  auto* mass = new mfem::VectorFEMassIntegrator(a_coef);
   mass->SetIntRule(&ir);
   B.AddDomainIntegrator(mass);
 
   mfem::ConstantCoefficient b_coef(b);
-  auto*                     curlcurl = new mfem::CurlCurlIntegrator(b_coef);
+  auto* curlcurl = new mfem::CurlCurlIntegrator(b_coef);
   curlcurl->SetIntRule(&ir);
   B.AddDomainIntegrator(curlcurl);
   B.Assemble(0);
   B.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J_mfem(B.ParallelAssemble());
 
-  mfem::ParLinearForm             f(&fespace);
+  mfem::ParLinearForm f(&fespace);
   mfem::VectorFunctionCoefficient load_func(dim, [&](const mfem::Vector& coords, mfem::Vector& output) {
-    double x  = coords(0);
-    double y  = coords(1);
-    output    = 0.0;
+    double x = coords(0);
+    double y = coords(1);
+    output = 0.0;
     output(0) = 10 * x * y;
     output(1) = -5 * (x - y) * y;
   });
@@ -347,7 +347,7 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   mfem::Vector U(fespace.TrueVSize());
   u_global.GetTrueDofs(U);
 
-  using test_space  = decltype(test);
+  using test_space = decltype(test);
   using trial_space = decltype(trial);
 
   Functional<test_space(trial_space)> residual(&fespace, {&fespace});
@@ -436,7 +436,7 @@ int main(int argc, char* argv[])
 
   axom::slic::SimpleLogger logger;
 
-  int serial_refinement   = 1;
+  int serial_refinement = 1;
   int parallel_refinement = 0;
 
   mfem::OptionsParser args(argc, argv);
