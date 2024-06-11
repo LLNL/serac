@@ -20,13 +20,13 @@
 namespace serac {
 
 struct LevelSet {
-  double y_height = 0.9;//1.9;
+  double y_height = 1.2;  // 1.9;
 
-  static constexpr double xAlpha = 0.0; //1.0;
-  static constexpr double yAlpha = 1.0;
+  static constexpr double xAlpha = 1.0;  // 1.0;
+  static constexpr double yAlpha = 0.3;
 
   // positive means constraint is satisfied, i.e., c(x) >= 0
-  double evaluate(const mfem::Vector& x) const { return y_height - xAlpha * x[0] - yAlpha * x[1] ; }
+  double evaluate(const mfem::Vector& x) const { return y_height - xAlpha * x[0] - yAlpha * x[1]; }
 
   mfem::Vector gradient(const mfem::Vector& x) const
   {
@@ -45,46 +45,42 @@ struct LevelSet {
   }
 };
 
+template <int dim>
+struct ConstView {
+  ConstView(const mfem::Vector& v_) : v(v_), numNodes_(v.Size() / dim) {}
+
+  int getIndex(int i, int j) const { return mfem::Ordering::Map<mfem::Ordering::byNODES>(numNodes_, dim, i, j); }
+
+  const double& operator[](int i) const { return v[i]; }
+  const double& operator()(int i) const { return v[i]; }
+  const double& operator()(int i, int j) const { return v[getIndex(i, j)]; }
+
+  int numNodes() const { return numNodes_; }
+
+private:
+  const mfem::Vector& v;
+  int                 numNodes_;
+};
 
 template <int dim>
 struct View {
-  View(mfem::Vector& v_) : v(v_), offset(v.Size()/dim) {
-  }
+  View(mfem::Vector& v_) : v(v_), numNodes_(v.Size() / dim) {}
 
-  double& operator[] (int i) { return v[i]; }
-  double& operator() (int i) { return v[i]; }
-  const double& operator[] (int i) const { return v[i]; }
-  const double& operator() (int i) const { return v[i]; }
+  int getIndex(int i, int j) const { return mfem::Ordering::Map<mfem::Ordering::byNODES>(numNodes_, dim, i, j); }
 
-  //double& operator() (int i, int j) { return v[i + offset*j]; }
-  //const double& operator() (int i, int j) const { return v[i + offset*j]; }
+  double&       operator[](int i) { return v[i]; }
+  double&       operator()(int i) { return v[i]; }
+  const double& operator[](int i) const { return v[i]; }
+  const double& operator()(int i) const { return v[i]; }
 
-  double& operator() (int i, int j) { return v[dim * i + j]; }
-  const double& operator() (int i, int j) const { return v[dim * i + j]; }
+  double&       operator()(int i, int j) { return v[getIndex(i, j)]; }
+  const double& operator()(int i, int j) const { return v[getIndex(i, j)]; }
 
-  int numNodes() const { return offset; }
+  int numNodes() const { return numNodes_; }
 
-  private:
+private:
   mfem::Vector& v;
-  int offset;
-};
-
-
-template <int dim>
-struct ConstView {
-  ConstView(const mfem::Vector& v_) : v(v_), offset(v.Size()/dim) {
-  }
-
-  const double& operator[] (int i) const { return v[i]; }
-  const double& operator() (int i) const { return v[i]; }
-  //const double& operator() (int i, int j) const { return v[i + offset*j]; }
-  const double& operator() (int i, int j) const { return v[dim * i + j]; }
-
-  int numNodes() const { return offset; }
-
-  private:
-  const mfem::Vector& v;
-  int offset;
+  int           numNodes_;
 };
 
 template <int order, int dim>
@@ -111,7 +107,8 @@ struct InequalityConstraint {
     constraint_ncp_error_  = 0.1 * std::numeric_limits<double>::max();
   }
 
-  void outputStateToDisk() const {
+  void outputStateToDisk() const
+  {
     StateManager::updateState(constraint_);
     StateManager::updateDual(constraint_multiplier_);
     StateManager::updateState(constraint_penalty_);
@@ -121,20 +118,19 @@ struct InequalityConstraint {
 
   void sumConstraintResidual(const FiniteElementVector& x_current, mfem::Vector& res)
   {
-    const int sz       = x_current.Size();
-    const int numNodes = sz / dim;
-    SLIC_ERROR_ROOT_IF(numNodes != constraint_.Size(), "Constraint size does not match system size.");
-
-    View<1> constraint(constraint_);
-    View<1> constraint_multiplier(constraint_multiplier_);
-    View<1> constraint_penalty(constraint_penalty_);
+    View<1>        constraint(constraint_);
+    View<1>        constraint_multiplier(constraint_multiplier_);
+    View<1>        constraint_penalty(constraint_penalty_);
     ConstView<dim> x(x_current);
-    View<dim> residual(res);
+    View<dim>      residual(res);
+
+    const int numNodes = x.numNodes();
+    SLIC_ERROR_ROOT_IF(numNodes != constraint_.Size(), "Constraint size does not match system size.");
 
     mfem::Vector currentCoords(dim);
     for (int n = 0; n < numNodes; ++n) {
       for (int i = 0; i < dim; ++i) {
-        currentCoords[i] = x(n,i);
+        currentCoords[i] = x(n, i);
       }
 
       const double c   = levelSet_.evaluate(currentCoords);
@@ -146,7 +142,7 @@ struct InequalityConstraint {
 
       if (lam >= k * c) {
         for (int i = 0; i < dim; ++i) {
-          residual(n,i) += gradC[i] * (-lam + k * c);
+          residual(n, i) += gradC[i] * (-lam + k * c);
         }
       }
     }
@@ -155,27 +151,26 @@ struct InequalityConstraint {
   std::unique_ptr<mfem::HypreParMatrix> sumConstraintJacobian(const FiniteElementVector&            x_current,
                                                               std::unique_ptr<mfem::HypreParMatrix> J)
   {
-    const int sz       = x_current.Size();
-    const int numNodes = sz / dim;
-    SLIC_ERROR_ROOT_IF(numNodes != constraint_.Size(), "Constraint size does not match system size.");
-
     constraint_diagonal_stiffness_ = 0.0;
 
-    View<1> constraint(constraint_);
-    View<1> constraint_multiplier(constraint_multiplier_);
-    View<1> constraint_penalty(constraint_penalty_);
-    ConstView<dim> x(x_current);
-    View<dim*dim> constraint_diagonal_stiffness(constraint_diagonal_stiffness_);
+    View<1>         constraint(constraint_);
+    View<1>         constraint_multiplier(constraint_multiplier_);
+    View<1>         constraint_penalty(constraint_penalty_);
+    ConstView<dim>  x(x_current);
+    View<dim * dim> constraint_diagonal_stiffness(constraint_diagonal_stiffness_);
+
+    const int numNodes = x.numNodes();
+    SLIC_ERROR_ROOT_IF(numNodes != constraint_.Size(), "Constraint size does not match system size.");
 
     mfem::Vector currentCoords(dim);  // switch to stack vectors eventually
     mfem::Vector xyz_dirs(dim);
 
     for (int n = 0; n < numNodes; ++n) {
       for (int i = 0; i < dim; ++i) {
-        currentCoords[i] = x(n,i);
+        currentCoords[i] = x(n, i);
       }
       const double c   = levelSet_.evaluate(currentCoords);
-      constraint[n]   = c;
+      constraint[n]    = c;
       const double lam = constraint_multiplier[n];
       const double k   = constraint_penalty[n];
 
@@ -186,7 +181,7 @@ struct InequalityConstraint {
           xyz_dirs[i]              = 1.0;
           const mfem::Vector hessI = levelSet_.hess_vec(currentCoords, xyz_dirs);
           for (int j = 0; j < dim; ++j) {
-            constraint_diagonal_stiffness(n, dim*i+j) += k * gradC[i] * gradC[j] + hessI[j] * (-lam + k * c);
+            constraint_diagonal_stiffness(n, dim * i + j) += k * gradC[i] * gradC[j] + hessI[j] * (-lam + k * c);
           }
         }
       }
@@ -198,20 +193,17 @@ struct InequalityConstraint {
     const auto* Jdiag_i    = hypre_CSRMatrixI(J_hype->diag);
     const auto* Jdiag_j    = hypre_CSRMatrixJ(J_hype->diag);
 
-    // J->Print("first.txt");
-
-    using array = std::array<int, dim>;
+    using array    = std::array<int, dim>;
     using arrayInt = typename array::size_type;
 
     std::array<int, dim> nodalCols;
     for (int n = 0; n < numNodes; ++n) {
       for (int i = 0; i < dim; ++i) {
-        //nodalCols[static_cast<arrayInt>(i)] = n + i * numNodes;
-        nodalCols[static_cast<arrayInt>(i)] = dim * n + i;
+        nodalCols[static_cast<arrayInt>(i)] = x.getIndex(n, i);
       }
 
       for (int i = 0; i < dim; ++i) {
-        int  row      = dim * n + i;
+        int  row      = x.getIndex(n, i);
         auto rowStart = Jdiag_i[row];
         auto rowEnd   = Jdiag_i[row + 1];
         for (auto colInd = rowStart; colInd < rowEnd; ++colInd) {
@@ -219,28 +211,18 @@ struct InequalityConstraint {
           auto& val = Jdiag_data[colInd];
           for (int j = 0; j < dim; ++j) {
             if (col == nodalCols[static_cast<arrayInt>(j)]) {
-              val += constraint_diagonal_stiffness(n, dim*i+j);
+              val += constraint_diagonal_stiffness(n, dim * i + j);
             }
           }
         }
       }
     }
 
-    // J->Print("second.txt");
-
-    // auto diagSparseMat = std::make_unique<mfem::SparseMatrix>(constraint_diagonal_stiffness_);
-    // auto diagHypreMat = std::make_unique<mfem::HypreParMatrix>(constraint_diagonal_stiffness_.comm(),
-    // J.GetGlobalNumRows(), J.GetRowStarts(), diagSparseMat.get()); printf("h\n"); printf("i,j\n"); printf("k\n");
     return J;
   }
 
   void updateMultipliers(const FiniteElementVector& x_current)
   {
-    printf("updating multipliers\n");
-    const int rows     = x_current.Size();
-    const int numNodes = rows / dim;
-    SLIC_ERROR_ROOT_IF(numNodes != constraint_.Size(), "Constraint size does not match system size.");
-
     double target_decrease_factor = 0.75;
 
     auto fischer_burmeister_ncp_error = [](double c, double lam, double k) {
@@ -248,19 +230,22 @@ struct InequalityConstraint {
       return std::sqrt(ck * ck + lam * lam) - ck - lam;
     };
 
-    View<1> constraint(constraint_);
-    View<1> constraint_multiplier(constraint_multiplier_);
-    View<1> constraint_penalty(constraint_penalty_);
-    View<1> constraint_ncp_error(constraint_ncp_error_);
+    View<1>        constraint(constraint_);
+    View<1>        constraint_multiplier(constraint_multiplier_);
+    View<1>        constraint_penalty(constraint_penalty_);
+    View<1>        constraint_ncp_error(constraint_ncp_error_);
     ConstView<dim> x(x_current);
+
+    const int numNodes = x.numNodes();
+    SLIC_ERROR_ROOT_IF(numNodes != constraint_.Size(), "Constraint size does not match system size.");
 
     for (int n = 0; n < numNodes; ++n) {
       mfem::Vector currentCoords(dim);
       for (int i = 0; i < dim; ++i) {
-        currentCoords[i] = x(n,i);
+        currentCoords[i] = x(n, i);
       }
       const double c = levelSet_.evaluate(currentCoords);
-      constraint[n] = c;
+      constraint[n]  = c;
 
       const double lam = constraint_multiplier[n];
       const double k   = constraint_penalty[n];

@@ -202,10 +202,6 @@ void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_d
   // Save the restart/Sidre file
   StateManager::save(time_, cycle_, mesh_tag_);
 
-  //for (auto& constraint : inequality_constraints_) {
-//    constraint->outputStateToDisk();
-//  }
-
   // Optionally output a paraview datacollection for visualization
   if (paraview_output_dir) {
     printf("output paraview");

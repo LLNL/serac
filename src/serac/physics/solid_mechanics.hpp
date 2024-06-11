@@ -1121,12 +1121,17 @@ public:
     setPressure(DependsOn<>{}, pressure_function, optional_domain);
   }
 
+  void computeUpdatedCoordinates()
+  {
+    auto reference_nodes = dynamic_cast<const mfem::ParGridFunction*>(mesh_.GetNodes());
+    reference_nodes->ParFESpace()->GetProlongationMatrix()->Mult(displacement_, x_current_);
+    x_current_ += *reference_nodes;
+    // x_current += shape_displacement_;
+  }
+
   void updateConstraintMultipliers()
   {
-    mfem::VectorFunctionCoefficient getCoords(dim, [](const mfem::Vector& x, mfem::Vector& xn) { xn = x; });
-    x_current_.project(getCoords);
-    x_current_ += displacement_;
-    x_current_ += shape_displacement_;
+    computeUpdatedCoordinates();
     for (auto& constraint : inequality_constraints) {
       constraint->updateMultipliers(x_current_);
     }
@@ -1150,10 +1155,7 @@ public:
 
           r = res;
 
-          mfem::VectorFunctionCoefficient getCoords(dim, [](const mfem::Vector& x, mfem::Vector& xn) { xn = x; });
-          x_current_.project(getCoords);
-          x_current_ += u;
-          x_current_ += shape_displacement_;
+          computeUpdatedCoordinates();
           for (auto& constraint : inequality_constraints) {
             constraint->sumConstraintResidual(x_current_, r);
           }
@@ -1167,11 +1169,7 @@ public:
                                         *parameters_[parameter_indices].state...);
           J_             = assemble(drdu);
 
-          mfem::VectorFunctionCoefficient getCoords(dim, [](const mfem::Vector& x, mfem::Vector& xn) { xn = x; });
-          x_current_.project(getCoords);
-          x_current_ += u;
-          x_current_ += shape_displacement_;
-
+          computeUpdatedCoordinates();
           for (auto& constraint : inequality_constraints) {
             J_ = std::move(constraint->sumConstraintJacobian(x_current_, std::move(J_)));
           }
