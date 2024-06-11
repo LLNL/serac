@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "serac/numerics/functional/tensor.hpp"
+#include "serac/numerics/functional/tuple_tensor_dual_functions.hpp"
 
 using namespace serac;
 
@@ -434,10 +435,9 @@ TEST(Tensor, DerivativeOfLinearSolveWrtAMatchesFiniteDifference)
 TEST(Tensor, EigenvaluesTriplyDegenerate) {
   const double lambda = 2.5;
   const auto A = lambda*DenseIdentity<3>();
-  tensor<double, 3> eigvals;
-  tensor<double, 3, 3> eigvecs;
-  eig_symm(A, eigvals, eigvecs);
-  for (i=0; i < 3; i++){
+  auto [eigvals, eigvecs] = eig_symm(A);
+  std::cout << "eigvals = " << eigvals << std::endl;
+  for (int i = 0; i < 3; i++){
     EXPECT_NEAR(eigvals[i], lambda, 1e-12);
   }
 }
