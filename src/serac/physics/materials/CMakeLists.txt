@@ -24,6 +24,8 @@ set(materials_headers
     solid_material.hpp
     thermal_material_input.hpp
     thermal_material.hpp
+    thermoplastic_material_largestrains.hpp
+    thermoplastic_material_smallstrains.hpp
     )
 
 set(materials_depends
