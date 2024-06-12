@@ -754,18 +754,16 @@ auto eigenvalues(const serac::tensor<T, size, size>& A)
   return output;
 }
 
-/// signum
-// Should we implement the derivative?
-// It should be NaN when val = 0
+/**
+ * @brief Signum, returns sign of input
+ * 
+ * @param val Input value.
+ * @return 0 when input is negative, 0 when input is 0, 1 when input is positive.
+ */
 template <typename T> int sgn(T val) {
-    return (T(0) < val) - (val < T(0));
-}
-
-/// second tensor invariant
-template <typename T>
-SERAC_HOST_DEVICE constexpr auto I2(const tensor<T, 3, 3>& A) {
-  auto trA = tr(A);
-  return 0.5*(trA*trA - inner(transpose(A), A));
+  // Should we implement the derivative?
+  // It should be NaN when val = 0
+  return (T(0) < val) - (val < T(0));
 }
 
 /**
@@ -788,10 +786,12 @@ SERAC_HOST_DEVICE tensor<int, 3> argsort(const tensor<T, 3>& v) {
   return order;
 }
 
-/** Eigendecomposition for symmetric 3x3 matrix
+/** Eigendecomposition for a symmetric 3x3 matrix
  *
- * @param A Matrix for which the eigendecomposition will be computed. Must be symmetric, this is
- * not checked.
+ * @param A Matrix for which the eigendecomposition will be computed. Must be
+ * symmetric, this is not checked.
+ * @return tuple with the eigenvalues in the first element, and the matrix of
+ * eigenvectors (columnwise) in the second element.
  * 
  * @note based on "A robust algorithm for finding the eigenvalues and
  * eigenvectors of 3x3 symmetric matrices", by Scherzinger & Dohrmann
