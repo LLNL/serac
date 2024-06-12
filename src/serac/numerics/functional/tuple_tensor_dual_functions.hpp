@@ -768,6 +768,26 @@ SERAC_HOST_DEVICE constexpr auto I2(const tensor<T, 3, 3>& A) {
   return 0.5*(trA*trA - inner(transpose(A), A));
 }
 
+/**
+ * @brief Find indices that would sort a 3-vector
+ *
+ * @param v 3-vector to sort.
+ * @return 3-vector of indices that would sort \p v in ascending order.
+ */
+template<typename T>
+SERAC_HOST_DEVICE tensor<int, 3> argsort(const tensor<T, 3>& v) {
+  auto swap = [](int& first, int& second) {
+    int tmp = first;
+    first = second;
+    second = tmp;
+  };
+  tensor<int, 3> order{0, 1, 2};
+  if (v[0] > v[1]) swap(order[0], order[1]);
+  if (v[order[1]] > v[order[2]]) swap(order[1], order[2]);
+  if (v[order[0]] > v[order[1]]) swap(order[0], order[1]);
+  return order;
+}
+
 /** Eigendecomposition for symmetric 3x3 matrix
  *
  * @param A Matrix for which the eigendecomposition will be computed. Must be symmetric, this is
@@ -883,28 +903,17 @@ SERAC_HOST_DEVICE tuple<vec3, mat3> eig_symm(const mat3 & A) {
   // shift them to get eigenvalues of A
   for (int i = 0; i < 3; i++) eta[i] += tr(A) / 3.0;
 
-  return {eta, Q};
+  // sort eigenvalues into ascending order
+  auto order = argsort(eta);
+  vec3 eigvals{{eta[order[0]], eta[order[1]], eta[order[2]]}};
+  mat3 eigvecs{{{Q[0][order[0]], Q[0][order[1]], Q[0][order[2]]},
+                {Q[1][order[0]], Q[1][order[1]], Q[1][order[2]]},
+                {Q[2][order[0]], Q[2][order[1]], Q[2][order[2]]}}};
+
+  return {eigvals, eigvecs};
 }
 
-/**
- * @brief Find indices that would sort a 3-vector
- *
- * @param v 3-vector to sort.
- * @return 3-vector of indices that would sort \p v in ascending order.
- */
-template<typename T>
-SERAC_HOST_DEVICE tensor<int, 3> argsort(const tensor<T, 3>& v) {
-  auto swap = [](int& first, int& second) {
-    int tmp = first;
-    first = second;
-    second = tmp;
-  };
-  tensor<int, 3> order{0, 1, 2};
-  if (v[0] > v[1]) swap(order[0], order[1]);
-  if (v[order[1]] > v[order[2]]) swap(order[1], order[2]);
-  if (v[order[0]] > v[order[1]]) swap(order[0], order[1]);
-  return order;
-}
+
 
 /**
  * @brief Logarithm of a symmetric 3x3 matrix

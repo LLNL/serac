@@ -432,16 +432,6 @@ TEST(Tensor, DerivativeOfLinearSolveWrtAMatchesFiniteDifference)
   EXPECT_LT(squared_norm(dx_FD - get_gradient(x)), tolerance);
 }
 
-TEST(Tensor, EigenvaluesTriplyDegenerate) {
-  const double lambda = 2.5;
-  const auto A = lambda*DenseIdentity<3>();
-  auto [eigvals, eigvecs] = eig_symm(A);
-  std::cout << "eigvals = " << eigvals << std::endl;
-  for (int i = 0; i < 3; i++){
-    EXPECT_NEAR(eigvals[i], lambda, 1e-12);
-  }
-}
-
 TEST(Tensor, argsort) {
   tensor v{{1.0, 3.0, 0.0}};
   auto sorted = argsort(v);
@@ -455,3 +445,53 @@ TEST(Tensor, argsort) {
   ASSERT_EQ(sorted[1], 1);
   ASSERT_EQ(sorted[2], 0);
 }
+
+TEST(Tensor, EigenvaluesTriplyDegenerate) {
+  const double lambda = 2.5;
+  const auto A = lambda*DenseIdentity<3>();
+  auto [eigvals, eigvecs] = eig_symm(A);
+  for (int i = 0; i < 3; i++) {
+    EXPECT_NEAR(eigvals[i], lambda, 1e-12);
+  }
+}
+
+TEST(Tensor, EigendecompWithUniqueEigenvalues) {
+  const tensor lambda{{-1.1, 2.6, 2.2}};
+  // Q is a rotation matrix.
+  // Generated externally, written out to 15 decimals
+  const tensor Q{{{-0.928152308749236, -0.091036503308254, -0.360895617636}  ,
+                  { 0.238177386319198,  0.599832274220295, -0.763853896664712},
+                  { 0.28601542687348 , -0.794929932679048, -0.535052873762272}}};
+  const auto A = dot(Q, dot(diag(lambda), transpose(Q)));
+  // std::cout << "A =\n" << A << std::endl;
+  auto [eigvals, eigvecs] = eig_symm(A);
+
+  // eigenvalues should be returned in ascending order
+  EXPECT_NEAR(eigvals[0], lambda[0], 1e-12);
+  EXPECT_NEAR(eigvals[1], lambda[2], 1e-12);
+  EXPECT_NEAR(eigvals[2], lambda[1], 1e-12);
+  
+  // check eigenvectors by re-assembling the matrix
+  tensor<double, 3, 3> should_be_A = dot(eigvecs, dot(diag(eigvals), transpose(eigvecs)));
+  EXPECT_LT(norm(should_be_A - A), 1e-12);
+}
+
+TEST(Tensor, EigendecompWith2NearlyDegenerateEigenvalues) {
+  const tensor lambda{{2.5, 2.5 + 1e-8, 1.1}};
+  const tensor Q{{{-0.928152308749236, -0.091036503308254, -0.360895617636}  ,
+                  { 0.238177386319198,  0.599832274220295, -0.763853896664712},
+                  { 0.28601542687348 , -0.794929932679048, -0.535052873762272}}};
+  const auto A = dot(Q, dot(diag(lambda), transpose(Q)));
+  // std::cout << "A =\n" << A << std::endl;
+  auto [eigvals, eigvecs] = eig_symm(A);
+
+  // check eigenvalues
+  EXPECT_NEAR(eigvals[0], lambda[2], 1e-12);
+  EXPECT_NEAR(eigvals[1], lambda[0], 1e-12);
+  EXPECT_NEAR(eigvals[2], lambda[1], 1e-12);
+
+  // check eigenvectors by re-assembling the matrix
+  tensor<double, 3, 3> should_be_A = dot(eigvecs, dot(diag(eigvals), transpose(eigvecs)));
+  EXPECT_LT(norm(A - should_be_A), 1e-12);
+}
+
