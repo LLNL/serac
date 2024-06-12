@@ -51,15 +51,19 @@ public:
     return normEval;
   }
 
-
   void assembleJacobian(const mfem::Vector& x) const
   {
     CALI_CXX_MARK_FUNCTION;
     grad = &oper->GetGradient(x);
+  }
+
+  void setPreconditioner() const
+  {
+    CALI_CXX_MARK_FUNCTION;
     prec->SetOperator(*grad);
   }
 
-  void applyPreconditioner(const mfem::Vector& r, mfem::Vector& c) const
+  void solveLinearSystem(const mfem::Vector& r, mfem::Vector& c) const
   {
     CALI_CXX_MARK_FUNCTION;
     prec->Mult(r, c);  // c = [DF(x_i)]^{-1} [F(x_i)-b]
@@ -107,7 +111,8 @@ public:
       real_t norm_nm1 = norm;
 
       assembleJacobian(x);
-      applyPreconditioner(r, c);
+      setPreconditioner();
+      solveLinearSystem(r, c);
 
       // there must be a better way to do this?
       x0.SetSize(x.Size());
