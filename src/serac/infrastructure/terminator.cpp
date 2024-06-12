@@ -14,6 +14,9 @@
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/profiling.hpp"
 
+#include "mfem.hpp"
+#include "mfem/linalg/petsc.hpp"
+
 namespace {
 /**
  * The actual signal handler - must have this exact signature
@@ -47,6 +50,12 @@ void exitGracefully(bool error)
     serac::logger::flush();
     serac::logger::finalize();
   }
+
+#ifdef SERAC_USE_PETSC
+#ifdef MFEM_USE_PETSC
+  mfem::MFEMFinalizePetsc();
+#endif
+#endif
 
   int mpi_initialized = 0;
   MPI_Initialized(&mpi_initialized);

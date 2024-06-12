@@ -100,10 +100,12 @@ struct TimesteppingOptions {
 /// Linear solution method indicator
 enum class LinearSolver
 {
-  CG,       /**< Conjugate gradient */
-  GMRES,    /**< Generalized minimal residual method */
-  SuperLU,  /**< SuperLU MPI-enabled direct nodal solver */
-  Strumpack /**< Strumpack MPI-enabled direct frontal solver*/
+  CG,        /**< Conjugate gradient */
+  GMRES,     /**< Generalized minimal residual method */
+  SuperLU,   /**< SuperLU MPI-enabled direct nodal solver */
+  Strumpack, /**< Strumpack MPI-enabled direct frontal solver*/
+  PetscCG,   /**< PETSc MPI-enabled conjugate gradient solver */
+  PetscGMRES /**< PETSc MPI-enabled generalize minimal residual solver */
 };
 // _linear_solvers_end
 
@@ -164,6 +166,31 @@ struct AMGXOptions {
   bool verbose = false;
 };
 
+/**
+ * @brief Preconditioner types supported by PETSc
+ */
+enum class PetscPCType
+{
+  JACOBI,        /**< Jacobi with diagonal scaling */
+  JACOBI_L1,     /**< Jacobi with row-wise L1 norm scaling */
+  JACOBI_ROWSUM, /**< Jacobi with row sum (no absolute value) scaling */
+  JACOBI_ROWMAX, /**< Jacobi with L\inf norm scaling */
+  PBJACOBI,      /**< Point-block Jacobi with LU factorization on sub-blocks */
+  BJACOBI,       /**< Block Jacobi with LU factorization on sub-blocks, set number of blocks with -pc_bjacobi_blocks */
+  LU,            /**< Direct solver based on LU factorization */
+  ILU,           /**< Incomplete LU factorization */
+  CHOLESKY,      /**< Cholesky factorization */
+  ICC,           /**< Incomplete Cholesky factorization */
+  SVD,           /**< LAPACK xGESVD SVD decomposition, fully redundant (SLOW for MPI) */
+  ASM,  /**< Additive Schwarz method, each block is solved with its own KSP object, blocks cannot be shared between MPI
+           processes. Set total number of blocks with -pc_asm_blocks N */
+  GASM, /**< Additive Schwarz method, each block is solved with its own KSP object, blocks can be shared between MPI
+           processes. Set total number of blocks with -pc_gasm_total_subdomains N */
+  GAMG, /**< PETSc built-in AMG preconditioner */
+  HMG,  /**< Hierarchical AMG for multi-component PDE problems */
+  NONE, /**< No preconditioner, or type set via -pc_type CLI flag */
+};
+
 // _preconditioners_start
 /// The type of preconditioner to be used
 enum class Preconditioner
@@ -174,6 +201,7 @@ enum class Preconditioner
   HypreAMG,         /**< Hypre's BoomerAMG algebraic multi-grid */
   HypreILU,         /**< Hypre's Incomplete LU */
   AMGX,             /**< NVIDIA's AMGX GPU-enabled algebraic multi-grid, GPU builds only */
+  Petsc,            /**< PETSc preconditioner,  */
   None              /**< No preconditioner used */
 };
 // _preconditioners_end
@@ -186,6 +214,12 @@ struct LinearSolverOptions {
 
   /// PreconditionerOptions selection
   Preconditioner preconditioner = Preconditioner::HypreJacobi;
+
+  /// AMGX Options, used for Preconditioner::AMGX
+  AMGXOptions amgx_options = AMGXOptions{};
+
+  /// PETSc preconditioner type
+  PetscPCType petsc_preconditioner = PetscPCType::JACOBI;
 
   /// Relative tolerance
   double relative_tol = 1.0e-8;
