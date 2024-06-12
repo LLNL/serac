@@ -54,12 +54,12 @@ class Serac(CachedCMakePackage, CudaPackage):
     varmsg = "Build development tools (such as Sphinx, CppCheck, ClangFormat, etc...)"
     variant("devtools", default=False, description=varmsg)
 
-    variant("profiling", default=False, 
+    variant("profiling", default=True,
             description="Build with hooks for Adiak/Caliper performance analysis")
 
     variant("petsc", default=True,
             description="Enable PETSc support")
-    variant("slepc", default=True, description="Enable SLEPc integration") 
+    variant("slepc", default=False, description="Enable SLEPc integration")
     variant("sundials", default=True,
             description="Build MFEM TPL with SUNDIALS nonlinear/ODE solver support")
     variant("umpire",   default=True,

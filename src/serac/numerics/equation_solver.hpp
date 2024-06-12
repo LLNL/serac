@@ -20,6 +20,7 @@
 
 #include "serac/infrastructure/input.hpp"
 #include "serac/numerics/solver_config.hpp"
+#include "serac/numerics/petsc_solvers.hpp"
 
 namespace serac {
 
@@ -274,13 +275,11 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
 
 /**
  * @brief Build a preconditioner from the available options
- *
- * @param preconditioner The preconditioner type to be built
- * @param print_level The print level for the constructed preconditioner
+ * @param linear_opts The options to configure the linear solver and preconditioner
  * @param comm The communicator for the underlying operator and HypreParVectors
  * @return A constructed preconditioner based on the input option
  */
-std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level = 0,
+std::unique_ptr<mfem::Solver> buildPreconditioner(LinearSolverOptions       linear_opts,
                                                   [[maybe_unused]] MPI_Comm comm = MPI_COMM_WORLD);
 
 #ifdef MFEM_USE_AMGX
@@ -293,6 +292,11 @@ std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner,
  */
 std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MPI_Comm comm);
 #endif
+
+#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
+
+#endif
+
 }  // namespace serac
 
 /**

@@ -23,6 +23,7 @@
 #include "serac/numerics/functional/shape_aware_functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/materials/solid_material.hpp"
+#include "serac/physics/inequality_constraint.hpp"
 
 namespace serac {
 
@@ -181,8 +182,11 @@ public:
         ode2_(displacement_.space().TrueVSize(),
               {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = v_, .d2u_dt2 = acceleration_},
               *nonlin_solver_, bcs_),
-        geom_nonlin_(geom_nonlin)
+        geom_nonlin_(geom_nonlin),
+        x_current_(
+            StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "current_coordinates"), mesh_tag_))
   {
+    CALI_CXX_MARK_FUNCTION;
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension, {0}, and runtime mesh dimension, {1}, mismatch", dim,
                                          mesh_.Dimension()));
@@ -1006,6 +1010,13 @@ public:
     addBodyForce(DependsOn<>{}, body_force, optional_domain);
   }
 
+  /// @brief  Add an inequality constraint
+  /// @param constraint  The constraint to add
+  void addInequalityConstraint(std::unique_ptr<InequalityConstraint<order, dim>> constraint)
+  {
+    inequality_constraints.push_back(std::move(constraint));
+  }
+
   /**
    * @brief Set the traction boundary condition
    *
@@ -1117,6 +1128,22 @@ public:
     setPressure(DependsOn<>{}, pressure_function, optional_domain);
   }
 
+  void computeUpdatedCoordinates()
+  {
+    auto reference_nodes = dynamic_cast<const mfem::ParGridFunction*>(mesh_.GetNodes());
+    reference_nodes->ParFESpace()->GetProlongationMatrix()->Mult(displacement_, x_current_);
+    x_current_ += *reference_nodes;
+    // x_current += shape_displacement_;
+  }
+
+  void updateConstraintMultipliers()
+  {
+    computeUpdatedCoordinates();
+    for (auto& constraint : inequality_constraints) {
+      constraint->updateMultipliers(x_current_);
+    }
+  }
+
   /// @brief Build the quasi-static operator corresponding to the total Lagrangian formulation
   virtual std::unique_ptr<mfem_ext::StdFunctionOperator> buildQuasistaticOperator()
   {
@@ -1129,20 +1156,41 @@ public:
         [this](const mfem::Vector& u, mfem::Vector& r) {
           const mfem::Vector res = (*residual_)(ode_time_point_, shape_displacement_, u, acceleration_,
                                                 *parameters_[parameter_indices].state...);
-
           // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
           // tracking strategy
           // See https://github.com/mfem/mfem/issues/3531
+
           r = res;
+
+          computeUpdatedCoordinates();
+          for (auto& constraint : inequality_constraints) {
+            constraint->sumConstraintResidual(x_current_, ode_time_point_, r);
+          }
+
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
         },
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
+          CALI_MARK_BEGIN("Functional Jacobian assemble");
           auto [r, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(u), acceleration_,
                                         *parameters_[parameter_indices].state...);
+          CALI_MARK_END("Functional Jacobian assemble");
+
+          CALI_MARK_BEGIN("Assemble sparse matrix");
           J_             = assemble(drdu);
-          J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+          CALI_MARK_END("Assemble sparse matrix");
+
+          CALI_MARK_BEGIN("Assemble constraint matrix");
+          computeUpdatedCoordinates();
+          for (auto& constraint : inequality_constraints) {
+            J_ = std::move(constraint->sumConstraintJacobian(x_current_, ode_time_point_, std::move(J_)));
+          }
+          CALI_MARK_END("Assemble constraint matrix");
+
+          CALI_MARK_BEGIN("EliminateEssentialsDofs");
+          J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+          CALI_MARK_END("EliminateEssentialsDofs");
           return *J_;
         });
   }
@@ -1168,6 +1216,7 @@ public:
   /// @overload
   void completeSetup() override
   {
+    CALI_CXX_MARK_FUNCTION;
     // Build the dof array lookup tables
     displacement_.space().BuildDofToArrays();
 
@@ -1215,6 +1264,16 @@ public:
           });
     }
 
+#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
+    auto* space_dep_pc =
+        dynamic_cast<serac::mfem_ext::PetscPreconditionerSpaceDependent*>(&nonlin_solver_->preconditioner());
+    if (space_dep_pc) {
+      // This call sets the displacement ParFiniteElementSpace used to get the spatial coordinates and to
+      // generate the near null space for the PCGAMG preconditioner
+      space_dep_pc->SetFESpace(&displacement_.space());
+    }
+#endif
+
     nonlin_solver_->setOperator(*residual_with_bcs_);
 
     if (checkpoint_to_disk_) {
@@ -1239,6 +1298,7 @@ public:
   /// @overload
   void advanceTimestep(double dt) override
   {
+    CALI_CXX_MARK_FUNCTION;
     SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in SolidMechanics.");
 
     // If this is the first call, initialize the previous parameter values as the initial values
@@ -1330,6 +1390,7 @@ public:
   /// @overload
   void reverseAdjointTimestep() override
   {
+    CALI_CXX_MARK_FUNCTION;
     auto& lin_solver = nonlin_solver_->linearSolver();
 
     // By default, use a homogeneous essential boundary condition
@@ -1397,6 +1458,7 @@ public:
   /// @overload
   std::unordered_map<std::string, FiniteElementState> getCheckpointedStates(int cycle_to_load) const override
   {
+    CALI_CXX_MARK_FUNCTION;
     std::unordered_map<std::string, FiniteElementState> previous_states;
 
     if (checkpoint_to_disk_) {
@@ -1421,6 +1483,7 @@ public:
   /// @overload
   FiniteElementDual& computeTimestepSensitivity(size_t parameter_field) override
   {
+    CALI_CXX_MARK_FUNCTION;
     SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
                     axom::fmt::format("Invalid parameter index '{}' requested for sensitivity."));
 
@@ -1435,6 +1498,7 @@ public:
   /// @overload
   FiniteElementDual& computeTimestepShapeSensitivity() override
   {
+    CALI_CXX_MARK_FUNCTION;
     auto drdshape =
         serac::get<DERIVATIVE>((*residual_)(ode_time_point_, differentiate_wrt(shape_displacement_), displacement_,
                                             acceleration_, *parameters_[parameter_indices].state...));
@@ -1616,6 +1680,10 @@ protected:
   /// @brief Coefficient containing the essential boundary values
   std::shared_ptr<mfem::Coefficient> component_disp_bdr_coef_;
 
+  FiniteElementState x_current_;
+  using InequalityConstraintPtr = std::unique_ptr<InequalityConstraint<order, dim>>;
+  std::vector<InequalityConstraintPtr> inequality_constraints;
+
   /// @brief Array functions computing the derivative of the residual with respect to each given parameter
   /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
   /// template parameter.
@@ -1643,6 +1711,7 @@ protected:
   /// @brief Solve the Quasi-static Newton system
   virtual void quasiStaticSolve(double dt)
   {
+    CALI_CXX_MARK_FUNCTION;
     // warm start must be called prior to the time update so that the previous Jacobians can be used consistently
     // throughout.
     warmStartDisplacement(dt);
@@ -1721,6 +1790,7 @@ protected:
    */
   void warmStartDisplacement(double dt)
   {
+    CALI_CXX_MARK_FUNCTION;
     // Update the linearized Jacobian matrix
     auto [r, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
                                   *parameters_[parameter_indices].previous_state...);

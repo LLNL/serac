@@ -14,20 +14,21 @@
 #include "serac/numerics/equation_solver.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
-#include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/terminator.hpp"
+#include "serac/infrastructure/initialize.hpp"
 
 using namespace serac;
 using namespace serac::mfem_ext;
 
-using param_t = std::tuple<NonlinearSolver, LinearSolver, Preconditioner>;
+using param_t = std::tuple<NonlinearSolver, LinearSolver, Preconditioner, PetscPCType>;
 
 class EquationSolverSuite : public testing::TestWithParam<param_t> {
 protected:
-  void            SetUp() override { std::tie(nonlin_solver, lin_solver, precond) = GetParam(); }
+  void            SetUp() override { std::tie(nonlin_solver, lin_solver, precond, pc_type) = GetParam(); }
   NonlinearSolver nonlin_solver;
   LinearSolver    lin_solver;
   Preconditioner  precond;
+  PetscPCType     pc_type;
 };
 
 TEST_P(EquationSolverSuite, All)
@@ -90,12 +91,13 @@ TEST_P(EquationSolverSuite, All)
         return *J;
       });
 
-  const LinearSolverOptions lin_opts = {.linear_solver  = lin_solver,
-                                        .preconditioner = precond,
-                                        .relative_tol   = 1.0e-10,
-                                        .absolute_tol   = 1.0e-12,
-                                        .max_iterations = 500,
-                                        .print_level    = 1};
+  const LinearSolverOptions lin_opts = {.linear_solver        = lin_solver,
+                                        .preconditioner       = precond,
+                                        .petsc_preconditioner = pc_type,
+                                        .relative_tol         = 1.0e-10,
+                                        .absolute_tol         = 1.0e-12,
+                                        .max_iterations       = 500,
+                                        .print_level          = 1};
 
   const NonlinearSolverOptions nonlin_opts = {.nonlin_solver  = nonlin_solver,
                                               .relative_tol   = 1.0e-10,
@@ -114,47 +116,33 @@ TEST_P(EquationSolverSuite, All)
   }
 }
 
-/**
- * @brief Nonlinear solvers to test. Always includes NonlinearSolver::Newton and NonlinearSolver::LBFGS
- * If SERAC_USE_SUNDIALS is set, adds: NonlinearSolver::KINFullStep, NonlinearSolver::KINBacktrackingLineSearch, and
- * NonlinearSolver::KINPicard.
- * If MFEM_USE_PETSC and SERAC_USE_PETSC are set, adds NonlinearSolver::PetscNewton,
- * NonlinearSolver::PetscNewtonBacktracking, and NonlinearSolver::PetscNewtonCriticalPoint
- */
-auto nonlinear_solvers = testing::Values(
-    NonlinearSolver::Newton, NonlinearSolver::NewtonLineSearch, NonlinearSolver::TrustRegion, NonlinearSolver::LBFGS
 #ifdef SERAC_USE_SUNDIALS
-    ,
-    NonlinearSolver::KINFullStep, NonlinearSolver::KINBacktrackingLineSearch, NonlinearSolver::KINPicard
+INSTANTIATE_TEST_SUITE_P(
+    AllEquationSolverTests, EquationSolverSuite,
+    testing::Combine(testing::Values(NonlinearSolver::Newton, NonlinearSolver::KINFullStep,
+                                     NonlinearSolver::KINBacktrackingLineSearch, NonlinearSolver::KINPicard,
+                                     NonlinearSolver::PetscNewton, NonlinearSolver::PetscNewtonBacktracking,
+                                     NonlinearSolver::PetscNewtonCriticalPoint),
+                     testing::Values(LinearSolver::CG, LinearSolver::GMRES, LinearSolver::PetscCG,
+                                     LinearSolver::PetscGMRES),
+                     testing::Values(Preconditioner::Petsc),
+                     testing::Values(PetscPCType::JACOBI, PetscPCType::JACOBI_L1, PetscPCType::JACOBI_ROWSUM,
+                                     PetscPCType::JACOBI_ROWMAX, PetscPCType::PBJACOBI, PetscPCType::BJACOBI,
+                                     PetscPCType::LU, PetscPCType::ILU, PetscPCType::CHOLESKY, PetscPCType::SVD,
+                                     PetscPCType::ASM, PetscPCType::GASM, PetscPCType::GAMG, PetscPCType::HMG)));
+#else
+INSTANTIATE_TEST_SUITE_P(
+    AllEquationSolverTests, EquationSolverSuite,
+    testing::Combine(
+        testing::Values(NonlinearSolver::Newton, NonlinearSolver::PetscNewton, NonlinearSolver::PetscNewtonBacktracking,
+                        NonlinearSolver::PetscNewtonCriticalPoint),
+        testing::Values(LinearSolver::CG, LinearSolver::GMRES, LinearSolver::PetscCG, LinearSolver::PetscGMRES),
+        testing::Values(Preconditioner::Petsc),
+        testing::Values(PetscPCType::JACOBI, PetscPCType::JACOBI_L1, PetscPCType::JACOBI_ROWSUM,
+                        PetscPCType::JACOBI_ROWMAX, PetscPCType::PBJACOBI, PetscPCType::BJACOBI, PetscPCType::LU,
+                        PetscPCType::ILU, PetscPCType::CHOLESKY, PetscPCType::ICC, PetscPCType::SVD, PetscPCType::ASM,
+                        PetscPCType::GASM, PetscPCType::GAMG, PetscPCType::HMG)));
 #endif
-#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
-    ,
-    NonlinearSolver::PetscNewton, NonlinearSolver::PetscNewtonBacktracking, NonlinearSolver::PetscNewtonCriticalPoint
-#endif
-);
-
-/**
- * @brief Linear solvers to test. Always includes LinearSolver::CG, LinearSolver::GMRES, and LinearSolver::SuperLU.
- * If MFEM_USE_PETSC and SERAC_USE_PETSC are set, adds LinearSolver::PetscCG and LinearSolver::PetscGMRES.
- */
-auto linear_solvers = testing::Values(LinearSolver::CG, LinearSolver::GMRES, LinearSolver::SuperLU
-#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
-                                      ,
-                                      LinearSolver::PetscCG, LinearSolver::PetscGMRES
-#endif
-);
-
-auto preconditioners =
-    testing::Values(Preconditioner::HypreJacobi, Preconditioner::HypreL1Jacobi, Preconditioner::HypreGaussSeidel,
-                    Preconditioner::HypreAMG, Preconditioner::HypreILU
-#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
-                    ,
-                    Preconditioner::Petsc
-#endif
-    );
-
-INSTANTIATE_TEST_SUITE_P(AllEquationSolverTests, EquationSolverSuite,
-                         testing::Combine(nonlinear_solvers, linear_solvers, preconditioners));
 
 int main(int argc, char* argv[])
 {

@@ -182,6 +182,7 @@ void BasePhysics::UpdateParaviewDataCollection(const std::string& paraview_outpu
 
 void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_dir) const
 {
+  CALI_CXX_MARK_FUNCTION;
   // Update the states and duals in the state manager
   for (auto& state : states_) {
     StateManager::updateState(*state);
@@ -204,6 +205,7 @@ void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_d
 
   // Optionally output a paraview datacollection for visualization
   if (paraview_output_dir) {
+    printf("output paraview");
     // Check to see if the paraview data collection exists. If not, create it.
     if (!paraview_dc_) {
       CreateParaviewDataCollection();
