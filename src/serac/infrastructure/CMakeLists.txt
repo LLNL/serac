@@ -27,6 +27,7 @@ set(infrastructure_headers
     logger.hpp
     mpi_fstream.hpp
     output.hpp
+    petsc_ext.hpp
     profiling.hpp
     terminator.hpp
     variant.hpp
@@ -41,6 +42,7 @@ set(infrastructure_sources
     logger.cpp
     mpi_fstream.cpp
     output.cpp
+    petsc_ext.cpp
     profiling.cpp
     terminator.cpp
     )
@@ -49,6 +51,7 @@ set(infrastructure_depends axom::inlet axom::fmt axom::cli11 mfem)
 blt_list_append(TO infrastructure_depends ELEMENTS tribol IF TRIBOL_FOUND)
 blt_list_append(TO infrastructure_depends ELEMENTS caliper adiak::adiak IF SERAC_ENABLE_PROFILING)
 blt_list_append(TO infrastructure_depends ELEMENTS blt::cuda IF ENABLE_CUDA)
+blt_list_append(TO infrastructure_depends ELEMENTS PkgConfig::PETSC IF PETSC_FOUND)
 list(APPEND infrastructure_depends blt::mpi)
 
 blt_add_library(
@@ -61,7 +64,7 @@ blt_add_library(
 # Set file back to C++ due to nvcc compiler error
 set_source_files_properties(input.cpp PROPERTIES LANGUAGE CXX)
 
-target_include_directories(serac_infrastructure PUBLIC 
+target_include_directories(serac_infrastructure PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../..>
     $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>

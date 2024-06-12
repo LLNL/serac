@@ -17,9 +17,11 @@
 #include <variant>
 
 #include "mfem.hpp"
+#include "mfem/linalg/petsc.hpp"
 
 #include "serac/infrastructure/input.hpp"
 #include "serac/numerics/solver_config.hpp"
+#include "serac/infrastructure/petsc_ext.hpp"
 
 namespace serac {
 
@@ -274,13 +276,11 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
 
 /**
  * @brief Build a preconditioner from the available options
- *
- * @param preconditioner The preconditioner type to be built
- * @param print_level The print level for the constructed preconditioner
+ * @param linear_opts The options to configure the linear solver and preconditioner
  * @param comm The communicator for the underlying operator and HypreParVectors
  * @return A constructed preconditioner based on the input option
  */
-std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level = 0,
+std::unique_ptr<mfem::Solver> buildPreconditioner(LinearSolverOptions       linear_opts,
                                                   [[maybe_unused]] MPI_Comm comm = MPI_COMM_WORLD);
 
 #ifdef MFEM_USE_AMGX
@@ -293,6 +293,26 @@ std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner,
  */
 std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MPI_Comm comm);
 #endif
+
+#ifdef MFEM_USE_PETSC
+/**
+ * @brief Build a PETSc preconditioner
+ *
+ * @param pc_type Type of PETSc preconditioner to construct
+ * @param comm The communicator for the underlying operator and HypreParVectors
+ * @return The constructed PETSc preconditioner
+ */
+std::unique_ptr<mfem::PetscPreconditioner> buildPetscPreconditioner(PetscPCType pc_type, const MPI_Comm comm);
+
+/**
+ * @brief Convert a string to the corresponding PetscPCType
+ *
+ * @param type_str String to convert
+ * @return The converted PetscPCType
+ */
+PetscPCType stringToPetscPCType(const std::string& type_str);
+#endif
+
 }  // namespace serac
 
 /**

@@ -843,7 +843,7 @@ std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(const NonlinearSolverOp
 std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLinearSolverAndPreconditioner(
     LinearSolverOptions linear_opts, MPI_Comm comm)
 {
-  auto preconditioner = buildPreconditioner(linear_opts.preconditioner, linear_opts.preconditioner_print_level, comm);
+  auto preconditioner = buildPreconditioner(linear_opts, comm);
 
   if (linear_opts.linear_solver == LinearSolver::SuperLU) {
     auto lin_solver = std::make_unique<SuperLUSolver>(linear_opts.print_level, comm);
@@ -868,6 +868,19 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
     case LinearSolver::GMRES:
       iter_lin_solver = std::make_unique<mfem::GMRESSolver>(comm);
       break;
+#ifdef MFEM_USE_PETSC
+    case LinearSolver::PetscCG:
+      iter_lin_solver = std::make_unique<serac::mfem_ext::PetscKSPSolver>(comm, KSPCG, std::string());
+      break;
+    case LinearSolver::PetscGMRES:
+      iter_lin_solver = std::make_unique<serac::mfem_ext::PetscKSPSolver>(comm, KSPGMRES, std::string());
+      break;
+#else
+    case LinearSolver::PetscCG:
+    case LinearSolver::PetscGMRES:
+      SLIC_ERROR_ROOT("PETSc linear solver requested for non-PETSc build.");
+      exitGracefully(true);
+#endif
     default:
       SLIC_ERROR_ROOT("Linear solver type not recognized.");
       exitGracefully(true);
@@ -940,10 +953,127 @@ std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MP
 }
 #endif
 
-std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level,
-                                                  [[maybe_unused]] MPI_Comm comm)
+#ifdef MFEM_USE_PETSC
+
+std::unique_ptr<mfem::PetscPreconditioner> buildPetscPreconditioner(PetscPCType pc_type, MPI_Comm comm)
+{
+  // Handle GAMG solver specially, since we need to be able to set the near null space later
+  if (pc_type == PetscPCType::GAMG) {
+    // Special type, as we need to attach near null space
+    auto gamg_solver = std::make_unique<serac::mfem_ext::PetscGAMGSolver>(comm);
+    // Automatically shift the LU factorization to ensure positive definiteness
+    PetscOptionsInsertString(nullptr, "-mg_coarse_sub_pc_factor_shift_type positive_definite");
+#ifdef PETSC_HAVE_SUPERLU_DIST
+    // Use the SuperLU_dist solvers, if available
+    PetscOptionsInsertString(nullptr, "-mg_coarse_sub_pc_factor_mat_solver_type superlu_dist");
+#endif
+    gamg_solver->Customize();
+    return gamg_solver;
+  }
+
+  auto preconditioner = std::make_unique<mfem::PetscPreconditioner>(comm);
+  switch (pc_type) {
+    case PetscPCType::JACOBI:
+      PetscCallAbort(comm, PCSetType(*preconditioner, PCJACOBI));
+      PetscCallAbort(comm, PCJacobiSetType(*preconditioner, PC_JACOBI_DIAGONAL));
+      break;
+    case PetscPCType::JACOBI_L1:
+      PetscCallAbort(comm, PCSetType(*preconditioner, PCJACOBI));
+      PetscCallAbort(comm, PCJacobiSetType(*preconditioner, PC_JACOBI_ROWL1));
+      break;
+    case PetscPCType::JACOBI_ROWMAX:
+      PetscCallAbort(comm, PCSetType(*preconditioner, PCJACOBI));
+      PetscCallAbort(comm, PCJacobiSetType(*preconditioner, PC_JACOBI_ROWMAX));
+      break;
+    case PetscPCType::JACOBI_ROWSUM:
+      PetscCallAbort(comm, PCSetType(*preconditioner, PCJACOBI));
+      PetscCallAbort(comm, PCJacobiSetType(*preconditioner, PC_JACOBI_ROWSUM));
+      break;
+    case PetscPCType::PBJACOBI:
+      PetscCallAbort(comm, PCSetType(*preconditioner, PCPBJACOBI));
+      break;
+    case PetscPCType::BJACOBI:
+      PetscCallAbort(comm, PCSetType(*preconditioner, PCPBJACOBI));
+      break;
+    case PetscPCType::LU:
+      PetscCallAbort(comm, PCSetType(*preconditioner, PCLU));
+      // Automatically shift the LU factorization to ensure positive definiteness
+      PetscCallAbort(comm, PCFactorSetShiftType(*preconditioner, MAT_SHIFT_POSITIVE_DEFINITE));
+#ifdef PETSC_HAVE_SUPERLU_DIST
+      // Use the SuperLU_dist solvers, if available
+      PetscCallAbort(comm, PCFactorSetMatSolverType(*preconditioner, MATSOLVERSUPERLU_DIST));
+#endif
+      break;
+    case PetscPCType::ILU:
+      PetscCallAbort(comm, PCSetType(*preconditioner, PCILU));
+      // Automatically shift the ILU factorization to ensure positive definiteness
+      PetscCallAbort(comm, PCFactorSetShiftType(*preconditioner, MAT_SHIFT_POSITIVE_DEFINITE));
+      break;
+    case PetscPCType::CHOLESKY:
+      PetscCallAbort(comm, PCSetType(*preconditioner, PCCHOLESKY));
+      // Automatically shift the ILU factorization to ensure positive definiteness
+      PetscCallAbort(comm, PCFactorSetShiftType(*preconditioner, MAT_SHIFT_POSITIVE_DEFINITE));
+      break;
+    case PetscPCType::ICC:
+      PetscCallAbort(comm, PCSetType(*preconditioner, PCICC));
+      // Automatically shift the ILU factorization to ensure positive definiteness
+      PetscCallAbort(comm, PCFactorSetShiftType(*preconditioner, MAT_SHIFT_POSITIVE_DEFINITE));
+      break;
+    case PetscPCType::SVD:
+      PetscCallAbort(comm, PCSetType(*preconditioner, PCSVD));
+      break;
+    case PetscPCType::ASM:
+      PetscCallAbort(comm, PCSetType(*preconditioner, PCASM));
+      break;
+    case PetscPCType::GASM:
+      PetscCallAbort(comm, PCSetType(*preconditioner, PCGASM));
+      break;
+    case PetscPCType::HMG:
+      PetscCallAbort(comm, PCSetType(*preconditioner, PCHMG));
+      PetscCallAbort(comm, PCHMGSetUseSubspaceCoarsening(*preconditioner, PETSC_TRUE));
+
+      break;
+    case PetscPCType::GAMG:  // Handled above
+      break;
+    case PetscPCType::NONE:
+      PetscCallAbort(comm, PCSetType(*preconditioner, PCNONE));
+      break;
+  }
+  // Allow further customization via command-line arguments (PETSc has many)
+  preconditioner->Customize();
+  return preconditioner;
+}
+
+PetscPCType stringToPetscPCType(const std::string& type_str)
+{
+  std::unordered_map<std::string, PetscPCType> types{
+      {"jacobi", PetscPCType::JACOBI},
+      {"jacobi_l1", PetscPCType::JACOBI_L1},
+      {"jacobi_rowsum", PetscPCType::JACOBI_ROWSUM},
+      {"jacobi_rowmax", PetscPCType::JACOBI_ROWMAX},
+      {"pbjacobi", PetscPCType::PBJACOBI},
+      {"bjacobi", PetscPCType::BJACOBI},
+      {"lu", PetscPCType::LU},
+      {"ilu", PetscPCType::ILU},
+      {"cholesky", PetscPCType::CHOLESKY},
+      {"icc", PetscPCType::ICC},
+      {"svd", PetscPCType::SVD},
+      {"asm", PetscPCType::ASM},
+      {"gasm", PetscPCType::GASM},
+      {"gamg", PetscPCType::GAMG},
+      {"hmg", PetscPCType::HMG},
+      {"none", PetscPCType::NONE},
+  };
+  return types.at(type_str);
+}
+
+#endif
+
+std::unique_ptr<mfem::Solver> buildPreconditioner(LinearSolverOptions linear_opts, [[maybe_unused]] MPI_Comm comm)
 {
   std::unique_ptr<mfem::Solver> preconditioner_solver;
+  auto                          preconditioner = linear_opts.preconditioner;
+  auto                          print_level    = linear_opts.print_level;
 
   // Handle the preconditioner - currently just BoomerAMG and HypreSmoother are supported
   if (preconditioner == Preconditioner::HypreAMG) {
@@ -969,9 +1099,15 @@ std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner,
     preconditioner_solver = std::move(ilu_preconditioner);
   } else if (preconditioner == Preconditioner::AMGX) {
 #ifdef MFEM_USE_AMGX
-    preconditioner_solver = buildAMGX(AMGXOptions{}, comm);
+    preconditioner_solver = buildAMGX(linear_opts.amgx_options, comm);
 #else
     SLIC_ERROR_ROOT("AMGX requested in non-GPU build");
+#endif
+  } else if (preconditioner == Preconditioner::Petsc) {
+#ifdef MFEM_USE_PETSC
+    preconditioner_solver = buildPetscPreconditioner(linear_opts.petsc_preconditioner, comm);
+#else
+    SLIC_ERROR_ROOT("PETSc preconditioner requested in non-PETSc build");
 #endif
   } else {
     SLIC_ERROR_ROOT_IF(preconditioner != Preconditioner::None, "Unknown preconditioner type requested");
@@ -1003,8 +1139,9 @@ void EquationSolver::defineInputFileSchema(axom::inlet::Container& container)
   iterative_container.addInt("max_iter", "Maximum iterations for the linear solve.").defaultValue(5000);
   iterative_container.addInt("print_level", "Linear print level.").defaultValue(0);
   iterative_container.addString("solver_type", "Solver type (gmres|minres|cg).").defaultValue("gmres");
-  iterative_container.addString("prec_type", "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|ILU).")
+  iterative_container.addString("prec_type", "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|ILU|Petsc).")
       .defaultValue("JacobiSmoother");
+  iterative_container.addString("petsc_prec_type", "Type of PETSc preconditioner to use.").defaultValue("jacobi");
 
   auto& direct_container = linear_container.addStruct("direct_options", "Direct solver parameters");
   direct_container.addInt("print_level", "Linear print level.").defaultValue(0);
@@ -1064,6 +1201,12 @@ serac::LinearSolverOptions FromInlet<serac::LinearSolverOptions>::operator()(con
 #endif
   } else if (prec_type == "GaussSeidel") {
     options.preconditioner = serac::Preconditioner::HypreGaussSeidel;
+#ifdef MFEM_USE_PETSC
+  } else if (prec_type == "Petsc") {
+    const std::string petsc_prec = config["petsc_prec_type"];
+    options.preconditioner       = serac::Preconditioner::Petsc;
+    options.petsc_preconditioner = serac::stringToPetscPCType(petsc_prec);
+#endif
   } else {
     std::string msg = axom::fmt::format("Unknown preconditioner type given: '{0}'", prec_type);
     SLIC_ERROR_ROOT(msg);

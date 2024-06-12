@@ -16,6 +16,7 @@
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
+#include "serac/infrastructure/terminator.hpp"
 
 namespace serac {
 
@@ -53,9 +54,14 @@ void shape_test(GeometricNonlinearities geo_nonlin)
   auto linear_options = solid_mechanics::default_linear_options;
 
   // Use tight tolerances as this is a machine precision test
+#ifdef MFEM_USE_PETSC
+  linear_options.preconditioner       = Preconditioner::Petsc;
+  linear_options.petsc_preconditioner = PetscPCType::GAMG;
+#else
   linear_options.preconditioner = Preconditioner::HypreJacobi;
-  linear_options.relative_tol   = 1.0e-15;
-  linear_options.absolute_tol   = 1.0e-15;
+#endif
+  linear_options.relative_tol = 1.0e-15;
+  linear_options.absolute_tol = 1.0e-15;
 
   auto nonlinear_options = solid_mechanics::default_nonlinear_options;
 
@@ -191,12 +197,10 @@ TEST(SolidMechanics, MoveShapeNonlinear) { shape_test(GeometricNonlinearities::O
 int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);
-  MPI_Init(&argc, &argv);
+  serac::initialize(argc, argv);
 
   axom::slic::SimpleLogger logger;
 
   int result = RUN_ALL_TESTS();
-  MPI_Finalize();
-
-  return result;
+  serac::exitGracefully(result);
 }

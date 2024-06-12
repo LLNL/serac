@@ -249,6 +249,15 @@ public:
       amg_prec->SetSystemsOptions(dim, true);
     }
 
+#ifdef MFEM_USE_PETSC
+    auto* gamg_pc = dynamic_cast<serac::mfem_ext::PetscGAMGSolver*>(&nonlin_solver_->preconditioner());
+    if (gamg_pc) {
+      // This call sets the displacement ParFiniteElementSpace used to get the spatial coordinates and to
+      // generate the near null space for the PCGAMG preconditioner
+      gamg_pc->SetElasticityOptions(&displacement_.space());
+    }
+#endif
+
     int true_size = velocity_.space().TrueVSize();
 
     u_.SetSize(true_size);
