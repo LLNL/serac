@@ -226,8 +226,21 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             set(ParMETIS_DIR ${PARMETIS_DIR} CACHE PATH "")
         endif()
         set(MFEM_USE_OPENMP ${ENABLE_OPENMP} CACHE BOOL "")
-        set(MFEM_USE_PETSC OFF CACHE BOOL "")
-        set(MFEM_USE_SLEPC OFF CACHE BOOL "")
+
+        if(PETSC_DIR)
+            set(MFEM_USE_PETSC ON CACHE BOOL "")
+            set(PETSC_ARCH "" CACHE STRING "")
+            set(PETSC_EXECUTABLE_RUNS "ON" CACHE BOOL "")
+            if(SLEPC_DIR)
+                set(MFEM_USE_SLEPC ON CACHE BOOL "")
+                set(SLEPC_ARCH "" CACHE STRING "")
+                set(SLEPC_VERSION_OK "TRUE" CACHE BOOL "")
+            endif()
+        else()
+            set(MFEM_USE_PETSC OFF CACHE BOOL "")
+            set(MFEM_USE_SLEPC OFF CACHE BOOL "")
+        endif()
+
         set(MFEM_USE_RAJA OFF CACHE BOOL "")
         set(MFEM_USE_SUNDIALS ${SERAC_USE_SUNDIALS} CACHE BOOL "")
         if(SUPERLUDIST_DIR)
@@ -309,38 +322,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endforeach()
 
         set(MFEM_BUILT_WITH_CMAKE TRUE)
-    endif()
-
-    #------------------------------------------------------------------------------
-    # PETSc
-    #------------------------------------------------------------------------------
-    if(PETSC_DIR)
-        serac_assert_is_directory(DIR_VARIABLE PETSC_DIR)
-        include(${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake)
-        serac_assert_find_succeeded(PROJECT_NAME PETSc
-                                    TARGET       PkgConfig::PETSC
-                                    DIR_VARIABLE PETSC_DIR)
-        message(STATUS "PETSc support is ON")
-        set(PETSC_FOUND TRUE)
-    else()
-        message(STATUS "PETSc support is OFF")
-        set(PETSC_FOUND FALSE)
-    endif()
-
-    #------------------------------------------------------------------------------
-    # SLEPC
-    #------------------------------------------------------------------------------
-    if(SLEPC_DIR)
-        serac_assert_is_directory(DIR_VARIABLE SLEPC_DIR)
-        include(${CMAKE_CURRENT_LIST_DIR}/FindSLEPc.cmake)
-        serac_assert_find_succeeded(PROJECT_NAME SLEPC
-                                    TARGET PkgConfig::SLEPC
-                                    DIR_VARIABLE SLEPC_DIR)
-        message(STATUS "SLEPc support is ON")
-        set(SLEPC_FOUND TRUE)
-    else()
-        message(STATUS "SLEPc support is OFF")
-        set(SLEPC_FOUND FALSE)
     endif()
 
     #------------------------------------------------------------------------------

@@ -126,6 +126,18 @@ else()
         list(APPEND MFEM_LIBRARIES ${CUDA_cusolver_LIBRARY})
     endif()
 
+    # Add missing libs needed by slepc
+    # https://github.com/mfem/mfem/issues/3793
+    set(_lib_paths ${ARPACK_DIR}/lib/libarpack.so ${ARPACK_DIR}/lib64/libarpack.so ${ARPACK_DIR}/lib/libparpack.so ${ARPACK_DIR}/lib64/libparpack.so)
+    foreach(_path ${_lib_paths})
+        if (EXISTS ${_path})
+            set(MFEM_LIBRARIES "${MFEM_LIBRARIES} ${_path}")
+        endif()
+    endforeach()
+
+    # Add arpack include directories
+    list(APPEND MFEM_INCLUDE_DIRS ${ARPACK_DIR}/include)
+
     blt_import_library(
         NAME          mfem
         INCLUDES      ${MFEM_INCLUDE_DIRS}

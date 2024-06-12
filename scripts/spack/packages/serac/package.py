@@ -101,6 +101,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("mfem+amgx", when="+cuda")
     depends_on("mfem+asan", when="+asan")
     depends_on("mfem+strumpack", when="+strumpack")
+    depends_on("mfem+petsc", when="+petsc")
+    depends_on("mfem+slepc", when="+slepc")
 
     depends_on("netcdf-c@4.7.4", when="+netcdf")
 
@@ -111,6 +113,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("petsc~strumpack", when="+petsc~strumpack")
     depends_on("petsc+openmp", when="+petsc+openmp")
     depends_on("petsc~openmp", when="+petsc~openmp")
+
     depends_on("slepc+arpack", when="+slepc")
 
     depends_on("tribol", when="+tribol")
