@@ -13,6 +13,7 @@
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
 #include "serac/serac_config.hpp"
+#include "serac/infrastructure/profiling.hpp"
 
 namespace serac {
 
@@ -37,8 +38,9 @@ public:
 #endif
 
   /// Evaluate the residual, put in rOut and return its norm.
-  double evaluate_norm(const mfem::Vector& x, mfem::Vector& rOut) const
+  double evaluateNorm(const mfem::Vector& x, mfem::Vector& rOut) const
   {
+    CALI_CXX_MARK_FUNCTION;
     double normEval = std::numeric_limits<double>::max();
     try {
       oper->Mult(x, rOut);
@@ -49,18 +51,33 @@ public:
     return normEval;
   }
 
+
+  void assembleJacobian(const mfem::Vector& x) const
+  {
+    CALI_CXX_MARK_FUNCTION;
+    grad = &oper->GetGradient(x);
+    prec->SetOperator(*grad);
+  }
+
+  void applyPreconditioner(const mfem::Vector& r, mfem::Vector& c) const
+  {
+    CALI_CXX_MARK_FUNCTION;
+    prec->Mult(r, c);  // c = [DF(x_i)]^{-1} [F(x_i)-b]
+  }
+
   /// @overload
   void Mult(const mfem::Vector&, mfem::Vector& x) const
   {
+    serac::profiling::initialize();
+
     MFEM_ASSERT(oper != NULL, "the Operator is not set (use SetOperator).");
     MFEM_ASSERT(prec != NULL, "the Solver is not set (use SetSolver).");
 
     using real_t = mfem::real_t;
 
     real_t norm, norm_goal;
-    oper->Mult(x, r);
+    norm = initial_norm = evaluateNorm(x, r);
 
-    norm = initial_norm = Norm(r);
     if (print_options.first_and_last && !print_options.iterations) {
       mfem::out << "Newton iteration " << std::setw(3) << 0 << " : ||r|| = " << std::setw(13) << norm << "...\n";
     }
@@ -89,10 +106,8 @@ public:
 
       real_t norm_nm1 = norm;
 
-      grad = &oper->GetGradient(x);
-      prec->SetOperator(*grad);
-
-      prec->Mult(r, c);  // c = [DF(x_i)]^{-1} [F(x_i)-b]
+      assembleJacobian(x);
+      applyPreconditioner(r, c);
 
       // there must be a better way to do this?
       x0.SetSize(x.Size());
@@ -101,7 +116,7 @@ public:
 
       real_t stepScale = 1.0;
       add(x0, -stepScale, c, x);
-      norm = evaluate_norm(x, r);
+      norm = evaluateNorm(x, r);
 
       const int               max_ls_iters = nonlinear_options.max_line_search_iterations;
       static constexpr real_t reduction    = 0.5;
@@ -119,20 +134,20 @@ public:
       for (; !is_improved(norm, stepScale) && ls_iter < max_ls_iters; ++ls_iter, ++ls_iter_sum) {
         stepScale *= reduction;
         add(x0, -stepScale, c, x);
-        norm = evaluate_norm(x, r);
+        norm = evaluateNorm(x, r);
       }
 
       // try the opposite direction and linesearch back from there
       if (max_ls_iters > 0 && ls_iter == max_ls_iters && !is_improved(norm, stepScale)) {
         stepScale = 1.0;
         add(x0, stepScale, c, x);
-        norm = evaluate_norm(x, r);
+        norm = evaluateNorm(x, r);
 
         ls_iter = 0;
         for (; !is_improved(norm, stepScale) && ls_iter < max_ls_iters; ++ls_iter, ++ls_iter_sum) {
           stepScale *= reduction;
           add(x0, stepScale, c, x);
-          norm = evaluate_norm(x, r);
+          norm = evaluateNorm(x, r);
         }
 
         // ok, the opposite direction was also terrible, lets go back, cut in half 1 last time and accept it hoping for
@@ -141,7 +156,7 @@ public:
           ++ls_iter_sum;
           stepScale *= reduction;
           add(x0, -stepScale, c, x);
-          norm = evaluate_norm(x, r);
+          norm = evaluateNorm(x, r);
         }
       }
 
@@ -166,6 +181,7 @@ public:
     if (!converged && (print_options.summary || print_options.warnings)) {
       mfem::out << "Newton: No convergence!\n";
     }
+    serac::profiling::finalize();
   }
 };
 
