@@ -775,7 +775,7 @@ SERAC_HOST_DEVICE constexpr auto I2(const tensor<T, 3, 3>& A) {
  * 
  * @note based on "A robust algorithm for finding the eigenvalues and
  * eigenvectors of 3x3 symmetric matrices", by Scherzinger & Dohrmann
-*/
+ */
 SERAC_HOST_DEVICE tuple<vec3, mat3> eig_symm(const mat3 & A) {
   using std::pow;
   using std:: acos;
