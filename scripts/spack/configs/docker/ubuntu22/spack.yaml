@@ -88,6 +88,11 @@ spack:
       externals:
       - spec: bzip2@1.0.8
         prefix: /usr
+    cuda:
+      externals:
+        - spec: cuda@12.3.0
+          prefix: /usr/local/cuda-12.3
+      buildable: false
     curl:
       buildable: false
       externals:

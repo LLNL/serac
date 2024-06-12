@@ -270,11 +270,17 @@ class Serac(CachedCMakePackage, CudaPackage):
         if "SYS_TYPE" in env:
             # Are we on a LLNL system then strip node number
             hostname = hostname.rstrip("1234567890")
+        special_case = ""
+        if "+cuda" in self.spec:
+            special_case += "_cuda"
+        if "+asan" in self.spec:
+            special_case += "_asan"
         return "{0}-{1}-{2}@{3}.cmake".format(
             hostname,
             self._get_sys_type(self.spec),
             self.spec.compiler.name,
-            self.spec.compiler.version
+            self.spec.compiler.version,
+            special_case,
         )
 
 
