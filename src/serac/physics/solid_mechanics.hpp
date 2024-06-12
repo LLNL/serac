@@ -383,12 +383,14 @@ public:
     dr_                     = 0.0;
     predicted_displacement_ = 0.0;
 
-    if (!checkpoint_to_disk_) {
+    if (checkpoint_to_disk_) {
+      outputStateToDisk();
+    } else {
       checkpoint_states_.clear();
-
-      checkpoint_states_["displacement"].push_back(displacement_);
-      checkpoint_states_["velocity"].push_back(velocity_);
-      checkpoint_states_["acceleration"].push_back(acceleration_);
+      auto state_names = stateNames();
+      for (const auto& state_name : state_names) {
+        checkpoint_states_[state_name].push_back(state(state_name));
+      }
     }
   }
 
@@ -1151,11 +1153,10 @@ public:
     if (checkpoint_to_disk_) {
       outputStateToDisk();
     } else {
-      checkpoint_states_.clear();
-
-      checkpoint_states_["displacement"].push_back(displacement_);
-      checkpoint_states_["velocity"].push_back(velocity_);
-      checkpoint_states_["acceleration"].push_back(acceleration_);
+      auto state_names = stateNames();
+      for (const auto& state_name : state_names) {
+        checkpoint_states_[state_name].push_back(state(state_name));
+      }
     }
   }
 
@@ -1180,8 +1181,6 @@ public:
     warmStartDisplacement();
 
     nonlin_solver_->solve(displacement_);
-
-    cycle_ += 1;
   }
 
   /// @overload
@@ -1200,15 +1199,17 @@ public:
       quasiStaticSolve(dt);
     } else {
       ode2_.Step(displacement_, velocity_, time_, dt);
+    }
 
-      cycle_ += 1;
+    cycle_ += 1;
 
-      if (checkpoint_to_disk_) {
-        outputStateToDisk();
-      } else {
-        checkpoint_states_["displacement"].push_back(displacement_);
-        checkpoint_states_["velocity"].push_back(velocity_);
-        checkpoint_states_["acceleration"].push_back(acceleration_);
+    if (checkpoint_to_disk_) {
+      outputStateToDisk();
+      exit(1);
+    } else {
+      auto state_names = stateNames();
+      for (const auto& state_name : state_names) {
+        checkpoint_states_[state_name].push_back(state(state_name));
       }
     }
 
