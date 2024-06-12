@@ -913,33 +913,4 @@ SERAC_HOST_DEVICE tuple<vec3, mat3> eig_symm(const mat3 & A) {
   return {eigvals, eigvecs};
 }
 
-
-
-/**
- * @brief Logarithm of a symmetric 3x3 matrix
- * 
- * Overload that works on a spectral decomposition of a matrix. Use this version
- * to avoid the expense of recomputing the spectral decomposition.
- * 
- * @param eigvals Eigenvalues of the matrix
- * @param eigvecs Eigenvectors of the matrix
- * @return mat3 Logarithm of the matrix
- */
-mat3 log_symm(vec3 eigvals, mat3 eigvecs) {
-  using std::log;
-  auto log_eigvals = make_tensor<3>([&](int i){ return log(eigvals[i]); });
-  return dot(eigvecs, dot(diag(log_eigvals), transpose(eigvecs)));
-}
-
-/**
- * @brief Logarithm of a symmetric 3x3 matrix
- * 
- * @param A Input matrix. Must be symmetric and positive definite. These conditions are not checked.
- * @return mat3 Logarithm of \p A
- */
-mat3 log_symm(mat3 A) {
-  auto [eigvals, eigvecs] = eig_symm(A);
-  return log_symm(eigvals, eigvecs);
-}
-
 }  // namespace serac
