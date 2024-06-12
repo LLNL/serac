@@ -1153,6 +1153,7 @@ public:
     if (checkpoint_to_disk_) {
       outputStateToDisk();
     } else {
+      checkpoint_states_.clear();
       auto state_names = stateNames();
       for (const auto& state_name : state_names) {
         checkpoint_states_[state_name].push_back(state(state_name));
@@ -1205,7 +1206,6 @@ public:
 
     if (checkpoint_to_disk_) {
       outputStateToDisk();
-      exit(1);
     } else {
       auto state_names = stateNames();
       for (const auto& state_name : state_names) {
