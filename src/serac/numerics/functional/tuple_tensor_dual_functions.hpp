@@ -887,6 +887,26 @@ SERAC_HOST_DEVICE tuple<vec3, mat3> eig_symm(const mat3 & A) {
 }
 
 /**
+ * @brief Find indices that would sort a 3-vector
+ *
+ * @param v 3-vector to sort.
+ * @return 3-vector of indices that would sort \p v in ascending order.
+ */
+template<typename T>
+SERAC_HOST_DEVICE tensor<int, 3> argsort(const tensor<T, 3>& v) {
+  auto swap = [](int& first, int& second) {
+    int tmp = first;
+    first = second;
+    second = tmp;
+  };
+  tensor<int, 3> order{0, 1, 2};
+  if (v[0] > v[1]) swap(order[0], order[1]);
+  if (v[order[1]] > v[order[2]]) swap(order[1], order[2]);
+  if (v[order[0]] > v[order[1]]) swap(order[0], order[1]);
+  return order;
+}
+
+/**
  * @brief Logarithm of a symmetric 3x3 matrix
  * 
  * Overload that works on a spectral decomposition of a matrix. Use this version

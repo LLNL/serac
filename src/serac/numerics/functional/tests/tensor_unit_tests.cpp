@@ -441,3 +441,17 @@ TEST(Tensor, EigenvaluesTriplyDegenerate) {
     EXPECT_NEAR(eigvals[i], lambda, 1e-12);
   }
 }
+
+TEST(Tensor, argsort) {
+  tensor v{{1.0, 3.0, 0.0}};
+  auto sorted = argsort(v);
+  ASSERT_EQ(sorted[0], 2);
+  ASSERT_EQ(sorted[1], 0);
+  ASSERT_EQ(sorted[2], 1);
+
+  v = {3.0, 1.0, 0.0};
+  sorted = argsort(v);
+  ASSERT_EQ(sorted[0], 2);
+  ASSERT_EQ(sorted[1], 1);
+  ASSERT_EQ(sorted[2], 0);
+}
