@@ -765,7 +765,7 @@ template <typename T> int sgn(T val) {
 template <typename T>
 SERAC_HOST_DEVICE constexpr auto I2(const tensor<T, 3, 3>& A) {
   auto trA = tr(A);
-  return 0.5*(trA*trA - tr(dot(transpose(A), A)));
+  return 0.5*(trA*trA - inner(transpose(A), A));
 }
 
 /** Eigendecomposition for symmetric 3x3 matrix
@@ -786,7 +786,7 @@ SERAC_HOST_DEVICE tuple<vec3, mat3> eig_symm(const mat3 & A) {
   tensor<double, 3, 3> Q = DenseIdentity<3>();
 
   auto A_dev = dev(A);
-  double J2 = I2(A_dev);
+  double J2 = 0.5*inner(A_dev, A_dev);
   double J3 = det(A_dev);
 
   if (J2 > 0.0) {
@@ -886,12 +886,28 @@ SERAC_HOST_DEVICE tuple<vec3, mat3> eig_symm(const mat3 & A) {
   return {eta, Q};
 }
 
+/**
+ * @brief Logarithm of a symmetric 3x3 matrix
+ * 
+ * Overload that works on a spectral decomposition of a matrix. Use this version
+ * to avoid the expense of recomputing the spectral decomposition.
+ * 
+ * @param eigvals Eigenvalues of the matrix
+ * @param eigvecs Eigenvectors of the matrix
+ * @return mat3 Logarithm of the matrix
+ */
 mat3 log_symm(vec3 eigvals, mat3 eigvecs) {
   using std::log;
   auto log_eigvals = make_tensor<3>([&](int i){ return log(eigvals[i]); });
   return dot(eigvecs, dot(diag(log_eigvals), transpose(eigvecs)));
 }
 
+/**
+ * @brief Logarithm of a symmetric 3x3 matrix
+ * 
+ * @param A Input matrix. Must be symmetric and positive definite. These conditions are not checked.
+ * @return mat3 Logarithm of \p A
+ */
 mat3 log_symm(mat3 A) {
   auto [eigvals, eigvecs] = eig_symm(A);
   return log_symm(eigvals, eigvecs);
