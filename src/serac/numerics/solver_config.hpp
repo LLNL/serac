@@ -114,9 +114,12 @@ enum class LinearSolver
 /// Nonlinear solver method indicator
 enum class NonlinearSolver
 {
-  Newton,                    /**< MFEM-native Newton-Raphson */
-  LBFGS,                     /**< MFEM-native Limited memory BFGS */
-  KINFullStep,               /**< KINSOL Full Newton (Sundials must be enabled) */
+  Newton,           /**< MFEM-native Newton-Raphson */
+  LBFGS,            /**< MFEM-native Limited memory BFGS */
+  NewtonLineSearch, /**< Custom solver using preconditioned earch direction with backtracking line search */
+  Nesterov,         /**< Custom solver using Nesterov dynamic (damped) dynamics for accelerating implicit solves */
+  TrustRegion,      /**< Custom solver using a trust region solver */
+  KINFullStep,      /**< KINSOL Full Newton (Sundials must be enabled) */
   KINBacktrackingLineSearch, /**< KINSOL Newton with Backtracking Line Search (Sundials must be enabled) */
   KINPicard                  /**< KINSOL Picard (Sundials must be enabled) */
 };
@@ -205,7 +208,7 @@ struct LinearSolverOptions {
 /// Nonlinear solution scheme parameters
 struct NonlinearSolverOptions {
   /// Nonlinear solver selection
-  NonlinearSolver nonlin_solver = NonlinearSolver::Newton;
+  NonlinearSolver nonlin_solver = NonlinearSolver::NewtonLineSearch;
 
   /// Relative tolerance
   double relative_tol = 1.0e-8;
@@ -213,8 +216,14 @@ struct NonlinearSolverOptions {
   /// Absolute tolerance
   double absolute_tol = 1.0e-12;
 
+  /// Minimum number of iterations
+  int min_iterations = 0;
+
   /// Maximum number of iterations
   int max_iterations = 20;
+
+  /// Maximum line search cutbacks
+  int max_line_search_iterations = 0;
 
   /// Debug print level
   int print_level = 0;

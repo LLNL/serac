@@ -2,20 +2,18 @@
 # This is the shared configuration of jobs for quartz
 .on_quartz:
   variables:
-    ALLOC_OPTIONS: "--res=ci --exclusive=user -A ${ALLOC_BANK} --deadline=now+1hour"
-    ALLOC_COMMAND: "salloc ${ALLOC_OPTIONS} -N ${ALLOC_NODES} -t ${ALLOC_TIME}"
+    SCHEDULER_PARAMETERS: "--res=ci --exclusive=user -A ${ALLOC_BANK} --deadline=now+1hour -N ${ALLOC_NODES} -t ${ALLOC_TIME}"
   tags:
-    - shell
+    - batch
     - quartz
   rules:
     - if: '$CI_COMMIT_BRANCH =~ /_qnone/ || $ON_QUARTZ == "OFF"' #run except if ...
       when: never
   before_script:
-    - module load python/3.9.12
     # We could also extract the CMake executable location from the hostconfig in common_build_functions
     # like we do in config-build
     - module load cmake/3.23.1
-
+    - module load texlive
 
 ####
 # Templates
