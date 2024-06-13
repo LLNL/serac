@@ -114,7 +114,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     # Adiak
     #------------------------------------------------------------------------------
     if(SERAC_ENABLE_PROFILING AND NOT ADIAK_DIR)
-        message(FATAL_ERROR "SERAC_ENABLE_PROFILING cannot be ON without ADIAK_DIR defined.")
+        message(FATAL_ERROR "SERAC_ENABLE_PROFILING cannot be ON without ADIAK_DIR defined. Either specify a host \
+                             config with ADIAK_DIR, or rebuild Serac TPLs with +profiling variant.")
     endif()
 
     if(ADIAK_DIR AND SERAC_ENABLE_PROFILING)
@@ -135,7 +136,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     # Caliper
     #------------------------------------------------------------------------------
     if(SERAC_ENABLE_PROFILING AND NOT CALIPER_DIR)
-        message(FATAL_ERROR "SERAC_ENABLE_PROFILING cannot be ON without CALIPER_DIR defined.")
+        message(FATAL_ERROR "SERAC_ENABLE_PROFILING cannot be ON without CALIPER_DIR defined. Either specify a host \
+                             config with CALIPER_DIR, or rebuild Serac TPLs with +profiling variant.")
     endif()
 
     if(CALIPER_DIR AND SERAC_ENABLE_PROFILING)
