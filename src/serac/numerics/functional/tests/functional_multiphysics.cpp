@@ -56,11 +56,12 @@ TEST(FunctionalMultiphysics, NonlinearThermalTest3D)
 
   residual.AddVolumeIntegral(
       DependsOn<0, 1>{},
-      [=](double /*t*/, auto x, auto temperature, auto dtemperature_dt) {
-        auto [u, du_dx]      = temperature;
+      [=](double /*t*/, auto position, auto temperature, auto dtemperature_dt) {
+        auto [X, dX_dxi]     = position;
+        auto [u, du_dX]      = temperature;
         auto [du_dt, unused] = dtemperature_dt;
-        auto source          = rho * cp * du_dt * du_dt - (100 * x[0] * x[1]);
-        auto flux            = kappa * du_dx;
+        auto source          = rho * cp * du_dt * du_dt - (100 * X[0] * X[1]);
+        auto flux            = kappa * du_dX;
         return serac::tuple{source, flux};
       },
       *mesh3D);
