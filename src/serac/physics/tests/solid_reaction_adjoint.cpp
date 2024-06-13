@@ -29,7 +29,7 @@ using SolidMechanicsType = SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>>;
 const std::string mesh_tag       = "mesh";
 const std::string physics_prefix = "solid";
 
-using SolidMaterial = solid_mechanics::ParameterizedNeoHookeanSolid<dim>;
+using SolidMaterial = solid_mechanics::ParameterizedNeoHookeanSolid;
 auto geoNonlinear   = GeometricNonlinearities::On;
 
 constexpr double boundary_disp       = 0.013;
