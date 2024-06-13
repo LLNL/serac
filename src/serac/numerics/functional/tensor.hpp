@@ -1905,7 +1905,6 @@ inline bool isnan(const zero&) { return false; }
 
 }  // namespace serac
 
-
 #if 0
 
 inline float angle_between(const vec < 2 > & a, const vec < 2 > & b) {

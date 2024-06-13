@@ -756,11 +756,13 @@ auto eigenvalues(const serac::tensor<T, size, size>& A)
 
 /**
  * @brief Signum, returns sign of input
- * 
+ *
  * @param val Input value.
  * @return 0 when input is negative, 0 when input is 0, 1 when input is positive.
  */
-template <typename T> int sgn(T val) {
+template <typename T>
+int sgn(T val)
+{
   // Should we implement the derivative?
   // It should be NaN when val = 0
   return (T(0) < val) - (val < T(0));
@@ -772,12 +774,13 @@ template <typename T> int sgn(T val) {
  * @param v 3-vector to sort.
  * @return 3-vector of indices that would sort \p v in ascending order.
  */
-template<typename T>
-SERAC_HOST_DEVICE tensor<int, 3> argsort(const tensor<T, 3>& v) {
+template <typename T>
+SERAC_HOST_DEVICE tensor<int, 3> argsort(const tensor<T, 3>& v)
+{
   auto swap = [](int& first, int& second) {
     int tmp = first;
-    first = second;
-    second = tmp;
+    first   = second;
+    second  = tmp;
   };
   tensor<int, 3> order{0, 1, 2};
   if (v[0] > v[1]) swap(order[0], order[1]);
@@ -792,25 +795,25 @@ SERAC_HOST_DEVICE tensor<int, 3> argsort(const tensor<T, 3>& v) {
  * symmetric, this is not checked.
  * @return tuple with the eigenvalues in the first element, and the matrix of
  * eigenvectors (columnwise) in the second element.
- * 
+ *
  * @note based on "A robust algorithm for finding the eigenvalues and
  * eigenvectors of 3x3 symmetric matrices", by Scherzinger & Dohrmann
  */
-inline SERAC_HOST_DEVICE tuple<vec3, mat3> eig_symm(const mat3 & A) {
+inline SERAC_HOST_DEVICE tuple<vec3, mat3> eig_symm(const mat3& A)
+{
   // We know of optimizations for this routine. When this becomes the
   // bottleneck, we can revisit. See OptimiSM for details.
-  
-  tensor<double, 3> eta{};
+
+  tensor<double, 3>    eta{};
   tensor<double, 3, 3> Q = DenseIdentity<3>();
 
-  auto A_dev = dev(A);
-  double J2 = 0.5*inner(A_dev, A_dev);
-  double J3 = det(A_dev);
+  auto   A_dev = dev(A);
+  double J2    = 0.5 * inner(A_dev, A_dev);
+  double J3    = det(A_dev);
 
   if (J2 > 0.0) {
-
     // angle used to find eigenvalues
-    double tmp = (0.5 * J3) * std::pow(3.0 / J2, 1.5);
+    double tmp   = (0.5 * J3) * std::pow(3.0 / J2, 1.5);
     double alpha = std::acos(fmin(fmax(tmp, -1.0), 1.0)) / 3.0;
 
     // consider the most distinct eigenvalue first
@@ -823,28 +826,26 @@ inline SERAC_HOST_DEVICE tuple<vec3, mat3> eig_symm(const mat3 & A) {
     // find the eigenvector for that eigenvalue
     mat3 r;
 
-    int imax = -1;
+    int    imax     = -1;
     double norm_max = -1.0;
 
     for (int i = 0; i < 3; i++) {
-
       for (int j = 0; j < 3; j++) {
-        r[i][j] = A_dev(j,i) - (i == j) * eta(0);
+        r[i][j] = A_dev(j, i) - (i == j) * eta(0);
       }
 
       double norm_r = norm(r[i]);
       if (norm_max < norm_r) {
-        imax = i;
+        imax     = i;
         norm_max = norm_r;
       }
-
     }
 
     vec3 s0, s1, t1, t2, v0, v1, v2, w;
 
     s0 = normalize(r[imax]);
-    t1 = r[(imax+1)%3] - dot(r[(imax+1)%3], s0) * s0;
-    t2 = r[(imax+2)%3] - dot(r[(imax+2)%3], s0) * s0;
+    t1 = r[(imax + 1) % 3] - dot(r[(imax + 1) % 3], s0) * s0;
+    t2 = r[(imax + 2) % 3] - dot(r[(imax + 2) % 3], s0) * s0;
     s1 = normalize((norm(t1) > norm(t2)) ? t1 : t2);
 
     // record the first eigenvector
@@ -863,7 +864,7 @@ inline SERAC_HOST_DEVICE tuple<vec3, mat3> eig_symm(const mat3 & A) {
     double A21 = dot(s1, A_dev_s0);
     double A22 = dot(s1, A_dev_s1);
 
-    double delta = 0.5 * sgn(A11-A22) * std::sqrt((A11-A22)*(A11-A22) + 4*A12*A21);
+    double delta = 0.5 * sgn(A11 - A22) * std::sqrt((A11 - A22) * (A11 - A22) + 4 * A12 * A21);
 
     eta(1) = 0.5 * (A11 + A22) - delta;
     eta(2) = 0.5 * (A11 + A22) + delta;
@@ -872,15 +873,13 @@ inline SERAC_HOST_DEVICE tuple<vec3, mat3> eig_symm(const mat3 & A) {
     // then just use the basis for the orthogonal complement
     // found earlier
     if (fabs(delta) <= 1.0e-15) {
-      
-      for (int i = 0; i < 3; i++){
+      for (int i = 0; i < 3; i++) {
         Q[i][1] = s0(i);
         Q[i][2] = s1(i);
-      } 
-      
-    // otherwise compute the remaining eigenvectors
-    } else {
+      }
 
+      // otherwise compute the remaining eigenvectors
+    } else {
       t1 = A_dev_s0 - eta(1) * s0;
       t2 = A_dev_s1 - eta(1) * s1;
 
@@ -894,7 +893,6 @@ inline SERAC_HOST_DEVICE tuple<vec3, mat3> eig_symm(const mat3 & A) {
       // first two directions
       v2 = normalize(cross(v0, v1));
       for (int i = 0; i < 3; i++) Q[i][2] = v2(i);
-
     }
   }
   // eta are actually eigenvalues of A_dev, so
@@ -904,9 +902,11 @@ inline SERAC_HOST_DEVICE tuple<vec3, mat3> eig_symm(const mat3 & A) {
   // sort eigenvalues into ascending order
   auto order = argsort(eta);
   vec3 eigvals{{eta[order[0]], eta[order[1]], eta[order[2]]}};
+  // clang-format off
   mat3 eigvecs{{{Q[0][order[0]], Q[0][order[1]], Q[0][order[2]]},
                 {Q[1][order[0]], Q[1][order[1]], Q[1][order[2]]},
                 {Q[2][order[0]], Q[2][order[1]], Q[2][order[2]]}}};
+  // clang-format on
 
   return {eigvals, eigvecs};
 }
