@@ -4,6 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 
 #include "serac/numerics/functional/tensor.hpp"
@@ -446,7 +447,7 @@ TEST(Tensor, argsort) {
   ASSERT_EQ(sorted[2], 0);
 }
 
-TEST(Tensor, EigenvaluesTriplyDegenerate) {
+TEST(Tensor, EigendecompOfTriplyDegenerate) {
   const double lambda = 2.5;
   const auto A = lambda*DenseIdentity<3>();
   auto [eigvals, eigvecs] = eig_symm(A);
@@ -495,3 +496,15 @@ TEST(Tensor, EigendecompWith2NearlyDegenerateEigenvalues) {
   EXPECT_LT(norm(A - should_be_A), 1e-12);
 }
 
+int main(int argc, char* argv[])
+{
+  ::testing::InitGoogleTest(&argc, argv);
+  MPI_Init(&argc, &argv);
+
+  axom::slic::SimpleLogger logger;
+
+  int result = RUN_ALL_TESTS();
+  MPI_Finalize();
+
+  return result;
+}
