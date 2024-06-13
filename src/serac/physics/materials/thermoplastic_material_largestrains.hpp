@@ -142,7 +142,7 @@ struct J2LargeStrainsThermal {
 
     const auto tau = s_updated + K * tr(eps_el_trial) * I;
     
-    const auto sigma = det(F) * tau;
+    const auto sigma = tau / def(F);
 
     const auto q = std::sqrt(1.5) * norm(s_updated);
 
