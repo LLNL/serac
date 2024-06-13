@@ -911,4 +911,22 @@ inline SERAC_HOST_DEVICE tuple<vec3, mat3> eig_symm(const mat3& A)
   return {eigvals, eigvecs};
 }
 
+template <typename Function>
+auto isotropic_tensor_function(mat3 A, const Function& f)
+{
+  auto [lambda, Q] = eig_symm(A);
+  vec3 y;
+  for (int i = 0; i < 3; i++) {
+    y[i] = f(lambda[i]);
+  }
+  return dot(Q, dot(diag(y), transpose(Q)));
+}
+
+auto log_symm(mat3 A)
+{
+  using std::log;
+  mat3 logA = isotropic_tensor_function(A, [](double x) { return log(x); });
+  return logA;
+}
+
 }  // namespace serac

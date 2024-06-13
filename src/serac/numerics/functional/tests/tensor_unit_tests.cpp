@@ -504,6 +504,26 @@ TEST(Tensor, EigendecompWith2NearlyDegenerateEigenvalues)
   EXPECT_LT(norm(A - should_be_A), 1e-12);
 }
 
+TEST(Tensor, LogOfSpherical)
+{
+  auto A = M_E*DenseIdentity<3>();
+  auto logA = log_symm(A);
+  ASSERT_LT(norm(logA - DenseIdentity<3>()), 1e-12);
+}
+
+TEST(Tensor, Log)
+{
+  const tensor lambda_A{{1.1, 2.6, 2.2}};
+  const tensor lambda_B{{0.8, 1.3, 1.3}};
+  const tensor<double, 3, 3> Q{{{-0.928152308749236, -0.091036503308254, -0.360895617636}  ,
+                                { 0.238177386319198,  0.599832274220295, -0.763853896664712},
+                                { 0.28601542687348 , -0.794929932679048, -0.535052873762272}}};
+  const auto A = dot(Q, dot(diag(lambda_A), transpose(Q)));
+  const auto B = dot(Q, dot(diag(lambda_B), transpose(Q)));
+  auto e = log_symm(dot(A, B)) - (log_symm(A) + log_symm(B));
+  EXPECT_LT(norm(e), 1e-12);
+}
+
 int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);
