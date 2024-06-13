@@ -464,9 +464,9 @@ TEST(Tensor, EigendecompWithUniqueEigenvalues)
   // clang-format off
   // Q is a rotation matrix.
   // Generated externally, written out to 15 decimals
-  const tensor Q{{{-0.928152308749236, -0.091036503308254, -0.360895617636}  ,
-                  { 0.238177386319198,  0.599832274220295, -0.763853896664712},
-                  { 0.28601542687348 , -0.794929932679048, -0.535052873762272}}};
+  const tensor<double, 3, 3> Q{{{-0.928152308749236, -0.091036503308254, -0.360895617636}  ,
+                                { 0.238177386319198,  0.599832274220295, -0.763853896664712},
+                                { 0.28601542687348 , -0.794929932679048, -0.535052873762272}}};
   // clang-format on
   const auto A = dot(Q, dot(diag(lambda), transpose(Q)));
   // std::cout << "A =\n" << A << std::endl;
@@ -486,9 +486,9 @@ TEST(Tensor, EigendecompWith2NearlyDegenerateEigenvalues)
 {
   const tensor lambda{{2.5, 2.5 + 1e-8, 1.1}};
   // clang-format off
-  const tensor Q{{{-0.928152308749236, -0.091036503308254, -0.360895617636}  ,
-                  { 0.238177386319198,  0.599832274220295, -0.763853896664712},
-                  { 0.28601542687348 , -0.794929932679048, -0.535052873762272}}};
+  const tensor<double, 3, 3> Q{{{-0.928152308749236, -0.091036503308254, -0.360895617636}  ,
+                                { 0.238177386319198,  0.599832274220295, -0.763853896664712},
+                                { 0.28601542687348 , -0.794929932679048, -0.535052873762272}}};
   // clang-format on
   const auto A = dot(Q, dot(diag(lambda), transpose(Q)));
   // std::cout << "A =\n" << A << std::endl;
