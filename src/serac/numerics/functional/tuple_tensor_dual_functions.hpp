@@ -949,61 +949,41 @@ SERAC_HOST_DEVICE constexpr auto symmetric_mat3_function_with_derivative(tensor<
   });
 }
 
-double log_symm_eigenvalue_secant(double lam1, double lam2) {
-  if (lam1 == lam2) {
-    return 1/lam1;
-  } else {
-    double y = lam1 / lam2;
-    return ( std::log(y)/(y - 1.0) ) / lam2;
-  }
-}
-
 template <typename T>
 auto log_symm(tensor<T, 3, 3> A)
 {
-  using std::log;
-  auto logA = symmetric_mat3_function(A, [](double x) { return log(x); }, log_symm_eigenvalue_secant);
-  return logA;
+  auto g = [](double lam1, double lam2) {
+    if (lam1 == lam2) {
+      return 1/lam1;
+    } else {
+      double y = lam1 / lam2;
+      return ( std::log(y)/(y - 1.0) ) / lam2;
+    }
+  };
+  return symmetric_mat3_function(A, [](double x) { return std::log(x); }, g);
+}
+
+template<typename T>
+auto exp_symm(tensor<T, 3, 3> A)
+{
+  auto g = [](double lam1, double lam2) {
+    if (lam1 == lam2) {
+      return std::exp(lam1);
+    } else {
+      double arg = lam1 - lam2;
+      return std::exp(lam2)*std::expm1(arg)/arg;
+    }
+  };
+  return symmetric_mat3_function(A, [](double x){ return std::exp(x); }, g);
+}
+
+template<typename T>
+auto sqrt_symm(tensor<T, 3, 3> A)
+{
+  auto g = [](double lam1, double lam2) {
+    return 1.0/(std::sqrt(lam1) + std::sqrt(lam2));
+  };
+  return symmetric_mat3_function(A, [](double x){ return std::sqrt(x); }, g);
 }
 
 }  // namespace serac
-
-  // auto invA = inv(get_value(A));
-  // return make_tensor<n, n>([&](int i, int j) {
-  //   auto          value = invA[i][j];
-  //   gradient_type gradient{};
-  //   for (int k = 0; k < n; k++) {
-  //     for (int l = 0; l < n; l++) {
-  //       gradient -= invA[i][k] * A[k][l].gradient * invA[l][j];
-  //     }
-  //   }
-  //   return dual<gradient_type>{value, gradient};
-  // });
-
-// std::cout << "------------------------------" << std::endl;
-//   constexpr bool type_is_dual = is_dual_number<T>::value;
-//   //constexpr bool tensor_is_dual = is_tensor_of_dual_number<T>::value;
-//   constexpr bool tensor_is_dual = is_tensor_of_dual_number<decltype(A)>::value;
-//   std::cout << "A's type is dual: " << type_is_dual << std::endl;
-//   std::cout << "A is tensor of dual: " << tensor_is_dual << std::endl;
-
-//   if constexpr (!is_dual_number<T>::value) {
-//     return logA;
-//   } else {
-
-//     for (int a = 0; a < 3; a++) {
-//       for (int b = 0; b < 3; b++) {
-//         double g = log_symm_eigenvalue_difference(lambda[a], lambda[b]);
-//         for (int i = 0; i < 3; i++) {
-//           for (int j = 0; j < 3; j++) {
-//             for (int k = 0; k < 3; k++) {
-//               for (int l = 0; l < 3; l++) {
-//                 dlogA[i][j] += g*Q[k][a]*Q[l][b]*Q[i][a]*Q[j][b]*A[k][l].gradient;
-//               }
-//             }
-//           }
-//         }
-//       }
-//     }
-//     return dual{logA, DlogA};
-//   }
