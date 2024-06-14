@@ -110,7 +110,7 @@ struct J2LargeStrainsThermal {
     // e_elastic = 0.5 ln(be)
     auto eps_el_trial = 0.5 * matrix_log(be);
     auto eps_el_dev_trial = dev(eps_el_trial);
-    auto eps_el_vol = eps_el_trial - eps_el_dev_trial;
+    const auto eps_el_vol = eps_el_trial - eps_el_dev_trial;
 
     //
     auto s_trial = 2. * G * eps_el_dev_trial;
@@ -140,12 +140,12 @@ struct J2LargeStrainsThermal {
     
     // update states
     state.accumulated_plastic_strain += delta_gamma_value;
-    state.F = F; 
-    state.eps_el = eps_el_trial;
+    state.F = get_value(F); 
+    state.eps_el = get_value(eps_el_trial);
 
     const auto tau = s_updated + K * eps_el_vol;
     
-    const auto sigma = tau / def(F);
+    const auto sigma = tau / det(F);
 
     const auto q = std::sqrt(1.5) * norm(s_updated);
 
