@@ -288,9 +288,10 @@ public:
 
     if (!checkpoint_to_disk_) {
       checkpoint_states_.clear();
-
-      checkpoint_states_["temperature"].push_back(temperature_);
-      checkpoint_states_["temperature_rate"].push_back(temperature_rate_);
+      auto state_names = stateNames();
+      for (const auto& state_name : state_names) {
+        checkpoint_states_[state_name].push_back(state(state_name));
+      }
     }
   }
 
@@ -342,21 +343,20 @@ public:
         bc.setDofs(temperature_, time_);
       }
       nonlin_solver_->solve(temperature_);
-
-      cycle_ += 1;
-
     } else {
       // Step the time integrator
       // Note that the ODE solver handles the essential boundary condition application itself
       ode_.Step(temperature_, time_, dt);
+    }
 
-      cycle_ += 1;
+    cycle_ += 1;
 
-      if (checkpoint_to_disk_) {
-        outputStateToDisk();
-      } else {
-        checkpoint_states_["temperature"].push_back(temperature_);
-        checkpoint_states_["temperature_rate"].push_back(temperature_rate_);
+    if (checkpoint_to_disk_) {
+      outputStateToDisk();
+    } else {
+      auto state_names = stateNames();
+      for (const auto& state_name : state_names) {
+        checkpoint_states_[state_name].push_back(state(state_name));
       }
     }
 
@@ -775,9 +775,10 @@ public:
       outputStateToDisk();
     } else {
       checkpoint_states_.clear();
-
-      checkpoint_states_["temperature"].push_back(temperature_);
-      checkpoint_states_["temperature_rate"].push_back(temperature_rate_);
+      auto state_names = stateNames();
+      for (const auto& state_name : state_names) {
+        checkpoint_states_[state_name].push_back(state(state_name));
+      }
     }
   }
 
