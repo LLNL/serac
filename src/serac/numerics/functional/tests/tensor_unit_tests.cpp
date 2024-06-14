@@ -524,6 +524,36 @@ TEST(Tensor, Log)
   EXPECT_LT(norm(e), 1e-12);
 }
 
+TEST(Tensor, LogWithDualNumbers)
+{
+  const tensor lambda{{1.1, 2.6, 2.2}};
+  const tensor<double, 3, 3> Q{{{-0.928152308749236, -0.091036503308254, -0.360895617636}  ,
+                                { 0.238177386319198,  0.599832274220295, -0.763853896664712},
+                                { 0.28601542687348 , -0.794929932679048, -0.535052873762272}}};
+  auto A = dot(Q, dot(diag(lambda), transpose(Q)));
+  auto logA = log_symm(make_dual(A));
+  tensor<double, 3, 3, 3, 3> dlogA_h{};
+  double h = 1e-4;
+  for (int k = 0; k < 3; k++) {
+    for (int l = 0; l < 3; l++) {
+      A[k][l] += 0.5*h;
+      A[l][k] += 0.5*h;
+      tensor<double, 3, 3> logA_p = log_symm(A);
+      for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+          dlogA_h[i][j][k][l] = (logA_p[i][j] - logA[i][j].value)/h;
+          std::cout << i << j << k << l << std::endl;
+          std::cout << "dlogA   = " << logA[i][j].gradient[k][l] << std::endl;
+          std::cout << "dlogA_h = " << dlogA_h[i][j][k][l] << std::endl;
+        }
+      }
+      A[k][l] -= 0.5*h;
+      A[l][k] -= 0.5*h;
+    }
+  }
+  
+}
+
 int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);
