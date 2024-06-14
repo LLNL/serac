@@ -911,17 +911,8 @@ inline SERAC_HOST_DEVICE tuple<vec3, mat3> eig_symm(const mat3& A)
   return {eigvals, eigvecs};
 }
 
-double log_symm_eigenvalue_difference(double lam1, double lam2) {
-  if (lam1 == lam2) {
-    return 1/lam1;
-  } else {
-    double y = lam1 / lam2;
-    return ( std::log(y)/(y - 1.0) ) / lam2;
-  }
-}
-
-template <typename T, typename Function>
-auto symmetric_mat3_function(tensor<T, 3, 3> A, const Function& f)
+template <typename T, typename Function, typename EigvalSecantFunction>
+auto symmetric_mat3_function(tensor<T, 3, 3> A, const Function& f, const EigvalSecantFunction& g)
 {
   auto [lambda, Q] = eig_symm(get_value(A));
   vec3 y;
@@ -933,13 +924,13 @@ auto symmetric_mat3_function(tensor<T, 3, 3> A, const Function& f)
   if constexpr(!is_dual_number<T>::value) {
     return f_A;
   } else {
-    return symmetric_mat3_function_with_derivative(A, f_A, lambda, Q); //, eig_diff_func);
+    return symmetric_mat3_function_with_derivative(A, f_A, lambda, Q, g);
   }
 }
 
-template <typename Gradient>
+template <typename Gradient, typename Function>
 SERAC_HOST_DEVICE constexpr auto symmetric_mat3_function_with_derivative(tensor<dual<Gradient>, 3, 3> A, tensor<double, 3, 3> f_A, 
-  vec3 lambda, mat3 Q) //, const Function& eigenvalue_secant)
+  vec3 lambda, mat3 Q, const Function& g)
 {
   return make_tensor<3, 3>([&](int i, int j) {
     auto value = f_A[i][j];
@@ -948,7 +939,7 @@ SERAC_HOST_DEVICE constexpr auto symmetric_mat3_function_with_derivative(tensor<
       for (int l = 0; l < 3; l++) {
         for (int a = 0; a < 3; a++) {
           for (int b = 0; b < 3; b++) {
-            gradient += log_symm_eigenvalue_difference(lambda[a], lambda[b])*Q[k][a]*Q[l][b]*Q[i][a]*Q[j][b]*A[k][l].gradient;
+            gradient += g(lambda[a], lambda[b])*Q[k][a]*Q[l][b]*Q[i][a]*Q[j][b]*A[k][l].gradient;
           }
         }
         
@@ -958,11 +949,20 @@ SERAC_HOST_DEVICE constexpr auto symmetric_mat3_function_with_derivative(tensor<
   });
 }
 
+double log_symm_eigenvalue_secant(double lam1, double lam2) {
+  if (lam1 == lam2) {
+    return 1/lam1;
+  } else {
+    double y = lam1 / lam2;
+    return ( std::log(y)/(y - 1.0) ) / lam2;
+  }
+}
+
 template <typename T>
 auto log_symm(tensor<T, 3, 3> A)
 {
   using std::log;
-  auto logA = symmetric_mat3_function(A, [](double x) { return log(x); });
+  auto logA = symmetric_mat3_function(A, [](double x) { return log(x); }, log_symm_eigenvalue_secant);
   return logA;
 }
 
