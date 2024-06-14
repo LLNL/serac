@@ -859,7 +859,9 @@ auto matrix_log(const serac::tensor<T, dim, dim>& A)
   auto temp = dot(LogEta, QT);
   //
   return dot(Q, temp);
-=======
+}
+
+/*
  * @brief Signum, returns sign of input
  *
  * @param val Input value.
