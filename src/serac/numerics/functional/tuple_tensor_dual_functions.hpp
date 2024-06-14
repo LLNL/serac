@@ -921,29 +921,28 @@ double log_symm_eigenvalue_difference(double lam1, double lam2) {
 }
 
 template <typename T, typename Function>
-auto isotropic_tensor_function(tensor<T, 3, 3> A, const Function& f)
+auto symmetric_mat3_function(tensor<T, 3, 3> A, const Function& f)
 {
   auto [lambda, Q] = eig_symm(get_value(A));
   vec3 y;
   for (int i = 0; i < 3; i++) {
     y[i] = f(lambda[i]);
   }
-  return dot(Q, dot(diag(y), transpose(Q)));
+  auto f_A = dot(Q, dot(diag(y), transpose(Q)));
+
+  if constexpr(!is_dual_number<T>::value) {
+    return f_A;
+  } else {
+    return symmetric_mat3_function_with_derivative(A, f_A, lambda, Q); //, eig_diff_func);
+  }
 }
 
-template <typename Gradient, typename Function>
-SERAC_HOST_DEVICE constexpr auto isotropic_tensor_function(tensor<dual<Gradient>, 3, 3> A, const Function& f)
+template <typename Gradient>
+SERAC_HOST_DEVICE constexpr auto symmetric_mat3_function_with_derivative(tensor<dual<Gradient>, 3, 3> A, tensor<double, 3, 3> f_A, 
+  vec3 lambda, mat3 Q) //, const Function& eigenvalue_secant)
 {
-  auto eigendecomp = eig_symm(get_value(A));
-  vec3 lambda = get<0>(eigendecomp);
-  mat3 Q = get<1>(eigendecomp);
-  vec3 y;
-  for (int i = 0; i < 3; i++) {
-    y[i] = f(lambda[i]);
-  }
-  auto logA = dot(Q, dot(diag(y), transpose(Q)));
   return make_tensor<3, 3>([&](int i, int j) {
-    auto value = logA[i][j];
+    auto value = f_A[i][j];
     Gradient gradient{};
     for (int k = 0; k < 3; k++) {
       for (int l = 0; l < 3; l++) {
@@ -963,7 +962,7 @@ template <typename T>
 auto log_symm(tensor<T, 3, 3> A)
 {
   using std::log;
-  auto logA = isotropic_tensor_function(A, [](double x) { return log(x); });
+  auto logA = symmetric_mat3_function(A, [](double x) { return log(x); });
   return logA;
 }
 
