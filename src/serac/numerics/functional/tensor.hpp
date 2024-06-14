@@ -1283,7 +1283,7 @@ auto matrix_sqrt(const tensor<T, dim, dim>& A)
 }
 
 /**
- * @brief compute the matrix exponential of a square, real-valued, possibly non-symmetric matrix
+ * @brief compute the matrix exponential of a square, real-valued, generally non-symmetric matrix
  * using Taylor expansion to prescribed tolerance
  *
  * @tparam T the data type stored in each element of the matrix
@@ -1291,7 +1291,7 @@ auto matrix_sqrt(const tensor<T, dim, dim>& A)
  * @return a square matrix, B, approximating exp(A)
  */
 template <typename T, int dim>
-auto matrix_exp(const tensor<T, dim, dim>& A)
+auto matrix_exp_unsymm(const tensor<T, dim, dim>& A)
 {
   auto                       powA  = DenseIdentity<dim>();
   auto                       expA  = DenseIdentity<dim>();

@@ -755,6 +755,59 @@ auto eigenvalues(const serac::tensor<T, size, size>& A)
 }
 
 /**
+ * @brief compute exp of a square, real-valued, symmetric matrix
+ *
+ * @tparam T the data type stored in each element of the matrix
+ * @param A the matrix to compute the exp of
+ * @return exp(A)
+ */
+template <typename T, int dim>
+auto matrix_exp(const serac::tensor<T, dim, dim>& A)
+{
+  //
+  serac::tensor<T, dim, dim>      Q;
+  auto ExpEta = DenseIdentity<dim>();
+  mfem::Vector vec_eta(dim);
+  mfem::DenseMatrix matQ(dim, dim);
+
+  // put tensor values in an mfem::DenseMatrix
+  mfem::DenseMatrix matA(dim, dim);
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      if constexpr (is_dual_number<T>::value) {
+        matA(i, j) = A[i][j].value;
+      } else {
+        matA(i, j) = A[i][j];
+      }
+    }
+  }
+
+  //
+  mfem::DenseMatrixEigensystem eig_sys(matA);
+  eig_sys.Eval();
+
+  vec_eta = eig_sys.Eigenvalues();
+  for (int i = 0; i < dim; i++) {
+    ExpEta[i][i] = std::exp(vec_eta(i));
+  }
+
+  //
+  matQ = eig_sys.Eigenvectors();
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      Q[i][j] = matQ(i, j);
+    }
+  }
+  
+  //
+  auto QT = transpose(Q);
+  //
+  auto temp = dot(ExpEta, QT);
+  //
+  return dot(Q, temp);
+}
+
+/**
  * @brief compute log of a square, real-valued, symmetric matrix
  *
  * @tparam T the data type stored in each element of the matrix
@@ -806,6 +859,5 @@ auto matrix_log(const serac::tensor<T, dim, dim>& A)
   //
   return dot(Q, temp);
 }
-
 
 }  // namespace serac
