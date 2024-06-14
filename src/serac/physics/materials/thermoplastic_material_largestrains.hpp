@@ -111,7 +111,6 @@ struct J2LargeStrainsThermal {
     auto eps_el_trial = 0.5 * matrix_log(be);
     auto eps_el_dev_trial = dev(eps_el_trial);
     auto eps_el_vol = eps_el_trial - eps_el_dev_trial;
-;
 
     //
     auto s_trial = 2. * G * eps_el_dev_trial;
