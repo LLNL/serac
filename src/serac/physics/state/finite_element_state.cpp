@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -70,6 +70,22 @@ void FiniteElementState::projectOnBoundary(mfem::VectorCoefficient& coef, const 
   mfem::ParGridFunction& grid_function = gridFunction();
   // markers should be const param in mfem, but it's not
   grid_function.ProjectBdrCoefficient(coef, const_cast<mfem::Array<int>&>(markers));
+  setFromGridFunction(grid_function);
+}
+
+void FiniteElementState::project(mfem::Coefficient& coef, const Domain& domain)
+{
+  mfem::Array<int>       uniq_dof_ids  = domain.dof_list(gridFunction().FESpace());
+  mfem::ParGridFunction& grid_function = gridFunction();
+  grid_function.ProjectCoefficient(coef, uniq_dof_ids);
+  setFromGridFunction(grid_function);
+}
+
+void FiniteElementState::project(mfem::VectorCoefficient& coef, const Domain& domain)
+{
+  mfem::Array<int>       uniq_dof_ids  = domain.dof_list(gridFunction().FESpace());
+  mfem::ParGridFunction& grid_function = gridFunction();
+  grid_function.ProjectCoefficient(coef, uniq_dof_ids);
   setFromGridFunction(grid_function);
 }
 

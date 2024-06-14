@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -108,12 +108,18 @@ public:
    * @param[in] parameter_names A vector of the names of the requested parameter fields
    * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param[in] time The simulation time to initialize the physics module to
+   * @param[in] checkpoint_to_disk A flag to save the transient states on disk instead of memory for the transient
+   * adjoint solves
+   *
+   * @note On parallel file systems (e.g. lustre), significant slowdowns and occasional errors were observed when
+   *       writing and reading the needed trainsient states to disk for adjoint solves
    */
   HeatTransfer(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
                const serac::TimesteppingOptions timestepping_opts, const std::string& physics_name,
-               std::string mesh_tag, std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0)
+               std::string mesh_tag, std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0,
+               bool checkpoint_to_disk = false)
       : HeatTransfer(std::make_unique<EquationSolver>(nonlinear_opts, lin_opts, StateManager::mesh(mesh_tag).GetComm()),
-                     timestepping_opts, physics_name, mesh_tag, parameter_names, cycle, time)
+                     timestepping_opts, physics_name, mesh_tag, parameter_names, cycle, time, checkpoint_to_disk)
   {
   }
 
@@ -127,11 +133,16 @@ public:
    * @param[in] parameter_names A vector of the names of the requested parameter fields
    * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param[in] time The simulation time to initialize the physics module to
+   * @param[in] checkpoint_to_disk A flag to save the transient states on disk instead of memory for the transient
+   * adjoint solves
+   *
+   * @note On parallel file systems (e.g. lustre), significant slowdowns and occasional errors were observed when
+   *       writing and reading the needed trainsient states to disk for adjoint solves
    */
   HeatTransfer(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
                const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {},
-               int cycle = 0, double time = 0.0)
-      : BasePhysics(physics_name, mesh_tag, cycle, time),
+               int cycle = 0, double time = 0.0, bool checkpoint_to_disk = false)
+      : BasePhysics(physics_name, mesh_tag, cycle, time, checkpoint_to_disk),
         temperature_(StateManager::newState(H1<order>{}, detail::addPrefix(physics_name, "temperature"), mesh_tag_)),
         temperature_rate_(
             StateManager::newState(H1<order>{}, detail::addPrefix(physics_name, "temperature_rate"), mesh_tag_)),
@@ -261,9 +272,6 @@ public:
 
   /**
    * @brief Non virtual method to reset thermal states to zero.  This does not reset design parameters or shape.
-   *
-   * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
-   * @param[in] time The simulation time to initialize the physics module to
    */
   void initializeThermalStates()
   {
@@ -277,6 +285,14 @@ public:
     implicit_sensitivity_temperature_start_of_step_ = 0.0;
     temperature_adjoint_load_                       = 0.0;
     temperature_rate_adjoint_load_                  = 0.0;
+
+    if (!checkpoint_to_disk_) {
+      checkpoint_states_.clear();
+      auto state_names = stateNames();
+      for (const auto& state_name : state_names) {
+        checkpoint_states_[state_name].push_back(state(state_name));
+      }
+    }
   }
 
   /**
@@ -335,6 +351,15 @@ public:
 
     cycle_ += 1;
 
+    if (checkpoint_to_disk_) {
+      outputStateToDisk();
+    } else {
+      auto state_names = stateNames();
+      for (const auto& state_name : state_names) {
+        checkpoint_states_[state_name].push_back(state(state_name));
+      }
+    }
+
     if (cycle_ > max_cycle_) {
       timesteps_.push_back(dt);
       max_cycle_ = cycle_;
@@ -359,8 +384,7 @@ public:
     // auto lambda = [] __host__ __device__ (auto) {}; ), MaterialType cannot be an extended
     // generic lambda.  The static asserts below check this.
   private:
-    class DummyArgumentType {
-    };
+    class DummyArgumentType {};
     static_assert(!std::is_invocable<MaterialType, DummyArgumentType&>::value);
     static_assert(!std::is_invocable<MaterialType, DummyArgumentType*>::value);
     static_assert(!std::is_invocable<MaterialType, DummyArgumentType>::value);
@@ -603,6 +627,9 @@ public:
   {
     if (state_name == "temperature") {
       temperature_ = state;
+      if (!checkpoint_to_disk_) {
+        checkpoint_states_["temperature"][static_cast<size_t>(cycle_)] = temperature_;
+      }
       return;
     }
 
@@ -743,6 +770,16 @@ public:
             return *J_;
           });
     }
+
+    if (checkpoint_to_disk_) {
+      outputStateToDisk();
+    } else {
+      checkpoint_states_.clear();
+      auto state_names = stateNames();
+      for (const auto& state_name : state_names) {
+        checkpoint_states_[state_name].push_back(state(state_name));
+      }
+    }
   }
 
   /**
@@ -844,10 +881,17 @@ public:
 
     // Load the temperature from the previous cycle from disk
     serac::FiniteElementState temperature_n_minus_1(temperature_);
-    StateManager::loadCheckpointedStates(cycle_, {temperature_, temperature_rate_});
-    StateManager::loadCheckpointedStates(cycle_ - 1, {temperature_n_minus_1});
 
-    double dt = loadCheckpointedTimestep(cycle_ - 1);
+    {
+      auto previous_states_n         = getCheckpointedStates(cycle_);
+      auto previous_states_n_minus_1 = getCheckpointedStates(cycle_ - 1);
+
+      temperature_          = previous_states_n.at("temperature");
+      temperature_rate_     = previous_states_n.at("temperature_rate");
+      temperature_n_minus_1 = previous_states_n_minus_1.at("temperature");
+    }
+
+    double dt = getCheckpointedTimestep(cycle_ - 1);
 
     // K := dR/du
     auto K = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(temperature_),
@@ -894,26 +938,26 @@ public:
    * @brief Accessor for getting named finite element state primal solution from the physics modules at a given
    * checkpointed cycle index
    *
-   * @param state_name The name of the Finite Element State primal solution to retrieve
-   * @param cycle The previous timestep where the state solution is requested
+   * @param cycle_to_load The previous timestep where the state solution is requested
    * @return The named primal Finite Element State
    */
-  FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const override
+  std::unordered_map<std::string, FiniteElementState> getCheckpointedStates(int cycle_to_load) const override
   {
-    if (state_name == "temperature") {
-      FiniteElementState previous_state = temperature_;
-      StateManager::loadCheckpointedStates(cycle, {previous_state});
-      return previous_state;
-    } else if (state_name == "temperature_rate") {
-      FiniteElementState previous_state = temperature_rate_;
-      StateManager::loadCheckpointedStates(cycle, {previous_state});
-      return previous_state;
+    std::unordered_map<std::string, FiniteElementState> previous_states;
+
+    if (checkpoint_to_disk_) {
+      previous_states.emplace("temperature", temperature_);
+      previous_states.emplace("temperature_rate", temperature_rate_);
+      StateManager::loadCheckpointedStates(cycle_to_load,
+                                           {previous_states.at("temperature"), previous_states.at("temperature_rate")});
+      return previous_states;
+    } else {
+      previous_states.emplace("temperature", checkpoint_states_.at("temperature")[static_cast<size_t>(cycle_to_load)]);
+      previous_states.emplace("temperature_rate",
+                              checkpoint_states_.at("temperature_rate")[static_cast<size_t>(cycle_to_load)]);
     }
 
-    SLIC_ERROR_ROOT(axom::fmt::format("State '{}' requested from heat transfer module '{}', but it doesn't exist",
-                                      state_name, name_));
-
-    return temperature_;
+    return previous_states;
   }
 
   /**

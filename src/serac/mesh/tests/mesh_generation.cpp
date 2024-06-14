@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -17,8 +17,7 @@
 #include "serac/serac_config.hpp"
 #include "serac/infrastructure/input.hpp"
 
-class SlicErrorException : public std::exception {
-};
+class SlicErrorException : public std::exception {};
 
 // Copied from src/serac/infrastructure/tests/serac_input.cpp
 class MeshTest : public ::testing::Test {

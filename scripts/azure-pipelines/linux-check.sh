@@ -1,6 +1,6 @@
 #!/bin/bash
 ##############################################################################
-# Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
@@ -39,7 +39,7 @@ if [[ "$DO_DOCS_CHECK" == "yes" ]] ; then
         echo "sphinx not found: $SPHINX_EXECUTABLE"
         exit 1
     fi    
-    DOXYGEN_EXECUTABLE=/usr/bin/doxygen
+    DOXYGEN_EXECUTABLE=/usr/local/bin/doxygen
     if [[ ! -f "$DOXYGEN_EXECUTABLE" ]]; then
         echo "doxygen not found: $DOXYGEN_EXECUTABLE"
         exit 1

@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -17,7 +17,7 @@ if(NOT MFEM_DIR)
     message(FATAL_ERROR "MFEM support needs explicit MFEM_DIR")
 endif()
 message(STATUS "Looking for MFEM using MFEM_DIR = ${MFEM_DIR}")
-serac_assert_is_directory(VARIABLE_NAME MFEM_DIR)
+serac_assert_is_directory(DIR_VARIABLE MFEM_DIR)
 
 set(_MFEM_DIR ${MFEM_DIR}) # Save MFEM_DIR as a non-cache variable
 find_package(MFEM CONFIG NO_DEFAULT_PATH PATHS "${MFEM_DIR}/lib/cmake/mfem")

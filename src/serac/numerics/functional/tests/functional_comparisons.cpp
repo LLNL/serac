@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -109,11 +109,12 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   // Add the total domain residual term to the functional
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
-      [=](double /*t*/, auto x, auto temperature) {
+      [=](double /*t*/, auto position, auto temperature) {
         // get the value and the gradient from the input tuple
-        auto [u, du_dx] = temperature;
-        auto source     = a * u - (100 * x[0] * x[1]);
-        auto flux       = b * du_dx;
+        auto [X, dX_dxi] = position;
+        auto [u, du_dX]  = temperature;
+        auto source      = a * u - (100 * X[0] * X[1]);
+        auto flux        = b * du_dX;
         return serac::tuple{source, flux};
       },
       mesh);

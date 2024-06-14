@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -16,8 +16,7 @@
 #include "serac/numerics/equation_solver.hpp"
 #include "serac/serac_config.hpp"
 
-class SlicErrorException : public std::exception {
-};
+class SlicErrorException : public std::exception {};
 
 namespace serac {
 

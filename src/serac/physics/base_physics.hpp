@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -56,8 +56,11 @@ public:
    * @param[in] mesh_tag The tag for the mesh in the StateManager to construct the physics module on
    * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param[in] time The simulation time to initialize the physics module to
+   * @param[in] checkpoint_to_disk A flag to save the transient states on disk instead of memory for the transient
+   * adjoint solves
    */
-  BasePhysics(std::string physics_name, std::string mesh_tag, int cycle = 0, double time = 0.0);
+  BasePhysics(std::string physics_name, std::string mesh_tag, int cycle = 0, double time = 0.0,
+              bool checkpoint_to_disk = false);
 
   /**
    * @brief Construct a new Base Physics object (copy constructor)
@@ -174,6 +177,40 @@ public:
   virtual std::vector<std::string> adjointNames() const { return {}; }
 
   /**
+   * @brief Get a vector of the finite element state dual (reaction) solution names
+   *
+   * @return The dual solution names
+   */
+  virtual std::vector<std::string> dualNames() const { return {}; }
+
+  /**
+   * @brief Accessor for getting named finite element state dual (reaction) solution from the physics modules
+   *
+   * @param dual_name The name of the Finite Element State dual solution to retrieve
+   * @return The named dual Finite Element State
+   */
+  virtual const FiniteElementDual& dual(const std::string& dual_name) const
+  {
+    SLIC_ERROR_ROOT(axom::fmt::format("dual '{}' requested from physics module '{}' which does not support duals",
+                                      dual_name, name_));
+    return *duals_[0];
+  }
+
+  /**
+   * @brief Accessor for getting named finite element state dual adjoint (reaction adjoint load) from the physics
+   * modules
+   *
+   * @param dual_name The name of the Finite Element State dual (reaction adjoint load) solution to retrieve
+   * @return The named adjoint Finite Element State
+   */
+  virtual const FiniteElementDual& dualAdjoint(const std::string& dual_name) const
+  {
+    SLIC_ERROR_ROOT(axom::fmt::format(
+        "dualAdjoint '{}' requested from physics module '{}' which does not support duals", dual_name, name_));
+    return *dual_adjoints_[0];
+  }
+
+  /**
    * @brief Accessor for getting the shape displacement field from the physics modules
    *
    * @return The shape displacement finite element state
@@ -264,15 +301,16 @@ public:
   /**
    * @brief Compute the implicit sensitivity of the quantity of interest used in defining the adjoint load with respect
    * to the parameter field (d QOI/d state * d state/d parameter).
+   * @param parameter_index the index of the parameter
    *
    * @return The sensitivity of the QOI (given implicitly by the adjoint load) with respect to the parameter
    *
-   * @pre completeSetup(), advanceTimestep(), and solveAdjoint() must be called prior to this method.
+   * @pre completeSetup(), advanceTimestep(), and reverseAdjointTimestep() must be called prior to this method.
    */
-  virtual const FiniteElementDual& computeTimestepSensitivity(size_t /* parameter_index */)
+  virtual const FiniteElementDual& computeTimestepSensitivity(size_t parameter_index)
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Parameter sensitivities not enabled in physics module {}", name_));
-    return *parameters_[0].sensitivity;
+    return *parameters_[parameter_index].sensitivity;
   }
 
   /**
@@ -281,13 +319,65 @@ public:
    *
    * @return The sensitivity with respect to the shape displacement
    *
-   * @pre completeSetup(), advanceTimestep(), and solveAdjoint() must be called prior to this method.
+   * @pre completeSetup(), advanceTimestep(), and reverseAdjointTimestep() must be called prior to this method.
    */
   virtual const FiniteElementDual& computeTimestepShapeSensitivity()
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Shape sensitivities not enabled in physics module {}", name_));
     return *shape_displacement_sensitivity_;
   }
+
+  /**
+   * @brief computes and sets the adjoint load due to reaction load sensitivities
+   *
+   * @param dual_name Name for the physics and residual specific dual (reactions)
+   * @param reaction_direction A FiniteElementState which specifies how the reactions dofs are weighted for the reaction
+   * qoi
+   */
+  virtual void computeDualAdjointLoad(const std::string& dual_name, const serac::FiniteElementState& reaction_direction)
+  {
+    (void)reaction_direction;
+    SLIC_ERROR_ROOT(axom::fmt::format("computeDualAdjointLoad not enabled in physics module {}, dual name {} requested",
+                                      name_, dual_name));
+  }
+
+  /**
+   * @brief computes the partial sensitivity of the dual (reaction) loads in specified direction with respect to
+   * parameter
+   *
+   * @param reaction_direction A FiniteElementState which specifies how the reactions dofs are weighted for the reaction
+   * qoi
+   * @param parameter_index the index of the parameter
+   * @return reaction sensitivity field
+   *
+   * @pre `computeDualAdjointLoad' for the desired dual (reaction) and `reverseAdjointTimestep` must be called before
+   * this
+   */
+  virtual const serac::FiniteElementDual& computeDualSensitivity(const serac::FiniteElementState& reaction_direction,
+                                                                 size_t                           parameter_index)
+  {
+    (void)reaction_direction;
+    SLIC_ERROR_ROOT(axom::fmt::format("computeDualSensitivity not enabled in physics module {}", name_));
+    return *parameters_[parameter_index].sensitivity;
+  };
+
+  /**
+   * @brief computes the partial sensitivity of the reaction loads (in specified direction) with respect to shape
+   *
+   * @param reaction_direction A FiniteElementState which specifies how the reactions dofs are weighted for the reaction
+   * qoi
+   * @return reaction sensitivity field
+   *
+   * @pre `computeDualAdjointLoad' for the desired dual (reaction) and `reverseAdjointTimestep` must be called before
+   * this
+   */
+  virtual const serac::FiniteElementDual& computeDualShapeSensitivity(
+      const serac::FiniteElementState& reaction_direction)
+  {
+    (void)reaction_direction;
+    SLIC_ERROR_ROOT(axom::fmt::format("computeDualShapeSensitivity not enabled in physics module {}", name_));
+    return *shape_displacement_sensitivity_;
+  };
 
   /**
    * @brief Compute the implicit sensitivity of the quantity of interest with respect to the initial condition fields
@@ -306,6 +396,8 @@ public:
   /**
    * @brief Advance the state variables according to the chosen time integrator
    *
+   * Advance the underlying ODE with the requested time integration scheme using the previously set timestep.
+   *
    * @param dt The increment of simulation time to advance the underlying physical system
    */
   virtual void advanceTimestep(double dt) = 0;
@@ -321,6 +413,7 @@ public:
   /**
    * @brief Solve the adjoint reverse timestep problem
    * @pre It is expected that the forward analysis is complete and the current states are valid
+   * @pre It is expected that the adjoint load has already been set in setAdjointLoad
    */
   virtual void reverseAdjointTimestep()
   {
@@ -336,21 +429,21 @@ public:
   virtual void outputStateToDisk(std::optional<std::string> paraview_output_dir = {}) const;
 
   /**
-   * @brief Accessor for getting named finite element state primal solution from the physics modules at a given
+   * @brief Accessor for getting a single named finite element state primal solution from the physics modules at a given
    * checkpointed cycle index
    *
-   * @param state_name The name of the Finite Element State primal solution to retrieve
    * @param cycle The cycle to retrieve state from
+   * @param state_name The name of the state to retrieve (e.g. "temperature", "displacement")
    * @return The named primal Finite Element State
    */
-  virtual FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const;
+  FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const;
 
   /**
    * @brief Get a timestep increment which has been previously checkpointed at the give cycle
    * @param cycle The previous 'timestep' number where the timestep increment is requested
    * @return The timestep increment
    */
-  virtual double loadCheckpointedTimestep(int cycle) const;
+  virtual double getCheckpointedTimestep(int cycle) const;
 
   /**
    * @brief Initializes the Sidre structure for simulation summary data
@@ -403,6 +496,15 @@ protected:
    */
   void initializeBasePhysicsStates(int cycle, double time);
 
+  /**
+   * @brief Accessor for getting all of the primal solutions from the physics modules at a given
+   * checkpointed cycle index
+   *
+   * @param cycle The cycle to retrieve state from
+   * @return A map containing the primal field names and their associated FiniteElementStates at the requested cycle
+   */
+  virtual std::unordered_map<std::string, FiniteElementState> getCheckpointedStates(int cycle) const;
+
   /// @brief Name of the physics module
   std::string name_ = {};
 
@@ -433,6 +535,11 @@ protected:
    * @brief List of finite element duals associated with this physics module
    */
   std::vector<const serac::FiniteElementDual*> duals_;
+
+  /**
+   * @brief List of adjoint finite element duals associated with this physics module
+   */
+  std::vector<const serac::FiniteElementDual*> dual_adjoints_;
 
   /// @brief The information needed for the physics parameters stored as Finite Element State fields
   struct ParameterInfo {
@@ -480,6 +587,21 @@ protected:
   /// @note This is owned by the physics instance as the sensitivity is with respect to a certain PDE residual (i.e.
   /// physics module)
   std::unique_ptr<FiniteElementDual> shape_displacement_sensitivity_;
+
+  /// @brief A map containing optionally in-memory checkpointed primal states for transient adjoint solvers
+  mutable std::unordered_map<std::string, std::vector<serac::FiniteElementState>> checkpoint_states_;
+
+  /**
+   * @brief A container relating a checkpointed cycle and the associated finite element state fields
+   *
+   * @note This is only used when the disk-based checkpointing is used. It avoids thrashing the disk IO
+   * by performing a file open/read/close for every separate retrieval of state checkpoint data for the
+   * various primal fields.
+   */
+  mutable std::unordered_map<std::string, serac::FiniteElementState> cached_checkpoint_states_;
+
+  /// @brief An optional int for disk-based checkpointing containing the cycle number of the last retrieved checkpoint
+  mutable std::optional<int> cached_checkpoint_cycle_;
 
   /**
    *@brief Whether the simulation is time-independent
@@ -560,6 +682,9 @@ protected:
    * @brief Boundary condition manager instance
    */
   BoundaryConditionManager bcs_;
+
+  /// A flag denoting whether to save the state to disk or memory as needed for dynamic adjoint solves
+  bool checkpoint_to_disk_;
 };
 
 }  // namespace serac

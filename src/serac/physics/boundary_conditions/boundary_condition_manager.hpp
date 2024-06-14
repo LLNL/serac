@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -148,7 +148,7 @@ private:
  * @tparam Pred Predicate for the view
  */
 template <class Iter, class Pred>
-FilterView(Iter, Iter, Pred &&) -> FilterView<Iter, Pred>;
+FilterView(Iter, Iter, Pred&&) -> FilterView<Iter, Pred>;
 
 /**
  * @brief A container for the boundary condition information relating to a specific physics module
@@ -161,6 +161,17 @@ public:
    * @param mesh The mesh for the underlying physics module
    */
   explicit BoundaryConditionManager(const mfem::ParMesh& mesh) : num_attrs_(mesh.bdr_attributes.Max()) {}
+
+  /**
+   * @brief Set the natural boundary conditions from a list of boundary markers and a coefficient
+   *
+   * @param[in] nat_bdr The set of mesh attributes denoting a natural boundary
+   * @param[in] nat_bdr_coef The coefficient defining the natural boundary function
+   * @param[in] space The finite element space to which the BC should be applied
+   * @param[in] component The component to set (null implies all components are set)
+   */
+  void addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
+                  mfem::ParFiniteElementSpace& space, const std::optional<int> component = {});
 
   /**
    * @brief Set the essential boundary conditions from a list of boundary markers and a coefficient
@@ -186,17 +197,6 @@ public:
    */
   void addEssential(const mfem::Array<int>& true_dofs, std::shared_ptr<mfem::VectorCoefficient> ess_bdr_coef,
                     mfem::ParFiniteElementSpace& space);
-
-  /**
-   * @brief Set the natural boundary conditions from a list of boundary markers and a coefficient
-   *
-   * @param[in] nat_bdr The set of mesh attributes denoting a natural boundary
-   * @param[in] nat_bdr_coef The coefficient defining the natural boundary function
-   * @param[in] space The finite element space to which the BC should be applied
-   * @param[in] component The component to set (null implies all components are set)
-   */
-  void addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
-                  mfem::ParFiniteElementSpace& space, const std::optional<int> component = {});
 
   /**
    * @brief Set a generic boundary condition from a list of boundary markers and a coefficient

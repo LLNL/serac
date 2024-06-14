@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -208,8 +208,8 @@ public:
     thermal.setFluxBCs(flux_function, EntireBoundary(thermal.mesh()));
 
     // volumetric source
-    auto source_function = [temp_rate_grad](auto X, auto /* time */, auto /* u */, auto /* du_dx */) {
-      return dot(X, temp_rate_grad);
+    auto source_function = [temp_rate_grad](auto position, auto /* time */, auto /* u */, auto /* du_dx */) {
+      return dot(get<VALUE>(position), temp_rate_grad);
     };
     thermal.setSource(source_function, EntireDomain(thermal.mesh()));
   }

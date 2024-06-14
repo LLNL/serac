@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -140,7 +140,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
     case WhichTest::Moment: {
       Functional<double(trial_space)> x_moment({&fespace});
       x_moment.AddDomainIntegral(
-          Dimension<dim>{}, DependsOn<>{}, [&](double /*t*/, auto x) { return x[0]; }, mesh);
+          Dimension<dim>{}, DependsOn<>{}, [&](double /*t*/, auto position) { return get<VALUE>(position)[0]; }, mesh);
 
       constexpr double expected[] = {0.5, 40.0};
 
@@ -183,9 +183,10 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
       Functional<double(trial_space)> f({&fespace});
       f.AddDomainIntegral(
           Dimension<dim>{}, DependsOn<0>{},
-          [&](double /*t*/, auto x, auto temperature) {
+          [&](double /*t*/, auto position, auto temperature) {
+            auto X           = get<VALUE>(position);
             auto [u, grad_u] = temperature;
-            return x[0] * x[0] + sin(x[1]) + x[0] * u * u * u;
+            return X[0] * X[0] + sin(X[1]) + X[0] * u * u * u;
           },
           mesh);
       f.AddBoundaryIntegral(
@@ -249,10 +250,11 @@ void qoi_test(mfem::ParMesh& mesh, H1<p1> trial1, H1<p2> trial2, Dimension<dim>)
   Functional<double(trial_space1, trial_space2)> f({&fespace1, &fespace2});
   f.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0, 1>{},
-      [&](double /*t*/, auto x, auto temperature, auto dtemperature_dt) {
+      [&](double /*t*/, auto position, auto temperature, auto dtemperature_dt) {
+        auto [X, dX_dxi]     = position;
         auto [u, grad_u]     = temperature;
         auto [du_dt, unused] = dtemperature_dt;
-        return x[0] * x[0] + sin(du_dt) + x[0] * u * u * u;
+        return X[0] * X[0] + sin(du_dt) + X[0] * u * u * u;
       },
       mesh);
   f.AddBoundaryIntegral(

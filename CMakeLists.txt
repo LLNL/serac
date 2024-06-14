@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -101,15 +101,17 @@ foreach(_tool ${_used_blt_tools})
     endif()
 endforeach()
 
-set(BLT_REQUIRED_CLANGFORMAT_VERSION  "10" CACHE STRING "")
+set(BLT_REQUIRED_CLANGFORMAT_VERSION  "14" CACHE STRING "")
 
 set(ENABLE_BENCHMARKS  OFF CACHE BOOL "")
 
 set(ENABLE_ALL_WARNINGS ON CACHE BOOL "")
 set(ENABLE_WARNINGS_AS_ERRORS ON CACHE BOOL "")
 
-# Allows MPI/CUDA/etc targets to be exported in the serac namespace
-set(BLT_EXPORT_THIRDPARTY ON CACHE BOOL "")
+set(BLT_EXPORT_THIRDPARTY OFF CACHE BOOL "")
+if (BLT_EXPORT_THIRDPARTY)
+    message(FATAL_ERROR "Serac does not use BLT's exporting of TPLs, it conflicts with the new blt_install_tpl_setups macro.")
+endif()
 
 include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
 

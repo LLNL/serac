@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -71,23 +71,4 @@ void finalize()
 #endif
 }
 
-/// @cond
-namespace detail {
-
-void startCaliperRegion([[maybe_unused]] const char* name)
-{
-#ifdef SERAC_USE_CALIPER
-  CALI_MARK_BEGIN(name);
-#endif
-}
-
-void endCaliperRegion([[maybe_unused]] const char* name)
-{
-#ifdef SERAC_USE_CALIPER
-  CALI_MARK_END(name);
-#endif
-}
-
-}  // namespace detail
-   /// @endcond
 }  // namespace serac::profiling

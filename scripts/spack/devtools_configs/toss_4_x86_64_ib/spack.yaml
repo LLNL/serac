@@ -44,6 +44,7 @@ spack:
         mpi: [mvapich2]
         gl: [opengl]
         glu: [openglu]
+        zlib-api: [zlib]
 
     openblas:
       buildable: false
@@ -67,8 +68,8 @@ spack:
     mvapich2:
       buildable: false
       externals:
-      - spec: mvapich2@2.3.6%gcc@10.3.1 process_managers=slurm arch=linux-rhel8-ivybridge
-        prefix: /usr/tce/packages/mvapich2/mvapich2-2.3.6-gcc-10.3.1
+      - spec: mvapich2@2.3.7%gcc@10.3.1~alloca~cuda~debug~hwloc_graphics~hwlocv2+regcache+wrapperrpath build_system=autotools ch3_rank_bits=32 fabrics=mrail file_systems=auto process_managers=slurm threads=multiple
+        prefix: /usr/tce/packages/mvapich2/mvapich2-2.3.7-gcc-10.3.1
 
     netlib-lapack:
       buildable: false
@@ -241,11 +242,9 @@ spack:
       externals:
       - spec: cmake@3.23.1
         prefix: /usr/tce
-
-    # FIXME: make installed clang 14.0.6 work or install 16
-    # llvm:
-    #   version: [14.0.6]
-    #   buildable: false
-    #   externals:
-    #   - spec: llvm@14.0.6+clang
-    #     prefix: /usr/tce/packages/clang/clang-14.0.6
+    llvm:
+      version: [14.0.6]
+      buildable: false
+      externals:
+      - spec: llvm@14.0.6+clang+python
+        prefix: /usr/tce/packages/clang/clang-14.0.6

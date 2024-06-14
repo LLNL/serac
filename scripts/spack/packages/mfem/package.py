@@ -1,14 +1,17 @@
-# Copyright 2013-2023 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
+# other Serac Project Developers. See the top-level COPYRIGHT file for details.
 #
-# SPDX-License-Identifier: (Apache-2.0 OR MIT)
+# SPDX-License-Identifier: (BSD-3-Clause)
 
 from spack.pkg.builtin.mfem import Mfem as BuiltinMfem
 
 
 class Mfem(BuiltinMfem):
 
-    version("4.6.2-rc0", commit="79b609872ab4cef720adac2f820792fe09c87065")
+    # Note: Make sure this sha coincides with the git submodule
+    # Note: We add a number to the end of the real version number to indicate that we have
+    # moved forward past the release. Increment the last number when updating the commit sha.
+    version("4.7.0.0", commit="dc9128ef596e84daf1138aa3046b826bba9d259f")
 
     variant('asan', default=False, description='Add Address Sanitizer flags')
 

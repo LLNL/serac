@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -21,8 +21,7 @@
 
 namespace serac {
 
-class ContactTest : public testing::TestWithParam<std::pair<ContactEnforcement, std::string>> {
-};
+class ContactTest : public testing::TestWithParam<std::pair<ContactEnforcement, std::string>> {};
 
 TEST_P(ContactTest, patch)
 {

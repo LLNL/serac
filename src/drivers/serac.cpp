@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -246,14 +246,6 @@ int getOrder(std::optional<serac::SolidMechanicsInputOptions>  solid_mechanics_o
 int main(int argc, char* argv[])
 {
   serac::initialize(argc, argv);
-
-  // TODO: Remove this after input file functionality is restored.
-  const std::string warning_message = R"PREFIX(******************************
-This Serac driver does not
-currently work due to missing
-input file functionality.
-******************************)PREFIX";
-  SLIC_INFO(warning_message);
 
   // Handle Command line
   std::unordered_map<std::string, std::string> cli_opts =

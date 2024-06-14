@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -72,7 +72,7 @@ TEST(SolidMechanics, FiniteDifferenceParameter)
   // As we only have one parameter in this example, the index is zero.
   constexpr int bulk_parameter_index = 0;
 
-  solid_mechanics::ParameterizedNeoHookeanSolid<dim> mat{1.0, 0.0, 0.0};
+  solid_mechanics::ParameterizedNeoHookeanSolid mat{1.0, 0.0, 0.0};
   solid_solver.setMaterial(DependsOn<0, 1>{}, mat);
 
   // Define the function for the initial displacement and boundary condition

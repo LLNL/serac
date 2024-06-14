@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
   G_field.project(G_coeff);
   solid_solver.setParameter(1, G_field);
 
-  serac::solid_mechanics::ParameterizedNeoHookeanSolid<dim> mat{1.0, 0.0, 0.0};
+  serac::solid_mechanics::ParameterizedNeoHookeanSolid mat{1.0, 0.0, 0.0};
   solid_solver.setMaterial(serac::DependsOn<0, 1>{}, mat);
 
   // Pass the BC information to the solver object

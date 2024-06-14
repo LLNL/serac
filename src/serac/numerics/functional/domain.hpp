@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -50,6 +50,12 @@ struct Domain {
   std::vector<int> quad_ids_;
   std::vector<int> tet_ids_;
   std::vector<int> hex_ids_;
+
+  std::vector<int> mfem_edge_ids_;
+  std::vector<int> mfem_tri_ids_;
+  std::vector<int> mfem_quad_ids_;
+  std::vector<int> mfem_tet_ids_;
+  std::vector<int> mfem_hex_ids_;
   /// @endcond
 
   Domain(const mfem::Mesh& m, int d, Type type = Domain::Type::Elements) : mesh_(m), dim_(d), type_(type) {}
@@ -123,6 +129,9 @@ struct Domain {
 
     exit(1);
   }
+
+  /// @brief get mfem degree of freedom list for a given FiniteElementSpace
+  mfem::Array<int> dof_list(mfem::FiniteElementSpace* fes) const;
 };
 
 /// @brief constructs a domain from all the elements in a mesh

@@ -1,4 +1,4 @@
-.. ## Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+.. ## Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 .. ## other Serac Project Developers. See the top-level COPYRIGHT file for details.
 .. ##
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
@@ -65,51 +65,42 @@ integrals, floating points, and strings. Note that this macro is a no-op if the
 To add profile regions and ensure that Caliper is only used when it has been enabled
 through Spack, only use the macros described below to instrument your code:
 
-Use ``SERAC_MARK_FUNCTION`` at the very top of a function to mark it for profiling.
+Use ``CALI_CXX_MARK_FUNCTION`` at the very top of a function to mark it for profiling.
 
-Use ``SERAC_MARK_BEGIN(name)`` at the beginning of a region and ``SERAC_MARK_END(name)`` at the end of the region.
+Use ``CALI_MARK_BEGIN(name)`` at the beginning of a region and ``CALI_MARK_END(name)`` at the end of the region.
 
-Use ``SERAC_MARK_LOOP_BEGIN(id, name)`` before a loop to mark it for profiling, ``SERAC_MARK_LOOP_ITER(id, i)`` at the beginning
-of the  ``i`` th iteration of a loop, and ``SERAC_MARK_LOOP_END(id)`` immediately after the loop ends:
+Use ``CALI_CXX_MARK_LOOP_BEGIN(id, name)`` before a loop to mark it for profiling, ``CALI_CXX_MARK_LOOP_ITERATION(id, i)`` at the beginning
+of the  ``i`` th iteration of a loop, and ``CALI_CXX_MARK_LOOP_END(id)`` immediately after the loop ends:
 
 .. code-block:: c++
 
-  SERAC_MARK_BEGIN("region_name");
+  CALI_MARK_BEGIN("region_name");
    
-  SERAC_MARK_LOOP_BEGIN(doubling_loop, "doubling_loop");
+  CALI_CXX_MARK_LOOP_BEGIN(doubling_loop, "doubling_loop");
   for (int i = 0; i < input.size(); i++)
   {
-    SERAC_MARK_LOOP_ITER(doubling_loop, i);
+    CALI_CXX_MARK_LOOP_ITERATION(doubling_loop, i);
     output[i] = input[i] * 2;
   }
-  SERAC_MARK_LOOP_END(doubling_loop);
+  CALI_CXX_MARK_LOOP_END(doubling_loop);
 
-  SERAC_MARK_END("region_name");
+  CALI_MARK_END("region_name");
 
 
-Note that the ``id`` argument to the ``SERAC_MARK_LOOP_*`` macros can be any identifier as long as it is consistent
-between all uses of ``SERAC_MARK_LOOP_*`` for a given loop.  
+Note that the ``id`` argument to the ``CALI_CXX_MARK_LOOP_*`` macros can be any identifier as long as it is consistent
+between all uses of ``CALI_CXX_MARK_LOOP_*`` for a given loop.  
 
-To reduce the amount of annotation for regions bounded by a particular scope, use ``SERAC_PROFILE_SCOPE(name)``. This will follow RAII and works with graceful exception handling. When ``SERAC_PROFILE_SCOPE`` is instantiated, profiling of this region starts, and when the scope exits, profiling of this region will end.
+To reduce the amount of annotation for regions bounded by a particular scope, use ``CALI_CXX_MARK_SCOPE(name)``. This will follow RAII and works with graceful exception handling. When ``CALI_CXX_MARK_SCOPE`` is instantiated, profiling of this region starts, and when the scope exits, profiling of this region will end.
 
 .. code-block:: c++
 
-   // Refine once more and utilize SERAC_PROFILE_SCOPE
+   // Refine once more and utilize CALI_CXX_MARK_SCOPE
   {
-    SERAC_PROFILE_SCOPE("RefineOnceMore");
+    CALI_CXX_MARK_SCOPE("RefineOnceMore");
     pmesh->UniformRefinement();
   }
 
-Alternatively, for single line expressions, use ``SERAC_PROFILE_EXPR(name, expr)``. In the following example, only the call to ``buildMeshFromFile`` will be profiled (tag = "LOAD_MESH").
 
-.. code-block:: c++
-
-     auto pmesh = mesh::refineAndDistribute(SERAC_PROFILE_EXPR("LOAD_MESH", buildMeshFromFile(mesh_file)), 0, 0);
-
-.. note::
-   ``SERAC_PROFILE_EXPR`` creates a lambda and the expression is evaluated within that scope, and then the result is returned.
-
-     
 Performance Data
 ----------------
 

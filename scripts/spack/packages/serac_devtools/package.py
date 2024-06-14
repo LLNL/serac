@@ -1,7 +1,7 @@
-# Copyright 2013-2019 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
+# other Serac Project Developers. See the top-level COPYRIGHT file for details.
 #
-# SPDX-License-Identifier: (Apache-2.0 OR MIT)
+# SPDX-License-Identifier: (BSD-3-Clause)
 
 from spack import *
 
@@ -13,7 +13,7 @@ class SeracDevtools(BundlePackage):
     depends_on('cmake')
     depends_on('cppcheck')
     depends_on('doxygen')
-    depends_on("llvm@10.0.0+clang+python")
-    depends_on('python')
     depends_on('py-ats')
     depends_on('py-sphinx')
+    depends_on('python')
+    depends_on("llvm@14+clang+python")

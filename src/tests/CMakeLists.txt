@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -12,13 +12,20 @@ set(language_tests
     copy_elision.cpp
     mfem_array_std_algo.cpp)
 
+set(language_dependencies
+    gtest
+    mfem
+    blt::mpi)
+
+blt_list_append(TO language_dependencies ELEMENTS blt::openmp IF ENABLE_OPENMP)
+
 serac_add_tests( SOURCES ${language_tests}
-                 DEPENDS_ON gtest mfem mpi)
+                 DEPENDS_ON ${language_dependencies})
 
 if(ENABLE_CUDA)
     blt_add_library( NAME       cuda_smoketest_kernel
                      SOURCES    cuda_smoketest_kernel.cpp 
-                     DEPENDS_ON cuda)
+                     DEPENDS_ON blt::cuda)
 
     serac_add_tests( SOURCES    cuda_smoketest.cpp
                      DEPENDS_ON cuda_smoketest_kernel gtest)
@@ -31,8 +38,14 @@ endif()
 serac_add_tests( SOURCES       axom_smoketest.cpp
                  DEPENDS_ON    axom::inlet)
 
-if(SERAC_USE_PETSC)
-    serac_add_tests( SOURCES       petsc_smoketest.cpp
-                     DEPENDS_ON    PETSc gtest
-                     NUM_MPI_TASKS 4)
+if(PETSC_FOUND)
+    serac_add_tests(SOURCES       petsc_smoketest.cpp
+                    DEPENDS_ON    PkgConfig::PETSC gtest axom::slic
+                    NUM_MPI_TASKS 4)
+
+    if(SLEPC_FOUND)
+        serac_add_tests(SOURCES       slepc_smoketest.cpp
+                        DEPENDS_ON    PkgConfig::SLEPC gtest axom::slic
+                        NUM_MPI_TASKS 4)
+    endif()
 endif()

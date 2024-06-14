@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -15,6 +15,7 @@ set(serial_solver_tests
     solid_statics_patch.cpp
     solid_dynamics_patch.cpp
     dynamic_solid_adjoint.cpp
+    finite_element_vector_set_over_domain.cpp
     )
 
 serac_add_tests( SOURCES ${serial_solver_tests}
@@ -34,6 +35,9 @@ set(solver_tests
     thermal_mechanics.cpp
     thermal_robin_condition.cpp
     dynamic_thermal_adjoint.cpp
+    solid_reaction_adjoint.cpp
+    thermal_nonlinear_solve.cpp
+    solid_nonlinear_solve.cpp
     )
 blt_list_append(TO solver_tests ELEMENTS contact_patch.cpp contact_beam.cpp IF TRIBOL_FOUND)
 

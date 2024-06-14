@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -80,7 +80,7 @@ inline void check_for_missing_nodal_gridfunc(const mfem::Mesh& mesh)
       following member functions are invoked before use
 
       > mfem::Mesh::EnsureNodes();
-      > mfem::Mesh::ExchangeFaceNbrData();
+      > mfem::ParMesh::ExchangeFaceNbrData();
 
       or else the mfem::Mesh won't be fully initialized
       )errmsg";);
@@ -192,7 +192,7 @@ class Functional<test(trials...), exec> {
   static constexpr auto             Q                = std::max({test::order, trials::order...}) + 1;
 
   static constexpr mfem::Geometry::Type elem_geom[4]    = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT,
-                                                        mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
+                                                           mfem::Geometry::SQUARE, mfem::Geometry::CUBE};
   static constexpr mfem::Geometry::Type simplex_geom[4] = {mfem::Geometry::INVALID, mfem::Geometry::SEGMENT,
                                                            mfem::Geometry::TRIANGLE, mfem::Geometry::TETRAHEDRON};
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -35,14 +35,12 @@ namespace serac {
  *        will also store no data, but it will still appear as an argument to the q-function
  *        (to make the material model interface consistent).
  */
-struct Nothing {
-};
+struct Nothing {};
 
 /**
  * @brief see `Nothing` for a complete description of this class and when to use it
  */
-struct Empty {
-};
+struct Empty {};
 
 template <typename T>
 struct QuadratureData;

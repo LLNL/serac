@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -59,7 +59,7 @@ const mfem::DenseMatrix C = []() {
   return C_mat;
 }();
 
-const std::function stiffness_linear = [](const mfem::Vector & /*x*/) -> mfem::DenseMatrix {
+const std::function stiffness_linear = [](const mfem::Vector& /*x*/) -> mfem::DenseMatrix {
   mfem::DenseMatrix K(3, 3);
   K(0, 0) = 1.0;
   K(0, 1) = -1.0;

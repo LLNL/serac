@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -114,9 +114,9 @@ mfem::Mesh buildBallMesh(int approx_number_of_elements)
   static constexpr double vertices[num_vertices][dim] = {{0, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, 0, -1},
                                                          {0, 0, 1}, {0, -1, 0}, {1, 0, 0}};
   static constexpr int    triangles[num_elems][3]     = {{4, 5, 6}, {4, 6, 2}, {4, 2, 1}, {4, 1, 5},
-                                                  {5, 1, 3}, {5, 3, 6}, {3, 1, 2}, {6, 3, 2}};
+                                                         {5, 1, 3}, {5, 3, 6}, {3, 1, 2}, {6, 3, 2}};
   static constexpr int    tetrahedra[num_elems][4]    = {{0, 4, 5, 6}, {0, 4, 6, 2}, {0, 4, 2, 1}, {0, 4, 1, 5},
-                                                   {0, 5, 1, 3}, {0, 5, 3, 6}, {0, 3, 1, 2}, {0, 6, 3, 2}};
+                                                         {0, 5, 1, 3}, {0, 5, 3, 6}, {0, 3, 1, 2}, {0, 6, 3, 2}};
 
   auto mesh = mfem::Mesh(dim, num_vertices, num_elems, num_boundary_elements);
 
@@ -488,16 +488,17 @@ serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const
     elements[1] = elements_input["y"];
     if (z_present) elements[2] = elements_input["z"];
 
-    std::vector<double> overall_size(elements.size());
+    std::vector<double> overall_size;
     if (base.contains("size")) {
       auto size_input = base["size"];
-      overall_size    = {size_input["x"], size_input["y"]};
+      overall_size.push_back(size_input["x"]);
+      overall_size.push_back(size_input["y"]);
 
       if (size_input.contains("z")) {
         overall_size.push_back(size_input["z"]);
       }
     } else {
-      overall_size = std::vector<double>(overall_size.size(), 1.);
+      overall_size = std::vector<double>(elements.size(), 1.);
     }
 
     return {serac::mesh::BoxInputOptions{elements, overall_size}, ser_ref, par_ref};

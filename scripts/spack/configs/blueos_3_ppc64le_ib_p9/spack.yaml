@@ -201,28 +201,28 @@ spack:
           prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/cppcheck-2.9
       buildable: false
     doxygen:
-      version: [1.9.6]
+      version: [1.9.8]
       externals:
-        - spec: doxygen@1.9.6
-          prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.9.6
+        - spec: doxygen@1.9.8
+          prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.9.8
       buildable: false
     llvm:
-      version: [10.0.0]
+      version: [14.0.5]
       buildable: false
       externals:
-      - spec: llvm+clang@10.0.0
-        prefix: /usr/tce/packages/clang/clang-10.0.0
+      - spec: llvm@14.0.5+clang+python
+        prefix: /usr/tce/packages/clang/clang-14.0.5
     py-ats:
       version: [7.0.105]
       externals:
         - spec: py-ats@7.0.105
-          prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.10.10
+          prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.11.7
       buildable: false
     py-sphinx:
-      version: [7.0.0]
+      version: [7.2.6]
       externals:
-        - spec: py-sphinx@7.0.0
-          prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.10.10
+        - spec: py-sphinx@7.2.6
+          prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.11.7
       buildable: false
     python:
       version: [3.8.2]
@@ -232,13 +232,19 @@ spack:
       buildable: false
 
     # Globally lock version of third party libraries
+    axom:
+      require: "@0.9.0.1"
     camp:
-      require: "@2023.06.0"
+      require: "@2024.02.0"
     conduit:
-      require: "@0.8.8~shared~test~examples~utilities"
+      require: "@0.9.1~shared~test~examples~utilities"
     hdf5:
       variants: ~shared~mpi
+    mfem:
+      require: "@4.7.0.0"
     raja:
-      require: "@2023.06.1~shared~examples~exercises"
+      require: "@2024.02.0~shared~examples~exercises"
+    tribol:
+      require: "@0.1.0.15~examples~tests"
     umpire:
-      require: "@2023.06.0~shared~examples"
+      require: "@2024.02.0~shared~examples~werror"

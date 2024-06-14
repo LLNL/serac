@@ -1,7 +1,7 @@
 #!/bin/sh
 "exec" "python3" "-u" "-B" "$0" "$@"
 
-# Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for details.
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
@@ -16,60 +16,64 @@
 
 from common_build_functions import *
 
-from optparse import OptionParser
+from argparse import ArgumentParser
 
 
 def parse_args():
     "Parses args from command line"
-    parser = OptionParser()
+    parser = ArgumentParser()
     # Location of source directory to build
-    parser.add_option("-d", "--directory",
+    parser.add_argument("-d", "--directory",
                       dest="directory",
                       default="",
                       help="Directory of source to be built (Defaults to current)")
     # Whether to build a specific hostconfig
-    parser.add_option("--host-config",
+    parser.add_argument("--host-config",
                       dest="hostconfig",
                       default="",
                       help="Specific host-config file to build (Tries multiple known paths to locate given file)")
     # Extra cmake options to pass to config build
-    parser.add_option("--extra-cmake-options",
+    parser.add_argument("--extra-cmake-options",
                       dest="extra_cmake_options",
                       default="",
                       help="Extra cmake options to add to the cmake configure line")
-    parser.add_option("--automation-mode",
+    parser.add_argument("--automation-mode",
                       action="store_true",
                       dest="automation",
                       default=False,
                       help="Toggle automation mode which uses env $HOST_CONFIG then $SYS_TYPE/$COMPILER if found")
-    parser.add_option("--skip-install",
+    parser.add_argument("--skip-install",
                       action="store_true",
                       dest="skip_install",
                       default=False,
                       help="Skip testing install target which does not work in some configurations (codevelop)")
-    parser.add_option("-v", "--verbose",
+    parser.add_argument("-v", "--verbose",
                       action="store_true",
                       dest="verbose",
                       default=False,
                       help="Output logs to screen as well as to files")
+    parser.add_argument("-j", "--jobs",
+                      dest="jobs",
+                      default="",
+                      help="Allow N jobs at once for any `make` commands (empty string means max system amount)")
     ###############
     # parse args
     ###############
-    opts, extras = parser.parse_args()
+    args, extra_args = parser.parse_known_args()
     # we want a dict b/c the values could 
-    # be passed without using optparse
-    opts = vars(opts)
+    # be passed without using argparse
+    args = vars(args)
 
     # Ensure correctness
-    if opts["automation"] and opts["hostconfig"] != "":
+    if args["automation"] and args["hostconfig"] != "":
         print("[ERROR: automation and host-config modes are mutually exclusive]")
         sys.exit(1)
 
-    return opts
+    return args
 
 
 def main():
-    opts = parse_args()
+    args = parse_args()
 
     # Determine source directory to be built
     if os.environ.get("UBERENV_PREFIX") != None:
@@ -78,8 +82,8 @@ def main():
             print("[ERROR: Given environment variable 'UBERENV_PREFIX' is not a valid directory]")
             print("[    'UBERENV_PREFIX' = %s]" % repo_dir)
             return 1
-    if opts["directory"] != "":
-        repo_dir = opts["directory"]
+    if args["directory"] != "":
+        repo_dir = args["directory"]
         if not os.path.isdir(repo_dir):
             print("[ERROR: Given command line variable '--directory' is not a valid directory]")
             print("[    '--directory' = %s]" % repo_dir)
@@ -93,19 +97,19 @@ def main():
         timestamp = get_timestamp()
 
         # Default to build all SYS_TYPE's host-configs in host-config/
-        build_all = not opts["hostconfig"] and not opts["automation"]
+        build_all = not args["hostconfig"] and not args["automation"]
         if build_all:
             res = build_and_test_host_configs(repo_dir, timestamp, False,
-                                              opts["verbose"], opts["extra_cmake_options"],
-                                              opts["skip_install"])
+                                              args["verbose"], args["extra_cmake_options"],
+                                              args["skip_install"], args["jobs"])
         # Otherwise try to build a specific host-config
         else:
             # Command-line arg has highest priority
-            if opts["hostconfig"]:
-                hostconfig = opts["hostconfig"]
+            if args["hostconfig"]:
+                hostconfig = args["hostconfig"]
             
             # Otherwise try to reconstruct host-config path from SYS_TYPE and COMPILER
-            elif opts["automation"]:
+            elif args["automation"]:
                 if not "SYS_TYPE" in os.environ:
                     print("[ERROR: Automation mode required 'SYS_TYPE' environment variable]")
                     return 1
@@ -145,8 +149,8 @@ def main():
 
             test_root = get_build_and_test_root(repo_dir, timestamp)
             os.mkdir(test_root)
-            res = build_and_test_host_config(test_root, hostconfig_path, opts["verbose"], opts["extra_cmake_options"],
-                                             opts["skip_install"])
+            res = build_and_test_host_config(test_root, hostconfig_path, args["verbose"], args["extra_cmake_options"],
+                                             args["skip_install"], args["jobs"])
 
     finally:
         os.chdir(original_wd)

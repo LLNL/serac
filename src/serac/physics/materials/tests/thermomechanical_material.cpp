@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -210,7 +210,7 @@ TEST(ThermomechanicalMaterial, SatisfiesDissipationInequality)
   tensor<double, 3, 3>         displacement_grad_old{};
   double                       dt                 = 1.0;
   auto                         generalized_fluxes = material.calculateThermalConstitutiveOutputs(
-      displacement_grad, temperature, temperature_grad, state, displacement_grad_old, temperature_old, dt);
+                              displacement_grad, temperature, temperature_grad, state, displacement_grad_old, temperature_old, dt);
   auto [heat_capacity, source, heat_flux] = generalized_fluxes;
   auto dissipation                        = -dot(heat_flux, temperature_grad) / temperature;
   EXPECT_TRUE(dissipation >= 0.0);
@@ -283,7 +283,7 @@ TEST(ThermomechanicalMaterial, StressHasCorrectSymmetry)
   double                       temperature  = temperature_old;
   double                       dt           = 1.0;
   auto                         piola_stress = material.calculateMechanicalConstitutiveOutputs(
-      displacement_grad, temperature, temperature_grad, state, displacement_grad_old, temperature_old, dt);
+                              displacement_grad, temperature, temperature_grad, state, displacement_grad_old, temperature_old, dt);
   auto   deformation_grad = displacement_grad + I;
   auto   kirchhoff_stress = piola_stress * transpose(deformation_grad);
   double tol              = 1e-10;

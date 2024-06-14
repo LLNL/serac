@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -38,7 +38,9 @@
 #cmakedefine SERAC_USE_LUA
 #cmakedefine SERAC_USE_MFEM
 #cmakedefine SERAC_USE_MPI
+#cmakedefine SERAC_USE_PETSC
 #cmakedefine SERAC_USE_RAJA
+#cmakedefine SERAC_USE_SLEPC
 #cmakedefine SERAC_USE_SUNDIALS
 #cmakedefine SERAC_USE_TRIBOL
 #cmakedefine SERAC_USE_UMPIRE

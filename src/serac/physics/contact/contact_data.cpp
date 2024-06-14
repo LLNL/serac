@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -111,7 +111,7 @@ std::unique_ptr<mfem::BlockOperator> ContactData::mergedJacobian() const
   block_J->owns_blocks = true;
   // rather than returning different blocks for each contact interaction with Lagrange multipliers, merge them all into
   // a single block
-  mfem::Array2D<mfem::HypreParMatrix*> constraint_matrices(static_cast<int>(interactions_.size()), 1);
+  mfem::Array2D<const mfem::HypreParMatrix*> constraint_matrices(static_cast<int>(interactions_.size()), 1);
 
   for (size_t i{0}; i < interactions_.size(); ++i) {
     // this is the BlockOperator for one of the contact interactions
@@ -215,7 +215,7 @@ std::unique_ptr<mfem::BlockOperator> ContactData::mergedJacobian() const
     inactive_diag.SetDataOwner(false);
     auto& block_1_0 = static_cast<mfem::HypreParMatrix&>(block_J->GetBlock(1, 0));
     auto  block_1_1 = new mfem::HypreParMatrix(block_1_0.GetComm(), block_1_0.GetGlobalNumRows(),
-                                              block_1_0.GetRowStarts(), &inactive_diag);
+                                               block_1_0.GetRowStarts(), &inactive_diag);
     block_1_1->SetOwnerFlags(3, 3, 1);
     block_J->SetBlock(1, 1, block_1_1);
     // end building I_(inactive)
