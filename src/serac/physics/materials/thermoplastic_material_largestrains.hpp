@@ -64,11 +64,11 @@ struct J2LargeStrainsThermal {
   double        theta_ref;  // reference temperature
   double        eta;        // efficiency
 
-  /// @brief variables required to characterize the hysteresis response
+  /// @brief state variables
   struct State {
-    tensor<double, dim, dim> Fe;                           ///< plastic strain
-    tensor<double, dim, dim> eps_el;                      ///< plastic strain
-    double                   accumulated_plastic_strain;  ///< uniaxial equivalent plastic strain
+    tensor<double, dim, dim> F;                           ///< deformation gradient
+    tensor<double, dim, dim> eps_el;                      ///< elastic strain
+    double                   accumulated_plastic_strain;  ///< accumulated plastic strain
   };
 
   /** @brief */
@@ -76,11 +76,11 @@ struct J2LargeStrainsThermal {
   auto operator()(State& state, const tensor<T1, 3, 3>& du_dX, const T2 theta, const tensor<T3, 3>& grad_theta) const
   {
     // Get states
-    auto Fe_n = state.Fe;
-    if (Fe_n[0][0] == 0) {
-      Fe_n[0][0] = 1;
-      Fe_n[1][1] = 1;
-      Fe_n[2][2] = 1;
+    auto F_n = state.F;
+    if (F_n[0][0] == 0) {
+      F_n[0][0] = 1;
+      F_n[1][1] = 1;
+      F_n[2][2] = 1;
     }
     const auto eps_el_n             = state.eps_el;
     const double acc_plastic_strain = state.accumulated_plastic_strain;
@@ -99,8 +99,8 @@ struct J2LargeStrainsThermal {
 
     //- Compute e_elastic = 0.5 ln(be)
     // delta_F = F * F_inv and delta_F^T = F_n_inv^T * F^T
-    auto Fe_n_inv = inv(Fe_n);
-    auto delta_F = dot(F, Fe_n_inv);
+    auto F_n_inv = inv(F_n);
+    auto delta_F = dot(F, F_n_inv);
 
     // be = delta_F * bn * delta_F^T
     auto delta_F_T      = transpose(delta_F);
@@ -110,6 +110,8 @@ struct J2LargeStrainsThermal {
     // e_elastic = 0.5 ln(be)
     auto eps_el_trial = 0.5 * matrix_log(be);
     auto eps_el_dev_trial = dev(eps_el_trial);
+    auto eps_el_vol = eps_el_trial - eps_el_dev_trial;
+;
 
     //
     auto s_trial = 2. * G * eps_el_dev_trial;
@@ -131,16 +133,18 @@ struct J2LargeStrainsThermal {
 
       //
       eps_el_dev_trial -= (3. * G * delta_gamma / q_trial) * eps_el_dev_trial;
+      eps_el_trial -= (3. * G * delta_gamma / q_trial) * eps_el_dev_trial;
       delta_gamma_value = get_value(delta_gamma);
     }
     
     const auto s_updated = 2. * G * eps_el_dev_trial;
     
-    //
+    // update states
     state.accumulated_plastic_strain += delta_gamma_value;
-    //state.eps_el += eps_el_dev_trial;
+    state.F = F; 
+    state.eps_el = eps_el_trial;
 
-    const auto tau = s_updated + K * tr(eps_el_trial) * I;
+    const auto tau = s_updated + K * eps_el_vol;
     
     const auto sigma = tau / def(F);
 
