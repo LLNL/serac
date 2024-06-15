@@ -911,6 +911,54 @@ inline SERAC_HOST_DEVICE tuple<vec3, mat3> eig_symm(const mat3& A)
   return {eigvals, eigvecs};
 }
 
+/*
+// Should we provide this fallback, or force the author to consider how to
+// write a numerically stable version on a case-by-case basis?
+// The convenience of this is somewhat undermined by the fact that it would
+// only work for functions that already have a dual number overload.
+template <typename Function>
+double generic_eigenvalue_tangent(double lam1, double lam2, const Function& f)
+{
+  if (lam1 == lam2) {
+    return f(make_dual(lam1));
+  } else {
+    return (f(lam1) - f(lam2))/(lam1 - lam2);
+  }
+}
+*/
+
+/**
+ * @brief Constructs an isotropic tensor-valued function of a symmetric 3x3 tensor from a scalar function
+ * 
+ * This allows one to use a scalar-valued function of a scalar to construct an
+ * isotropic tensor-valued function of a symmetric tensor. The scalar function
+ * is applied to the principal values of the matrix, and then rotated back into
+ * the external coordinate system with the eigenvector matrix.
+ * 
+ * If A = V diag(lambda_0, lambda_1, lambda_2) V^T,
+ * then f(A) = V diag(f(lambda_0), f(lambda_1), f(lambda_2)) V^T
+ * 
+ * The function \p g, which we call the eigenvalue secant function, is only used
+ * if the derivative of the function is sought by having a dual number input
+ * tensor \p A. It must compute
+ *                 | df/dx, if lam1 = lam2
+ * g(lam1, lam2) = |
+ *                 | ( f(lam1) - f(lam2) ) / (lam1 - lam2), otherwise
+ *
+ * Analytically, this is a continuous function. However, in floating point arithmetic
+ * the direct implementation will often suffer from catastrophic cancellation. The
+ * presence of the \p g argument gives you a way to write this function in a numerically
+ * stable way (and thus preserve accuracy in the derivative of the tensor function).
+ * 
+ * @tparam T The datatype stored in the tensor
+ * @tparam Function Type for the functor object representing the scalar function
+ * @tparam EigvalSecantFunction Type for the functor object representing the secant eigenvalue function (see below)
+ * 
+ * @param A The matrix to apply the isotropic tensor function to.
+ * @param f A scalar-valued function of a scalar. This is applied to the eigenvalues of \p A.
+ * @param g The eigenvalue secant function
+ * @return The tensor f(A).
+ */
 template <typename T, typename Function, typename EigvalSecantFunction>
 auto symmetric_mat3_function(tensor<T, 3, 3> A, const Function& f, const EigvalSecantFunction& g)
 {
@@ -928,6 +976,7 @@ auto symmetric_mat3_function(tensor<T, 3, 3> A, const Function& f, const EigvalS
   }
 }
 
+/// Helper function for defining the derivative
 template <typename Gradient, typename Function>
 SERAC_HOST_DEVICE constexpr auto symmetric_mat3_function_with_derivative(tensor<dual<Gradient>, 3, 3> A, tensor<double, 3, 3> f_A, 
   vec3 lambda, mat3 Q, const Function& g)
@@ -949,6 +998,12 @@ SERAC_HOST_DEVICE constexpr auto symmetric_mat3_function_with_derivative(tensor<
   });
 }
 
+/**
+ * @brief Logarithm of a symmetric matrix
+ * 
+ * @param A Matrix to operate on. Must be SPD. This is not checked.
+ * @return The logarithmic mapping of \p A.
+ */
 template <typename T>
 auto log_symm(tensor<T, 3, 3> A)
 {
@@ -963,6 +1018,12 @@ auto log_symm(tensor<T, 3, 3> A)
   return symmetric_mat3_function(A, [](double x) { return std::log(x); }, g);
 }
 
+/**
+ * @brief Exponential of a symmetric matrix
+ * 
+ * @param A Matrix to operate on. Must be symmetric. This is not checked.
+ * @return Exponential mapping of \p A.
+ */
 template<typename T>
 auto exp_symm(tensor<T, 3, 3> A)
 {
@@ -977,6 +1038,12 @@ auto exp_symm(tensor<T, 3, 3> A)
   return symmetric_mat3_function(A, [](double x){ return std::exp(x); }, g);
 }
 
+/**
+ * @brief Square root of a symmetric matrix
+ * 
+ * @param A Matrix to operate on. Must be SPD. This is not checked.
+ * @return Matrix B such that B*B = A
+ */
 template<typename T>
 auto sqrt_symm(tensor<T, 3, 3> A)
 {
