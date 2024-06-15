@@ -525,7 +525,7 @@ TEST(Tensor, LogOfGeneralSymmetric)
   // use same eigenvalue matrix for A and B to ensure they commute
   const auto A = dot(Q, dot(diag(lambda_A), transpose(Q)));
   const auto B = dot(Q, dot(diag(lambda_B), transpose(Q)));
-  
+
   auto e = log_symm(dot(A, B)) - (log_symm(A) + log_symm(B));
   EXPECT_LT(norm(e), 1e-12);
 }
@@ -550,7 +550,7 @@ TEST(Tensor, LogDerivative)
     return dual<double>{A[i][j], dA[i][j]};
   });
 
-  const double epsilon = 1.0e-8;
+  const double epsilon = 1.0e-5;
 
   tensor<double, 3, 3> dlogA[3] = {
     double_dot(dlogA_dA, dA),
@@ -558,9 +558,10 @@ TEST(Tensor, LogDerivative)
     get_gradient(log_symm(Adual))
   };
 
-  EXPECT_LT(norm(dlogA[0] - dlogA[1]), 1.0e-7);
+  EXPECT_LT(norm(dlogA[0] - dlogA[1]), 1.0e-9);
   EXPECT_LT(norm(dlogA[0] - dlogA[2]), 1.0e-14);
 }
+
 
 int main(int argc, char* argv[])
 {
