@@ -562,6 +562,50 @@ TEST(Tensor, LogDerivative)
   EXPECT_LT(norm(dlogA[0] - dlogA[2]), 1.0e-14);
 }
 
+TEST(Tensor, ExponentialTraceIdentity)
+{
+  const tensor lambda{{1.1, 2.6, 2.2}};
+  const tensor<double, 3, 3> Q{{{-0.928152308749236, -0.091036503308254, -0.360895617636}  ,
+                                { 0.238177386319198,  0.599832274220295, -0.763853896664712},
+                                { 0.28601542687348 , -0.794929932679048, -0.535052873762272}}};
+  auto A = dot(Q, dot(diag(lambda), transpose(Q)));
+
+  auto expA = exp_symm(A);
+  EXPECT_NEAR(det(expA), std::exp(tr(A)), 1e-12);
+}
+
+TEST(Tensor, ExpDerivative)
+{
+  const tensor lambda{{1.1, 2.6, 2.2}};
+  const tensor<double, 3, 3> Q{{{-0.928152308749236, -0.091036503308254, -0.360895617636}  ,
+                                { 0.238177386319198,  0.599832274220295, -0.763853896664712},
+                                { 0.28601542687348 , -0.794929932679048, -0.535052873762272}}};
+  auto A = dot(Q, dot(diag(lambda), transpose(Q)));
+
+  auto expA = exp_symm(make_dual(A));
+  auto dexpA_dA = get_gradient(expA);
+
+  // perturbation should be symmetric, or else violates requirement of log_symm 
+  const tensor<double, 3, 3> dA{{{ 0.2, -0.4, -1.6},
+                                 {-0.4,  0.1, -1.7},
+                                 {-1.6, -1.7,  2.0}}};
+
+  tensor< dual<double>, 3, 3 > Adual = make_tensor< 3, 3 >([&](int i, int j) {
+    return dual<double>{A[i][j], dA[i][j]};
+  });
+
+  const double epsilon = 1.0e-6;
+
+  tensor<double, 3, 3> dexpA[3] = {
+    double_dot(dexpA_dA, dA),
+    (exp_symm(A + epsilon * dA) - exp_symm(A - epsilon * dA)) / (2 * epsilon),
+    get_gradient(exp_symm(Adual))
+  };
+
+  EXPECT_LT(norm(dexpA[0] - dexpA[1]), 1.0e-8);
+  EXPECT_LT(norm(dexpA[0] - dexpA[2]), 1.0e-13);
+}
+
 
 int main(int argc, char* argv[])
 {
