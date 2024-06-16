@@ -929,15 +929,15 @@ double generic_eigenvalue_tangent(double lam1, double lam2, const Function& f)
 
 /**
  * @brief Constructs an isotropic tensor-valued function of a symmetric 3x3 tensor from a scalar function
- * 
+ *
  * This allows one to use a scalar-valued function of a scalar to construct an
  * isotropic tensor-valued function of a symmetric tensor. The scalar function
  * is applied to the principal values of the matrix, and then rotated back into
  * the external coordinate system with the eigenvector matrix.
- * 
+ *
  * If A = V diag(lambda_0, lambda_1, lambda_2) V^T,
  * then f(A) = V diag(f(lambda_0), f(lambda_1), f(lambda_2)) V^T
- * 
+ *
  * The function \p g, which we call the eigenvalue secant function, is only used
  * if the derivative of the function is sought by having a dual number input
  * tensor \p A. It must compute
@@ -949,11 +949,11 @@ double generic_eigenvalue_tangent(double lam1, double lam2, const Function& f)
  * the direct implementation will often suffer from catastrophic cancellation. The
  * presence of the \p g argument gives you a way to write this function in a numerically
  * stable way (and thus preserve accuracy in the derivative of the tensor function).
- * 
+ *
  * @tparam T The datatype stored in the tensor
  * @tparam Function Type for the functor object representing the scalar function
  * @tparam EigvalSecantFunction Type for the functor object representing the secant eigenvalue function (see below)
- * 
+ *
  * @param A The matrix to apply the isotropic tensor function to.
  * @param f A scalar-valued function of a scalar. This is applied to the eigenvalues of \p A.
  * @param g The eigenvalue secant function
@@ -969,7 +969,7 @@ auto symmetric_mat3_function(tensor<T, 3, 3> A, const Function& f, const EigvalS
   }
   auto f_A = dot(Q, dot(diag(y), transpose(Q)));
 
-  if constexpr(!is_dual_number<T>::value) {
+  if constexpr (!is_dual_number<T>::value) {
     return f_A;
   } else {
     return symmetric_mat3_function_with_derivative(A, f_A, lambda, Q, g);
@@ -978,20 +978,20 @@ auto symmetric_mat3_function(tensor<T, 3, 3> A, const Function& f, const EigvalS
 
 /// Helper function for defining the derivative
 template <typename Gradient, typename Function>
-SERAC_HOST_DEVICE constexpr auto symmetric_mat3_function_with_derivative(tensor<dual<Gradient>, 3, 3> A, tensor<double, 3, 3> f_A, 
-  vec3 lambda, mat3 Q, const Function& g)
+SERAC_HOST_DEVICE constexpr auto symmetric_mat3_function_with_derivative(tensor<dual<Gradient>, 3, 3> A,
+                                                                         tensor<double, 3, 3> f_A, vec3 lambda, mat3 Q,
+                                                                         const Function& g)
 {
   return make_tensor<3, 3>([&](int i, int j) {
-    auto value = f_A[i][j];
+    auto     value = f_A[i][j];
     Gradient gradient{};
     for (int k = 0; k < 3; k++) {
       for (int l = 0; l < 3; l++) {
         for (int a = 0; a < 3; a++) {
           for (int b = 0; b < 3; b++) {
-            gradient += g(lambda[a], lambda[b])*Q[k][a]*Q[l][b]*Q[i][a]*Q[j][b]*A[k][l].gradient;
+            gradient += g(lambda[a], lambda[b]) * Q[k][a] * Q[l][b] * Q[i][a] * Q[j][b] * A[k][l].gradient;
           }
         }
-        
       }
     }
     return dual<Gradient>{value, gradient};
@@ -1000,7 +1000,7 @@ SERAC_HOST_DEVICE constexpr auto symmetric_mat3_function_with_derivative(tensor<
 
 /**
  * @brief Logarithm of a symmetric matrix
- * 
+ *
  * @param A Matrix to operate on. Must be SPD. This is not checked.
  * @return The logarithmic mapping of \p A.
  */
@@ -1009,22 +1009,23 @@ auto log_symm(tensor<T, 3, 3> A)
 {
   auto g = [](double lam1, double lam2) {
     if (lam1 == lam2) {
-      return 1/lam1;
+      return 1 / lam1;
     } else {
       double y = lam1 / lam2;
-      return ( std::log(y)/(y - 1.0) ) / lam2;
+      return (std::log(y) / (y - 1.0)) / lam2;
     }
   };
-  return symmetric_mat3_function(A, [](double x) { return std::log(x); }, g);
+  return symmetric_mat3_function(
+      A, [](double x) { return std::log(x); }, g);
 }
 
 /**
  * @brief Exponential of a symmetric matrix
- * 
+ *
  * @param A Matrix to operate on. Must be symmetric. This is not checked.
  * @return Exponential mapping of \p A.
  */
-template<typename T>
+template <typename T>
 auto exp_symm(tensor<T, 3, 3> A)
 {
   auto g = [](double lam1, double lam2) {
@@ -1032,25 +1033,25 @@ auto exp_symm(tensor<T, 3, 3> A)
       return std::exp(lam1);
     } else {
       double arg = lam1 - lam2;
-      return std::exp(lam2)*std::expm1(arg)/arg;
+      return std::exp(lam2) * std::expm1(arg) / arg;
     }
   };
-  return symmetric_mat3_function(A, [](double x){ return std::exp(x); }, g);
+  return symmetric_mat3_function(
+      A, [](double x) { return std::exp(x); }, g);
 }
 
 /**
  * @brief Square root of a symmetric matrix
- * 
+ *
  * @param A Matrix to operate on. Must be SPD. This is not checked.
  * @return Matrix B such that B*B = A
  */
-template<typename T>
+template <typename T>
 auto sqrt_symm(tensor<T, 3, 3> A)
 {
-  auto g = [](double lam1, double lam2) {
-    return 1.0/(std::sqrt(lam1) + std::sqrt(lam2));
-  };
-  return symmetric_mat3_function(A, [](double x){ return std::sqrt(x); }, g);
+  auto g = [](double lam1, double lam2) { return 1.0 / (std::sqrt(lam1) + std::sqrt(lam2)); };
+  return symmetric_mat3_function(
+      A, [](double x) { return std::sqrt(x); }, g);
 }
 
 }  // namespace serac
