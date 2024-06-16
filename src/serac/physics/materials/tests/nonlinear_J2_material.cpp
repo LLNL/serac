@@ -16,6 +16,10 @@
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/physics/materials/material_verification_tools.hpp"
 
+// these are for writing stress to a file
+// can delete once stress has been visually inspected
+#include <fstream>
+
 namespace serac {
 
 TEST(NonlinearJ2Material, PowerLawHardeningWorksWithDuals)
@@ -75,6 +79,42 @@ TEST(NonlinearJ2Material, Uniaxial)
     ASSERT_LE(std::abs(s - stress_exact(e)), 1e-10 * std::abs(stress_exact(e)));
     ASSERT_LE(std::abs(pe - plastic_strain_exact(e)), 1e-10 * std::abs(plastic_strain_exact(e)));
   }
+};
+
+TEST(FiniteDeformationJ2Material, Uniaxial)
+{
+  double                                            E       = 1.0;
+  double                                            nu      = 0.25;
+  double                                            sigma_y = 0.01;
+  double                                            Hi      = E / 100.0;
+  double                                            eps0    = sigma_y / Hi;
+  double                                            n       = 1;
+  solid_mechanics::PowerLawHardening                hardening{.sigma_y = sigma_y, .n = n, .eps0 = eps0};
+  solid_mechanics::J2Nonlinear<decltype(hardening)> material{.E = E, .nu = nu, .hardening = hardening, .density = 1.0};
+
+  auto internal_state   = solid_mechanics::J2Nonlinear<decltype(hardening)>::State{};
+  auto strain           = [=](double t) { return sigma_y / E * t; };
+  auto response_history = uniaxial_stress_test(2.0, 20, material, internal_state, strain);
+
+  auto stress_exact = [=](double epsilon) {
+    return epsilon < sigma_y / E ? E * epsilon : E / (E + Hi) * (sigma_y + Hi * epsilon);
+  };
+  auto plastic_strain_exact = [=](double epsilon) {
+    return epsilon < sigma_y / E ? E * epsilon : (E * epsilon - sigma_y) / (E + Hi);
+  };
+
+  std::ofstream file;
+  file.open("stress.txt");
+
+  for (auto r : response_history) {
+    double e  = get<1>(r)[0][0];                 // strain
+    double s  = get<2>(r)[0][0];                 // stress
+    double pe = get<3>(r).plastic_strain[0][0];  // plastic strain
+    ASSERT_LE(std::abs(s - stress_exact(e)), 1E300*1e-10 * std::abs(stress_exact(e)));
+    ASSERT_LE(std::abs(pe - plastic_strain_exact(e)), 1E300*1e-10 * std::abs(plastic_strain_exact(e)));
+    file << e << " " << s << std::endl;
+  }
+  file.close();
 };
 
 }  // namespace serac
