@@ -294,6 +294,69 @@ struct J2 {
   }
 };
 
+/// @brief J2 material with nonlinear isotropic hardening.
+template <typename HardeningType>
+struct J2FiniteDeformationNonlinear {
+  static constexpr int    dim = 3;      ///< spatial dimension
+  static constexpr double tol = 1e-10;  ///< relative tolerance on residual mag to judge convergence of return map
+
+  double        E;          ///< Young's modulus
+  double        nu;         ///< Poisson's ratio
+  HardeningType hardening;  ///< Flow stress hardening model
+  double        density;    ///< mass density
+
+  /// @brief variables required to characterize the hysteresis response
+  struct State {
+    tensor<double, dim, dim> Fpinv = DenseIdentity<3>(); ///< plastic distortion tensor
+    double accumulated_plastic_strain;  ///< uniaxial equivalent plastic strain
+  };
+
+  /** @brief calculate the Cauchy stress, given the displacement gradient and previous material state */
+  template <typename T>
+  auto operator()(State& state, const T du_dX) const
+  {
+    using std::sqrt;
+    constexpr auto I = Identity<dim>();
+    const double   K = E / (3.0 * (1.0 - 2.0 * nu));
+    const double   G = 0.5 * E / (1.0 + nu);
+
+    // (i) elastic predictor
+    auto F = du_dX + I;
+    auto Fe = dot(F, state.Fpinv);
+    auto Ee = 0.5*log_symm(dot(transpose(Fe), Fe));
+    auto p = K * tr(Ee);
+    auto s = 2.0 * G * dev(Ee);
+    auto q = sqrt(1.5) * norm(s);
+
+    // (ii) admissibility
+    const double eqps_old = state.accumulated_plastic_strain;
+    auto         residual = [eqps_old, G, *this](auto delta_eqps, auto trial_mises) {
+      return trial_mises - 3.0 * G * delta_eqps - this->hardening(eqps_old + delta_eqps);
+    };
+    if (residual(0.0, get_value(q)) > tol * hardening.sigma_y) {
+      // (iii) return mapping
+
+      // Note the tolerance for convergence is the same as the tolerance for entering the return map.
+      // This ensures that if the constitutive update is called again with the updated internal
+      // variables, the return map won't be repeated.
+      ScalarSolverOptions opts{.xtol = 0, .rtol = tol * hardening.sigma_y, .max_iter = 25};
+      double              lower_bound = 0.0;
+      double              upper_bound = (get_value(q) - hardening(eqps_old)) / (3.0 * G);
+      auto [delta_eqps, status]       = solve_scalar_equation(residual, 0.0, lower_bound, upper_bound, opts, q);
+
+      auto Np = 1.5 * s / q;
+
+      s = s - 2.0 * G * delta_eqps * Np;
+      auto A = exp_symm(-delta_eqps*Np);
+      Fe = dot(Fe, A);
+      state.accumulated_plastic_strain += get_value(delta_eqps);
+      state.Fpinv = dot(state.Fpinv, get_value(A));
+    }
+    auto M = s + p * I; // Mandel stress
+    return dot(dot(Fe, M), inv(Fe))/det(F);
+  }
+};
+
 /**
  * @brief Transform the Kirchhoff stress to the Piola stress
  *
