@@ -77,6 +77,42 @@ TEST(NonlinearJ2Material, Uniaxial)
   }
 };
 
+TEST(FiniteDeformationNonlinearJ2Material, Uniaxial)
+{
+  /* Log strain J2 plasticity has the nice feature that the exact uniaxial stress solution from
+     small strain plasticity are applicable, if you replace the lineasr strain with log strain
+     and use the Kirchhoff stress as the output.
+  */
+  double                                            E       = 1.0;
+  double                                            nu      = 0.25;
+  double                                            sigma_y = 0.01;
+  double                                            Hi      = E / 100.0;
+  double                                            eps0    = sigma_y / Hi;
+  double                                            n       = 1;
+  solid_mechanics::PowerLawHardening                hardening{.sigma_y = sigma_y, .n = n, .eps0 = eps0};
+  solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)> material{.E = E, .nu = nu, .hardening = hardening, .density = 1.0};
+
+  auto internal_state   = solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)>::State{};
+  auto strain           = [=](double t) { return sigma_y / E * t; };
+  auto response_history = uniaxial_stress_test(2.0, 4, material, internal_state, strain);
+
+  auto stress_exact = [=](double epsilon) {
+    return epsilon < sigma_y / E ? E * epsilon : E / (E + Hi) * (sigma_y + Hi * epsilon);
+  };
+  auto plastic_strain_exact = [=](double epsilon) {
+    return epsilon < sigma_y / E ? 0.0: (E * epsilon - sigma_y) / (E + Hi);
+  };
+
+  for (auto r : response_history) {
+    double J = detApIm1(get<1>(r)) + 1;
+    double e  = std::log1p(get<1>(r)[0][0]); // log strain
+    double s  = get<2>(r)[0][0]*J; // Kirchhoff stress
+    double pe = -std::log(get<3>(r).Fpinv[0][0]);  // plastic strain
+    ASSERT_NEAR(s,  stress_exact(e), 1e-6 * std::abs(stress_exact(e)));
+    ASSERT_NEAR(pe, plastic_strain_exact(e), 1e-6 * std::abs(plastic_strain_exact(e)));
+  }
+};
+
 }  // namespace serac
 
 int main(int argc, char* argv[])
