@@ -324,6 +324,8 @@ struct J2FiniteDeformationNonlinear {
     auto F = du_dX + I;
     auto Fe = dot(F, state.Fpinv);
     auto Ee = 0.5*log_symm(dot(transpose(Fe), Fe));
+    // From this point until the state variable update, the algorithm exactly coincides with the
+    // small strain one.
     auto p = K * tr(Ee);
     auto s = 2.0 * G * dev(Ee);
     auto q = sqrt(1.5) * norm(s);
@@ -352,7 +354,9 @@ struct J2FiniteDeformationNonlinear {
       state.accumulated_plastic_strain += get_value(delta_eqps);
       state.Fpinv = dot(state.Fpinv, get_value(A));
     }
-    auto M = s + p * I; // Mandel stress
+    // Mandel stress
+    auto M = s + p * I;
+    // convert to Cauchy
     return dot(dot(Fe, M), inv(Fe))/det(F);
   }
 };
