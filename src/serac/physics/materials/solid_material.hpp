@@ -294,7 +294,7 @@ struct J2 {
   }
 };
 
-/// @brief J2 material with nonlinear isotropic hardening.
+/// @brief Finite deformation version of J2 material with nonlinear isotropic hardening.
 template <typename HardeningType>
 struct J2FiniteDeformationNonlinear {
   static constexpr int    dim = 3;      ///< spatial dimension
@@ -307,7 +307,7 @@ struct J2FiniteDeformationNonlinear {
 
   /// @brief variables required to characterize the hysteresis response
   struct State {
-    tensor<double, dim, dim> Fpinv = DenseIdentity<3>(); ///< plastic distortion tensor
+    tensor<double, dim, dim> Fpinv = DenseIdentity<3>(); ///< inverse of plastic distortion tensor
     double accumulated_plastic_strain;  ///< uniaxial equivalent plastic strain
   };
 
