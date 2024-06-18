@@ -49,14 +49,14 @@ struct integral_constant {
 
 SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <typename lambda, int... i>
-SERAC_HOST_DEVICE constexpr void for_constexpr(const lambda & f, integral_constant<i>... args)
+SERAC_HOST_DEVICE constexpr void for_constexpr(const lambda& f, integral_constant<i>... args)
 {
   f(args...);
 }
 
 SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <int... n, typename lambda, typename... arg_types>
-SERAC_HOST_DEVICE constexpr void for_constexpr(const lambda & f, std::integer_sequence<int, n...>, arg_types... args)
+SERAC_HOST_DEVICE constexpr void for_constexpr(const lambda& f, std::integer_sequence<int, n...>, arg_types... args)
 {
   (detail::for_constexpr(f, args..., integral_constant<n>{}), ...);
 }
@@ -94,7 +94,7 @@ SERAC_HOST_DEVICE constexpr void for_constexpr(const lambda & f, std::integer_se
  *
  */
 template <int... n, typename lambda>
-SERAC_HOST_DEVICE constexpr void for_constexpr(const lambda & f)
+SERAC_HOST_DEVICE constexpr void for_constexpr(const lambda& f)
 {
   detail::for_constexpr(f, std::make_integer_sequence<int, n>{}...);
 }

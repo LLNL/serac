@@ -67,7 +67,7 @@ struct TestThermalIntegratorTwo {
 
 struct TrivialIntegrator {
   template <typename UnusedType>
-  SERAC_HOST_DEVICE auto operator()(double /*t*/, UnusedType /*position*/) const 
+  SERAC_HOST_DEVICE auto operator()(double /*t*/, UnusedType /*position*/) const
   {
     return 1.0;
   }

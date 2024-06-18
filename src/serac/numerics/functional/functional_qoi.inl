@@ -174,7 +174,7 @@ public:
 
   /// @overload
   template <int dim, int... args, typename lambda, typename qpt_data_type = Nothing>
-  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, const lambda & integrand, Domain& domain,
+  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, const lambda& integrand, Domain& domain,
                          std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
   {
     if (domain.mesh_.GetNE() == 0) return;
@@ -201,7 +201,7 @@ public:
    * and @a spatial_dim template parameter
    */
   template <int dim, int... args, typename lambda, typename qpt_data_type = void>
-  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, const lambda & integrand, mfem::Mesh& mesh)
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, const lambda& integrand, mfem::Mesh& mesh)
   {
     auto num_bdr_elements = mesh.GetNBE();
     if (num_bdr_elements == 0) return;
@@ -215,7 +215,7 @@ public:
 
   /// @overload
   template <int dim, int... args, typename lambda>
-  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, const lambda & integrand, const Domain& domain)
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, const lambda& integrand, const Domain& domain)
   {
     auto num_bdr_elements = domain.mesh_.GetNBE();
     if (num_bdr_elements == 0) return;
@@ -256,7 +256,7 @@ public:
    * @brief Adds a volume integral, i.e., over 3D elements in R^3
    */
   template <int... args, typename lambda, typename qpt_data_type = Nothing>
-  void AddVolumeIntegral(DependsOn<args...> which_args, const lambda & integrand, mfem::Mesh& domain,
+  void AddVolumeIntegral(DependsOn<args...> which_args, const lambda& integrand, mfem::Mesh& domain,
                          std::shared_ptr<QuadratureData<qpt_data_type>>& data = NoQData)
   {
     AddDomainIntegral(Dimension<3>{}, which_args, integrand, domain, data);
@@ -264,7 +264,7 @@ public:
 
   /// @brief alias for Functional::AddBoundaryIntegral(Dimension<2>{}, integrand, domain);
   template <int... args, typename lambda>
-  void AddSurfaceIntegral(DependsOn<args...> which_args, const lambda & integrand, mfem::Mesh& domain)
+  void AddSurfaceIntegral(DependsOn<args...> which_args, const lambda& integrand, mfem::Mesh& domain)
   {
     AddBoundaryIntegral(Dimension<2>{}, which_args, integrand, domain);
   }

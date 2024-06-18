@@ -423,7 +423,7 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename MaterialType>
-  void setMaterial(DependsOn<active_parameters...>, const MaterialType & material)
+  void setMaterial(DependsOn<active_parameters...>, const MaterialType& material)
   {
     ThermalMaterialIntegrand<MaterialType> integrand(material);
 
@@ -433,7 +433,7 @@ public:
 
   /// @overload
   template <typename MaterialType>
-  void setMaterial(const MaterialType & material)
+  void setMaterial(const MaterialType& material)
   {
     setMaterial(DependsOn<>{}, material);
   }

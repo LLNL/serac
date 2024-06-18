@@ -75,7 +75,7 @@ struct QFunctionArgument<L2<p, c>, Dimension<dim>> {
 /// @overload
 SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <typename lambda, typename T, int... i>
-SERAC_HOST_DEVICE auto apply_qf_helper(const lambda & qf, double t, const tensor<double, 2>& x_q, const T& arg_tuple,
+SERAC_HOST_DEVICE auto apply_qf_helper(const lambda& qf, double t, const tensor<double, 2>& x_q, const T& arg_tuple,
                                        std::integer_sequence<int, i...>)
 {
   tensor<double, 2> J_q{};
@@ -85,7 +85,7 @@ SERAC_HOST_DEVICE auto apply_qf_helper(const lambda & qf, double t, const tensor
 /// @overload
 SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <typename lambda, typename T, int... i>
-SERAC_HOST_DEVICE auto apply_qf_helper(const lambda & qf, double t, const tensor<double, 3>& x_q, const T& arg_tuple,
+SERAC_HOST_DEVICE auto apply_qf_helper(const lambda& qf, double t, const tensor<double, 3>& x_q, const T& arg_tuple,
                                        std::integer_sequence<int, i...>)
 {
   constexpr int                dim = 3;
@@ -95,7 +95,7 @@ SERAC_HOST_DEVICE auto apply_qf_helper(const lambda & qf, double t, const tensor
 
 /// @overload
 template <typename lambda, typename coords_type, typename... T>
-SERAC_HOST_DEVICE auto apply_qf(const lambda & qf, double t, const coords_type & x_q, const serac::tuple<T...>& arg_tuple)
+SERAC_HOST_DEVICE auto apply_qf(const lambda& qf, double t, const coords_type& x_q, const serac::tuple<T...>& arg_tuple)
 {
   return apply_qf_helper(qf, t, x_q, arg_tuple, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>{});
 }
