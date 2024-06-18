@@ -39,7 +39,7 @@ if [[ "$DO_DOCS_CHECK" == "yes" ]] ; then
         echo "sphinx not found: $SPHINX_EXECUTABLE"
         exit 1
     fi    
-    DOXYGEN_EXECUTABLE=/usr/bin/doxygen
+    DOXYGEN_EXECUTABLE=/usr/local/bin/doxygen
     if [[ ! -f "$DOXYGEN_EXECUTABLE" ]]; then
         echo "doxygen not found: $DOXYGEN_EXECUTABLE"
         exit 1

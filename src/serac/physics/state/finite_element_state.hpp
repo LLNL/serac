@@ -21,6 +21,7 @@
 
 #include "serac/infrastructure/variant.hpp"
 #include "serac/physics/state/finite_element_vector.hpp"
+#include "serac/numerics/functional/domain.hpp"
 
 namespace serac {
 
@@ -198,6 +199,12 @@ public:
 
   /// \overload
   void projectOnBoundary(mfem::VectorCoefficient& coef, const mfem::Array<int>& markers);
+
+  /// \overload
+  void project(mfem::Coefficient& coef, const Domain& d);
+
+  /// \overload
+  void project(mfem::VectorCoefficient& coef, const Domain& d);
 
   /**
    * @brief Construct a grid function from the finite element state true vector
