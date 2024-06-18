@@ -176,6 +176,65 @@ TEST(FiniteDeformationNonlinearJ2Material, DerivativeCorrectness)
   EXPECT_LT(norm(dsig[0] - dsig[1]), 1e-5*norm(dsig[1]));
 }
 
+TEST(FiniteDeformationNonlinearJ2Material, FrameIndifference)
+{
+  // parameters
+  double E = 200.0e9;
+  double nu = 0.25;
+  double sigma_y = 350e6;
+  double eps0 = sigma_y / E;
+  double n = 3;
+
+  // hardening model
+  solid_mechanics::PowerLawHardening hardening{.sigma_y = sigma_y, .n = n, .eps0 = eps0};
+
+  // material model
+  solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)> material{.E = E, .nu = nu, .hardening = hardening, .density = 1.0};
+
+  // clang-format off
+  const tensor<double, 3, 3> H{{
+    { 0.025, -0.008,  0.005},
+    {-0.008, -0.01,   0.003},
+    { 0.005,  0.003,  0.0}
+  }};
+  
+  // this is a rotation matrix, randomly generated in numpy
+  const tensor<double, 3, 3> Q{{
+    {-0.928152308749236, -0.091036503308254, -0.360895617636},
+    {0.238177386319198, 0.599832274220295, -0.763853896664712},
+    {0.28601542687348, -0.794929932679048, -0.535052873762272}
+  }};
+  //clang-format on
+
+  // before we check frame indifference, make sure Q is a rotation
+  constexpr auto I = Identity<3>();
+  ASSERT_LT(norm(dot(transpose(Q), Q) - I), 1e-14);
+
+  // initialize internal state variables
+  auto internal_state = solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)>::State{};
+
+  auto sigma = material(internal_state, H);
+
+  // make sure that this load case is actually yielding
+  ASSERT_GT(internal_state.accumulated_plastic_strain, 1e-3);
+
+  // transform displacement gradient to new coordinate frame
+  // H_star = F_star - I
+  //        = QF - I
+  //        = Q(H + I) - I
+  auto H_star = dot(Q, H + I) - I;
+
+  auto internal_state_star = solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)>::State{};
+  auto sigma_star = material(internal_state_star, H_star);
+
+  auto error = sigma_star - dot(dot(Q, sigma), transpose(Q));
+  ASSERT_LT(norm(error), 1e-13*norm(sigma));
+
+  // The plastic distortion Fp is in the intermediate space and should be invariant
+  error = internal_state.Fpinv - internal_state_star.Fpinv;
+  ASSERT_LT(norm(error), 1e-13*norm(internal_state.Fpinv));
+}
+
 }  // namespace serac
 
 int main(int argc, char* argv[])
