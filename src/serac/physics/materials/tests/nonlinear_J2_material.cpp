@@ -113,6 +113,59 @@ TEST(FiniteDeformationNonlinearJ2Material, Uniaxial)
   }
 };
 
+TEST(FiniteDeformationNonlinearJ2Material, DerivativeCorrectness)
+{
+  // parameters
+  double E = 200.0e9;
+  double nu = 0.25;
+  double sigma_y = 350e6;
+  double eps0 = sigma_y / E;
+  double n = 3;
+
+  // hardening model
+  solid_mechanics::PowerLawHardening hardening{.sigma_y = sigma_y, .n = n, .eps0 = eps0};
+
+  // material model
+  solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)> material{.E = E, .nu = nu, .hardening = hardening, .density = 1.0};
+
+  // initialize internal state variables
+  auto internal_state = solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)>::State{};
+
+  // strain
+  // clang-format off
+  const tensor<double, 3, 3> H{{{ 0.025, -0.008,  0.005},
+                                {-0.008, -0.01,   0.003},
+                                { 0.005,  0.003,  0.0}}};
+
+  const tensor<double, 3, 3> dH{{{0.002, 0.0, 0.001},
+                                 {0.0, 0.01, 0.0},
+                                 {-0.001, 0.0, 0.001}}};
+  // clang-format on
+  auto stress_and_tangent = material(internal_state, make_dual(H));
+  // auto stress = get_value(stress_and_tangent);
+  auto tangent = get_gradient(stress_and_tangent);
+
+  // make sure that this load case is actually yielding
+  ASSERT_GT(internal_state.accumulated_plastic_strain, 1e-3);
+
+  //tensor<dual<double>, 3, 3> Hdual = make_tensor<3, 3>([&](int i, int j) { return dual<double>{H[i][j], dH[i][j]}; });
+
+  const double epsilon = 1.0e-5;
+
+  auto internal_state_old_p = solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)>::State{};
+  auto stress_p = material(internal_state_old_p, H + epsilon * dH);
+  ASSERT_GT(internal_state_old_p.accumulated_plastic_strain, 1e-3);
+
+  auto internal_state_old_m = solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)>::State{};
+  auto stress_m = material(internal_state_old_m, H - epsilon * dH);
+  ASSERT_GT(internal_state_old_m.accumulated_plastic_strain, 1e-3);
+
+  tensor<double, 3, 3> dsig[2] = {double_dot(tangent, dH),
+                                  (stress_p - stress_m) / (2 * epsilon)};
+
+  EXPECT_LT(norm(dsig[0] - dsig[1]), 1.0e-9);
+}
+
 }  // namespace serac
 
 int main(int argc, char* argv[])
