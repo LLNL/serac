@@ -201,10 +201,10 @@ spack:
           prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/cppcheck-2.9
       buildable: false
     doxygen:
-      version: [1.9.6]
+      version: [1.9.8]
       externals:
-        - spec: doxygen@1.9.6
-          prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.9.6
+        - spec: doxygen@1.9.8
+          prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.9.8
       buildable: false
     llvm:
       version: [14.0.5]
@@ -216,13 +216,13 @@ spack:
       version: [7.0.105]
       externals:
         - spec: py-ats@7.0.105
-          prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.10.10
+          prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.11.7
       buildable: false
     py-sphinx:
-      version: [7.0.0]
+      version: [7.2.6]
       externals:
-        - spec: py-sphinx@7.0.0
-          prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.10.10
+        - spec: py-sphinx@7.2.6
+          prefix: /usr/workspace/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.11.7
       buildable: false
     python:
       version: [3.8.2]

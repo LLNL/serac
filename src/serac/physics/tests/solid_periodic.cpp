@@ -76,7 +76,7 @@ void periodic_test(mfem::Element::Type element_type)
   solid_solver.setParameter(0, user_defined_bulk_modulus);
   solid_solver.setParameter(1, user_defined_shear_modulus);
 
-  solid_mechanics::ParameterizedNeoHookeanSolid<dim> mat{1.0, 0.0, 0.0};
+  solid_mechanics::ParameterizedNeoHookeanSolid mat{1.0, 0.0, 0.0};
   solid_solver.setMaterial(DependsOn<0, 1>{}, mat);
 
   // Boundary conditions:

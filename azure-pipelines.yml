@@ -6,8 +6,8 @@
 #
 
 variables:
-  Clang_14_ImageName: 'seracllnl/tpls:clang-14_05-08-24_18h-37m'
-  GCC_13_ImageName: 'seracllnl/tpls:gcc-13_05-08-24_18h-37m'
+  Clang_14_ImageName: 'seracllnl/tpls:clang-14_05-31-24_19h-38m'
+  GCC_13_ImageName: 'seracllnl/tpls:gcc-13_05-31-24_19h-38m'
 
 jobs:
 - job: Build_and_Test
@@ -55,7 +55,7 @@ jobs:
     submodules: recursive
   - script:  |
       echo " -e $TEST_TARGET -e HOST_CONFIG $(Compiler_ImageName) ./scripts/llnl/build_src.py $BUILD_SRC_OPTS -v --host-config $HOST_CONFIG --extra-cmake-options \"${CMAKE_OPTS} -DCMAKE_BUILD_TYPE=$BUILD_TYPE\""
-      docker run --rm -v `pwd`:/home/serac/serac -e TEST_TARGET -e HOST_CONFIG $(Compiler_ImageName) ./serac/scripts/llnl/build_src.py $BUILD_SRC_OPTS -v --host-config $HOST_CONFIG --extra-cmake-options "${CMAKE_OPTS} -DCMAKE_BUILD_TYPE=$BUILD_TYPE"
+      docker run --rm -v `pwd`:/home/serac/serac -e TEST_TARGET -e HOST_CONFIG $(Compiler_ImageName) ./serac/scripts/llnl/build_src.py $BUILD_SRC_OPTS -v --host-config $HOST_CONFIG --extra-cmake-options "${CMAKE_OPTS} -DCMAKE_BUILD_TYPE=$BUILD_TYPE" --jobs 4
 
     displayName: '$(TEST_TARGET) Build & Test'
   - task: PublishTestResults@2
