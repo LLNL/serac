@@ -38,7 +38,6 @@ endif()
 serac_add_tests( SOURCES       axom_smoketest.cpp
                  DEPENDS_ON    axom::inlet)
 
-
 if(PETSC_FOUND)
     serac_add_tests(SOURCES       petsc_smoketest.cpp
                     DEPENDS_ON    PkgConfig::PETSC gtest axom::slic
