@@ -38,10 +38,15 @@ endif()
 serac_add_tests( SOURCES       axom_smoketest.cpp
                  DEPENDS_ON    axom::inlet)
 
-serac_add_tests(SOURCES       mfem_petsc_smoketest.cpp
-                DEPENDS_ON    mfem gtest serac_infrastructure
-                NUM_MPI_TASKS 4)
 
-serac_add_tests(SOURCES       mfem_slepc_smoketest.cpp
-                DEPENDS_ON    mfem gtest serac_infrastructure
-                NUM_MPI_TASKS 4)
+if (SERAC_USE_PETSC AND PETSC_FOUND)
+    serac_add_tests(SOURCES       mfem_petsc_smoketest.cpp
+                    DEPENDS_ON    mfem gtest serac_infrastructure
+                    NUM_MPI_TASKS 4)
+
+    if (SERAC_USE_SLEPC AND SLEPC_FOUND)
+        serac_add_tests(SOURCES       mfem_slepc_smoketest.cpp
+                        DEPENDS_ON    mfem gtest serac_infrastructure
+                        NUM_MPI_TASKS 4)
+    endif()
+endif()
