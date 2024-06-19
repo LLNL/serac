@@ -210,6 +210,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     # Conflicts
     #
 
+    conflicts("~petsc", when="+slepc", msg="PETSc must be built when building with SLEPc!")
+
     conflicts("sundials@:6.0.0", when="+sundials",
               msg="Sundials needs to be greater than 6.0.0")
 

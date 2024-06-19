@@ -182,6 +182,40 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     message(STATUS "Sundials support is ${SERAC_USE_SUNDIALS}")
 
     #------------------------------------------------------------------------------
+    # PETSc
+    #------------------------------------------------------------------------------
+    if (PETSC_DIR)
+        serac_assert_is_directory(DIR_VARIABLE PETSC_DIR)
+        set(SERAC_USE_PETSC ON CACHE BOOL "")
+        
+        # Note: MFEM sets PETSC_FOUND itself
+        if (NOT SERAC_ENABLE_CODEVELOP)
+            set(PETSC_FOUND TRUE)
+        endif()
+    else()
+        set(SERAC_USE_PETSC OFF CACHE BOOL "")
+        set(PETSC_FOUND FALSE)
+    endif()
+    message(STATUS "PETSc support is ${SERAC_USE_PETSC}")
+
+    #------------------------------------------------------------------------------
+    # SLEPc
+    #------------------------------------------------------------------------------
+    if (SLEPC_DIR)
+        serac_assert_is_directory(DIR_VARIABLE SLEPC_DIR)
+        set(SERAC_USE_SLEPC ON CACHE BOOL "")
+        
+        # Note: MFEM sets SLEPC_FOUND itself
+        if (NOT SERAC_ENABLE_CODEVELOP)
+            set(SLEPC_FOUND TRUE)
+        endif()
+    else()
+        set(SERAC_USE_SLEPC OFF CACHE BOOL "")
+        set(SLEPC_FOUND FALSE)
+    endif()
+    message(STATUS "SLEPc support is ${SERAC_USE_SLEPC}")
+
+    #------------------------------------------------------------------------------
     # MFEM
     #------------------------------------------------------------------------------
     if(NOT SERAC_ENABLE_CODEVELOP)
