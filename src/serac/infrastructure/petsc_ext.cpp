@@ -16,19 +16,32 @@
 namespace serac::mfem_ext {
 
 // Static functions needed to create a shell PC
-typedef struct {
-  mfem::Solver* solver;
-  bool          ownsop;
-} __mfem_pc_shell_ctx;
 
-static PetscErrorCode __mfem_pc_shell_view(PC pc, PetscViewer viewer)
+/// @brief Context to store wrapped solver object
+typedef struct {
+  /// @brief Wrapped solver object
+  mfem::Solver* solver;
+
+  /// @brief Flag indicating whether @a solver is owned by the preconditioner, generally false.
+  bool owns_op;
+} SolverWrapperCtx;
+
+/**
+ * @brief Callback for printing information about the preconditioner object to a viewer
+ *
+ * @param[in] pc Shell preconditioner object to print
+ * @param[out] viewer Viewer to output information to
+ *
+ * @return Error code, or 0 on success.
+ */
+static PetscErrorCode solverWrapperView(PC pc, PetscViewer viewer)
 {
-  __mfem_pc_shell_ctx* ctx;
+  SolverWrapperCtx* ctx;
 
   PetscFunctionBeginUser;
   auto* void_ctx = static_cast<void*>(&ctx);
   PetscCall(PCShellGetContext(pc, &void_ctx));
-  ctx = static_cast<__mfem_pc_shell_ctx*>(void_ctx);
+  ctx = static_cast<SolverWrapperCtx*>(void_ctx);
   if (ctx->solver) {
     mfem::PetscPreconditioner* ppc = dynamic_cast<mfem::PetscPreconditioner*>(ctx->solver);
     if (ppc) {
@@ -38,22 +51,32 @@ static PetscErrorCode __mfem_pc_shell_view(PC pc, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode __mfem_pc_shell_apply(PC pc, Vec x, Vec y)
+/**
+ * @brief Callback for applying the Mult() function of the wrapped solver
+ *
+ * @param[in,out] pc Shell preconditioner object containing the solver
+ * @param[in] x The input (right-hand-side) vector
+ * @param[out] y The output (solution) vector
+ *
+ * @return Error code, or 0 on success.
+ */
+static PetscErrorCode solverWrapperMult(PC pc, Vec x, Vec y)
 {
-  Mat                  A;
-  PetscBool            is_hypre;
-  __mfem_pc_shell_ctx* ctx;
+  Mat               A;
+  PetscBool         is_hypre;
+  SolverWrapperCtx* ctx;
 
   PetscFunctionBeginUser;
   auto* void_ctx = static_cast<void*>(&ctx);
   PetscCall(PCShellGetContext(pc, &void_ctx));
-  ctx = static_cast<__mfem_pc_shell_ctx*>(void_ctx);
+  ctx = static_cast<SolverWrapperCtx*>(void_ctx);
   mfem::PetscParVector xx(x, true);
   mfem::PetscParVector yy(y, true);
   // Get the operator from the nonlinear solver and wrap as mfem::PetscParMatrix
   PetscCall(PCGetOperators(pc, nullptr, &A));
   PetscCall(PetscObjectTypeCompare(reinterpret_cast<PetscObject>(A), MATHYPRE, &is_hypre));
   std::unique_ptr<mfem::Operator> mat;
+  // If the MatType is MATHYPRE, we should wrap as a HypreParMatrix for non-PETSc solvers
   if (is_hypre) {
     hypre_ParCSRMatrix* hypre_mat;
     PetscCall(MatHYPREGetParCSR(A, &hypre_mat));
@@ -72,22 +95,32 @@ static PetscErrorCode __mfem_pc_shell_apply(PC pc, Vec x, Vec y)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode __mfem_pc_shell_apply_transpose(PC pc, Vec x, Vec y)
+/**
+ * @brief Callback for applying the MultTranspose() function of the wrapped solver
+ *
+ * @param[in,out] pc Shell preconditioner object containing the solver
+ * @param[in] x The input (right-hand-side) vector
+ * @param[out] y The output (solution) vector
+ *
+ * @return Error code, or 0 on success.
+ */
+static PetscErrorCode solverWrapperMultTranspose(PC pc, Vec x, Vec y)
 {
-  Mat                  A;
-  PetscBool            is_hypre;
-  __mfem_pc_shell_ctx* ctx;
+  Mat               A;
+  PetscBool         is_hypre;
+  SolverWrapperCtx* ctx;
 
   PetscFunctionBeginUser;
   auto* void_ctx = static_cast<void*>(&ctx);
   PetscCall(PCShellGetContext(pc, &void_ctx));
-  ctx = static_cast<__mfem_pc_shell_ctx*>(void_ctx);
+  ctx = static_cast<SolverWrapperCtx*>(void_ctx);
   mfem::PetscParVector xx(x, true);
   mfem::PetscParVector yy(y, true);
   // Get the operator from the nonlinear solver and wrap as mfem::PetscParMatrix
   PetscCall(PCGetOperators(pc, nullptr, &A));
   PetscCall(PetscObjectTypeCompare(reinterpret_cast<PetscObject>(A), MATHYPRE, &is_hypre));
   std::unique_ptr<mfem::Operator> mat;
+  // If the MatType is MATHYPRE, we should wrap as a HypreParMatrix for non-PETSc solvers
   if (is_hypre) {
     hypre_ParCSRMatrix* hypre_mat;
     PetscCall(MatHYPREGetParCSR(A, &hypre_mat));
@@ -106,44 +139,44 @@ static PetscErrorCode __mfem_pc_shell_apply_transpose(PC pc, Vec x, Vec y)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode __mfem_pc_shell_setup(PC pc)
+/**
+ * @brief Callback to destroy the SolverWrapperCtx object
+ *
+ * @param[in,out] pc Shell preconditioner object
+ *
+ * @return Error code, or 0 on success.
+ */
+static PetscErrorCode solverWrapperDestroy(PC pc)
 {
-  __mfem_pc_shell_ctx* ctx;
-
   PetscFunctionBeginUser;
-  auto* void_ctx = static_cast<void*>(&ctx);
+  void* void_ctx;
   PetscCall(PCShellGetContext(pc, &void_ctx));
-  ctx = static_cast<__mfem_pc_shell_ctx*>(void_ctx);
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode __mfem_pc_shell_destroy(PC pc)
-{
-  __mfem_pc_shell_ctx* ctx;
-
-  PetscFunctionBeginUser;
-  auto* void_ctx = static_cast<void*>(&ctx);
-  PetscCall(PCShellGetContext(pc, &void_ctx));
-  ctx = static_cast<__mfem_pc_shell_ctx*>(void_ctx);
-  if (ctx->ownsop) {
+  SolverWrapperCtx* ctx = static_cast<SolverWrapperCtx*>(void_ctx);
+  if (ctx->owns_op) {
     delete ctx->solver;
   }
-  PetscCall(PetscFree(void_ctx));
-  ctx = NULL;
+  PetscCall(PetscFree(ctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// Sets the type of PC to PCSHELL and wraps the solver action
-// if ownsop is true, ownership of precond is transferred to the PETSc object
-static PetscErrorCode MakeShellPC(PC pc, mfem::Solver& precond, bool ownsop)
+/**
+ * @brief Helper function to create a shell preconditioner wrapping a generic mfem::Solver
+ *
+ * @param[in,out] pc Preconditioner object to set up as shell
+ * @param[in] solver Solver to wrap in the shell preconditioner
+ * @param[in] owns_op Flag specifying whether the solver object should be destroyed with the preconditioner
+ *
+ * @return Error code, or 0 on success.
+ */
+static PetscErrorCode wrapSolverInShellPC(PC pc, mfem::Solver& solver, bool owns_op = false)
 {
-  __mfem_pc_shell_ctx* ctx;
+  SolverWrapperCtx* ctx;
 
   PetscFunctionBeginUser;
   PetscCall(PetscCalloc1(1, &ctx));
 
-  ctx->solver = &precond;
-  ctx->ownsop = ownsop;
+  ctx->solver  = &solver;
+  ctx->owns_op = owns_op;
 
   // In case the PC was already of type SHELL, this will destroy any
   // previous user-defined data structure
@@ -152,13 +185,11 @@ static PetscErrorCode MakeShellPC(PC pc, mfem::Solver& precond, bool ownsop)
 
   PetscCall(PCSetType(pc, PCSHELL));
   PetscCall(PCShellSetName(pc, "MFEM Solver"));
-  auto* void_ctx = static_cast<void*>(ctx);
-  PetscCall(PCShellSetContext(pc, void_ctx));
-  PetscCall(PCShellSetApply(pc, __mfem_pc_shell_apply));
-  PetscCall(PCShellSetApplyTranspose(pc, __mfem_pc_shell_apply_transpose));
-  PetscCall(PCShellSetSetUp(pc, __mfem_pc_shell_setup));
-  PetscCall(PCShellSetView(pc, __mfem_pc_shell_view));
-  PetscCall(PCShellSetDestroy(pc, __mfem_pc_shell_destroy));
+  PetscCall(PCShellSetContext(pc, static_cast<void*>(ctx)));
+  PetscCall(PCShellSetApply(pc, solverWrapperMult));
+  PetscCall(PCShellSetApplyTranspose(pc, solverWrapperMultTranspose));
+  PetscCall(PCShellSetView(pc, solverWrapperView));
+  PetscCall(PCShellSetDestroy(pc, solverWrapperDestroy));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -637,7 +668,7 @@ void PetscNewtonSolver::SetNonPetscSolver(mfem::Solver& solver)
   // Place the non-PETSc solver into a shell PC
   PC pc_shell;
   PetscCallAbort(GetComm(), KSPGetPC(ksp, &pc_shell));
-  PetscCallAbort(GetComm(), MakeShellPC(pc_shell, solver, false));
+  PetscCallAbort(GetComm(), wrapSolverInShellPC(pc_shell, solver, false));
 }
 
 void PetscNewtonSolver::SetLineSearchType(SNESLineSearchType linesearch_type)
