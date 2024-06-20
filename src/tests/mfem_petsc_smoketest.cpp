@@ -175,7 +175,9 @@ int ex9_main(int argc, char *argv[])
    int ode_solver_type = 4;
    real_t t_final = 10.0;
    real_t dt = 0.01;
-   bool visualization = true;
+   // SERAC_EDIT_START
+   bool visualization = false;
+   // SERAC_EDIT_END
    bool visit = false;
    bool binary = false;
    int vis_steps = 5;
@@ -784,9 +786,7 @@ real_t inflow_function(const Vector &x)
 
 // SERAC_EDIT_START
 // clang-format off
-constexpr char correct_output[] =
-"Options used:\n"
-"   --mesh /usr/workspace/meemee/serac/repo/mfem/data/periodic-hexagon.mesh\n"
+constexpr char correct_output[] = 
 "   --problem 0\n"
 "   --refine-serial 2\n"
 "   --refine-parallel 0\n"
@@ -798,7 +798,7 @@ constexpr char correct_output[] =
 "   --ode-solver 4\n"
 "   --t-final 10\n"
 "   --time-step 0.01\n"
-"   --visualization\n"
+"   --no-visualization\n"
 "   --no-visit-datafiles\n"
 "   --ascii-datafiles\n"
 "   --visualization-steps 5\n"
@@ -809,7 +809,6 @@ constexpr char correct_output[] =
 "Device configuration: cpu\n"
 "Memory configuration: host-std\n"
 "Number of unknowns: 3072\n"
-"GLVis visualization paused. Press space (in the GLVis window) to resume it.\n"
 "time step: 5, time: 0.05\n"
 "time step: 10, time: 0.1\n"
 "time step: 15, time: 0.15\n"
@@ -1019,12 +1018,17 @@ TEST(MfemPetscSmoketest, MfemPetscEx9)
   ex9_main(1, const_cast<char**>(fake_argv));
   std::string output = ::testing::internal::GetCapturedStdout();
 
+  // Cut first couple lines, to avoid comparing mesh paths
+  std::size_t first_line_pos  = output.find('\n');
+  std::size_t second_line_pos = output.find('\n', first_line_pos + 1);
+  output                      = output.substr(second_line_pos + 1);
+
   int num_procs = 0;
   int rank      = 0;
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if (rank == 0) {
-   EXPECT_EQ(output, correct_output);
+    EXPECT_EQ(output, correct_output);
   }
 }
 

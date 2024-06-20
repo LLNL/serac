@@ -71,7 +71,9 @@ int ex11_main(int argc, char *argv[])
    int seed = 75;
    bool slu_solver  = false;
    bool sp_solver = false;
-   bool visualization = 1;
+   // SERAC_EDIT_START
+   bool visualization = false;
+   // SERAC_EDIT_END
    bool use_slepc = true;
    const char *slepcrc_file = "";
    const char *device_config = "cpu";
@@ -457,7 +459,21 @@ int ex11_main(int argc, char *argv[])
 
 // SERAC_EDIT_START
 // clang-format off
-constexpr char correct_output[] = "";
+constexpr char correct_output[] = 
+"   --refine-serial 2\n"
+"   --refine-parallel 1\n"
+"   --order 1\n"
+"   --num-eigs 5\n"
+"   --seed 75\n"
+"   --no-superlu\n"
+"   --no-strumpack\n"
+"   --no-visualization\n"
+"   --useslepc\n"
+"   --slepcopts \n"
+"   --device cpu\n"
+"Device configuration: cpu\n"
+"Memory configuration: host-std\n"
+"Number of unknowns: 1361\n";
 // clang-format on
 
 TEST(MfemSlepcSmoketest, MfemPetscEx11)
@@ -467,12 +483,17 @@ TEST(MfemSlepcSmoketest, MfemPetscEx11)
   ex11_main(1, const_cast<char**>(fake_argv));
   std::string output = ::testing::internal::GetCapturedStdout();
 
+  // Cut first couple lines, to avoid comparing mesh paths
+  std::size_t first_line_pos  = output.find('\n');
+  std::size_t second_line_pos = output.find('\n', first_line_pos + 1);
+  output                      = output.substr(second_line_pos + 1);
+
   int num_procs = 0;
   int rank      = 0;
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if (rank == 0) {
-   EXPECT_EQ(output, correct_output);
+    EXPECT_EQ(output, correct_output);
   }
 }
 
