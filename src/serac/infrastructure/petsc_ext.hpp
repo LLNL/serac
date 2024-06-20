@@ -209,6 +209,8 @@ class PetscKSPSolver : virtual public mfem::IterativeSolver, public mfem::PetscL
 private:
   /// @brief Flag determining whether the mfem::Operator is wrapped or converted
   bool wrap_ = false;
+  /// @brief Flag indicating whether convertKSPPreSolve has been called
+  bool checked_for_convert_ = false;
   /// @brief mfem::HypreParMatrix wrapping an existing MATHYPRE. Mutable, as this may be set by a PETSc callback within
   /// Mult(), which is marked as const.
   mutable std::unique_ptr<mfem::HypreParMatrix> wrapped_matrix_;
