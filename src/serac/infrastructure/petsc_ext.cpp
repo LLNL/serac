@@ -447,14 +447,17 @@ PetscErrorCode convertKSPPreSolve(KSP ksp, [[maybe_unused]] Vec rhs, [[maybe_unu
   solver                              = static_cast<PetscKSPSolver*>(ctx);
   auto*                      prec     = solver->prec;
   mfem::PetscPreconditioner* petsc_pc = dynamic_cast<mfem::PetscPreconditioner*>(prec);
-  if (!solver->operatorset || solver->needs_hypre_wrapping_) {
-    PetscCall(KSPGetOperators(ksp, &A, NULL));
+  if (!solver->checked_for_convert_ || solver->needs_hypre_wrapping_) {
+    PetscCall(KSPGetOperators(ksp, NULL, &A));
     PetscBool is_hypre;
     PetscCall(PetscObjectTypeCompare(reinterpret_cast<PetscObject>(A), MATHYPRE, &is_hypre));
     SLIC_WARNING_IF(
         is_hypre && petsc_pc,
         "convertKSPPreSolve(...) - MATHYPRE is not supported for most PETSc preconditioners, converting to MATAIJ.");
-    if (!is_hypre || petsc_pc) PetscFunctionReturn(PETSC_SUCCESS);
+    if (!is_hypre || petsc_pc) {
+      solver->checked_for_convert_ = true;
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
     hypre_ParCSRMatrix *hypre_csr = nullptr, *old_hypre_csr = nullptr;
     PetscCall(MatHYPREGetParCSR(A, &hypre_csr));
     if (solver->wrapped_matrix_) {
@@ -464,9 +467,11 @@ PetscErrorCode convertKSPPreSolve(KSP ksp, [[maybe_unused]] Vec rhs, [[maybe_unu
       SLIC_INFO("convertKSPPreSolve(...) - Rebuilding HypreParMatrix wrapper");
       solver->wrapped_matrix_ = std::make_unique<mfem::HypreParMatrix>(hypre_csr, false);
     }
-    if (solver->prec) solver->prec->SetOperator(*solver->wrapped_matrix_);
+    SLIC_INFO("convertKSPPreSolve(...) - Setting operator for preconditioner");
+    if (prec) prec->SetOperator(*solver->wrapped_matrix_);
     solver->needs_hypre_wrapping_ = true;
   }
+  solver->checked_for_convert_ = true;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -541,7 +546,7 @@ void PetscKSPSolver::SetOperator(const mfem::Operator& op)
       // Create MATSHELL object or convert into a format suitable to construct preconditioners
       if (PETSC_HAVE_HYPRE && !petsc_pc) {
         SLIC_INFO("PetscKSPSolver::SetOperator(...) - Wrapping existing HYPRE matrix");
-        pA = new mfem::PetscParMatrix(hA, wrap_ ? PETSC_MATSHELL : PETSC_MATAIJ);
+        pA = new mfem::PetscParMatrix(hA, wrap_ ? PETSC_MATSHELL : PETSC_MATHYPRE);
       } else {
         SLIC_WARNING(
             "PetscKSPSolver::SetOperator(...) - Converting operator, consider using PetscParMatrix to avoid conversion "
