@@ -1169,21 +1169,6 @@ public:
     }
   }
 
-  /// @brief Solve the Quasi-static Newton system
-  virtual void quasiStaticSolve(double dt)
-  {
-    time_ += dt;
-
-    // Set the ODE time point for the time-varying loads in quasi-static problems
-    ode_time_point_ = time_;
-
-    // this method is essentially equivalent to the 1-liner
-    // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
-    warmStartDisplacement();
-
-    nonlin_solver_->solve(displacement_);
-  }
-
   /// @overload
   void advanceTimestep(double dt) override
   {
@@ -1574,6 +1559,23 @@ protected:
         return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + 1 + parameter_indices>{}, t, shape_displacement_,
                             displacement_, acceleration_, *parameters_[parameter_indices].state...);
       }...};
+
+
+
+  /// @brief Solve the Quasi-static Newton system
+  virtual void quasiStaticSolve(double dt)
+  {
+    time_ += dt;
+
+    // Set the ODE time point for the time-varying loads in quasi-static problems
+    ode_time_point_ = time_;
+
+    // this method is essentially equivalent to the 1-liner
+    // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
+    warmStartDisplacement();
+
+    nonlin_solver_->solve(displacement_);
+  }
 
   /**
    * @brief Calculate a list of constrained dofs in the true displacement vector from a function that
