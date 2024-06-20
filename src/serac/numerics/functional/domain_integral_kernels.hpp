@@ -97,8 +97,8 @@ SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, double t, coords_type&& x_q, qpt_da
 template <int i, int dim, typename... trials, typename lambda, typename qpt_data_type>
 auto get_derivative_type(lambda qf, qpt_data_type&& qpt_data)
 {
-  using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim> >::type...>;
-  return get_gradient(apply_qf(qf, double{}, serac::tuple<tensor<double, dim>, tensor<double, dim, dim> >{}, qpt_data,
+  using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim>>::type...>;
+  return get_gradient(apply_qf(qf, double{}, serac::tuple<tensor<double, dim>, tensor<double, dim, dim>>{}, qpt_data,
                                make_dual_wrt<i>(qf_arguments{})));
 };
 
@@ -106,7 +106,7 @@ template <typename lambda, int dim, int n, typename... T>
 SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(lambda qf, double t, const tensor<double, dim, n>& x,
                                                const tensor<double, dim, dim, n>& J, const T&... inputs)
 {
-  using position_t  = serac::tuple<tensor<double, dim>, tensor<double, dim, dim> >;
+  using position_t  = serac::tuple<tensor<double, dim>, tensor<double, dim, dim>>;
   using return_type = decltype(qf(double{}, position_t{}, T{}[0]...));
   tensor<return_type, n> outputs{};
   for (int i = 0; i < n; i++) {
@@ -128,7 +128,7 @@ SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, 
                                       const tensor<double, dim, dim, n>& J, qpt_data_type* qpt_data, bool update_state,
                                       const T&... inputs)
 {
-  using position_t  = serac::tuple<tensor<double, dim>, tensor<double, dim, dim> >;
+  using position_t  = serac::tuple<tensor<double, dim>, tensor<double, dim, dim>>;
   using return_type = decltype(qf(double{}, position_t{}, qpt_data[0], T{}[0]...));
   tensor<return_type, n> outputs{};
   for (int i = 0; i < n; i++) {
@@ -363,7 +363,7 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, d
 template <uint32_t wrt, int Q, mfem::Geometry::Type geom, typename signature, typename lambda_type, typename state_type,
           typename derivative_type>
 auto evaluation_kernel(signature s, lambda_type qf, const double* positions, const double* jacobians,
-                       std::shared_ptr<QuadratureData<state_type> > qf_state,
+                       std::shared_ptr<QuadratureData<state_type>> qf_state,
                        std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {
   auto trial_elements = trial_elements_tuple<geom>(s);
