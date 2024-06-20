@@ -256,14 +256,8 @@ TEST(BoundaryCondHelper, ElementAttributeDofList)
   mfem::ParFiniteElementSpace l2_vector(&pmesh, &l2_fec, sdim);
   mfem::ParGridFunction       l2_vector_gf(&l2_vector);
   mfem::PWVectorCoefficient   attr_vec_coef(sdim);
-  mfem::Vector                attr1vec(sdim);
-  attr1vec[0] = 0.0;
-  attr1vec[1] = 1.0;
-  attr1vec[2] = 2.0;
-  mfem::Vector attr2vec(sdim);
-  attr2vec[0] = 3.0;
-  attr2vec[1] = 4.0;
-  attr2vec[2] = 5.0;
+  mfem::Vector attr1vec({0.0, 1.0, 2.0});
+  mfem::Vector attr2vec({3.0, 4.0, 5.0});
   mfem::VectorConstantCoefficient attr1vCoef(attr1vec);
   mfem::VectorConstantCoefficient attr2vCoef(attr2vec);
   attr_vec_coef.UpdateCoefficient(1, attr1vCoef);
