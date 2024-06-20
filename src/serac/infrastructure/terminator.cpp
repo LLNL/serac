@@ -51,10 +51,8 @@ void exitGracefully(bool error)
     serac::logger::finalize();
   }
 
-#ifdef SERAC_USE_PETSC
-#ifdef MFEM_USE_PETSC
+#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
   mfem::MFEMFinalizePetsc();
-#endif
 #endif
 
   int mpi_initialized = 0;
