@@ -294,7 +294,7 @@ std::unique_ptr<mfem::Solver> buildPreconditioner(LinearSolverOptions       line
 std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MPI_Comm comm);
 #endif
 
-#ifdef MFEM_USE_PETSC
+#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
 /**
  * @brief Build a PETSc preconditioner
  *
@@ -302,7 +302,7 @@ std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MP
  * @param comm The communicator for the underlying operator and HypreParVectors
  * @return The constructed PETSc preconditioner
  */
-std::unique_ptr<mfem::PetscPreconditioner> buildPetscPreconditioner(PetscPCType pc_type, const MPI_Comm comm);
+std::unique_ptr<mfem_ext::PetscPCSolver> buildPetscPreconditioner(PetscPCType pc_type, const MPI_Comm comm);
 
 /**
  * @brief Convert a string to the corresponding PetscPCType

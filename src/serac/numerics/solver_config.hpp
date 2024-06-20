@@ -123,7 +123,10 @@ enum class NonlinearSolver
   TrustRegion,      /**< Custom solver using a trust region solver */
   KINFullStep,      /**< KINSOL Full Newton (Sundials must be enabled) */
   KINBacktrackingLineSearch, /**< KINSOL Newton with Backtracking Line Search (Sundials must be enabled) */
-  KINPicard                  /**< KINSOL Picard (Sundials must be enabled) */
+  KINPicard,                 /**< KINSOL Picard (Sundials must be enabled) */
+  PetscNewton,               /**< PETSc Full Newton */
+  PetscNewtonBacktracking,   /**< PETSc Newton with backtracking line search */
+  PetscNewtonCriticalPoint,  /**< PETSc Newton with critical point line search */
 };
 // _nonlinear_solvers_end
 

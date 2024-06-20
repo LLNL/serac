@@ -63,10 +63,8 @@ std::pair<int, int> initialize(int argc, char* argv[], MPI_Comm comm)
   mfem::Sundials::Init();
 #endif
 
-#ifdef SERAC_USE_PETSC
-#ifdef MFEM_USE_PETSC
+#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
   mfem::MFEMInitializePetsc(&argc, &argv);
-#endif
 #endif
   // Initialize GPU (no-op if not enabled/available)
   // TODO for some reason this causes errors on Lassen. We need to look into this ASAP.

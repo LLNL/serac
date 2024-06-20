@@ -14,6 +14,8 @@
 #include "serac/numerics/equation_solver.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
+#include "serac/infrastructure/initialize.hpp"
+#include "serac/infrastructure/terminator.hpp"
 
 using namespace serac;
 using namespace serac::mfem_ext;
@@ -112,24 +114,47 @@ TEST_P(EquationSolverSuite, All)
   }
 }
 
+/**
+ * @brief Nonlinear solvers to test. Always includes NonlinearSolver::Newton and NonlinearSolver::LBFGS
+ * If SERAC_USE_SUNDIALS is set, adds: NonlinearSolver::KINFullStep, NonlinearSolver::KINBacktrackingLineSearch, and
+ * NonlinearSolver::KINPicard.
+ * If MFEM_USE_PETSC and SERAC_USE_PETSC are set, adds NonlinearSolver::PetscNewton,
+ * NonlinearSolver::PetscNewtonBacktracking, and NonlinearSolver::PetscNewtonCriticalPoint
+ */
+auto nonlinear_solvers = testing::Values(
+    NonlinearSolver::Newton, NonlinearSolver::NewtonLineSearch, NonlinearSolver::TrustRegion, NonlinearSolver::LBFGS
 #ifdef SERAC_USE_SUNDIALS
-INSTANTIATE_TEST_SUITE_P(
-    AllEquationSolverTests, EquationSolverSuite,
-    testing::Combine(testing::Values(NonlinearSolver::Newton, NonlinearSolver::NewtonLineSearch,
-                                     NonlinearSolver::TrustRegion, NonlinearSolver::LBFGS, NonlinearSolver::KINFullStep,
-                                     NonlinearSolver::KINBacktrackingLineSearch, NonlinearSolver::KINPicard),
-                     testing::Values(LinearSolver::CG, LinearSolver::GMRES, LinearSolver::SuperLU),
-                     testing::Values(Preconditioner::HypreJacobi, Preconditioner::HypreL1Jacobi,
-                                     Preconditioner::HypreGaussSeidel, Preconditioner::HypreAMG,
-                                     Preconditioner::HypreILU)));
-#else
-INSTANTIATE_TEST_SUITE_P(AllEquationSolverTests, EquationSolverSuite,
-                         testing::Combine(testing::Values(NonlinearSolver::Newton, NonlinearSolver::LBFGS),
-                                          testing::Values(LinearSolver::CG, LinearSolver::GMRES, LinearSolver::SuperLU),
-                                          testing::Values(Preconditioner::HypreJacobi, Preconditioner::HypreL1Jacobi,
-                                                          Preconditioner::HypreGaussSeidel, Preconditioner::HypreAMG,
-                                                          Preconditioner::HypreILU)));
+    ,
+    NonlinearSolver::KINFullStep, NonlinearSolver::KINBacktrackingLineSearch, NonlinearSolver::KINPicard
 #endif
+#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
+    ,
+    NonlinearSolver::PetscNewton, NonlinearSolver::PetscNewtonBacktracking, NonlinearSolver::PetscNewtonCriticalPoint
+#endif
+);
+
+/**
+ * @brief Linear solvers to test. Always includes LinearSolver::CG, LinearSolver::GMRES, and LinearSolver::SuperLU.
+ * If MFEM_USE_PETSC and SERAC_USE_PETSC are set, adds LinearSolver::PetscCG and LinearSolver::PetscGMRES.
+ */
+auto linear_solvers = testing::Values(LinearSolver::CG, LinearSolver::GMRES, LinearSolver::SuperLU
+#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
+                                      ,
+                                      LinearSolver::PetscCG, LinearSolver::PetscGMRES
+#endif
+);
+
+auto preconditioners =
+    testing::Values(Preconditioner::HypreJacobi, Preconditioner::HypreL1Jacobi, Preconditioner::HypreGaussSeidel,
+                    Preconditioner::HypreAMG, Preconditioner::HypreILU
+#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
+                    ,
+                    Preconditioner::Petsc
+#endif
+    );
+
+INSTANTIATE_TEST_SUITE_P(AllEquationSolverTests, EquationSolverSuite,
+                         testing::Combine(nonlinear_solvers, linear_solvers, preconditioners));
 
 int main(int argc, char* argv[])
 {
@@ -137,13 +162,11 @@ int main(int argc, char* argv[])
 
   ::testing::InitGoogleTest(&argc, argv);
 
-  MPI_Init(&argc, &argv);
+  serac::initialize(argc, argv);
 
   axom::slic::SimpleLogger logger;
 
   result = RUN_ALL_TESTS();
 
-  MPI_Finalize();
-
-  return result;
+  serac::exitGracefully(result);
 }
