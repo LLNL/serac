@@ -209,8 +209,6 @@ public:
   }
 
 protected:
-
-
   /// @brief Solve the Quasi-static Newton system
   void quasiStaticSolve(double dt) override
   {
@@ -242,7 +240,6 @@ protected:
     displacement_.Set(1.0, mfem::Vector(augmented_solution, 0, displacement_.Size()));
     contact_.setPressures(mfem::Vector(augmented_solution, displacement_.Size(), contact_.numPressureDofs()));
   }
-
 
   using BasePhysics::bcs_;
   using BasePhysics::cycle_;

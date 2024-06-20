@@ -1560,8 +1560,6 @@ protected:
                             displacement_, acceleration_, *parameters_[parameter_indices].state...);
       }...};
 
-
-
   /// @brief Solve the Quasi-static Newton system
   virtual void quasiStaticSolve(double dt)
   {
