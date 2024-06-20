@@ -78,21 +78,30 @@ TEST(Thermomechanics, ParameterizedMaterial)
   double height       = 2.0;
 
   // clang-format off
-    auto mesh = mesh::refineAndDistribute(build_hollow_quarter_cylinder(radial_divisions, 
-                                                                        angular_divisions, 
+    auto mesh = mesh::refineAndDistribute(build_hollow_quarter_cylinder(radial_divisions,
+                                                                        angular_divisions,
                                                                         vertical_divisions,
-                                                                        inner_radius, 
-                                                                        outer_radius, 
+                                                                        inner_radius,
+                                                                        outer_radius,
                                                                         height), serial_refinement, parallel_refinement);
 
+  mesh->Save("mesh.msh");
   // clang-format on
   std::string mesh_tag{"mesh"};
   auto&       pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
+  NonlinearSolverOptions nonlinear_opts = solid_mechanics::default_nonlinear_options;
+  LinearSolverOptions    linear_opts    = solid_mechanics::default_linear_options;
+#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
+  nonlinear_opts.nonlin_solver = NonlinearSolver::PetscNewton;
+
+  linear_opts.linear_solver        = LinearSolver::PetscGMRES;
+  linear_opts.preconditioner       = Preconditioner::Petsc;
+  linear_opts.petsc_preconditioner = PetscPCType::HMG;
+#endif
   SolidMechanics<p, dim, Parameters<H1<p>, H1<p>>> simulation(
-      solid_mechanics::default_nonlinear_options, solid_mechanics::direct_linear_options,
-      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermomechanics_simulation", mesh_tag,
-      {"theta", "alpha"});
+      nonlinear_opts, linear_opts, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On,
+      "thermomechanics_simulation", mesh_tag, {"theta", "alpha"});
 
   double density   = 1.0;     ///< density
   double E         = 1000.0;  ///< Young's modulus
@@ -232,6 +241,8 @@ int main(int argc, char* argv[])
   ::testing::InitGoogleTest(&argc, argv);
 
   serac::initialize(argc, argv);
+
+  axom::slic::setLoggingMsgLevel(axom::slic::message::Info);
 
   int result = RUN_ALL_TESTS();
 
