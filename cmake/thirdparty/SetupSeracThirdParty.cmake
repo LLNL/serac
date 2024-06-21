@@ -184,7 +184,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         #### Store Data that MFEM clears
         set(tpls_to_save ADIAK AMGX AXOM CALIPER CAMP CONDUIT HDF5
                          HYPRE LUA METIS MFEM NETCDF PARMETIS PETSC RAJA 
-                         SUPERLU_DIST STRUMPACK SUNDIALS TRIBOL UMPIRE)
+                         SLEPC SUPERLU_DIST STRUMPACK SUNDIALS TRIBOL
+                         UMPIRE)
         foreach(_tpl ${tpls_to_save})
             set(${_tpl}_DIR_SAVE "${${_tpl}_DIR}")
         endforeach()
