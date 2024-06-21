@@ -303,9 +303,10 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${SERAC_SOURCE_DIR}>)
         target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/mfem>)
 
-        # Patch the mfem target with missing arpack dir for slepc
+        # Add missing ARPACK flags needed by SLEPc
+        # https://github.com/mfem/mfem/issues/4364
         if (MFEM_USE_PETSC AND MFEM_USE_SLEPC)
-            set(_lib_paths ${ARPACK_DIR}/lib/libarpack.so ${ARPACK_DIR}/lib64/libarpack.so ${ARPACK_DIR}/lib/libparpack.so ${ARPACK_DIR}/lib64/libparpack.so)
+            set(_lib_paths ${ARPACK_DIR}/lib/libparpack.so ${ARPACK_DIR}/lib64/libparpack.so)
             foreach(_path ${_lib_paths})
                 if (EXISTS ${_path})
                     target_link_libraries(mfem INTERFACE ${_path})

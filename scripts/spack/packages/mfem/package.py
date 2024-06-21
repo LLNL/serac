@@ -13,6 +13,8 @@ class Mfem(BuiltinMfem):
     # moved forward past the release. Increment the last number when updating the commit sha.
     version("4.7.0.0", commit="dc9128ef596e84daf1138aa3046b826bba9d259f")
 
+    # This can be removed once the following MFEM PR merges
+    # https://github.com/mfem/mfem/pull/4363
     patch("fix-dep-ordering.patch")
 
     variant('asan', default=False, description='Add Address Sanitizer flags')
