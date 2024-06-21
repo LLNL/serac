@@ -1,5 +1,7 @@
 // SERAC_EDIT_START
 // Source: https://github.com/mfem/mfem/blob/38c9bc75b524df6f05f9307c3ff11859a5141e0d/examples/petsc/ex11p.cpp
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-conversion"
 // clang-format off
 // SERAC_EDIT_END
 //                       MFEM Example 11 - Parallel Version
@@ -514,4 +516,5 @@ int main(int argc, char* argv[])
   return result;
 }
 
+#pragma GCC diagnostic pop
 // SERAC_EDIT_END
