@@ -5,13 +5,13 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 #pragma once
 
+#include "serac/serac_config.hpp"
 #include "serac/infrastructure/accelerator.hpp"
 #include "serac/numerics/functional/quadrature_data.hpp"
 #include "serac/numerics/functional/function_signature.hpp"
 #include "serac/numerics/functional/differentiate_wrt.hpp"
+#include "RAJA/RAJA.hpp"
 
-#include <RAJA/index/RangeSegment.hpp>
-#include <RAJA/RAJA.hpp>
 #include <array>
 #include <cstdint>
 
@@ -27,41 +27,41 @@ namespace domain_integral {
  * trial space
  */
 template <typename space, typename dimension>
-SERAC_HOST_DEVICE struct QFunctionArgument;
+struct QFunctionArgument;
 
 /// @overload
 template <int p, int dim>
-SERAC_HOST_DEVICE struct QFunctionArgument<H1<p, 1>, Dimension<dim> > {
-  using type = tuple<double, tensor<double, dim> >;  ///< what will be passed to the q-function
+struct QFunctionArgument<H1<p, 1>, Dimension<dim>> {
+  using type = tuple<double, tensor<double, dim>>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p, int c, int dim>
-SERAC_HOST_DEVICE struct QFunctionArgument<H1<p, c>, Dimension<dim> > {
-  using type = tuple<tensor<double, c>, tensor<double, c, dim> >;  ///< what will be passed to the q-function
+struct QFunctionArgument<H1<p, c>, Dimension<dim>> {
+  using type = tuple<tensor<double, c>, tensor<double, c, dim>>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p, int dim>
-SERAC_HOST_DEVICE struct QFunctionArgument<L2<p, 1>, Dimension<dim> > {
-  using type = tuple<double, tensor<double, dim> >;  ///< what will be passed to the q-function
+struct QFunctionArgument<L2<p, 1>, Dimension<dim>> {
+  using type = tuple<double, tensor<double, dim>>;  ///< what will be passed to the q-function
 };
 /// @overload
 template <int p, int c, int dim>
-SERAC_HOST_DEVICE struct QFunctionArgument<L2<p, c>, Dimension<dim> > {
-  using type = tuple<tensor<double, c>, tensor<double, c, dim> >;  ///< what will be passed to the q-function
+struct QFunctionArgument<L2<p, c>, Dimension<dim>> {
+  using type = tuple<tensor<double, c>, tensor<double, c, dim>>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p>
-SERAC_HOST_DEVICE struct QFunctionArgument<Hcurl<p>, Dimension<2> > {
+struct QFunctionArgument<Hcurl<p>, Dimension<2>> {
   using type = tuple<tensor<double, 2>, double>;  ///< what will be passed to the q-function
 };
 
 /// @overload
 template <int p>
-SERAC_HOST_DEVICE struct QFunctionArgument<Hcurl<p>, Dimension<3> > {
-  using type = tuple<tensor<double, 3>, tensor<double, 3> >;  ///< what will be passed to the q-function
+struct QFunctionArgument<Hcurl<p>, Dimension<3>> {
+  using type = tuple<tensor<double, 3>, tensor<double, 3>>;  ///< what will be passed to the q-function
 };
 
 /// @brief layer of indirection needed to unpack the entries of the argument tuple
@@ -97,8 +97,8 @@ SERAC_HOST_DEVICE auto apply_qf(const lambda& qf, double t, const coords_type& x
 template <int i, int dim, typename... trials, typename lambda, typename qpt_data_type>
 auto get_derivative_type(const lambda& qf, qpt_data_type qpt_data)
 {
-  using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim> >::type...>;
-  return get_gradient(apply_qf(qf, double{}, serac::tuple<tensor<double, dim>, tensor<double, dim, dim> >{}, qpt_data,
+  using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim>>::type...>;
+  return get_gradient(apply_qf(qf, double{}, serac::tuple<tensor<double, dim>, tensor<double, dim, dim>>{}, qpt_data,
                                make_dual_wrt<i>(qf_arguments{})));
 };
 
@@ -106,7 +106,7 @@ template <typename lambda, int dim, int n, typename... T>
 SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(const lambda& qf, double t, const tensor<double, dim, n>& x,
                                                const tensor<double, dim, dim, n>& J, const T&... inputs)
 {
-  using position_t  = serac::tuple<tensor<double, dim>, tensor<double, dim, dim> >;
+  using position_t  = serac::tuple<tensor<double, dim>, tensor<double, dim, dim>>;
   using return_type = decltype(qf(double{}, position_t{}, T{}[0]...));
   tensor<return_type, n> outputs{};
   for (int i = 0; i < n; i++) {
@@ -128,7 +128,7 @@ SERAC_HOST_DEVICE auto batch_apply_qf(const lambda& qf, double t, const tensor<d
                                       const tensor<double, dim, dim, n>& J, qpt_data_type* qpt_data, bool update_state,
                                       const T&... inputs)
 {
-  using position_t  = serac::tuple<tensor<double, dim>, tensor<double, dim, dim> >;
+  using position_t  = serac::tuple<tensor<double, dim>, tensor<double, dim, dim>>;
   using return_type = decltype(qf(double{}, position_t{}, qpt_data[0], T{}[0]...));
   tensor<return_type, n> outputs{};
   for (int i = 0; i < n; i++) {
