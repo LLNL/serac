@@ -363,7 +363,7 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, d
 template <uint32_t wrt, int Q, mfem::Geometry::Type geom, typename signature, typename lambda_type, typename state_type,
           typename derivative_type>
 auto evaluation_kernel(signature s, const lambda_type& qf, const double* positions, const double* jacobians,
-                       std::shared_ptr<QuadratureData<state_type> > qf_state,
+                       std::shared_ptr<QuadratureData<state_type>> qf_state,
                        std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {
   auto trial_elements = trial_elements_tuple<geom>(s);
