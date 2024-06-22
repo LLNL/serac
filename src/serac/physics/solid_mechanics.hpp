@@ -952,12 +952,12 @@ public:
      * @brief Body force call
      *
      * @tparam T temperature
-     * @tparam X Spatial position type
+     * @tparam Position Spatial position type
      * @tparam Displacement displacement
      * @tparam Acceleration acceleration
      * @tparam Params variadic parameters for call
      * @param[in] t temperature
-     * @param[in] x position
+     * @param[in] position position
      * @param[in] params parameter pack
      * @return The calculated material response (tuple of volumetric heat capacity and thermal flux) for a linear
      * isotropic material
