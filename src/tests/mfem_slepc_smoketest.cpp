@@ -63,9 +63,7 @@ int ex11_main(int argc, char *argv[])
    Hypre::Init();
 
    // 2. Parse command-line options.
-   // SERAC_EDIT_START
-   const char *mesh_file = SERAC_REPO_DIR "/mfem/data/star.mesh";
-   // SERAC_EDIT_END
+   const char *mesh_file = "";
    int ser_ref_levels = 2;
    int par_ref_levels = 1;
    int order = 1;
@@ -73,9 +71,7 @@ int ex11_main(int argc, char *argv[])
    int seed = 75;
    bool slu_solver  = false;
    bool sp_solver = false;
-   // SERAC_EDIT_START
-   bool visualization = false;
-   // SERAC_EDIT_END
+   bool visualization = true;
    bool use_slepc = true;
    const char *slepcrc_file = "";
    const char *device_config = "cpu";
@@ -460,42 +456,33 @@ int ex11_main(int argc, char *argv[])
 }
 
 // SERAC_EDIT_START
-// clang-format off
-constexpr char correct_output[] = 
-"   --refine-serial 2\n"
-"   --refine-parallel 1\n"
-"   --order 1\n"
-"   --num-eigs 5\n"
-"   --seed 75\n"
-"   --no-superlu\n"
-"   --no-strumpack\n"
-"   --no-visualization\n"
-"   --useslepc\n"
-"   --slepcopts \n"
-"   --device cpu\n"
-"Device configuration: cpu\n"
-"Memory configuration: host-std\n"
-"Number of unknowns: 1361\n";
 // clang-format on
 
 TEST(MfemSlepcSmoketest, MfemPetscEx11)
 {
   ::testing::internal::CaptureStdout();
-  const char* fake_argv[] = {"ex11"};
-  ex11_main(1, const_cast<char**>(fake_argv));
+#ifdef SERAC_USE_CUDA
+  const char* fake_argv[] = {"ex11",       "-m",          SERAC_REPO_DIR "/mfem/data/star.mesh",
+                             "--useslepc", "--slepcopts", SERAC_REPO_DIR "/mfem/examples/petsc/rc_ex11p_lobpcg_device",
+                             "--device",   "cuda",        "--no-visualization"};
+#else
+  const char* fake_argv[] = {"ex11",
+                             "-m",
+                             SERAC_REPO_DIR "/mfem/data/star.mesh",
+                             "--useslepc",
+                             "--slepcopts",
+                             SERAC_REPO_DIR "/mfem/examples/petsc/rc_ex11p_lobpcg",
+                             "--no-visualization"};
+#endif
+  int fake_argc = sizeof(fake_argv) / sizeof(fake_argv[0]);
+  ex11_main(fake_argc, const_cast<char**>(fake_argv));
   std::string output = ::testing::internal::GetCapturedStdout();
 
-  // Cut first couple lines, to avoid comparing mesh paths
-  std::size_t first_line_pos  = output.find('\n');
-  std::size_t second_line_pos = output.find('\n', first_line_pos + 1);
-  output                      = output.substr(second_line_pos + 1);
-
-  int num_procs = 0;
-  int rank      = 0;
-  MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+  int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if (rank == 0) {
-    EXPECT_EQ(output, correct_output);
+    EXPECT_NE(output.find("--order 1"), std::string::npos);
+    EXPECT_NE(output.find("Linear eigensolve converged"), std::string::npos);
   }
 }
 
