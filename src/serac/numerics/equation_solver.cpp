@@ -51,18 +51,21 @@ public:
     return normEval;
   }
 
+  /// assemble the jacobian
   void assembleJacobian(const mfem::Vector& x) const
   {
     CALI_CXX_MARK_FUNCTION;
     grad = &oper->GetGradient(x);
   }
 
+  /// set the preconditioner for the linear solver
   void setPreconditioner() const
   {
     CALI_CXX_MARK_FUNCTION;
     prec->SetOperator(*grad);
   }
 
+  /// solve the linear system
   void solveLinearSystem(const mfem::Vector& r, mfem::Vector& c) const
   {
     CALI_CXX_MARK_FUNCTION;
@@ -322,6 +325,7 @@ public:
   /// take a dogleg step in direction s, solution norm must be within trSize
   void dogleg_step(const mfem::Vector& cp, const mfem::Vector& newtonP, double trSize, mfem::Vector& s) const
   {
+    CALI_CXX_MARK_FUNCTION;
     // MRT, could optimize some of these eventually, compute on the outside and save
     double cc = Dot(cp, cp);
     double nn = Dot(newtonP, newtonP);
@@ -350,6 +354,7 @@ public:
                                        PrecondFunc precond, const TrustRegionSettings& settings, double& trSize,
                                        TrustRegionResults& results) const
   {
+    CALI_CXX_MARK_FUNCTION;
     // minimize r@z + 0.5*z@J@z
     results.interiorStatus    = TrustRegionResults::Status::Interior;
     results.cgIterationsCount = 0;
@@ -420,18 +425,41 @@ public:
     }
   }
 
+    /// assemble the jacobian
+  void assemble_jacobian(const mfem::Vector& x) const
+  {
+    CALI_CXX_MARK_FUNCTION;
+    grad = &oper->GetGradient(x);
+  }
+
+  mfem::real_t computeResidual(const mfem::Vector& x_, mfem::Vector& r_) const {
+    CALI_CXX_MARK_FUNCTION;
+    oper->Mult(x_, r_);
+    return Norm(r_);
+  }
+
+  void hess_vec(const mfem::Vector& x_, mfem::Vector& v_) const {
+    CALI_CXX_MARK_FUNCTION;
+    grad->Mult(x_, v_);
+  }
+
+  void precond(const mfem::Vector& x_, mfem::Vector& v_) const {
+    CALI_CXX_MARK_FUNCTION;
+    trPrecond.Mult(x_, v_);
+  };
+
   /// @overload
   void Mult(const mfem::Vector&, mfem::Vector& X) const
   {
+    serac::profiling::initialize();
+
     MFEM_ASSERT(oper != NULL, "the Operator is not set (use SetOperator).");
     MFEM_ASSERT(prec != NULL, "the Solver is not set (use SetSolver).");
 
     using real_t = mfem::real_t;
 
     real_t norm, norm_goal;
-    oper->Mult(X, r);
-
-    norm = initial_norm = Norm(r);
+    norm = initial_norm = computeResidual(X, r);
     norm_goal           = std::max(rel_tol * initial_norm, abs_tol);
     if (print_options.first_and_last && !print_options.iterations) {
       mfem::out << "Newton iteration " << std::setw(3) << 0 << " : ||r|| = " << std::setw(13) << norm << "...\n";
@@ -472,11 +500,12 @@ public:
         converged = false;
         break;
       }
-
-      auto K = &oper->GetGradient(X);
+      
+      assemble_jacobian(X);
+  
       if (it == 0 || (trResults.cgIterationsCount >= settings.maxCgIterations ||
                       cumulativeCgIters >= settings.maxCumulativeIteration)) {
-        trPrecond.SetOperator(*K);
+        trPrecond.SetOperator(*grad);
         cumulativeCgIters = 0;
         if (print_options.iterations) {
           // currently it will always be updated
@@ -484,8 +513,8 @@ public:
         }
       }
 
-      auto hess_vec_func = [=](const mfem::Vector& x_, mfem::Vector& v_) { K->Mult(x_, v_); };
-      auto precond_func  = [=](const mfem::Vector& x_, mfem::Vector& v_) { trPrecond.Mult(x_, v_); };
+      auto hess_vec_func = [&](const mfem::Vector& x_, mfem::Vector& v_) { hess_vec(x_, v_); };
+      auto precond_func  = [&](const mfem::Vector& x_, mfem::Vector& v_) { precond(x_, v_); };
 
       double cauchyPointNormSquared = trSize * trSize;
       trResults.reset();
@@ -538,9 +567,8 @@ public:
         double realObjective = std::numeric_limits<double>::max();
         double normPred      = std::numeric_limits<double>::max();
         try {
-          oper->Mult(xPred, rPred);
+          normPred      = computeResidual(xPred, rPred);
           realObjective = 0.5 * (Dot(r, d) + Dot(rPred, d));
-          normPred      = Norm(rPred);
         } catch (const std::exception&) {
           realObjective = std::numeric_limits<double>::max();
           normPred      = std::numeric_limits<double>::max();
@@ -603,6 +631,7 @@ public:
     if (!converged && (print_options.summary || print_options.warnings)) {
       mfem::out << "Newton: No convergence!\n";
     }
+    serac::profiling::finalize();
   }
 };
 
