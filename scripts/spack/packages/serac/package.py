@@ -111,8 +111,6 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("petsc", when="+petsc")
     depends_on("petsc+strumpack", when="+petsc+strumpack")
     depends_on("petsc~strumpack", when="+petsc~strumpack")
-    depends_on("petsc+openmp", when="+petsc+openmp")
-    depends_on("petsc~openmp", when="+petsc~openmp")
     depends_on("slepc+arpack", when="+slepc")
 
     depends_on("tribol", when="+tribol")
