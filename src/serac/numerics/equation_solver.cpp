@@ -66,10 +66,10 @@ public:
   }
 
   /// solve the linear system
-  void solveLinearSystem(const mfem::Vector& r, mfem::Vector& c) const
+  void solveLinearSystem(const mfem::Vector& r_, mfem::Vector& c_) const
   {
     CALI_CXX_MARK_FUNCTION;
-    prec->Mult(r, c);  // c = [DF(x_i)]^{-1} [F(x_i)-b]
+    prec->Mult(r_, c_);  // c = [DF(x_i)]^{-1} [F(x_i)-b]
   }
 
   /// @overload
