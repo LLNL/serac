@@ -128,9 +128,15 @@ else()
 
     # Add missing ARPACK flags needed by SLEPc (a string replace is required to get the correct linking order)
     # https://github.com/mfem/mfem/issues/4364
-    set(ARPACK_LIB "-L${ARPACK_DIR}/lib64 -lparpack -Wl,-rpath=${ARPACK_DIR}/lib64")
-    string(REPLACE "-lpetsc" "-lpetsc ${ARPACK_LIB}" MFEM_LIBRARIES "${MFEM_LIBRARIES}")
-    list(APPEND MFEM_INCLUDE_DIRS ${ARPACK_DIR}/include)
+    if (EXISTS ${ARPACK_DIR} AND PETSC_FOUND AND SLEPC_FOUND)
+        foreach(_dir ${ARPACK_DIR}/lib;${ARPACK_DIR}/lib64)
+            if (EXISTS ${_dir})
+                set(ARPACK_LIB "-L${_dir} -lparpack -Wl,-rpath=${_dir}")
+                string(REPLACE "-lpetsc" "-lpetsc ${ARPACK_LIB}" MFEM_LIBRARIES "${MFEM_LIBRARIES}")
+            endif()
+        endforeach()
+        list(APPEND MFEM_INCLUDE_DIRS ${ARPACK_DIR}/include)
+    endif()
 
     blt_import_library(
         NAME          mfem
