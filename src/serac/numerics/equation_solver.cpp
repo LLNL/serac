@@ -425,25 +425,31 @@ public:
     }
   }
 
-    /// assemble the jacobian
+  /// assemble the jacobian
   void assemble_jacobian(const mfem::Vector& x) const
   {
     CALI_CXX_MARK_FUNCTION;
     grad = &oper->GetGradient(x);
   }
 
-  mfem::real_t computeResidual(const mfem::Vector& x_, mfem::Vector& r_) const {
+  /// evaluate the nonlinear residual
+  mfem::real_t computeResidual(const mfem::Vector& x_, mfem::Vector& r_) const
+  {
     CALI_CXX_MARK_FUNCTION;
     oper->Mult(x_, r_);
     return Norm(r_);
   }
 
-  void hess_vec(const mfem::Vector& x_, mfem::Vector& v_) const {
+  /// apply the action of the assembled Jacobian matrix to a vector
+  void hess_vec(const mfem::Vector& x_, mfem::Vector& v_) const
+  {
     CALI_CXX_MARK_FUNCTION;
     grad->Mult(x_, v_);
   }
 
-  void precond(const mfem::Vector& x_, mfem::Vector& v_) const {
+  /// apply trust region specific preconditioner
+  void precond(const mfem::Vector& x_, mfem::Vector& v_) const
+  {
     CALI_CXX_MARK_FUNCTION;
     trPrecond.Mult(x_, v_);
   };
@@ -500,9 +506,9 @@ public:
         converged = false;
         break;
       }
-      
+
       assemble_jacobian(X);
-  
+
       if (it == 0 || (trResults.cgIterationsCount >= settings.maxCgIterations ||
                       cumulativeCgIters >= settings.maxCumulativeIteration)) {
         trPrecond.SetOperator(*grad);
