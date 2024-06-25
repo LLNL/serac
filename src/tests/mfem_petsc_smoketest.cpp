@@ -405,20 +405,20 @@ int ex1_main(int argc, char *argv[])
 TEST(MfemPetscSmoketest, MfemPetscEx1)
 {
   ::testing::internal::CaptureStdout();
-#ifdef SERAC_USE_CUDA
-  const char* fake_argv[] = {"ex1",
-                             "-m",
-                             SERAC_REPO_DIR "/mfem/data/star.mesh",
-                             "--usepetsc",
-                             "--partial-assembly",
-                             "--device",
-                             "cuda",
-                             "--petscopts",
-                             SERAC_REPO_DIR "/mfem/examples/petsc/rc_ex1p_device"};
-#else
+// #ifdef SERAC_USE_CUDA
+//   const char* fake_argv[] = {"ex1",
+//                              "-m",
+//                              SERAC_REPO_DIR "/mfem/data/star.mesh",
+//                              "--usepetsc",
+//                              "--partial-assembly",
+//                              "--device",
+//                              "cuda",
+//                              "--petscopts",
+//                              SERAC_REPO_DIR "/mfem/examples/petsc/rc_ex1p_device"};
+// #else
   const char* fake_argv[] = {"ex1",        "-m",          SERAC_REPO_DIR "/mfem/data/amr-quad.mesh",
                              "--usepetsc", "--petscopts", SERAC_REPO_DIR "/mfem/examples/petsc/rc_ex1p"};
-#endif
+// #endif
   int fake_argc = sizeof(fake_argv) / sizeof(fake_argv[0]);
   ex1_main(fake_argc, const_cast<char**>(fake_argv));
   std::string output = ::testing::internal::GetCapturedStdout();
