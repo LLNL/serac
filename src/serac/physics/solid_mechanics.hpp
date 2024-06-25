@@ -992,10 +992,9 @@ public:
   void addBodyForce(DependsOn<active_parameters...>, BodyForceType body_force,
                     const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    Domain                            domain = (optional_domain) ? *optional_domain : EntireDomain(mesh_);
-    BodyForceIntegrand<BodyForceType> force_integrand(body_force);
+    Domain domain = (optional_domain) ? *optional_domain : EntireDomain(mesh_);
     residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
-                                 std::move(force_integrand), domain);
+                                 BodyForceIntegrand<BodyForceType>(body_force), domain);
   }
 
   /// @overload
