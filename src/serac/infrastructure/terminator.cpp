@@ -15,7 +15,6 @@
 #include "serac/infrastructure/profiling.hpp"
 
 #include "mfem.hpp"
-#include "mfem/linalg/petsc.hpp"
 
 namespace {
 /**
