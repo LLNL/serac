@@ -208,10 +208,12 @@ PetscErrorCode convertPCPreSolve(PC pc, [[maybe_unused]] KSP ksp)
   // That means we have to ensure the matrix is MATAIJ
   if (!solver->checked_for_convert_ || solver->converted_matrix_) {
     PetscCall(PCGetOperators(pc, NULL, &A));
-    PetscBool is_aij;
-    PetscCall(PetscObjectTypeCompare(reinterpret_cast<PetscObject>(A), MATAIJ, &is_aij));
-    if (is_aij) PetscFunctionReturn(PETSC_SUCCESS);
-    SLIC_INFO("convertPCPreSolve(...) - Converting operators to MATAIJ format.");
+    char*   found;
+    MatType mat_type;
+    PetscCall(MatGetType(A, &mat_type));
+    PetscCall(PetscStrstr(mat_type, "aij", &found));
+    if (found) PetscFunctionReturn(PETSC_SUCCESS);
+    SLIC_INFO_ROOT("convertPCPreSolve(...) - Converting operators to MATAIJ format.");
     mfem::PetscParMatrix temp_mat(A, true);
     solver->converted_matrix_ = std::make_unique<mfem::PetscParMatrix>(temp_mat, mfem::Operator::PETSC_MATAIJ);
     PetscCall(PCSetOperators(pc, *solver->converted_matrix_, *solver->converted_matrix_));
@@ -249,7 +251,7 @@ PetscPCSolver::PetscPCSolver(MPI_Comm comm, Operator& op, PCType pc_type, const 
 void PetscPreconditionerSpaceDependent::SetOperator(const Operator& op)
 {
   // Update parent class
-  PetscPreconditioner::SetOperator(op);
+  PetscPCSolver::SetOperator(op);
   SLIC_WARNING_ROOT_IF(
       !fespace_,
       "Finite element space not set with SetFESpace() method, expect performance and/or convergence issues.");
@@ -341,7 +343,7 @@ void PetscGAMGSolver::SetupNearNullSpace()
   const mfem::FiniteElementCollection* fec     = fespace_->FEColl();
   bool                                 h1space = dynamic_cast<const mfem::H1_FECollection*>(fec);
   if (h1space) {
-    SLIC_INFO("PetscGAMGSolver::SetupNearNullSpace(...) - Setting up near null space");
+    SLIC_INFO_ROOT("PetscGAMGSolver::SetupNearNullSpace(...) - Setting up near null space");
     mfem::ParFiniteElementSpace* fespace_coords = fespace_;
 
     sdim = fespace_->GetParMesh()->SpaceDimension();
@@ -412,8 +414,8 @@ void PetscGAMGSolver::SetupNearNullSpace()
         PetscCallAbort(GetComm(), MatNullSpaceDestroy(&nnsp));
         PetscCallAbort(GetComm(), PetscSFDestroy(&sf));
       }
-      PetscCallAbort(GetComm(), VecDestroy(&pvec_coords));
     }
+    PetscCallAbort(GetComm(), VecDestroy(&pvec_coords));
     if (fespace_coords != fespace_) {
       delete fespace_coords;
     }
@@ -421,6 +423,7 @@ void PetscGAMGSolver::SetupNearNullSpace()
   }
   PetscCallAbort(GetComm(), MatGetNearNullSpace(pA, &nnsp));
   SLIC_WARNING_ROOT_IF(!nnsp, "Global near null space was not set successfully, expect slow (or no) convergence.");
+  SLIC_INFO_ROOT_IF(nnsp, "PetscGAMGSolver::SetupNearNullSpace(...) - Near null space set successfully.");
 }
 
 void PetscGAMGSolver::SetOperator(const Operator& op)
@@ -428,9 +431,6 @@ void PetscGAMGSolver::SetOperator(const Operator& op)
   // Update parent class
   PetscPreconditionerSpaceDependent::SetOperator(op);
   // Set rigid body near null space
-  SLIC_WARNING_ROOT_IF(
-      fespace_ == nullptr,
-      "Displacement FE space not set with PetscGAMGSolver::SetFESpace, expect slow (or no) convergence.");
   if (fespace_) {
     SetupNearNullSpace();
   }
@@ -451,7 +451,7 @@ PetscErrorCode convertKSPPreSolve(KSP ksp, [[maybe_unused]] Vec rhs, [[maybe_unu
     PetscCall(KSPGetOperators(ksp, NULL, &A));
     PetscBool is_hypre;
     PetscCall(PetscObjectTypeCompare(reinterpret_cast<PetscObject>(A), MATHYPRE, &is_hypre));
-    SLIC_WARNING_IF(
+    SLIC_WARNING_ROOT_IF(
         is_hypre && petsc_pc,
         "convertKSPPreSolve(...) - MATHYPRE is not supported for most PETSc preconditioners, converting to MATAIJ.");
     if (!is_hypre || petsc_pc) {
@@ -464,10 +464,10 @@ PetscErrorCode convertKSPPreSolve(KSP ksp, [[maybe_unused]] Vec rhs, [[maybe_unu
       old_hypre_csr = *solver->wrapped_matrix_;
     }
     if (old_hypre_csr != hypre_csr || !solver->wrapped_matrix_) {
-      SLIC_INFO("convertKSPPreSolve(...) - Rebuilding HypreParMatrix wrapper");
+      SLIC_INFO_ROOT("convertKSPPreSolve(...) - Rebuilding HypreParMatrix wrapper");
       solver->wrapped_matrix_ = std::make_unique<mfem::HypreParMatrix>(hypre_csr, false);
     }
-    SLIC_INFO("convertKSPPreSolve(...) - Setting operator for preconditioner");
+    SLIC_INFO_ROOT("convertKSPPreSolve(...) - Setting operator for preconditioner");
     if (prec) prec->SetOperator(*solver->wrapped_matrix_);
     solver->needs_hypre_wrapping_ = true;
   }
@@ -545,19 +545,19 @@ void PetscKSPSolver::SetOperator(const mfem::Operator& op)
     if (hA) {
       // Create MATSHELL object or convert into a format suitable to construct preconditioners
       if (PETSC_HAVE_HYPRE && !petsc_pc) {
-        SLIC_INFO("PetscKSPSolver::SetOperator(...) - Wrapping existing HYPRE matrix");
+        SLIC_INFO_ROOT("PetscKSPSolver::SetOperator(...) - Wrapping existing HYPRE matrix");
         pA = new mfem::PetscParMatrix(hA, wrap_ ? PETSC_MATSHELL : PETSC_MATHYPRE);
       } else {
-        SLIC_WARNING(
-            "PetscKSPSolver::SetOperator(...) - Converting operator, consider using PetscParMatrix to avoid conversion "
-            "costs");
+        SLIC_WARNING_ROOT(
+            "PetscKSPSolver::SetOperator(...) - Converting operator, consider using PetscParMatrix to avoid "
+            "conversion costs");
         pA = new mfem::PetscParMatrix(hA, wrap_ ? PETSC_MATSHELL : PETSC_MATAIJ);
       }
     } else if (oA)  // fallback to general operator
     {
       // Create MATSHELL or MATNEST (if oA is a BlockOperator) object
       // If oA is a BlockOperator, Operator::Type is relevant to the subblocks
-      SLIC_WARNING(
+      SLIC_WARNING_ROOT(
           "PetscKSPSolver::SetOperator(...) - Converting operator, consider using PetscParMatrix to avoid conversion "
           "costs");
       pA = new mfem::PetscParMatrix(GetComm(), oA, wrap_ ? PETSC_MATSHELL : PETSC_MATAIJ);
@@ -579,7 +579,7 @@ void PetscKSPSolver::SetOperator(const mfem::Operator& op)
     if (nheight != oheight || nwidth != owidth) {
       // reinit without destroying the KSP
       // communicator remains the same
-      SLIC_WARNING("PetscKSPSolver::SetOperator(...) - Rebuilding KSP");
+      SLIC_WARNING_ROOT("PetscKSPSolver::SetOperator(...) - Rebuilding KSP");
       PetscCallAbort(GetComm(), KSPReset(ksp));
       delete X;
       delete B;
@@ -706,10 +706,10 @@ void PetscNewtonSolver::SetSolver(mfem::Solver& solver)
       auto* inner_prec       = ksp_solver->GetPreconditioner();
       auto* petsc_inner_prec = dynamic_cast<mfem::PetscPreconditioner*>(inner_prec);
       if (petsc_inner_prec) {
-        SLIC_INFO("PetscNewtonSolver::SetSolver(...) - Set Jacobian type to PETSC_MATAIJ");
+        SLIC_INFO_ROOT("PetscNewtonSolver::SetSolver(...) - Set Jacobian type to PETSC_MATAIJ");
         SetJacobianType(PETSC_MATAIJ);
       } else {
-        SLIC_INFO("PetscNewtonSolver::SetSolver(...) - Set Jacobian type to PETSC_MATHYPRE");
+        SLIC_INFO_ROOT("PetscNewtonSolver::SetSolver(...) - Set Jacobian type to PETSC_MATHYPRE");
         SetJacobianType(ANY_TYPE);
       }
     }

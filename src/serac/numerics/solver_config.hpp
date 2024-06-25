@@ -183,7 +183,6 @@ enum class PetscPCType
   LU,            /**< Direct solver based on LU factorization */
   ILU,           /**< Incomplete LU factorization */
   CHOLESKY,      /**< Cholesky factorization */
-  ICC,           /**< Incomplete Cholesky factorization */
   SVD,           /**< LAPACK xGESVD SVD decomposition, fully redundant (SLOW for MPI) */
   ASM,  /**< Additive Schwarz method, each block is solved with its own KSP object, blocks cannot be shared between MPI
            processes. Set total number of blocks with -pc_asm_blocks N */

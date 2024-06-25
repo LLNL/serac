@@ -796,12 +796,14 @@ std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(const NonlinearSolverOp
     nonlinear_solver = std::make_unique<NewtonSolver>(comm, nonlinear_opts);
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::TrustRegion) {
     nonlinear_solver = std::make_unique<TrustRegion>(comm, nonlinear_opts, linear_opts, prec);
+#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::PetscNewton) {
     nonlinear_solver = std::make_unique<mfem_ext::PetscNewtonSolver>(comm, SNESNEWTONLS, SNESLINESEARCHBASIC);
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::PetscNewtonBacktracking) {
     nonlinear_solver = std::make_unique<mfem_ext::PetscNewtonSolver>(comm, SNESNEWTONLS, SNESLINESEARCHBT);
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::PetscNewtonCriticalPoint) {
     nonlinear_solver = std::make_unique<mfem_ext::PetscNewtonSolver>(comm, SNESNEWTONLS, SNESLINESEARCHCP);
+#endif
   }
   // KINSOL
   else {
@@ -886,6 +888,7 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
     case LinearSolver::PetscGMRES:
       SLIC_ERROR_ROOT("PETSc linear solver requested for non-PETSc build.");
       exitGracefully(true);
+      break;
 #endif
     default:
       SLIC_ERROR_ROOT("Linear solver type not recognized.");
@@ -991,10 +994,6 @@ std::unique_ptr<mfem_ext::PetscPCSolver> buildPetscPreconditioner(PetscPCType pc
       preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCLU);
       // Automatically shift the LU factorization to ensure positive definiteness
       PetscCallAbort(comm, PCFactorSetShiftType(*preconditioner, MAT_SHIFT_POSITIVE_DEFINITE));
-#ifdef PETSC_HAVE_SUPERLU_DIST
-      // Use the SuperLU_dist solvers, if available
-      PetscCallAbort(comm, PCFactorSetMatSolverType(*preconditioner, MATSOLVERSUPERLU_DIST));
-#endif
       break;
     case PetscPCType::ILU:
       preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCILU);
@@ -1003,11 +1002,6 @@ std::unique_ptr<mfem_ext::PetscPCSolver> buildPetscPreconditioner(PetscPCType pc
       break;
     case PetscPCType::CHOLESKY:
       preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCCHOLESKY);
-      // Automatically shift the ILU factorization to ensure positive definiteness
-      PetscCallAbort(comm, PCFactorSetShiftType(*preconditioner, MAT_SHIFT_POSITIVE_DEFINITE));
-      break;
-    case PetscPCType::ICC:
-      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCICC);
       // Automatically shift the ILU factorization to ensure positive definiteness
       PetscCallAbort(comm, PCFactorSetShiftType(*preconditioner, MAT_SHIFT_POSITIVE_DEFINITE));
       break;
@@ -1035,10 +1029,6 @@ std::unique_ptr<mfem_ext::PetscPCSolver> buildPetscPreconditioner(PetscPCType pc
       preconditioner = std::make_unique<mfem_ext::PetscGAMGSolver>(comm);
       // Automatically shift the LU factorization to ensure positive definiteness
       PetscOptionsInsertString(nullptr, "-mg_coarse_sub_pc_factor_shift_type positive_definite");
-#ifdef PETSC_HAVE_SUPERLU_DIST
-      // Use the SuperLU_dist solvers, if available
-      PetscOptionsInsertString(nullptr, "-mg_coarse_sub_pc_factor_mat_solver_type superlu_dist");
-#endif
       break;
     }
     case PetscPCType::NONE:
@@ -1062,7 +1052,6 @@ PetscPCType stringToPetscPCType(const std::string& type_str)
       {"lu", PetscPCType::LU},
       {"ilu", PetscPCType::ILU},
       {"cholesky", PetscPCType::CHOLESKY},
-      {"icc", PetscPCType::ICC},
       {"svd", PetscPCType::SVD},
       {"asm", PetscPCType::ASM},
       {"gasm", PetscPCType::GASM},
