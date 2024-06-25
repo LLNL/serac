@@ -20,7 +20,6 @@
 #include "serac/infrastructure/terminator.hpp"
 
 #include "mfem.hpp"
-#include "mfem/linalg/petsc.hpp"
 
 namespace serac {
 

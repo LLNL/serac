@@ -17,7 +17,6 @@
 #include <variant>
 
 #include "mfem.hpp"
-#include "mfem/linalg/petsc.hpp"
 
 #include "serac/infrastructure/input.hpp"
 #include "serac/numerics/solver_config.hpp"

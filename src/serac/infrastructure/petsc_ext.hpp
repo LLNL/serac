@@ -6,7 +6,6 @@
 #pragma once
 
 #include "mfem.hpp"
-#include "mfem/linalg/petsc.hpp"
 #include "serac/serac_config.hpp"
 
 #if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
