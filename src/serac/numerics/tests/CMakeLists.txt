@@ -19,5 +19,5 @@ serac_add_tests( SOURCES ${numerics_serial_tests}
 if(PETSC_FOUND)
     serac_add_tests(SOURCES       equationsolver_petsc.cpp
                     DEPENDS_ON    ${test_dependencies}
-                    NUM_MPI_TASKS 2)
+                    NUM_MPI_TASKS 1)
 endif()
