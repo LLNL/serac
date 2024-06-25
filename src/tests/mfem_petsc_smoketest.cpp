@@ -402,7 +402,7 @@ int ex1_main(int argc, char *argv[])
 // SERAC_EDIT_START
 // clang-format on
 
-TEST(MfemPetscSmoketest, MfemPetscEx9)
+TEST(MfemPetscSmoketest, MfemPetscEx1)
 {
   ::testing::internal::CaptureStdout();
 #ifdef SERAC_USE_CUDA
