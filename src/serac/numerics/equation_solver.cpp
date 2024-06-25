@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/numerics/equation_solver.hpp"
+
 #include <iomanip>
 #include <sstream>
 #include <ios>
