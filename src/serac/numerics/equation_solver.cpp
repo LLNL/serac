@@ -76,8 +76,6 @@ public:
   /// @overload
   void Mult(const mfem::Vector&, mfem::Vector& x) const
   {
-    serac::profiling::initialize();
-
     MFEM_ASSERT(oper != NULL, "the Operator is not set (use SetOperator).");
     MFEM_ASSERT(prec != NULL, "the Solver is not set (use SetSolver).");
 
@@ -190,7 +188,6 @@ public:
     if (!converged && (print_options.summary || print_options.warnings)) {
       mfem::out << "Newton: No convergence!\n";
     }
-    serac::profiling::finalize();
   }
 };
 
@@ -458,8 +455,6 @@ public:
   /// @overload
   void Mult(const mfem::Vector&, mfem::Vector& X) const
   {
-    serac::profiling::initialize();
-
     MFEM_ASSERT(oper != NULL, "the Operator is not set (use SetOperator).");
     MFEM_ASSERT(prec != NULL, "the Solver is not set (use SetSolver).");
 
@@ -638,7 +633,6 @@ public:
     if (!converged && (print_options.summary || print_options.warnings)) {
       mfem::out << "Newton: No convergence!\n";
     }
-    serac::profiling::finalize();
   }
 };
 
