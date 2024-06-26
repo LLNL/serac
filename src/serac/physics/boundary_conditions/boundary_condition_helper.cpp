@@ -45,16 +45,16 @@ void GetEssentialVDofsFromElementAttribute(const mfem::ParFiniteElementSpace& fe
     if (elem_attr_is_ess[fespace.GetAttribute(elem) - 1]) {
       if (component < 0)  // mark all components
       {
-        fespace.GetElementDofs(elem, vdofs);
-        mark_dofs(vdofs, ess_vdofs);
+        fespace.GetElementVDofs(elem, vdofs);
       } else  // mark only desired component
       {
         fespace.GetElementDofs(elem, dofs);
+        vdofs.SetSize(dofs.Size());
         for (int d = 0; d < dofs.Size(); d++) {
-          dofs[d] = fespace.DofToVDof(dofs[d], component);
+          vdofs[d] = fespace.DofToVDof(dofs[d], component);
         }
-        mark_dofs(dofs, ess_vdofs);
       }
+      mark_dofs(vdofs, ess_vdofs);
     }
   }
   fespace.Synchronize(ess_vdofs);

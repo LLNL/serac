@@ -31,6 +31,100 @@ double t = 0.0;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
+struct TrivialIntegrator {
+  template <typename UnusedType>
+  SERAC_HOST_DEVICE auto operator()(double /*t*/, UnusedType /*position*/) const
+  {
+    return 1.0;
+  }
+};
+
+struct TrivialVariadicIntegrator {
+  template <typename... Args>
+  SERAC_HOST_DEVICE auto operator()(Args...) const
+  {
+    return 1.0;
+  }
+};
+
+struct ZeroIndexIntegrator {
+  template <typename P>
+  SERAC_HOST_DEVICE auto operator()(double /*t*/, P position) const
+  {
+    return get<VALUE>(position)[0];
+  }
+};
+
+struct GetZeroIntegrator {
+  template <typename Unused, typename X>
+  SERAC_HOST_DEVICE auto operator()(double /*t*/, Unused, X x) const
+  {
+    return serac::get<0>(x);
+  }
+};
+
+struct SineIntegrator {
+  template <typename Position, typename Temperature>
+  SERAC_HOST_DEVICE auto operator()(double /*t*/, Position position, Temperature temperature) const
+  {
+    auto X           = get<VALUE>(position);
+    auto [u, grad_u] = temperature;
+    return X[0] * X[0] + sin(X[1]) + X[0] * u * u * u;
+  }
+};
+
+struct CosineIntegrator {
+  template <typename Position, typename Temperature>
+  SERAC_HOST_DEVICE auto operator()(double /*t*/, Position position, Temperature temperature) const
+  {
+    auto [X, dX_dxi] = position;
+    auto [u, unused] = temperature;
+    return X[0] - X[1] + cos(u * X[1]);
+  }
+};
+
+struct FourArgSineIntegrator {
+  template <typename Position, typename Temperature, typename TimeDerivativeTemp>
+  SERAC_HOST_DEVICE auto operator()(double /*t*/, Position position, Temperature temperature,
+                                    TimeDerivativeTemp dtemperature_dt) const
+  {
+    auto [X, dX_dxi]     = position;
+    auto [u, grad_u]     = temperature;
+    auto [du_dt, unused] = dtemperature_dt;
+    return X[0] * X[0] + sin(du_dt) + X[0] * u * u * u;
+  }
+};
+
+struct FourArgCosineIntegrator {
+  template <typename Position, typename Temperature, typename TimeDerivativeTemp>
+  SERAC_HOST_DEVICE auto operator()(double /*t*/, Position position, Temperature temperature,
+                                    TimeDerivativeTemp dtemperature_dt) const
+  {
+    auto [X, dX_dxi]     = position;
+    auto [u, grad_u]     = temperature;
+    auto [du_dt, unused] = dtemperature_dt;
+    return X[0] - X[1] + cos(u * du_dt);
+  }
+};
+
+struct GetNormZeroIntegrator {
+  template <typename Unused, typename X>
+  SERAC_HOST_DEVICE auto operator()(double /*t*/, Unused, X x) const
+  {
+    return norm(serac::get<0>(x));
+  }
+};
+
+struct CrossProductIntegrator {
+  template <typename X, typename Param>
+  SERAC_HOST_DEVICE auto operator()(double /*t*/, X x, Param param) const
+  {
+    using std::abs;
+    auto n = normalize(cross(get<DERIVATIVE>(x)));
+    return abs(dot(serac::get<VALUE>(param), n));
+  }
+};
+
 double measure_mfem(mfem::ParMesh& mesh)
 {
   mfem::ConstantCoefficient one(1.0);
@@ -124,8 +218,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
   switch (which) {
     case WhichTest::Measure: {
       Functional<double(trial_space)> measure({&fespace});
-      measure.AddDomainIntegral(
-          Dimension<dim>{}, DependsOn<>{}, [&](double /*t*/, auto /*x*/) { return 1.0; }, mesh);
+      measure.AddDomainIntegral(Dimension<dim>{}, DependsOn<>{}, TrivialIntegrator{}, mesh);
 
       constexpr double expected[] = {1.0, 16.0};
 
@@ -139,8 +232,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
 
     case WhichTest::Moment: {
       Functional<double(trial_space)> x_moment({&fespace});
-      x_moment.AddDomainIntegral(
-          Dimension<dim>{}, DependsOn<>{}, [&](double /*t*/, auto position) { return get<VALUE>(position)[0]; }, mesh);
+      x_moment.AddDomainIntegral(Dimension<dim>{}, DependsOn<>{}, ZeroIndexIntegrator{}, mesh);
 
       constexpr double expected[] = {0.5, 40.0};
 
@@ -151,8 +243,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
       EXPECT_NEAR(0.0, relative_error, 1.0e-10);
 
       Functional<double(trial_space)> x_moment_2({&fespace});
-      x_moment_2.AddDomainIntegral(
-          Dimension<dim>{}, DependsOn<0>{}, [&](double /*t*/, auto, auto u) { return get<0>(u); }, mesh);
+      x_moment_2.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, GetZeroIntegrator{}, mesh);
 
       relative_error = (x_moment_2(t, V) - expected[dim - 2]) / expected[dim - 2];
       EXPECT_NEAR(0.0, relative_error, 1.0e-10);
@@ -164,10 +255,8 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
 
     case WhichTest::SumOfMeasures: {
       Functional<double(trial_space)> sum_of_measures({&fespace});
-      sum_of_measures.AddDomainIntegral(
-          Dimension<dim>{}, DependsOn<>{}, [&](double /*t*/, auto /*x*/) { return 1.0; }, mesh);
-      sum_of_measures.AddBoundaryIntegral(
-          Dimension<dim - 1>{}, DependsOn<>{}, [&](double /*t*/, auto /*x*/) { return 1.0; }, mesh);
+      sum_of_measures.AddDomainIntegral(Dimension<dim>{}, DependsOn<>{}, TrivialIntegrator{}, mesh);
+      sum_of_measures.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<>{}, TrivialIntegrator{}, mesh);
 
       constexpr double expected[] = {5.0, 64.0};
 
@@ -181,22 +270,8 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
 
     case WhichTest::Nonlinear: {
       Functional<double(trial_space)> f({&fespace});
-      f.AddDomainIntegral(
-          Dimension<dim>{}, DependsOn<0>{},
-          [&](double /*t*/, auto position, auto temperature) {
-            auto X           = get<VALUE>(position);
-            auto [u, grad_u] = temperature;
-            return X[0] * X[0] + sin(X[1]) + X[0] * u * u * u;
-          },
-          mesh);
-      f.AddBoundaryIntegral(
-          Dimension<dim - 1>{}, DependsOn<0>{},
-          [&](double /*t*/, auto position, auto temperature) {
-            auto [X, dX_dxi] = position;
-            auto [u, unused] = temperature;
-            return X[0] - X[1] + cos(u * X[1]);
-          },
-          mesh);
+      f.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, SineIntegrator{}, mesh);
+      f.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, CosineIntegrator{}, mesh);
 
       constexpr double expected[] = {4.6640262484879, 192400.1149761554};
 
@@ -248,24 +323,8 @@ void qoi_test(mfem::ParMesh& mesh, H1<p1> trial1, H1<p2> trial2, Dimension<dim>)
   using trial_space2 = decltype(trial2);
 
   Functional<double(trial_space1, trial_space2)> f({&fespace1, &fespace2});
-  f.AddDomainIntegral(
-      Dimension<dim>{}, DependsOn<0, 1>{},
-      [&](double /*t*/, auto position, auto temperature, auto dtemperature_dt) {
-        auto [X, dX_dxi]     = position;
-        auto [u, grad_u]     = temperature;
-        auto [du_dt, unused] = dtemperature_dt;
-        return X[0] * X[0] + sin(du_dt) + X[0] * u * u * u;
-      },
-      mesh);
-  f.AddBoundaryIntegral(
-      Dimension<dim - 1>{}, DependsOn<0, 1>{},
-      [&](double /*t*/, auto position, auto temperature, auto dtemperature_dt) {
-        auto [X, dX_dxi]     = position;
-        auto [u, grad_u]     = temperature;
-        auto [du_dt, unused] = dtemperature_dt;
-        return X[0] - X[1] + cos(u * du_dt);
-      },
-      mesh);
+  f.AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1>{}, FourArgSineIntegrator{}, mesh);
+  f.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0, 1>{}, FourArgCosineIntegrator{}, mesh);
 
   // note: these answers are generated by a Mathematica script that
   // integrates the qoi for these domains to machine precision
@@ -307,8 +366,7 @@ TEST(QoI, DependsOnVectorValuedInput)
   using trial_space = H1<p, dim>;
 
   Functional<double(trial_space)> f({&fespace});
-  f.AddVolumeIntegral(
-      DependsOn<0>{}, [&](double /*t*/, auto /*x*/, auto u) { return norm(serac::get<0>(u)); }, mesh);
+  f.AddVolumeIntegral(DependsOn<0>{}, GetNormZeroIntegrator{}, mesh);
 
   double exact_answer   = 141.3333333333333;
   double relative_error = (f(t, U) - exact_answer) / exact_answer;
@@ -339,8 +397,7 @@ TEST(QoI, AddAreaIntegral)
   using trial_space = H1<p>;
 
   Functional<double(trial_space)> measure({&fespace});
-  measure.AddAreaIntegral(
-      DependsOn<>{}, [&](double /*t*/, auto /*x*/) { return 1.0; }, mesh);
+  measure.AddAreaIntegral(DependsOn<>{}, TrivialIntegrator{}, mesh);
   double relative_error = (measure(t, U) - measure_mfem(mesh)) / measure(t, U);
   EXPECT_NEAR(0.0, relative_error, 1.0e-10);
 
@@ -369,8 +426,7 @@ TEST(QoI, AddVolumeIntegral)
   using trial_space = H1<p>;
 
   Functional<double(trial_space)> measure({&fespace});
-  measure.AddVolumeIntegral(
-      DependsOn<>{}, [&](double /*t*/, auto /*x*/) { return 1.0; }, mesh);
+  measure.AddVolumeIntegral(DependsOn<>{}, TrivialIntegrator{}, mesh);
   double relative_error = (measure(t, U) - measure_mfem(mesh)) / measure(t, U);
   EXPECT_NEAR(0.0, relative_error, 1.0e-10);
 
@@ -403,10 +459,8 @@ TEST(QoI, UsingL2)
   // this tests a fix for the QoI constructor segfaulting when using L2 spaces
   Functional<double(trial_space_0, trial_space_1)> f({&fespace_0, &fespace_1});
 
-  f.AddVolumeIntegral(
-      DependsOn<1>{}, [&](auto...) { return 1.0; }, mesh);
-  f.AddSurfaceIntegral(
-      DependsOn<0>{}, [&](auto...) { return 1.0; }, mesh);
+  f.AddVolumeIntegral(DependsOn<1>{}, TrivialVariadicIntegrator{}, mesh);
+  f.AddSurfaceIntegral(DependsOn<0>{}, TrivialVariadicIntegrator{}, mesh);
 
   check_gradient(f, t, *U0, *U1);
 }
@@ -444,14 +498,11 @@ TEST(QoI, ShapeAndParameter)
 
   // Note that the integral does not have a shape parameter field. The transformations are handled under the hood
   // so the user only sees the modified x = X + p input arguments
-  serac_qoi.AddDomainIntegral(
-      serac::Dimension<dim>{}, serac::DependsOn<0>{},
-      [](double /*t*/, auto /*x*/, auto param) { return serac::get<0>(param); }, whole_mesh);
+  serac_qoi.AddDomainIntegral(serac::Dimension<dim>{}, serac::DependsOn<0>{}, GetZeroIntegrator{}, whole_mesh);
 
   qoi_type serac_volume(shape_fes, trial_fes);
 
-  serac_volume.AddDomainIntegral(
-      serac::Dimension<dim>{}, serac::DependsOn<>{}, [](double /*t*/, auto /*x*/) { return 1.0; }, whole_mesh);
+  serac_volume.AddDomainIntegral(serac::Dimension<dim>{}, serac::DependsOn<>{}, TrivialIntegrator{}, whole_mesh);
 
   std::unique_ptr<mfem::HypreParVector> shape_displacement(shape_fe_space->NewTrueDofVector());
   *shape_displacement = 1.0;
@@ -509,19 +560,13 @@ TEST(QoI, ShapeAndParameterBoundary)
 
   // Note that the integral does not have a shape parameter field. The transformations are handled under the hood
   // so the user only sees the modified x = X + p input arguments
-  serac_qoi.AddBoundaryIntegral(
-      serac::Dimension<dim - 1>{}, serac::DependsOn<0>{},
-      [](double /*t*/, auto x, auto param) {
-        using std::abs;
-        auto n = normalize(cross(get<DERIVATIVE>(x)));
-        return abs(dot(serac::get<VALUE>(param), n));
-      },
-      whole_boundary);
+  serac_qoi.AddBoundaryIntegral(serac::Dimension<dim - 1>{}, serac::DependsOn<0>{}, CrossProductIntegrator{},
+                                whole_boundary);
 
   qoi_type serac_area(shape_fes, trial_fes);
 
-  serac_area.AddBoundaryIntegral(
-      serac::Dimension<dim - 1>{}, serac::DependsOn<>{}, [](double /*t*/, auto /*x*/) { return 1.0; }, whole_boundary);
+  serac_area.AddBoundaryIntegral(serac::Dimension<dim - 1>{}, serac::DependsOn<>{}, TrivialIntegrator{},
+                                 whole_boundary);
 
   std::unique_ptr<mfem::HypreParVector> shape_displacement(shape_fe_space->NewTrueDofVector());
   *shape_displacement = 1.0;
