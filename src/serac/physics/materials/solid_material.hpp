@@ -307,8 +307,8 @@ struct J2FiniteDeformationNonlinear {
 
   /// @brief variables required to characterize the hysteresis response
   struct State {
-    tensor<double, dim, dim> Fpinv = DenseIdentity<3>(); ///< inverse of plastic distortion tensor
-    double accumulated_plastic_strain;  ///< uniaxial equivalent plastic strain
+    tensor<double, dim, dim> Fpinv = DenseIdentity<3>();  ///< inverse of plastic distortion tensor
+    double                   accumulated_plastic_strain;  ///< uniaxial equivalent plastic strain
   };
 
   /** @brief calculate the Cauchy stress, given the displacement gradient and previous material state */
@@ -321,9 +321,9 @@ struct J2FiniteDeformationNonlinear {
     const double   G = 0.5 * E / (1.0 + nu);
 
     // (i) elastic predictor
-    auto F = du_dX + I;
+    auto F  = du_dX + I;
     auto Fe = dot(F, state.Fpinv);
-    auto Ee = 0.5*log_symm(dot(transpose(Fe), Fe));
+    auto Ee = 0.5 * log_symm(dot(transpose(Fe), Fe));
     // From this point until the state variable update, the algorithm exactly coincides with the
     // small strain one.
     auto p = K * tr(Ee);
@@ -348,16 +348,16 @@ struct J2FiniteDeformationNonlinear {
 
       auto Np = 1.5 * s / q;
 
-      s = s - 2.0 * G * delta_eqps * Np;
-      auto A = exp_symm(-delta_eqps*Np);
-      Fe = dot(Fe, A);
+      s      = s - 2.0 * G * delta_eqps * Np;
+      auto A = exp_symm(-delta_eqps * Np);
+      Fe     = dot(Fe, A);
       state.accumulated_plastic_strain += get_value(delta_eqps);
       state.Fpinv = dot(state.Fpinv, get_value(A));
     }
     // Mandel stress
     auto M = s + p * I;
     // convert to Cauchy
-    return dot(dot(Fe, M), inv(Fe))/det(F);
+    return dot(dot(Fe, M), inv(Fe)) / det(F);
   }
 };
 

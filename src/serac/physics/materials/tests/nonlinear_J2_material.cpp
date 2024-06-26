@@ -83,14 +83,15 @@ TEST(FiniteDeformationNonlinearJ2Material, Uniaxial)
      small strain plasticity are applicable, if you replace the lineasr strain with log strain
      and use the Kirchhoff stress as the output.
   */
-  double                                            E       = 1.0;
-  double                                            nu      = 0.25;
-  double                                            sigma_y = 0.01;
-  double                                            Hi      = E / 100.0;
-  double                                            eps0    = sigma_y / Hi;
-  double                                            n       = 1;
-  solid_mechanics::PowerLawHardening                hardening{.sigma_y = sigma_y, .n = n, .eps0 = eps0};
-  solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)> material{.E = E, .nu = nu, .hardening = hardening, .density = 1.0};
+  double                             E       = 1.0;
+  double                             nu      = 0.25;
+  double                             sigma_y = 0.01;
+  double                             Hi      = E / 100.0;
+  double                             eps0    = sigma_y / Hi;
+  double                             n       = 1;
+  solid_mechanics::PowerLawHardening hardening{.sigma_y = sigma_y, .n = n, .eps0 = eps0};
+  solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)> material{
+      .E = E, .nu = nu, .hardening = hardening, .density = 1.0};
 
   auto internal_state   = solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)>::State{};
   auto strain           = [=](double t) { return sigma_y / E * t; };
@@ -100,15 +101,15 @@ TEST(FiniteDeformationNonlinearJ2Material, Uniaxial)
     return epsilon < sigma_y / E ? E * epsilon : E / (E + Hi) * (sigma_y + Hi * epsilon);
   };
   auto plastic_strain_exact = [=](double epsilon) {
-    return epsilon < sigma_y / E ? 0.0: (E * epsilon - sigma_y) / (E + Hi);
+    return epsilon < sigma_y / E ? 0.0 : (E * epsilon - sigma_y) / (E + Hi);
   };
 
   for (auto r : response_history) {
-    double J = detApIm1(get<1>(r)) + 1;
-    double e  = std::log1p(get<1>(r)[0][0]); // log strain
-    double s  = get<2>(r)[0][0]*J; // Kirchhoff stress
+    double J  = detApIm1(get<1>(r)) + 1;
+    double e  = std::log1p(get<1>(r)[0][0]);       // log strain
+    double s  = get<2>(r)[0][0] * J;               // Kirchhoff stress
     double pe = -std::log(get<3>(r).Fpinv[0][0]);  // plastic strain
-    ASSERT_NEAR(s,  stress_exact(e), 1e-6 * std::abs(stress_exact(e)));
+    ASSERT_NEAR(s, stress_exact(e), 1e-6 * std::abs(stress_exact(e)));
     ASSERT_NEAR(pe, plastic_strain_exact(e), 1e-6 * std::abs(plastic_strain_exact(e)));
   }
 };
@@ -122,17 +123,18 @@ TEST(FiniteDeformationNonlinearJ2Material, DerivativeCorrectness)
   // solve.
 
   // parameters
-  double E = 200.0e9;
-  double nu = 0.25;
+  double E       = 200.0e9;
+  double nu      = 0.25;
   double sigma_y = 350e6;
-  double eps0 = sigma_y / E;
-  double n = 3;
+  double eps0    = sigma_y / E;
+  double n       = 3;
 
   // hardening model
   solid_mechanics::PowerLawHardening hardening{.sigma_y = sigma_y, .n = n, .eps0 = eps0};
 
   // material model
-  solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)> material{.E = E, .nu = nu, .hardening = hardening, .density = 1.0};
+  solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)> material{
+      .E = E, .nu = nu, .hardening = hardening, .density = 1.0};
 
   // initialize internal state variables
   auto internal_state = solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)>::State{};
@@ -151,7 +153,7 @@ TEST(FiniteDeformationNonlinearJ2Material, DerivativeCorrectness)
   // clang-format on
 
   auto stress_and_tangent = material(internal_state, make_dual(H));
-  auto tangent = get_gradient(stress_and_tangent);
+  auto tangent            = get_gradient(stress_and_tangent);
 
   // make sure that this load case is actually yielding
   ASSERT_GT(internal_state.accumulated_plastic_strain, 1e-3);
@@ -160,36 +162,36 @@ TEST(FiniteDeformationNonlinearJ2Material, DerivativeCorrectness)
 
   // finite difference evaluations
   auto internal_state_old_p = solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)>::State{};
-  auto stress_p = material(internal_state_old_p, H + epsilon * dH);
+  auto stress_p             = material(internal_state_old_p, H + epsilon * dH);
 
   auto internal_state_old_m = solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)>::State{};
-  auto stress_m = material(internal_state_old_m, H - epsilon * dH);
+  auto stress_m             = material(internal_state_old_m, H - epsilon * dH);
 
   // Make sure the finite difference evaluations all took the same branch (yielding).
   ASSERT_GT(internal_state_old_p.accumulated_plastic_strain, 1e-3);
   ASSERT_GT(internal_state_old_m.accumulated_plastic_strain, 1e-3);
 
   // check AD against finite differences
-  tensor<double, 3, 3> dsig[2] = {double_dot(tangent, dH),
-                                  (stress_p - stress_m) / (2 * epsilon)};
+  tensor<double, 3, 3> dsig[2] = {double_dot(tangent, dH), (stress_p - stress_m) / (2 * epsilon)};
 
-  EXPECT_LT(norm(dsig[0] - dsig[1]), 1e-5*norm(dsig[1]));
+  EXPECT_LT(norm(dsig[0] - dsig[1]), 1e-5 * norm(dsig[1]));
 }
 
 TEST(FiniteDeformationNonlinearJ2Material, FrameIndifference)
 {
   // parameters
-  double E = 200.0e9;
-  double nu = 0.25;
+  double E       = 200.0e9;
+  double nu      = 0.25;
   double sigma_y = 350e6;
-  double eps0 = sigma_y / E;
-  double n = 3;
+  double eps0    = sigma_y / E;
+  double n       = 3;
 
   // hardening model
   solid_mechanics::PowerLawHardening hardening{.sigma_y = sigma_y, .n = n, .eps0 = eps0};
 
   // material model
-  solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)> material{.E = E, .nu = nu, .hardening = hardening, .density = 1.0};
+  solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)> material{
+      .E = E, .nu = nu, .hardening = hardening, .density = 1.0};
 
   // clang-format off
   const tensor<double, 3, 3> H{{
