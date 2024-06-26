@@ -380,16 +380,6 @@ public:
      */
     ThermalMaterialIntegrand(MaterialType material) : material_(material) {}
 
-    // Due to nvcc's lack of support for extended generic lambdas (i.e. functions of the form
-    // auto lambda = [] __host__ __device__ (auto) {}; ), MaterialType cannot be an extended
-    // generic lambda.  The static asserts below check this.
-  private:
-    class DummyArgumentType {};
-    static_assert(!std::is_invocable<MaterialType, DummyArgumentType&>::value);
-    static_assert(!std::is_invocable<MaterialType, DummyArgumentType*>::value);
-    static_assert(!std::is_invocable<MaterialType, DummyArgumentType>::value);
-
-  public:
     /**
      * @brief Evaluate integrand
      */
@@ -433,17 +423,15 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename MaterialType>
-  void setMaterial(DependsOn<active_parameters...>, MaterialType material)
+  void setMaterial(DependsOn<active_parameters...>, const MaterialType& material)
   {
-    ThermalMaterialIntegrand<MaterialType> integrand(material);
-
-    residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, NUM_STATE_VARS + active_parameters...>{}, integrand,
-                                 mesh_);
+    residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, NUM_STATE_VARS + active_parameters...>{},
+                                 ThermalMaterialIntegrand<MaterialType>(material), mesh_);
   }
 
   /// @overload
   template <typename MaterialType>
-  void setMaterial(MaterialType material)
+  void setMaterial(const MaterialType& material)
   {
     setMaterial(DependsOn<>{}, material);
   }

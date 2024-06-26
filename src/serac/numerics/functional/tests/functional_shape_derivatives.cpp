@@ -199,12 +199,70 @@ auto grad_monomials([[maybe_unused]] tensor<T, dim> X)
   }
 }
 
+template <int p, typename X>
+constexpr tensor<double, 2, (p + 1) * (p + 2) / 2> get_test_tensor_dim2()
+{
+  constexpr int dim  = 2;
+  constexpr int dim2 = (p + 1) * (p + 2) / 2;
+  return make_tensor<dim, dim2>([] SERAC_HOST_DEVICE(int i, int j) { return double(i + 1) / (j + 1); });
+}
+
+template <int p, typename X>
+constexpr tensor<double, 3, ((p + 1) * (p + 2) * (p + 3)) / 6> get_test_tensor_dim3()
+{
+  constexpr int dim  = 3;
+  constexpr int dim2 = ((p + 1) * (p + 2) * (p + 3)) / 6;
+  return make_tensor<dim, dim2>([] SERAC_HOST_DEVICE(int i, int j) { return double(i + 1) / (j + 1); });
+}
+
+template <int dim, int p, typename X>
+SERAC_HOST_DEVICE auto div_f(X x)
+{
+  if constexpr (dim == 2) {
+    auto c = get_test_tensor_dim2<p, X>();
+    return tr(dot(c, grad_monomials<p>(x)));
+  } else if constexpr (dim == 3) {
+    auto c = get_test_tensor_dim3<p, X>();
+    return tr(dot(c, grad_monomials<p>(x)));
+  }
+}
+
+template <int dim, int p, typename X>
+SERAC_HOST_DEVICE auto f(X x)
+{
+  if constexpr (dim == 2) {
+    auto c = get_test_tensor_dim2<p, X>();
+    return dot(c, monomials<p>(x));
+  } else if constexpr (dim == 3) {
+    auto c = get_test_tensor_dim3<p, X>();
+    return dot(c, monomials<p>(x));
+  }
+};
+
+template <int dim, int p>
+struct TestFunctorOne {
+  template <typename Postition>
+  SERAC_HOST_DEVICE auto operator()(double, Postition position) const
+  {
+    return serac::tuple{div_f<dim, p>(get<VALUE>(position)), zero{}};
+  }
+};
+
+template <int dim, int p>
+struct TestFunctorTwo {
+  template <typename Postition>
+  SERAC_HOST_DEVICE auto operator()(double, Postition position) const
+  {
+    auto [X, dX_dxi] = position;
+    auto n           = normalize(cross(dX_dxi));
+    return -dot(f<dim, p>(X), n);
+  }
+};
+
 template <int p>
 void functional_test_2D(mfem::ParMesh& mesh, double tolerance)
 {
   constexpr int dim = 2;
-
-  tensor c = make_tensor<dim, (p + 1) * (p + 2) / 2>([](int i, int j) { return double(i + 1) / (j + 1); });
 
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec1 = mfem::H1_FECollection(p, dim);
@@ -234,23 +292,9 @@ void functional_test_2D(mfem::ParMesh& mesh, double tolerance)
   // Construct the new functional object using the known test and trial spaces
   ShapeAwareFunctional<shape_space, test_space(trial_space)> residual(&fespace2, &fespace1, {&fespace1});
 
-  auto div_f = [c](auto x) { return tr(dot(c, grad_monomials<p>(x))); };
-  residual.AddDomainIntegral(
-      Dimension<dim>{}, DependsOn<>{},
-      [=](double /*t*/, auto position) {
-        return serac::tuple{div_f(get<VALUE>(position)), zero{}};
-      },
-      mesh);
+  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<>{}, TestFunctorOne<dim, p>{}, mesh);
 
-  auto f = [c](auto x) { return dot(c, monomials<p>(x)); };
-  residual.AddBoundaryIntegral(
-      Dimension<dim - 1>{}, DependsOn<>{},
-      [=](double /*t*/, auto position) {
-        auto [X, dX_dxi] = position;
-        auto n           = normalize(cross(dX_dxi));
-        return -dot(f(X), n);
-      },
-      mesh);
+  residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<>{}, TestFunctorTwo<dim, p>{}, mesh);
 
   double t        = 0.0;
   auto [r, drdU2] = residual(t, serac::differentiate_wrt(U2), U1);
@@ -265,8 +309,6 @@ void functional_test_3D(mfem::ParMesh& mesh, double tolerance)
 {
   constexpr int dim = 3;
 
-  tensor c = make_tensor<dim, ((p + 1) * (p + 2) * (p + 3)) / 6>([](int i, int j) { return double(i + 1) / (j + 1); });
-
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec1 = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace1(&mesh, &fec1);
@@ -295,23 +337,9 @@ void functional_test_3D(mfem::ParMesh& mesh, double tolerance)
   // Construct the new functional object using the known test and trial spaces
   ShapeAwareFunctional<shape_space, test_space(trial_space)> residual(&fespace2, &fespace1, {&fespace1});
 
-  auto div_f = [c](auto position) { return tr(dot(c, grad_monomials<p>(get<VALUE>(position)))); };
-  residual.AddDomainIntegral(
-      Dimension<dim>{}, DependsOn<>{},
-      [=](double /*t*/, auto X) {
-        return serac::tuple{div_f(X), zero{}};
-      },
-      mesh);
+  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<>{}, TestFunctorOne<dim, p>{}, mesh);
 
-  auto f = [c](auto x) { return dot(c, monomials<p>(x)); };
-  residual.AddBoundaryIntegral(
-      Dimension<dim - 1>{}, DependsOn<>{},
-      [=](double /*t*/, auto position) {
-        auto [X, dX_dxi] = position;
-        auto n           = normalize(cross(dX_dxi));
-        return -dot(f(X), n);
-      },
-      mesh);
+  residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<>{}, TestFunctorTwo<dim, p>{}, mesh);
 
   double t        = 0.0;
   auto [r, drdU2] = residual(t, serac::differentiate_wrt(U2), U1);
