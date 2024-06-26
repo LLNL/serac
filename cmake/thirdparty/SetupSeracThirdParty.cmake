@@ -8,6 +8,14 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     # Prevent this file from being called twice in the same scope
     set(SERAC_THIRD_PARTY_LIBRARIES_FOUND TRUE)
 
+    # At this time we do not want to profile any libraries. Temporarily unset
+    # Caliper and Adiak directories so our upstream libraries don't enable that
+    # behavior. Restoring them at bottom of file.
+    set(_adiak_dir ${ADIAK_DIR})
+    set(_caliper_dir ${CALIPER_DIR})
+    unset(ADIAK_DIR CACHE)
+    unset(CALIPER_DIR CACHE)
+
     #------------------------------------------------------------------------------
     # CUDA
     #------------------------------------------------------------------------------
@@ -111,61 +119,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
                  "${_dirs}")
 
     #------------------------------------------------------------------------------
-    # Adiak
-    #------------------------------------------------------------------------------
-    if(SERAC_ENABLE_PROFILING AND NOT ADIAK_DIR)
-        message(FATAL_ERROR "SERAC_ENABLE_PROFILING cannot be ON without ADIAK_DIR defined. Either specify a host \
-                             config with ADIAK_DIR, or rebuild Serac TPLs with +profiling variant.")
-    endif()
-
-    if(ADIAK_DIR AND SERAC_ENABLE_PROFILING)
-        serac_assert_is_directory(DIR_VARIABLE ADIAK_DIR)
-
-        find_dependency(adiak REQUIRED PATHS "${ADIAK_DIR}")
-        serac_assert_find_succeeded(PROJECT_NAME Adiak
-                                    TARGET       adiak::adiak
-                                    DIR_VARIABLE ADIAK_DIR)
-        message(STATUS "Adiak support is ON")
-        set(ADIAK_FOUND TRUE)
-    else()
-        message(STATUS "Adiak support is OFF")
-        set(ADIAK_FOUND FALSE)
-    endif()
-
-    #------------------------------------------------------------------------------
-    # Caliper
-    #------------------------------------------------------------------------------
-    if(SERAC_ENABLE_PROFILING AND NOT CALIPER_DIR)
-        message(FATAL_ERROR "SERAC_ENABLE_PROFILING cannot be ON without CALIPER_DIR defined. Either specify a host \
-                             config with CALIPER_DIR, or rebuild Serac TPLs with +profiling variant.")
-    endif()
-
-    if(CALIPER_DIR AND SERAC_ENABLE_PROFILING)
-        serac_assert_is_directory(DIR_VARIABLE CALIPER_DIR)
-
-        # Should this logic be in the Caliper CMake package?
-        # If CMake version doesn't support CUDAToolkit the libraries
-        # are just "baked in"
-        if(ENABLE_CUDA)
-            if(CMAKE_VERSION VERSION_LESS 3.17)
-                message(FATAL_ERROR "Serac+Caliper+CUDA requires CMake > 3.17.")
-            else()
-                find_package(CUDAToolkit REQUIRED)
-            endif() 
-        endif()
-
-        find_dependency(caliper REQUIRED PATHS "${CALIPER_DIR}")
-        serac_assert_find_succeeded(PROJECT_NAME Caliper
-                                    TARGET       caliper
-                                    DIR_VARIABLE CALIPER_DIR)
-        message(STATUS "Caliper support is ON")
-        set(CALIPER_FOUND TRUE)
-    else()
-        message(STATUS "Caliper support is OFF")
-        set(CALIPER_FOUND FALSE)
-    endif()
-
-    #------------------------------------------------------------------------------
     # Sundials
     #------------------------------------------------------------------------------
     if (SUNDIALS_DIR)
@@ -199,7 +152,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         #### Store Data that MFEM clears
         set(tpls_to_save ADIAK AMGX AXOM CALIPER CAMP CONDUIT HDF5
                          HYPRE LUA METIS MFEM NETCDF PARMETIS PETSC RAJA 
-                         SUPERLU_DIST STRUMPACK SUNDIALS TRIBOL UMPIRE)
+                         SLEPC SUPERLU_DIST STRUMPACK SUNDIALS TRIBOL
+                         UMPIRE)
         foreach(_tpl ${tpls_to_save})
             set(${_tpl}_DIR_SAVE "${${_tpl}_DIR}")
         endforeach()
@@ -410,12 +364,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
 
     else()
-        # Turn off profiling in Axom to keep logs specific to Serac
-        set(_adiak_dir_temp ${ADIAK_DIR})
-        set(_caliper_dir_temp ${CALIPER_DIR})
-        unset(ADIAK_DIR CACHE)
-        unset(CALIPER_DIR CACHE)
-
         set(ENABLE_FORTRAN OFF CACHE BOOL "" FORCE)
         # Otherwise we use the submodule
         message(STATUS "Using Axom submodule")
@@ -451,10 +399,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         blt_convert_to_system_includes(TARGET core)
 
         set(ENABLE_FORTRAN ON CACHE BOOL "" FORCE)
-
-        # Restore TPLs after turning off profiling in Axom to keep logs specific to Serac
-        set(ADIAK_DIR ${_adiak_dir_temp} CACHE PATH "")
-        set(CALIPER_DIR ${_caliper_dir_temp} CACHE PATH "")
     endif()
 
     #------------------------------------------------------------------------------
@@ -560,4 +504,63 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             endif()
         endforeach()
     endif()
+
+    # Restore cleared Adiak/Caliper directories, reason at top of file.
+    set(ADIAK_DIR ${_adiak_dir} CACHE PATH "" FORCE)
+    set(CALIPER_DIR ${_caliper_dir} CACHE PATH "" FORCE)
+    #------------------------------------------------------------------------------
+    # Adiak
+    #------------------------------------------------------------------------------
+    if(SERAC_ENABLE_PROFILING AND NOT ADIAK_DIR)
+        message(FATAL_ERROR "SERAC_ENABLE_PROFILING cannot be ON without ADIAK_DIR defined. Either specify a host \
+                             config with ADIAK_DIR, or rebuild Serac TPLs with +profiling variant.")
+    endif()
+
+    if(ADIAK_DIR AND SERAC_ENABLE_PROFILING)
+        serac_assert_is_directory(DIR_VARIABLE ADIAK_DIR)
+
+        find_dependency(adiak REQUIRED PATHS "${ADIAK_DIR}")
+        serac_assert_find_succeeded(PROJECT_NAME Adiak
+                                    TARGET       adiak::adiak
+                                    DIR_VARIABLE ADIAK_DIR)
+        message(STATUS "Adiak support is ON")
+        set(ADIAK_FOUND TRUE)
+    else()
+        message(STATUS "Adiak support is OFF")
+        set(ADIAK_FOUND FALSE)
+    endif()
+
+    #------------------------------------------------------------------------------
+    # Caliper
+    #------------------------------------------------------------------------------
+    if(SERAC_ENABLE_PROFILING AND NOT CALIPER_DIR)
+        message(FATAL_ERROR "SERAC_ENABLE_PROFILING cannot be ON without CALIPER_DIR defined. Either specify a host \
+                             config with CALIPER_DIR, or rebuild Serac TPLs with +profiling variant.")
+    endif()
+
+    if(CALIPER_DIR AND SERAC_ENABLE_PROFILING)
+        serac_assert_is_directory(DIR_VARIABLE CALIPER_DIR)
+
+        # Should this logic be in the Caliper CMake package?
+        # If CMake version doesn't support CUDAToolkit the libraries
+        # are just "baked in"
+        if(ENABLE_CUDA)
+            if(CMAKE_VERSION VERSION_LESS 3.17)
+                message(FATAL_ERROR "Serac+Caliper+CUDA requires CMake > 3.17.")
+            else()
+                find_package(CUDAToolkit REQUIRED)
+            endif() 
+        endif()
+
+        find_dependency(caliper REQUIRED PATHS "${CALIPER_DIR}")
+        serac_assert_find_succeeded(PROJECT_NAME Caliper
+                                    TARGET       caliper
+                                    DIR_VARIABLE CALIPER_DIR)
+        message(STATUS "Caliper support is ON")
+        set(CALIPER_FOUND TRUE)
+    else()
+        message(STATUS "Caliper support is OFF")
+        set(CALIPER_FOUND FALSE)
+    endif()
+
 endif()
