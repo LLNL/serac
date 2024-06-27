@@ -60,8 +60,6 @@ class Serac(CachedCMakePackage, CudaPackage):
     variant("petsc", default=True,
             description="Enable PETSc support")
     variant("slepc", default=True, description="Enable SLEPc integration") 
-    variant("netcdf", default=True,
-           description="Enable Cubit/Genesis reader")
     variant("sundials", default=True,
             description="Build MFEM TPL with SUNDIALS nonlinear/ODE solver support")
     variant("umpire",   default=True,
@@ -95,14 +93,13 @@ class Serac(CachedCMakePackage, CudaPackage):
                when="+sundials")
     depends_on("sundials+asan", when="+sundials+asan")
 
-    depends_on("mfem+metis+superlu-dist+lapack+mpi")
-    depends_on("mfem+netcdf", when="+netcdf")
+    depends_on("mfem+netcdf+metis+superlu-dist+lapack+mpi")
     depends_on("mfem+sundials", when="+sundials")
     depends_on("mfem+amgx", when="+cuda")
     depends_on("mfem+asan", when="+asan")
     depends_on("mfem+strumpack", when="+strumpack")
 
-    depends_on("netcdf-c@4.7.4", when="+netcdf")
+    depends_on("netcdf-c@4.7.4")
 
     depends_on("hypre@2.26.0~superlu-dist+mpi")
 
@@ -188,8 +185,8 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     # Package name doesnt match variant name
     # netcdf-c does not have a debug variant
-    depends_on("netcdf-c+shared", when="+netcdf+shared")
-    depends_on("netcdf-c~shared", when="+netcdf~shared")
+    depends_on("netcdf-c+shared", when="+shared")
+    depends_on("netcdf-c~shared", when="~shared")
 
     # Tribol does not have shared variant
     depends_on("tribol build_type=Debug", when="+tribol build_type=Debug")
@@ -372,8 +369,6 @@ class Serac(CachedCMakePackage, CudaPackage):
             entries.append(cmake_cache_path("%s_DIR" % dep.upper(),
                                             dep_dir))
 
-        #if spec.satisfies("^netcdf"):
-        # The actual package name is netcdf-c
         dep_dir = get_spec_path(spec, "netcdf-c", path_replacements)
         entries.append(cmake_cache_path("NETCDF_DIR", dep_dir))
 
