@@ -15,14 +15,17 @@ set(numerics_headers
     odes.hpp
     solver_config.hpp
     stdfunction_operator.hpp
+    petsc_solvers.hpp
     )
 
 set(numerics_sources
     equation_solver.cpp
     odes.cpp
+    petsc_solvers.cpp
     )
 
 set(numerics_depends serac_infrastructure serac_functional)
+blt_list_append(TO numerics_depends ELEMENTS PkgConfig::PETSC IF PETSC_FOUND)
 
 blt_add_library(
     NAME        serac_numerics

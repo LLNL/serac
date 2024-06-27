@@ -7,6 +7,7 @@
 
 #include "mfem.hpp"
 #include "serac/serac_config.hpp"
+#include "serac/numerics/solver_config.hpp"
 
 #if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
 
@@ -202,6 +203,23 @@ public:
 };
 
 /**
+ * @brief Build a PETSc preconditioner
+ *
+ * @param pc_type Type of PETSc preconditioner to construct
+ * @param comm The communicator for the underlying operator and HypreParVectors
+ * @return The constructed PETSc preconditioner
+ */
+std::unique_ptr<mfem_ext::PetscPCSolver> buildPetscPreconditioner(PetscPCType pc_type, const MPI_Comm comm);
+
+/**
+ * @brief Convert a string to the corresponding PetscPCType
+ *
+ * @param type_str String to convert
+ * @return The converted PetscPCType
+ */
+PetscPCType stringToPetscPCType(const std::string& type_str);
+
+/**
  * @brief Wrapper around mfem::PetscLinearSolver supporting the mfem::IterativeSolver interface
  */
 class PetscKSPSolver : virtual public mfem::IterativeSolver, public mfem::PetscLinearSolver {
@@ -304,7 +322,7 @@ public:
    * @param[in] b Right-hand side vector
    * @param[in,out] x Output solution vector (and initial guess if iterative mode is enabled)
    */
-  virtual void Mult(const mfem::Vector& b, mfem::Vector& x) const;
+  virtual void Mult(const mfem::Vector& b, mfem::Vector& x) const override;
 
   /**
    * @brief Solve x = Op^{-T} b
@@ -312,7 +330,7 @@ public:
    * @param[in] b Right-hand side vector
    * @param[in,out] x Output solution vector (and initial guess if iterative mode is enabled)
    */
-  virtual void MultTranspose(const mfem::Vector& b, mfem::Vector& x) const;
+  virtual void MultTranspose(const mfem::Vector& b, mfem::Vector& x) const override;
 
   /**
    * @brief Set the underlying matrix operator to use in the solution algorithm
@@ -320,7 +338,7 @@ public:
    * @param op The matrix operator, either wrapped as a MATSHELL or converted to a PETSc MatType (often MATAIJ or
    * MATHYPRE)
    */
-  virtual void SetOperator(const mfem::Operator& op);
+  virtual void SetOperator(const mfem::Operator& op) override;
 
   /**
    * @brief Set the preconditioner for the linear solver
@@ -330,7 +348,7 @@ public:
    * @note For best results, @a pc should be a PetscPCSolver. HYPRE-based mfem preconditioners also avoid convertion
    * costs, but do require re-wrapping the pointer to the interal HYPRE matrix upon each call to SetOperator().
    */
-  virtual void SetPreconditioner(mfem::Solver& pc);
+  virtual void SetPreconditioner(mfem::Solver& pc) override;
 
   /**
    * @brief Get the preconditioner, if set
@@ -338,6 +356,14 @@ public:
    * @return Pointer to preconditioner set with SetPreconditioner(), or nullptr if not set
    */
   virtual mfem::Solver* GetPreconditioner() { return prec; }
+
+  void         SetMaxIter(int max_its) { mfem::IterativeSolver::SetMaxIter(max_its); }
+  void         SetRelTol(mfem::real_t rtol) { mfem::IterativeSolver::SetRelTol(rtol); }
+  void         SetAbsTol(mfem::real_t atol) { mfem::IterativeSolver::SetAbsTol(atol); }
+  int          GetConverged() { return mfem::PetscLinearSolver::GetConverged(); }
+  mfem::real_t GetFinalNorm() { return mfem::PetscLinearSolver::GetFinalNorm(); }
+  int          GetNumIterations() { return mfem::PetscLinearSolver::GetNumIterations(); }
+  void         SetPrintLevel(int print_lev) override { mfem::PetscLinearSolver::SetPrintLevel(print_lev); }
 };
 
 /**
@@ -351,6 +377,34 @@ protected:
   SNESType snes_type_;
   /// @brief Linesearch type to use for PETSc nonlinear solver
   SNESLineSearchType linesearch_type_;
+  /// @brief Nonlinear solver options
+  NonlinearSolverOptions nonlinear_options_;
+
+  static SNESType SNESTypeFromOptions(NonlinearSolverOptions nonlinear_opts)
+  {
+    switch (nonlinear_opts.nonlin_solver) {
+      case NonlinearSolver::PetscNewton:
+      case NonlinearSolver::PetscNewtonBacktracking:
+      case NonlinearSolver::PetscNewtonCriticalPoint:
+        return SNESNEWTONLS;
+      default:
+        return SNESNEWTONLS;
+    }
+  }
+
+  static SNESLineSearchType SNESLineSearchTypeFromOptions(NonlinearSolverOptions nonlinear_opts)
+  {
+    switch (nonlinear_opts.nonlin_solver) {
+      case NonlinearSolver::PetscNewton:
+        return SNESLINESEARCHBASIC;
+      case NonlinearSolver::PetscNewtonBacktracking:
+        return SNESLINESEARCHBT;
+      case NonlinearSolver::PetscNewtonCriticalPoint:
+        return SNESLINESEARCHCP;
+      default:
+        return SNESLINESEARCHBASIC;
+    }
+  }
 
   /**
    * @brief Set the tolerances on the underlying PETSc nonlinear operator
@@ -363,7 +417,6 @@ protected:
    */
   void SetNonPetscSolver(mfem::Solver& solver);
 
-public:
   /**
    * @brief Construct a PETSc nonlinear solver
    * @param comm The MPI communicator used by the vectors and matrices in the solve
@@ -380,23 +433,18 @@ public:
                     SNESLineSearchType linesearch_type = SNESLINESEARCHBASIC,
                     const std::string& prefix          = std::string());
 
+public:
   /**
-   * @brief Construct a PETSc nonlinear solver with a nonlinear operator
+   * @brief Public constructor for PETSc nonlinear solvers from a NonlinearSolverOptions object
    * @param comm The MPI communicator used by the vectors and matrices in the solve
-   * @param op The operator representing the action of the residual and Jacobian
-   * @param snes_type The type of PETSc nonlinear solver to use, e.g. `SNESNEWTONLS`, `SNESNEWTONTR`, `SNESARCLENGTH`
-   * @param linesearch_type The type of line search to use, if applicable, e.g. `SNESLINESEARCHBASIC` (full step),
-   * `SNESLINESEARCHBT` (backtracking), `SNESLINESEARCHCP` (critical point)
+   * @param nonlinear_opts Options structure describing the solver type and tolerances
    * @param prefix Prefix for all PETSc command line options options
-   * @pre The method GetGradient() must be implemented for the operator @a op
    *
    * @note Additional arguments for the linear solver can be set via the command line, e.g. `-snes_rtol 1e-8`.
    * Use `-snes_type [snes_type] -help` for a complete list of options.
    * @note If @a prefix is provided, the options should be set as `-[prefix]_[option] [value]`.
    */
-  PetscNewtonSolver(MPI_Comm comm, Operator& op, SNESType snes_type = SNESNEWTONLS,
-                    SNESLineSearchType linesearch_type = SNESLINESEARCHBASIC,
-                    const std::string& prefix          = std::string());
+  PetscNewtonSolver(MPI_Comm comm, NonlinearSolverOptions nonlinear_opts, const std::string& prefix = std::string());
 
   /**
    * @brief Set the linear solver for the algorithn
@@ -437,6 +485,14 @@ public:
    * @return The MPI communicator used by the vectors and matrices in the solve
    */
   MPI_Comm GetComm() const { return NewtonSolver::GetComm(); }
+
+  void         SetMaxIter(int max_its) { mfem::NewtonSolver::SetMaxIter(max_its); }
+  void         SetRelTol(mfem::real_t rtol) { mfem::NewtonSolver::SetRelTol(rtol); }
+  void         SetAbsTol(mfem::real_t atol) { mfem::NewtonSolver::SetAbsTol(atol); }
+  int          GetConverged() { return mfem::PetscNonlinearSolver::GetConverged(); }
+  mfem::real_t GetFinalNorm() { return mfem::PetscNonlinearSolver::GetFinalNorm(); }
+  int          GetNumIterations() { return mfem::PetscNonlinearSolver::GetNumIterations(); }
+  void         SetPrintLevel(int print_lev) override { mfem::PetscNonlinearSolver::SetPrintLevel(print_lev); }
 };
 
 }  // namespace serac::mfem_ext

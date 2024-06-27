@@ -27,7 +27,6 @@ set(infrastructure_headers
     logger.hpp
     mpi_fstream.hpp
     output.hpp
-    petsc_ext.hpp
     profiling.hpp
     terminator.hpp
     variant.hpp
@@ -42,7 +41,6 @@ set(infrastructure_sources
     logger.cpp
     mpi_fstream.cpp
     output.cpp
-    petsc_ext.cpp
     profiling.cpp
     terminator.cpp
     )
@@ -51,7 +49,6 @@ set(infrastructure_depends axom::inlet axom::fmt axom::cli11 mfem)
 blt_list_append(TO infrastructure_depends ELEMENTS tribol IF TRIBOL_FOUND)
 blt_list_append(TO infrastructure_depends ELEMENTS caliper adiak::adiak IF SERAC_ENABLE_PROFILING)
 blt_list_append(TO infrastructure_depends ELEMENTS blt::cuda IF ENABLE_CUDA)
-blt_list_append(TO infrastructure_depends ELEMENTS PkgConfig::PETSC IF PETSC_FOUND)
 list(APPEND infrastructure_depends blt::mpi)
 
 blt_add_library(
