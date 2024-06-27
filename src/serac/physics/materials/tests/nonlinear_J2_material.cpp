@@ -122,22 +122,14 @@ TEST(FiniteDeformationNonlinearJ2Material, DerivativeCorrectness)
   // and make sure the derivative propagates correctly through the nonlinear
   // solve.
 
-  // parameters
-  double E       = 200.0e9;
-  double nu      = 0.25;
-  double sigma_y = 350e6;
-  double eps0    = sigma_y / E;
-  double n       = 3;
+  using Hardening = solid_mechanics::PowerLawHardening;
+  using Material  = solid_mechanics::J2FiniteDeformationNonlinear<Hardening>;
 
-  // hardening model
-  solid_mechanics::PowerLawHardening hardening{.sigma_y = sigma_y, .n = n, .eps0 = eps0};
-
-  // material model
-  solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)> material{
-      .E = E, .nu = nu, .hardening = hardening, .density = 1.0};
+  Hardening hardening{.sigma_y = 350e6, .n = 3, .eps0 = 0.00175};
+  Material  material{.E = 200e9, .nu = 0.25, .hardening = hardening, .density = 1.0};
 
   // initialize internal state variables
-  auto internal_state = solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)>::State{};
+  auto internal_state = Material::State{};
 
   // clang-format off
   const tensor<double, 3, 3> H{{
@@ -161,10 +153,10 @@ TEST(FiniteDeformationNonlinearJ2Material, DerivativeCorrectness)
   const double epsilon = 1.0e-5;
 
   // finite difference evaluations
-  auto internal_state_old_p = solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)>::State{};
+  auto internal_state_old_p = Material::State{};
   auto stress_p             = material(internal_state_old_p, H + epsilon * dH);
 
-  auto internal_state_old_m = solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)>::State{};
+  auto internal_state_old_m = Material::State{};
   auto stress_m             = material(internal_state_old_m, H - epsilon * dH);
 
   // Make sure the finite difference evaluations all took the same branch (yielding).
@@ -180,10 +172,10 @@ TEST(FiniteDeformationNonlinearJ2Material, DerivativeCorrectness)
 TEST(FiniteDeformationNonlinearJ2Material, FrameIndifference)
 {
   using Hardening = solid_mechanics::PowerLawHardening;
-  using Material = solid_mechanics::J2FiniteDeformationNonlinear<Hardening>;
+  using Material  = solid_mechanics::J2FiniteDeformationNonlinear<Hardening>;
 
   Hardening hardening{.sigma_y = 350e6, .n = 3, .eps0 = 0.002};
-  Material material{.E = 200.0e9, .nu = 0.25, .hardening = hardening, .density = 1.0};
+  Material  material{.E = 200.0e9, .nu = 0.25, .hardening = hardening, .density = 1.0};
 
   // clang-format off
   const tensor<double, 3, 3> H{{
