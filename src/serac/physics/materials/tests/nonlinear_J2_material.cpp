@@ -179,19 +179,11 @@ TEST(FiniteDeformationNonlinearJ2Material, DerivativeCorrectness)
 
 TEST(FiniteDeformationNonlinearJ2Material, FrameIndifference)
 {
-  // parameters
-  double E       = 200.0e9;
-  double nu      = 0.25;
-  double sigma_y = 350e6;
-  double eps0    = sigma_y / E;
-  double n       = 3;
+  using Hardening = solid_mechanics::PowerLawHardening;
+  using Material = solid_mechanics::J2FiniteDeformationNonlinear<Hardening>;
 
-  // hardening model
-  solid_mechanics::PowerLawHardening hardening{.sigma_y = sigma_y, .n = n, .eps0 = eps0};
-
-  // material model
-  solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)> material{
-      .E = E, .nu = nu, .hardening = hardening, .density = 1.0};
+  Hardening hardening{.sigma_y = 350e6, .n = 3, .eps0 = 0.002};
+  Material material{.E = 200.0e9, .nu = 0.25, .hardening = hardening, .density = 1.0};
 
   // clang-format off
   const tensor<double, 3, 3> H{{
@@ -213,8 +205,9 @@ TEST(FiniteDeformationNonlinearJ2Material, FrameIndifference)
   ASSERT_LT(norm(dot(transpose(Q), Q) - I), 1e-14);
 
   // initialize internal state variables
-  auto internal_state = solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)>::State{};
+  auto internal_state = Material::State{};
 
+  // stress components in original coordinate frame
   auto sigma = material(internal_state, H);
 
   // make sure that this load case is actually yielding
@@ -226,13 +219,16 @@ TEST(FiniteDeformationNonlinearJ2Material, FrameIndifference)
   //        = Q(H + I) - I
   auto H_star = dot(Q, H + I) - I;
 
-  auto internal_state_star = solid_mechanics::J2FiniteDeformationNonlinear<decltype(hardening)>::State{};
+  // Remember to initialize a fresh set of internal variables - the originals have been mutated
+  auto internal_state_star = Material::State{};
+
+  // stress in second coordinate frame
   auto sigma_star = material(internal_state_star, H_star);
 
   auto error = sigma_star - dot(dot(Q, sigma), transpose(Q));
   ASSERT_LT(norm(error), 1e-13*norm(sigma));
 
-  // The plastic distortion Fp is in the intermediate space and should be invariant
+  // The plastic distortion Fp has no legs in the observed space and should be invariant
   error = internal_state.Fpinv - internal_state_star.Fpinv;
   ASSERT_LT(norm(error), 1e-13*norm(internal_state.Fpinv));
 }
