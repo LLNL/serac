@@ -154,7 +154,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #------------------------------------------------------------------------------
     # SLEPc
     #------------------------------------------------------------------------------
-    if (SLEPC_DIR)
+    if (SLEPC_DIR AND PETSC_FOUND)
         serac_assert_is_directory(DIR_VARIABLE SLEPC_DIR)
         set(SERAC_USE_SLEPC ON CACHE BOOL "")
         
@@ -167,6 +167,15 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(SLEPC_FOUND FALSE)
     endif()
     message(STATUS "SLEPc support is ${SERAC_USE_SLEPC}")
+
+    #------------------------------------------------------------------------------
+    # ARPACK
+    #------------------------------------------------------------------------------
+    if (ARPACK_DIR AND SLEPC_FOUND)
+        serac_assert_is_directory(DIR_VARIABLE ARPACK_DIR)
+        include(${CMAKE_CURRENT_LIST_DIR}/FindARPACK.cmake)
+    endif()
+    message(STATUS "ARPACK support is ${ARPACK_FOUND}")
 
     #------------------------------------------------------------------------------
     # MFEM
@@ -303,18 +312,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         target_include_directories(mfem SYSTEM INTERFACE ${_mfem_includes})
         target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${SERAC_SOURCE_DIR}>)
         target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/mfem>)
-
-        # Add missing ARPACK flags needed by SLEPc
-        # https://github.com/mfem/mfem/issues/4364
-        if (MFEM_USE_PETSC AND MFEM_USE_SLEPC)
-            set(_lib_paths ${ARPACK_DIR}/lib/libparpack.so ${ARPACK_DIR}/lib64/libparpack.so)
-            foreach(_path ${_lib_paths})
-                if (EXISTS ${_path})
-                    target_link_libraries(mfem INTERFACE ${_path})
-                endif()
-            endforeach()
-            target_include_directories(mfem SYSTEM INTERFACE ${ARPACK_DIR}/include)
-        endif()
 
         #### Restore previously stored data
         foreach(_tpl ${tpls_to_save})
@@ -514,14 +511,14 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     # MPI library/directory but in some cases Spack cannot determine
     # the correct MPI lib directory. This guards against that.
     # https://github.com/spack/spack/issues/24685
+    set(_mfem_targets
+        mfem
+        axom::mfem
+        tribol::mfem)
     if(STRUMPACK_DIR)
         list(GET MPI_C_LIBRARIES 0 _first_mpi_lib)
         get_filename_component(_mpi_lib_dir ${_first_mpi_lib} DIRECTORY)
     
-        set(_mfem_targets
-            mfem
-            axom::mfem
-            tribol::mfem)
         foreach(_target ${_mfem_targets})
             if(TARGET ${_target})
                 message(STATUS "Adding MPI link directory to target [${_target}]")
@@ -529,6 +526,21 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             endif()
         endforeach()
     endif()
+
+    # Add missing ARPACK flags needed by SLEPc by injecting them into the MFEM targets.
+    # (A string replace is required to get the correct linking order.)
+    # https://github.com/mfem/mfem/issues/4364
+    if (ARPACK_FOUND)
+        list(APPEND MFEM_INCLUDE_DIRS ${ARPACK_DIR}/include)
+
+        foreach(_target ${_mfem_targets})
+            message("${_target} ${ARPACK_INCLUDE_DIRS}")
+            message("ARPACK_INCLUDE_DIRS ${ARPACK_INCLUDE_DIRS}")
+            target_include_directories(${_target} INTERFACE ${ARPACK_INCLUDE_DIRS})
+            target_link_libraries(${_target} INTERFACE ${ARPACK_LIBRARIES})
+        endforeach()
+    endif()
+    unset(_mfem_targets)
 
     # Restore cleared Adiak/Caliper directories, reason at top of file.
     set(ADIAK_DIR ${_adiak_dir} CACHE PATH "" FORCE)

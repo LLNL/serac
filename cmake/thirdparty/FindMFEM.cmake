@@ -126,18 +126,6 @@ else()
         list(APPEND MFEM_LIBRARIES ${CUDA_cusolver_LIBRARY})
     endif()
 
-    # Add missing ARPACK flags needed by SLEPc (a string replace is required to get the correct linking order)
-    # https://github.com/mfem/mfem/issues/4364
-    if (EXISTS ${ARPACK_DIR} AND PETSC_FOUND AND SLEPC_FOUND)
-        foreach(_dir ${ARPACK_DIR}/lib;${ARPACK_DIR}/lib64)
-            if (EXISTS ${_dir})
-                set(ARPACK_LIB "-L${_dir} -lparpack -larpack -Wl,-rpath=${_dir}")
-                string(REPLACE "-lslepc" "-lslepc ${ARPACK_LIB}" MFEM_LIBRARIES "${MFEM_LIBRARIES}")
-            endif()
-        endforeach()
-        list(APPEND MFEM_INCLUDE_DIRS ${ARPACK_DIR}/include)
-    endif()
-
     blt_import_library(
         NAME          mfem
         INCLUDES      ${MFEM_INCLUDE_DIRS}
