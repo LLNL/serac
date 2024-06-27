@@ -528,7 +528,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
 
     # Add missing ARPACK flags needed by SLEPc by injecting them into the MFEM targets.
-    # (A string replace is required to get the correct linking order.)
     # https://github.com/mfem/mfem/issues/4364
     if (ARPACK_FOUND)
         list(APPEND MFEM_INCLUDE_DIRS ${ARPACK_DIR}/include)
