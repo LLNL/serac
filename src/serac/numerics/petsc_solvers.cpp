@@ -4,9 +4,8 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/infrastructure/petsc_ext.hpp"
+#include "serac/numerics/petsc_solvers.hpp"
 #include "serac/infrastructure/logger.hpp"
-#include "petsc_ext.hpp"
 
 #if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
 
@@ -326,12 +325,6 @@ void PetscGAMGSolver::SetupNearNullSpace()
   PetscCallAbort(GetComm(), PCGetOperatorsSet(pc, nullptr, &is_op_set));
   if (!is_op_set) return;
 
-  PetscBool ismatis, ismataij;
-  bool      has_local_mat;
-  PetscCallAbort(GetComm(), PetscObjectTypeCompare(reinterpret_cast<PetscObject>(pA), MATIS, &ismatis));
-  PetscCallAbort(GetComm(), PetscObjectTypeCompare(reinterpret_cast<PetscObject>(pA), MATAIJ, &ismataij));
-  has_local_mat = ismatis || ismataij;
-
   PetscInt sdim = fespace_->GetParMesh()->SpaceDimension();
   int      vdim = fespace_->GetVDim();
 
@@ -348,7 +341,10 @@ void PetscGAMGSolver::SetupNearNullSpace()
 
     sdim = fespace_->GetParMesh()->SpaceDimension();
     if (vdim != sdim || fespace_->GetOrdering() != mfem::Ordering::byVDIM) {
-      fespace_coords = new mfem::ParFiniteElementSpace(fespace_->GetParMesh(), fec, sdim, mfem::Ordering::byVDIM);
+      SLIC_WARNING_ROOT(
+          "PetscGAMGSolver::SetupNearNullSpace(...) - Wrong displacement finite element space ordering - should be "
+          "byVDIM");
+      fespace_coords = new mfem::ParFiniteElementSpace(fespace_->GetParMesh(), fec, vdim, mfem::Ordering::byVDIM);
     }
     mfem::VectorFunctionCoefficient coeff_coords(sdim, func_coords);
     mfem::ParGridFunction           gf_coords(fespace_coords);
@@ -361,60 +357,10 @@ void PetscGAMGSolver::SetupNearNullSpace()
     Vec pvec_coords;
     PetscCallAbort(GetComm(), VecCreateMPIWithArray(GetComm(), sdim, hvec_coords->Size(), hvec_coords->GlobalSize(),
                                                     data_coords, &pvec_coords));
+    VecViewFromOptions(pvec_coords, NULL, "-view_coords");
     PetscCallAbort(GetComm(), MatNullSpaceCreateRigidBody(pvec_coords, &nnsp));
     PetscCallAbort(GetComm(), MatSetNearNullSpace(pA, nnsp));
     PetscCallAbort(GetComm(), MatNullSpaceDestroy(&nnsp));
-
-    // likely elasticity -> we attach rigid-body modes as near-null space information to the local matrices
-    if (vdim == sdim) {
-      if (has_local_mat) {
-        Mat                    lA = nullptr;
-        Vec                    lvec_coords;
-        ISLocalToGlobalMapping l2g;
-        PetscSF                sf;
-        PetscLayout            rmap;
-        const PetscInt*        gidxs;
-        PetscInt               nleaves;
-
-        if (ismatis) {
-          PetscCallAbort(GetComm(), MatISGetLocalMat(pA, &lA));
-        } else if (ismataij) {
-          PetscCallAbort(GetComm(), MatAIJGetLocalMat(pA, &lA));
-        } else {
-          SLIC_ERROR_ROOT("Unsupported mat type.");
-        }
-        PetscCallAbort(GetComm(), MatCreateVecs(lA, &lvec_coords, NULL));
-        PetscCallAbort(GetComm(), VecSetBlockSize(lvec_coords, sdim));
-        PetscCallAbort(GetComm(), MatGetLocalToGlobalMapping(pA, &l2g, NULL));
-        PetscCallAbort(GetComm(), MatGetLayouts(pA, &rmap, NULL));
-        PetscCallAbort(GetComm(), PetscSFCreate(GetComm(), &sf));
-        PetscCallAbort(GetComm(), ISLocalToGlobalMappingGetIndices(l2g, &gidxs));
-        PetscCallAbort(GetComm(), ISLocalToGlobalMappingGetSize(l2g, &nleaves));
-        PetscCallAbort(GetComm(), PetscSFSetGraphLayout(sf, rmap, nleaves, NULL, PETSC_OWN_POINTER, gidxs));
-        PetscCallAbort(GetComm(), ISLocalToGlobalMappingRestoreIndices(l2g, &gidxs));
-        {
-          PetscReal* garray;
-          PetscReal* larray;
-
-          PetscCallAbort(GetComm(), VecGetArray(pvec_coords, &garray));
-          PetscCallAbort(GetComm(), VecGetArray(lvec_coords, &larray));
-#if PETSC_VERSION_LT(3, 15, 0)
-          PetscCallAbort(GetComm(), PetscSFBcastBegin(sf, MPIU_SCALAR, garray, larray));
-          PetscCallAbort(GetComm(), PetscSFBcastEnd(sf, MPIU_SCALAR, garray, larray));
-#else
-          PetscCallAbort(GetComm(), PetscSFBcastBegin(sf, MPIU_SCALAR, garray, larray, MPI_REPLACE));
-          PetscCallAbort(GetComm(), PetscSFBcastEnd(sf, MPIU_SCALAR, garray, larray, MPI_REPLACE));
-#endif
-          PetscCallAbort(GetComm(), VecRestoreArray(pvec_coords, &garray));
-          PetscCallAbort(GetComm(), VecRestoreArray(lvec_coords, &larray));
-        }
-        PetscCallAbort(GetComm(), MatNullSpaceCreateRigidBody(lvec_coords, &nnsp));
-        PetscCallAbort(GetComm(), VecDestroy(&lvec_coords));
-        PetscCallAbort(GetComm(), MatSetNearNullSpace(lA, nnsp));
-        PetscCallAbort(GetComm(), MatNullSpaceDestroy(&nnsp));
-        PetscCallAbort(GetComm(), PetscSFDestroy(&sf));
-      }
-    }
     PetscCallAbort(GetComm(), VecDestroy(&pvec_coords));
     if (fespace_coords != fespace_) {
       delete fespace_coords;
@@ -434,6 +380,106 @@ void PetscGAMGSolver::SetOperator(const Operator& op)
   if (fespace_) {
     SetupNearNullSpace();
   }
+}
+
+// Helper functions
+
+std::unique_ptr<mfem_ext::PetscPCSolver> buildPetscPreconditioner(PetscPCType pc_type, MPI_Comm comm)
+{
+  std::unique_ptr<mfem_ext::PetscPCSolver> preconditioner;
+  switch (pc_type) {
+    case PetscPCType::JACOBI:
+      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCJACOBI);
+      PetscCallAbort(comm, PCJacobiSetType(*preconditioner, PC_JACOBI_DIAGONAL));
+      break;
+    case PetscPCType::JACOBI_L1:
+      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCJACOBI);
+      PetscCallAbort(comm, PCJacobiSetType(*preconditioner, PC_JACOBI_ROWL1));
+      break;
+    case PetscPCType::JACOBI_ROWMAX:
+      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCJACOBI);
+      PetscCallAbort(comm, PCJacobiSetType(*preconditioner, PC_JACOBI_ROWMAX));
+      break;
+    case PetscPCType::JACOBI_ROWSUM:
+      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCJACOBI);
+      PetscCallAbort(comm, PCJacobiSetType(*preconditioner, PC_JACOBI_ROWSUM));
+      break;
+    case PetscPCType::PBJACOBI:
+      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCPBJACOBI);
+      break;
+    case PetscPCType::BJACOBI:
+      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCBJACOBI);
+      break;
+    case PetscPCType::LU:
+      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCLU);
+      // Automatically shift the LU factorization to ensure positive definiteness
+      PetscCallAbort(comm, PCFactorSetShiftType(*preconditioner, MAT_SHIFT_POSITIVE_DEFINITE));
+      break;
+    case PetscPCType::ILU:
+      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCILU);
+      // Automatically shift the ILU factorization to ensure positive definiteness
+      PetscCallAbort(comm, PCFactorSetShiftType(*preconditioner, MAT_SHIFT_POSITIVE_DEFINITE));
+      break;
+    case PetscPCType::CHOLESKY:
+      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCCHOLESKY);
+      // Automatically shift the ILU factorization to ensure positive definiteness
+      PetscCallAbort(comm, PCFactorSetShiftType(*preconditioner, MAT_SHIFT_POSITIVE_DEFINITE));
+      break;
+    case PetscPCType::SVD:
+      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCSVD);
+      break;
+    case PetscPCType::ASM:
+      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCASM);
+      break;
+    case PetscPCType::GASM:
+      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCGASM);
+      break;
+    case PetscPCType::HMG: {
+      preconditioner = std::make_unique<mfem_ext::PetscPreconditionerSpaceDependent>(comm, PCHMG);
+      // Coarsen using component-based subspaces
+      PetscCallAbort(comm, PCHMGSetUseSubspaceCoarsening(*preconditioner, PETSC_TRUE));
+      // Reuse interpolation matrices to speed up computation
+      PetscCallAbort(comm, PCHMGSetReuseInterpolation(*preconditioner, PETSC_TRUE));
+      // Use GAMG for the inner preconditioner (faster)
+      PetscCallAbort(comm, PCHMGSetInnerPCType(*preconditioner, PCGAMG));
+      break;
+    }
+    case PetscPCType::GAMG: {
+      // Special type, as we need to attach near null space
+      preconditioner = std::make_unique<mfem_ext::PetscGAMGSolver>(comm);
+      // Automatically shift the LU factorization to ensure positive definiteness
+      PetscOptionsInsertString(nullptr, "-mg_coarse_sub_pc_factor_shift_type positive_definite");
+      break;
+    }
+    case PetscPCType::NONE:
+      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCNONE);
+      break;
+  }
+  // Allow further customization via command-line arguments (PETSc has many)
+  preconditioner->Customize();
+  return preconditioner;
+}
+
+PetscPCType stringToPetscPCType(const std::string& type_str)
+{
+  std::unordered_map<std::string, PetscPCType> types{
+      {"jacobi", PetscPCType::JACOBI},
+      {"jacobi_l1", PetscPCType::JACOBI_L1},
+      {"jacobi_rowsum", PetscPCType::JACOBI_ROWSUM},
+      {"jacobi_rowmax", PetscPCType::JACOBI_ROWMAX},
+      {"pbjacobi", PetscPCType::PBJACOBI},
+      {"bjacobi", PetscPCType::BJACOBI},
+      {"lu", PetscPCType::LU},
+      {"ilu", PetscPCType::ILU},
+      {"cholesky", PetscPCType::CHOLESKY},
+      {"svd", PetscPCType::SVD},
+      {"asm", PetscPCType::ASM},
+      {"gasm", PetscPCType::GASM},
+      {"gamg", PetscPCType::GAMG},
+      {"hmg", PetscPCType::HMG},
+      {"none", PetscPCType::NONE},
+  };
+  return types.at(type_str);
 }
 
 // PetscKSPSolver methods
@@ -630,20 +676,22 @@ PetscNewtonSolver::PetscNewtonSolver(MPI_Comm comm, SNESType snes_type, SNESLine
   NewtonSolver::iterative_mode = PetscNonlinearSolver::iterative_mode = true;
 }
 
-PetscNewtonSolver::PetscNewtonSolver(MPI_Comm comm, Operator& op, SNESType snes_type,
-                                     SNESLineSearchType linesearch_type, const std::string& prefix)
-    : mfem::NewtonSolver(comm),
-      mfem::PetscNonlinearSolver(comm, op, prefix),
-      snes_type_(snes_type),
-      linesearch_type_(linesearch_type)
+PetscNewtonSolver::PetscNewtonSolver(MPI_Comm comm, NonlinearSolverOptions nonlinear_opts, const std::string& prefix)
+    : PetscNewtonSolver(comm, SNESTypeFromOptions(nonlinear_opts), SNESLineSearchTypeFromOptions(nonlinear_opts),
+                        prefix)
 {
-  rel_tol  = PETSC_DEFAULT;
-  abs_tol  = PETSC_DEFAULT;
-  max_iter = PETSC_DEFAULT;
-  PetscCallVoid(SNESSetType(*this, snes_type_));
-  SetJacobianType(ANY_TYPE);
-  Customize();
-  NewtonSolver::iterative_mode = PetscNonlinearSolver::iterative_mode = true;
+  nonlinear_options_ = nonlinear_opts;
+  SetAbsTol(nonlinear_options_.absolute_tol);
+  SetRelTol(nonlinear_options_.relative_tol);
+  SetMaxIter(nonlinear_options_.max_iterations);
+  SetPrintLevel(nonlinear_options_.print_level);
+
+  rel_tol  = nonlinear_options_.relative_tol;
+  abs_tol  = nonlinear_options_.absolute_tol;
+  max_iter = nonlinear_options_.max_iterations;
+  if (nonlinear_options_.min_iterations > 0) {
+    PetscCallAbort(comm, SNESSetForceIteration(*this, PETSC_TRUE));
+  }
 }
 
 void PetscNewtonSolver::SetTolerances()
@@ -652,15 +700,20 @@ void PetscNewtonSolver::SetTolerances()
   // Fix specifically the absolute tolerance for CP linesearch, since a PETSc bug will erroneously lead to early
   // "convergence". See: https://gitlab.com/petsc/petsc/-/issues/1583
   if (operatorset) {
-    PetscBool is_newtonls, is_cp;
-    PetscCallAbort(GetComm(), PetscStrcmp(SNESNEWTONLS, snes_type_, &is_newtonls));
-    PetscCallAbort(GetComm(), PetscStrcmp(SNESLINESEARCHCP, linesearch_type_, &is_cp));
-    if (is_newtonls && is_cp) {
-      SNESLineSearch linesearch;
-      PetscCallAbort(GetComm(), SNESGetLineSearch(*this, &linesearch));
-      PetscCallAbort(GetComm(), SNESLineSearchSetTolerances(linesearch, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT,
-                                                            1e-30, PETSC_DEFAULT, PETSC_DEFAULT));
-    }
+    PetscBool      is_newtonls, is_cp;
+    SNESLineSearch linesearch;
+    PetscCallAbort(GetComm(), PetscObjectTypeCompare(*this, SNESNEWTONLS, &is_newtonls));
+    PetscCallAbort(GetComm(), SNESGetLineSearch(*this, &linesearch));
+    PetscCallAbort(GetComm(),
+                   PetscObjectTypeCompare(reinterpret_cast<PetscObject>(linesearch), SNESLINESEARCHCP, &is_cp));
+
+    auto max_ls_iters = nonlinear_options_.max_line_search_iterations > 0
+                            ? nonlinear_options_.max_line_search_iterations
+                            : PETSC_DEFAULT;
+    auto abs_ls_tol   = is_newtonls && is_cp ? 1e-30 : PETSC_DEFAULT;
+    // min step, max step, rel tol, abs tol, delta step tol, max iters
+    PetscCallAbort(GetComm(), SNESLineSearchSetTolerances(linesearch, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT,
+                                                          abs_ls_tol, PETSC_DEFAULT, max_ls_iters));
   }
 }
 

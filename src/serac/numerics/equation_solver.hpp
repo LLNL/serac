@@ -20,7 +20,7 @@
 
 #include "serac/infrastructure/input.hpp"
 #include "serac/numerics/solver_config.hpp"
-#include "serac/infrastructure/petsc_ext.hpp"
+#include "serac/numerics/petsc_solvers.hpp"
 
 namespace serac {
 
@@ -294,22 +294,7 @@ std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MP
 #endif
 
 #if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
-/**
- * @brief Build a PETSc preconditioner
- *
- * @param pc_type Type of PETSc preconditioner to construct
- * @param comm The communicator for the underlying operator and HypreParVectors
- * @return The constructed PETSc preconditioner
- */
-std::unique_ptr<mfem_ext::PetscPCSolver> buildPetscPreconditioner(PetscPCType pc_type, const MPI_Comm comm);
 
-/**
- * @brief Convert a string to the corresponding PetscPCType
- *
- * @param type_str String to convert
- * @return The converted PetscPCType
- */
-PetscPCType stringToPetscPCType(const std::string& type_str);
 #endif
 
 }  // namespace serac
