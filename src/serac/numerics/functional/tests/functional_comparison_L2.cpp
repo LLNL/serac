@@ -25,6 +25,32 @@ constexpr bool                 verbose = true;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
+template <int dim>
+struct hcurl_qfunction {
+  template <typename UnusedType1, typename UnusedType2, typename Position>
+  SERAC_HOST_DEVICE auto operator()(UnusedType1, UnusedType2, Position X) const
+  {
+    auto dp_dX = serac::get<1>(X);
+    auto I     = serac::Identity<dim>();
+    return serac::tuple{serac::det(dp_dX + I), serac::zero{}};
+  }
+};
+
+struct test_qfunction {
+  template <typename P, typename Temperature>
+  SERAC_HOST_DEVICE auto operator()(double, P position, Temperature temperature) const
+  {
+    static constexpr double a = 1.7;
+    static constexpr double b = 0.0;
+    // get the value and the gradient from the input tuple
+    auto [X, dX_dxi] = position;
+    auto [u, du_dx]  = temperature;
+    auto source      = a * u - (100 * X[0] * X[1]);
+    auto flux        = b * du_dx;
+    return serac::tuple{source, flux};
+  }
+};
+
 // this test sets up a toy "thermal" problem where the residual includes contributions
 // from a temperature-dependent source term and a temperature-gradient-dependent flux
 //
@@ -78,17 +104,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   Functional<test_space(trial_space)> residual(&fespace, {&fespace});
 
   // Add the total domain residual term to the weak form
-  residual.AddDomainIntegral(
-      Dimension<dim>{}, DependsOn<0>{},
-      [&](double /*t*/, [[maybe_unused]] auto position, [[maybe_unused]] auto temperature) {
-        // get the value and the gradient from the input tuple
-        auto [X, dX_dxi] = position;
-        auto [u, du_dX]  = temperature;
-        auto source      = a * u - (100 * X[0] * X[1]);
-        auto flux        = b * du_dX;
-        return serac::tuple{source, flux};
-      },
-      mesh);
+  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, test_qfunction{}, mesh);
 
   // uncomment lines below to verify that compile-time error messages
   // explain L2 spaces are not currently supported in boundary integrals.
@@ -162,14 +178,7 @@ TEST(L2, 2DMixed)
   mfem::ParFiniteElementSpace H1fespace(mesh2D.get(), &H1fec, dim);
 
   serac::Functional<test_space(trial_space)> f(&L2fespace, {&H1fespace});
-  f.AddDomainIntegral(
-      serac::Dimension<dim>{}, serac::DependsOn<0>{},
-      [](double /*t*/, auto, auto X) {
-        auto dp_dX = serac::get<1>(X);
-        auto I     = serac::Identity<dim>();
-        return serac::tuple{serac::det(dp_dX + I), serac::zero{}};
-      },
-      *mesh2D);
+  f.AddDomainIntegral(serac::Dimension<dim>{}, serac::DependsOn<0>{}, hcurl_qfunction<dim>{}, *mesh2D);
 }
 
 int main(int argc, char* argv[])
