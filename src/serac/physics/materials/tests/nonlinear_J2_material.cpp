@@ -39,11 +39,10 @@ TEST(NonlinearJ2Material, SatisfiesConsistency)
   // clang-format on
 
   using Hardening = solid_mechanics::PowerLawHardening;
-  using Material = solid_mechanics::J2Nonlinear<Hardening>;
+  using Material  = solid_mechanics::J2Nonlinear<Hardening>;
 
-  Hardening hardening_law{.sigma_y = 0.1, .n = 2.0, .eps0 = 0.01};
-  Material material{
-      .E = 1.0, .nu = 0.25, .hardening = hardening_law, .density = 1.0};
+  Hardening            hardening_law{.sigma_y = 0.1, .n = 2.0, .eps0 = 0.01};
+  Material             material{.E = 1.0, .nu = 0.25, .hardening = hardening_law, .density = 1.0};
   auto                 internal_state = Material::State{};
   tensor<double, 3, 3> stress         = material(internal_state, du_dx);
   double               mises          = std::sqrt(1.5) * norm(dev(stress));
@@ -58,7 +57,7 @@ TEST(NonlinearJ2Material, SatisfiesConsistency)
 TEST(NonlinearJ2Material, Uniaxial)
 {
   using Hardening = solid_mechanics::LinearHardening;
-  using Material = solid_mechanics::J2Nonlinear<Hardening>;
+  using Material  = solid_mechanics::J2Nonlinear<Hardening>;
 
   double E       = 1.0;
   double nu      = 0.25;
@@ -66,7 +65,7 @@ TEST(NonlinearJ2Material, Uniaxial)
   double Hi      = E / 100.0;
 
   Hardening hardening{.sigma_y = sigma_y, .Hi = Hi};
-  Material material{.E = E, .nu = nu, .hardening = hardening, .density = 1.0};
+  Material  material{.E = E, .nu = nu, .hardening = hardening, .density = 1.0};
 
   auto internal_state   = Material::State{};
   auto strain           = [=](double t) { return sigma_y / E * t; };
