@@ -30,12 +30,21 @@ TEST(NonlinearJ2Material, PowerLawHardeningWorksWithDuals)
 
 TEST(NonlinearJ2Material, SatisfiesConsistency)
 {
+  // clang-format off
   tensor<double, 3, 3> du_dx{
-      {{0.7551559, 0.3129729, 0.12388372}, {0.548188, 0.8851279, 0.30576992}, {0.82008433, 0.95633745, 0.3566252}}};
-  solid_mechanics::PowerLawHardening hardening_law{.sigma_y = 0.1, .n = 2.0, .eps0 = 0.01};
-  solid_mechanics::J2Nonlinear<solid_mechanics::PowerLawHardening> material{
+      {{0.7551559, 0.3129729, 0.12388372},
+       {0.548188, 0.8851279, 0.30576992},
+       {0.82008433, 0.95633745, 0.3566252}}
+  };
+  // clang-format on
+
+  using Hardening = solid_mechanics::PowerLawHardening;
+  using Material = solid_mechanics::J2Nonlinear<Hardening>;
+
+  Hardening hardening_law{.sigma_y = 0.1, .n = 2.0, .eps0 = 0.01};
+  Material material{
       .E = 1.0, .nu = 0.25, .hardening = hardening_law, .density = 1.0};
-  auto                 internal_state = solid_mechanics::J2Nonlinear<solid_mechanics::PowerLawHardening>::State{};
+  auto                 internal_state = Material::State{};
   tensor<double, 3, 3> stress         = material(internal_state, du_dx);
   double               mises          = std::sqrt(1.5) * norm(dev(stress));
   double               flow_stress    = hardening_law(internal_state.accumulated_plastic_strain);
