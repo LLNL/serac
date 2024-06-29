@@ -48,16 +48,18 @@ TEST(NonlinearJ2Material, SatisfiesConsistency)
 
 TEST(NonlinearJ2Material, Uniaxial)
 {
-  double                                            E       = 1.0;
-  double                                            nu      = 0.25;
-  double                                            sigma_y = 0.01;
-  double                                            Hi      = E / 100.0;
-  double                                            eps0    = sigma_y / Hi;
-  double                                            n       = 1;
-  solid_mechanics::PowerLawHardening                hardening{.sigma_y = sigma_y, .n = n, .eps0 = eps0};
-  solid_mechanics::J2Nonlinear<decltype(hardening)> material{.E = E, .nu = nu, .hardening = hardening, .density = 1.0};
+  using Hardening = solid_mechanics::LinearHardening;
+  using Material = solid_mechanics::J2Nonlinear<Hardening>;
 
-  auto internal_state   = solid_mechanics::J2Nonlinear<decltype(hardening)>::State{};
+  double E       = 1.0;
+  double nu      = 0.25;
+  double sigma_y = 0.01;
+  double Hi      = E / 100.0;
+
+  Hardening hardening{.sigma_y = sigma_y, .Hi = Hi};
+  Material material{.E = E, .nu = nu, .hardening = hardening, .density = 1.0};
+
+  auto internal_state   = Material::State{};
   auto strain           = [=](double t) { return sigma_y / E * t; };
   auto response_history = uniaxial_stress_test(2.0, 4, material, internal_state, strain);
 
@@ -84,14 +86,14 @@ TEST(FiniteDeformationNonlinearJ2Material, Uniaxial)
      and use the Kirchhoff stress as the output.
   */
 
-  using Hardening = solid_mechanics::PowerLawHardening;
+  using Hardening = solid_mechanics::LinearHardening;
   using Material  = solid_mechanics::J2FiniteDeformationNonlinear<Hardening>;
 
   double E       = 1.0;
   double sigma_y = 0.01;
   double Hi      = E / 100.0;
 
-  Hardening hardening{.sigma_y = sigma_y, .n = 1, .eps0 = sigma_y / Hi};
+  Hardening hardening{.sigma_y = sigma_y, .Hi = Hi};
   Material  material{.E = E, .nu = 0.25, .hardening = hardening, .density = 1.0};
 
   auto internal_state   = Material::State{};
