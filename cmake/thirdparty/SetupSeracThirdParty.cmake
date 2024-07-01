@@ -141,6 +141,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #------------------------------------------------------------------------------
     if (PETSC_DIR)
         serac_assert_is_directory(DIR_VARIABLE PETSC_DIR)
+        # NOTE: PETSc is built and used through MFEM
         set(SERAC_USE_PETSC ON CACHE BOOL "")
         
         # Note: MFEM *does not* set PETSC_FOUND itself, likely because we skip petsc build tests
@@ -156,6 +157,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #------------------------------------------------------------------------------
     if (SLEPC_DIR AND SERAC_USE_PETSC)
         serac_assert_is_directory(DIR_VARIABLE SLEPC_DIR)
+        # NOTE: SLEPc is built and used through MFEM
         set(SERAC_USE_SLEPC ON CACHE BOOL "")
         
         # Note: MFEM sets SLEPC_FOUND itself
