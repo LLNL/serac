@@ -98,6 +98,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("mfem+amgx", when="+cuda")
     depends_on("mfem+asan", when="+asan")
     depends_on("mfem+strumpack", when="+strumpack")
+    depends_on("mfem+petsc", when="+petsc")
+    depends_on("mfem+slepc", when="+slepc")
 
     depends_on("netcdf-c@4.7.4")
 
@@ -203,6 +205,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     #
     # Conflicts
     #
+
+    conflicts("~petsc", when="+slepc", msg="PETSc must be built when building with SLEPc!")
 
     conflicts("sundials@:6.0.0", when="+sundials",
               msg="Sundials needs to be greater than 6.0.0")
