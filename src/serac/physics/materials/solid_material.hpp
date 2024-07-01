@@ -257,67 +257,6 @@ struct J2Nonlinear {
   }
 };
 
-/// @brief a 3D constitutive model for a J2 material with linear isotropic and kinematic hardening.
-struct J2 {
-  /// this material is written for 3D
-  static constexpr int dim = 3;
-
-  double E;        ///< Young's modulus
-  double nu;       ///< Poisson's ratio
-  double Hi;       ///< isotropic hardening constant
-  double Hk;       ///< kinematic hardening constant
-  double sigma_y;  ///< yield stress
-  double density;  ///< mass density
-
-  /// @brief variables required to characterize the hysteresis response
-  struct State {
-    tensor<double, dim, dim> beta;                        ///< back-stress tensor
-    tensor<double, dim, dim> plastic_strain;              ///< plastic strain
-    double                   accumulated_plastic_strain;  ///< incremental plastic strain
-  };
-
-  /** @brief calculate the Cauchy stress, given the displacement gradient and previous material state */
-  template <typename T>
-  auto operator()(State& state, const T du_dX) const
-  {
-    using std::sqrt;
-    constexpr auto I = Identity<3>();
-    const double   K = E / (3.0 * (1.0 - 2.0 * nu));
-    const double   G = 0.5 * E / (1.0 + nu);
-
-    //
-    // see pg. 260, box 7.5,
-    // in "Computational Methods for Plasticity"
-    //
-
-    // (i) elastic predictor
-    auto el_strain = sym(du_dX) - state.plastic_strain;
-    auto p         = K * tr(el_strain);
-    auto s         = 2.0 * G * dev(el_strain);
-    auto eta       = s - state.beta;
-    auto q         = sqrt(3.0 / 2.0) * norm(eta);
-    auto phi       = q - (sigma_y + Hi * state.accumulated_plastic_strain);
-
-    // (ii) admissibility
-    if (phi > 0.0) {
-      // see (7.207) on pg. 261
-      auto plastic_strain_inc = phi / (3 * G + Hk + Hi);
-
-      // from here on, only normalize(eta) is required
-      // so we overwrite eta with its normalized version
-      eta = normalize(eta);
-
-      // (iii) return mapping
-      s = s - sqrt(6.0) * G * plastic_strain_inc * eta;
-      state.accumulated_plastic_strain += get_value(plastic_strain_inc);
-      state.plastic_strain += sqrt(3.0 / 2.0) * get_value(plastic_strain_inc) * get_value(eta);
-      state.beta = state.beta + sqrt(2.0 / 3.0) * Hk * get_value(plastic_strain_inc) * get_value(eta);
-    }
-
-    return s + p * I;
-  }
-};
-
 /// @brief Finite deformation version of J2 material with nonlinear isotropic hardening.
 template <typename HardeningType>
 struct J2FiniteDeformationNonlinear {
