@@ -10,6 +10,7 @@
 #if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
 
 #include "petsc/private/matimpl.h"
+#include "petsc/private/linesearchimpl.h"
 #include "petscmathypre.h"
 
 namespace serac::mfem_ext {
@@ -660,6 +661,79 @@ void PetscKSPSolver::SetPreconditioner(mfem::Solver& pc)
 
 // PetscNewtonSolver methods
 
+/**
+ * @brief Callback function passed to SNESLineSearchSetPreCheck which backs-off step size to prevent nan or inf values
+ *
+ * @param[in] linesearch Line search context
+ * @param[in] X Solution vector pre-step
+ * @param[in,out] Y Candidate Newton step
+ * @param[out] changed Output flag indicating whether the step @a Y was changed
+ * @param[in] ctx Context passed to SNESLineSearchSetPreCheck, unused
+ *
+ * @return Error code, or 0 on success.
+ */
+PetscErrorCode linesearchPreCheckBackoffOnNan(SNESLineSearch linesearch, Vec X, Vec Y, PetscBool* changed,
+                                              [[maybe_unused]] void* ctx)
+{
+  SNES        snes;
+  PetscReal   lambda_orig, lambda, min_lambda;
+  PetscScalar fty;
+  PetscInt    max_failures, num_failures = 0;
+  Vec         W, Ftemp;
+  PetscViewer monitor;
+  PetscObject linesearch_obj = reinterpret_cast<PetscObject>(linesearch);
+
+  PetscFunctionBeginUser;
+  PetscCall(SNESLineSearchGetSNES(linesearch, &snes));
+  PetscCall(SNESLineSearchGetVecs(linesearch, NULL, NULL, NULL, &W, &Ftemp));
+  PetscCall(SNESLineSearchGetLambda(linesearch, &lambda_orig));
+  lambda = lambda_orig;
+  PetscCall(SNESGetMaxNonlinearStepFailures(snes, &max_failures));
+  PetscCall(SNESLineSearchGetTolerances(linesearch, &min_lambda, NULL, NULL, NULL, NULL, NULL));
+  PetscCall(SNESLineSearchGetDefaultMonitor(linesearch, &monitor));
+  // If -snes_max_fail 0, don't check at all
+  // This is faster, but will fail if the step leads to a nan or inf value
+  while (num_failures++ < max_failures) {
+    PetscCall(VecWAXPY(W, -lambda_orig, Y, X));
+    if (linesearch->ops->viproject) PetscCall((*linesearch->ops->viproject)(snes, W));
+    PetscCall((*linesearch->ops->snesfunc)(snes, W, Ftemp));
+    PetscCall(VecDot(Ftemp, Y, &fty));
+    if (!PetscIsInfOrNanScalar(fty)) {
+      if (monitor) {
+        PetscCall(PetscViewerASCIIAddTab(monitor, linesearch_obj->tablevel));
+        auto msg = axom::fmt::format("    Line search: dot(F,Y) = {}, no back-off steps needed", fty, lambda);
+        PetscCall(PetscViewerASCIIPrintf(monitor, "%s\n", msg.c_str()));
+        PetscCall(PetscViewerASCIISubtractTab(monitor, linesearch_obj->tablevel));
+      }
+      break;
+    }
+    lambda *= 0.5;
+    if (lambda < min_lambda) {
+      if (monitor) {
+        PetscCall(PetscViewerASCIIAddTab(monitor, linesearch_obj->tablevel));
+        auto msg =
+            axom::fmt::format("    Line search: step size too small ({} < {}) after {} failures, exiting recovery",
+                              lambda, min_lambda, num_failures);
+        PetscCall(PetscViewerASCIIPrintf(monitor, "%s\n", msg.c_str()));
+        PetscCall(PetscViewerASCIISubtractTab(monitor, linesearch_obj->tablevel));
+      }
+      break;
+    }
+    if (monitor) {
+      PetscCall(PetscViewerASCIIAddTab(monitor, linesearch_obj->tablevel));
+      auto msg = axom::fmt::format(
+          "    Line search: dot(F,Y) = {}, scaling back step size to {} ({} of a maximum {} back-off steps)", fty,
+          lambda, num_failures, max_failures);
+      PetscCall(PetscViewerASCIIPrintf(monitor, "%s\n", msg.c_str()));
+      PetscCall(PetscViewerASCIISubtractTab(monitor, linesearch_obj->tablevel));
+    }
+    PetscCall(VecScale(Y, 0.5));
+    *changed = PETSC_TRUE;
+  }
+  // If we didn't find a sufficiently small step, PETSc will fail for us
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscNewtonSolver::PetscNewtonSolver(MPI_Comm comm, SNESType snes_type, SNESLineSearchType linesearch_type,
                                      const std::string& prefix)
     : mfem::NewtonSolver(comm),
@@ -672,6 +746,7 @@ PetscNewtonSolver::PetscNewtonSolver(MPI_Comm comm, SNESType snes_type, SNESLine
   max_iter = PETSC_DEFAULT;
   SetJacobianType(ANY_TYPE);
   PetscCallVoid(SNESSetType(*this, snes_type_));
+  PetscCallVoid(SNESSetMaxNonlinearStepFailures(*this, 5));
   Customize();
   NewtonSolver::iterative_mode = PetscNonlinearSolver::iterative_mode = true;
 }
@@ -714,6 +789,8 @@ void PetscNewtonSolver::SetTolerances()
     // min step, max step, rel tol, abs tol, delta step tol, max iters
     PetscCallAbort(GetComm(), SNESLineSearchSetTolerances(linesearch, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT,
                                                           abs_ls_tol, PETSC_DEFAULT, max_ls_iters));
+    // ensure we don't fail immediately if a nan occurs
+    PetscCallAbort(GetComm(), SNESLineSearchSetPreCheck(linesearch, linesearchPreCheckBackoffOnNan, NULL));
   }
 }
 
