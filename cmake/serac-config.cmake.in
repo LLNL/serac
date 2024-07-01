@@ -30,6 +30,7 @@ if(NOT SERAC_FOUND)
   set(SERAC_ENABLE_CUDA        @ENABLE_CUDA@)
 
   set(SERAC_USE_ADIAK          @SERAC_USE_ADIAK@)
+  set(SERAC_USE_ARPACK         @SERAC_USE_ARPACK@)
   set(SERAC_USE_AXOM           @SERAC_USE_AXOM@)
   set(SERAC_USE_CAMP           @SERAC_USE_CAMP@)
   set(SERAC_USE_CALIPER        @SERAC_USE_CALIPER@)
@@ -44,6 +45,7 @@ if(NOT SERAC_FOUND)
   set(SERAC_USE_UMPIRE         @SERAC_USE_UMPIRE@)
 
   set(SERAC_ADIAK_DIR          "@ADIAK_DIR@")
+  set(SERAC_ARPACK_DIR         "@ARPACK_DIR@")
   set(SERAC_AXOM_DIR           "@AXOM_DIR@")
   set(SERAC_CAMP_DIR           "@CAMP_DIR@")
   set(SERAC_CALIPER_DIR        "@CALIPER_DIR@")
@@ -63,7 +65,7 @@ if(NOT SERAC_FOUND)
   endif()
 
   # Set to real variable unless user overrode it
-  foreach(dep ADIAK AXOM CAMP CALIPER CONDUIT HDF5 MFEM RAJA STRUMPACK SUNDIALS TRIBOL UMPIRE)
+  foreach(dep ADIAK ARPACK AXOM CAMP CALIPER CONDUIT HDF5 MFEM RAJA STRUMPACK SUNDIALS TRIBOL UMPIRE)
     if (NOT ${dep}_DIR)
       set(${dep}_DIR "${SERAC_${dep}_DIR}")
     endif()
@@ -78,6 +80,11 @@ if(NOT SERAC_FOUND)
   set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB32_PATHS TRUE)
   set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS TRUE)
   set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIBX32_PATHS TRUE)
+
+  # Arpack
+  if(SERAC_USE_ARPACK)
+    find_dependency(arpackng REQUIRED PATHS "${ARPACK_DIR}/lib/cmake" "${ARPACK_DIR}/lib64/cmake")
+  endif()
 
   # Adiak
   if(SERAC_USE_ADIAK)

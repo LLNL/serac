@@ -137,9 +137,11 @@ int ex1_main(int argc, char *argv[])
    args.AddOption(&forcewrap, "-forcewrap", "--forcewrap",
                   "-noforce-wrap", "--noforce-wrap",
                   "Force matrix-free.");
-   args.AddOption(&useh2, "-useh2", "--useh2", "-no-h2",
-                  "--no-h2",
-                  "Use or not the H2 matrix solver.");
+   // SERAC_EDIT_START
+   // args.AddOption(&useh2, "-useh2", "--useh2", "-no-h2",
+   //                "--no-h2",
+   //                "Use or not the H2 matrix solver.");
+   // SERAC_EDIT_END
    args.Parse();
    if (!args.Good())
    {

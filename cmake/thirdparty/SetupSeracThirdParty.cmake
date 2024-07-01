@@ -154,7 +154,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #------------------------------------------------------------------------------
     # SLEPc
     #------------------------------------------------------------------------------
-    if (SLEPC_DIR AND PETSC_FOUND)
+    if (SLEPC_DIR AND SERAC_USE_PETSC)
         serac_assert_is_directory(DIR_VARIABLE SLEPC_DIR)
         set(SERAC_USE_SLEPC ON CACHE BOOL "")
         
@@ -171,11 +171,19 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #------------------------------------------------------------------------------
     # ARPACK
     #------------------------------------------------------------------------------
-    if (ARPACK_DIR AND SLEPC_FOUND)
+    if (ARPACK_DIR AND SERAC_USE_SLEPC)
         serac_assert_is_directory(DIR_VARIABLE ARPACK_DIR)
-        include(${CMAKE_CURRENT_LIST_DIR}/FindARPACK.cmake)
+        find_dependency(arpackng REQUIRED PATHS "${ARPACK_DIR}/lib/cmake" "${ARPACK_DIR}/lib64/cmake")
+        serac_assert_find_succeeded(PROJECT_NAME arpackng
+                                    TARGET       parpack
+                                    DIR_VARIABLE ARPACK_DIR)
+        set(SERAC_USE_ARPACK ON CACHE BOOL "")
+        set(ARPACK_FOUND TRUE)
+    else()
+        set(SERAC_USE_ARPACK OFF CACHE BOOL "")
+        set(ARPACK_FOUND FALSE)
     endif()
-    message(STATUS "ARPACK support is ${ARPACK_FOUND}")
+    message(STATUS "ARPACK support is ${SERAC_USE_ARPACK}")
 
     #------------------------------------------------------------------------------
     # MFEM
@@ -530,12 +538,10 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     # Add missing ARPACK flags needed by SLEPc by injecting them into the MFEM targets.
     # https://github.com/mfem/mfem/issues/4364
     if (ARPACK_FOUND)
-        list(APPEND MFEM_INCLUDE_DIRS ${ARPACK_DIR}/include)
-
         foreach(_target ${_mfem_targets})
             if(TARGET ${_target})
-                target_include_directories(${_target} INTERFACE ${ARPACK_INCLUDE_DIRS})
-                target_link_libraries(${_target} INTERFACE ${ARPACK_LIBRARIES})
+                message(STATUS "Adding parpack to target [${_target}]")
+                target_link_libraries(${_target} INTERFACE parpack)
             endif()
         endforeach()
     endif()
