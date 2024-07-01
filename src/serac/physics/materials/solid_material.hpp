@@ -195,7 +195,7 @@ struct VoceHardening {
   };
 };
 
-/// @brief J2 material with nonlinear isotropic hardening.
+/// @brief J2 material with nonlinear isotropic hardening and linear kinematic hardening
 template <typename HardeningType>
 struct J2Nonlinear {
   static constexpr int    dim = 3;      ///< spatial dimension
@@ -204,7 +204,8 @@ struct J2Nonlinear {
   double        E;          ///< Young's modulus
   double        nu;         ///< Poisson's ratio
   HardeningType hardening;  ///< Flow stress hardening model
-  double        density;    ///< mass density
+  double        Hk;         ///< Kinematic hardening modulus
+  double        density;    ///< Mass density
 
   /// @brief variables required to characterize the hysteresis response
   struct State {
@@ -225,12 +226,14 @@ struct J2Nonlinear {
     auto el_strain = sym(du_dX) - state.plastic_strain;
     auto p         = K * tr(el_strain);
     auto s         = 2.0 * G * dev(el_strain);
-    auto q         = sqrt(1.5) * norm(s);
+    auto sigma_b   = 2.0 / 3.0 * Hk * state.plastic_strain;
+    auto eta       = s - sigma_b;
+    auto q         = sqrt(1.5) * norm(eta);
 
     // (ii) admissibility
     const double eqps_old = state.accumulated_plastic_strain;
-    auto         residual = [eqps_old, G, *this](auto delta_eqps, auto trial_mises) {
-      return trial_mises - 3.0 * G * delta_eqps - this->hardening(eqps_old + delta_eqps);
+    auto         residual = [eqps_old, G, *this](auto delta_eqps, auto trial_q) {
+      return trial_q - (3.0 * G + Hk) * delta_eqps - this->hardening(eqps_old + delta_eqps);
     };
     if (residual(0.0, get_value(q)) > tol * hardening.sigma_y) {
       // (iii) return mapping
@@ -240,10 +243,10 @@ struct J2Nonlinear {
       // variables, the return map won't be repeated.
       ScalarSolverOptions opts{.xtol = 0, .rtol = tol * hardening.sigma_y, .max_iter = 25};
       double              lower_bound = 0.0;
-      double              upper_bound = (get_value(q) - hardening(eqps_old)) / (3.0 * G);
+      double              upper_bound = (get_value(q) - hardening(eqps_old)) / (3.0 * G + Hk);
       auto [delta_eqps, status]       = solve_scalar_equation(residual, 0.0, lower_bound, upper_bound, opts, q);
 
-      auto Np = 1.5 * s / q;
+      auto Np = 1.5 * eta / q;
 
       s = s - 2.0 * G * delta_eqps * Np;
       state.accumulated_plastic_strain += get_value(delta_eqps);
