@@ -173,17 +173,11 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     #------------------------------------------------------------------------------
     if (ARPACK_DIR AND SERAC_USE_SLEPC)
         serac_assert_is_directory(DIR_VARIABLE ARPACK_DIR)
-        find_dependency(arpackng REQUIRED PATHS "${ARPACK_DIR}/lib/cmake" "${ARPACK_DIR}/lib64/cmake")
-        serac_assert_find_succeeded(PROJECT_NAME arpackng
-                                    TARGET       parpack
-                                    DIR_VARIABLE ARPACK_DIR)
-        set(SERAC_USE_ARPACK ON CACHE BOOL "")
-        set(ARPACK_FOUND TRUE)
+        include(${CMAKE_CURRENT_LIST_DIR}/FindARPACK.cmake)
     else()
-        set(SERAC_USE_ARPACK OFF CACHE BOOL "")
         set(ARPACK_FOUND FALSE)
     endif()
-    message(STATUS "ARPACK support is ${SERAC_USE_ARPACK}")
+    message(STATUS "ARPACK support is ${ARPACK_FOUND}")
 
     #------------------------------------------------------------------------------
     # MFEM
@@ -540,8 +534,9 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     if (ARPACK_FOUND)
         foreach(_target ${_mfem_targets})
             if(TARGET ${_target})
-                message(STATUS "Adding parpack to target [${_target}]")
-                target_link_libraries(${_target} INTERFACE parpack)
+                message(STATUS "Adding arpack libraries and include dirs to target [${_target}]")
+                target_include_directories(${_target} INTERFACE ${ARPACK_INCLUDE_DIRS})
+                target_link_libraries(${_target} INTERFACE ${ARPACK_LIBRARIES})
             endif()
         endforeach()
     endif()
