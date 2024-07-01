@@ -348,4 +348,4 @@ Note: If you want to build with PETSc, you should instead use the command
 
 .. code-block:: bash
 
-   $ ./scripts/uberenv/uberenv.py --spack-env-file=scripts/spack/configs/macos_sonoma_aarch64/spack.yaml --prefix=../path/to/install --spec="++petsc %clang@18.1.8 ^openmpi@5.0.3_1 ^petsc+tetgen+scalapack+strumpack"
+   $ ./scripts/uberenv/uberenv.py --spack-env-file=scripts/spack/configs/macos_sonoma_aarch64/spack.yaml --prefix=../path/to/install --spec="+petsc %clang@18.1.8 ^openmpi@5.0.3_1 ^petsc+tetgen+scalapack+strumpack"
