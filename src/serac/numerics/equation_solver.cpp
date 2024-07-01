@@ -796,7 +796,7 @@ std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(const NonlinearSolverOp
     nonlinear_solver = std::make_unique<NewtonSolver>(comm, nonlinear_opts);
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::TrustRegion) {
     nonlinear_solver = std::make_unique<TrustRegion>(comm, nonlinear_opts, linear_opts, prec);
-#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
+#ifdef SERAC_USE_PETSC
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::PetscNewton) {
     nonlinear_solver = std::make_unique<mfem_ext::PetscNewtonSolver>(comm, nonlinear_opts);
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::PetscNewtonBacktracking) {
@@ -876,7 +876,7 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
     case LinearSolver::GMRES:
       iter_lin_solver = std::make_unique<mfem::GMRESSolver>(comm);
       break;
-#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
+#ifdef SERAC_USE_PETSC
     case LinearSolver::PetscCG:
       iter_lin_solver = std::make_unique<serac::mfem_ext::PetscKSPSolver>(comm, KSPCG, std::string());
       break;
@@ -997,7 +997,7 @@ std::unique_ptr<mfem::Solver> buildPreconditioner(LinearSolverOptions linear_opt
     SLIC_ERROR_ROOT("AMGX requested in non-GPU build");
 #endif
   } else if (preconditioner == Preconditioner::Petsc) {
-#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
+#ifdef SERAC_USE_PETSC
     preconditioner_solver = mfem_ext::buildPetscPreconditioner(linear_opts.petsc_preconditioner, comm);
 #else
     SLIC_ERROR_ROOT("PETSc preconditioner requested in non-PETSc build");
@@ -1094,7 +1094,7 @@ serac::LinearSolverOptions FromInlet<serac::LinearSolverOptions>::operator()(con
 #endif
   } else if (prec_type == "GaussSeidel") {
     options.preconditioner = serac::Preconditioner::HypreGaussSeidel;
-#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
+#ifdef SERAC_USE_PETSC
   } else if (prec_type == "Petsc") {
     const std::string petsc_prec = config["petsc_prec_type"];
     options.preconditioner       = serac::Preconditioner::Petsc;

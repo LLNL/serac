@@ -7,7 +7,7 @@
 #include "serac/numerics/petsc_solvers.hpp"
 #include "serac/infrastructure/logger.hpp"
 
-#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
+#ifdef SERAC_USE_PETSC
 
 #include "petsc/private/matimpl.h"
 #include "petsc/private/linesearchimpl.h"

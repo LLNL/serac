@@ -1219,7 +1219,7 @@ public:
           });
     }
 
-#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
+#ifdef SERAC_USE_PETSC
     auto* space_dep_pc =
         dynamic_cast<serac::mfem_ext::PetscPreconditionerSpaceDependent*>(&nonlin_solver_->preconditioner());
     if (space_dep_pc) {

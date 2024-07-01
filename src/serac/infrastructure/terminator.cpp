@@ -50,7 +50,7 @@ void exitGracefully(bool error)
     serac::logger::finalize();
   }
 
-#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
+#ifdef SERAC_USE_PETSC
   mfem::MFEMFinalizePetsc();
 #endif
 
