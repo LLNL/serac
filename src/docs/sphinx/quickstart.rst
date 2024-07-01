@@ -278,11 +278,15 @@ Installing base dependencies using Homebrew
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Install the following packages using Homebrew.
+
 .. code-block:: bash
+
    $ brew install autoconf automake bzip2 clingo cmake gcc gettext gnu-sed graphviz hwloc lapack libx11 llvm m4 make ninja open-mpi openblas pkg-config python readline spack zlib
 
 If you plan to install the developer tools, you should also run
+
 .. code-block:: bash
+
    $ brew install cppcheck doxygen llvm@14
    $ ln -s /opt/homebrew/opt/llvm@14/bin/clang-format /opt/homebrew/bin/clang-format
 
@@ -293,7 +297,9 @@ Homebrew will warn about such packages after installing them.
 
 In order for the correct compilers to be used for the installation, you should also add the bin directory for LLVM clang to your path in your ``.bash_profile``, ``.bashrc``, or ``.zshrc``, etc.
 This is also useful for a few additional packages:
+
 .. code-block:: bash
+
    $ export PATH="/opt/homebrew/opt/llvm/bin:/opt/homebrew/opt/m4/bin:/opt/homebrew/opt/gnu-sed/libexec/gnubin:$PATH"
 
 Configuring Spack
@@ -301,23 +307,27 @@ Configuring Spack
 In order to build Serac, we must define a ``spack.yaml`` file which tells Spack what packages we have installed.
 You will likely need to update the versions of packages in the provided example script ``scripts/spack/configs/macos_sonoma_aarch64/spack.yaml`` to match the versions installed by Homebrew.
 The versions for all installed packages can be listed via:
+
 .. code-block:: bash
+
    $ brew list --versions
+
 Note that the version format output by the above command is not the same as that expected by Spack, so be sure to add an ``@`` symbol between the package name and version string.
 
 If you are not using an M2 or M3 Mac, you will need to change the ``target`` for the compiler to ``x86_64`` or ``m1`` for Intel and M1-based Macs, respectively.
 Similarly, you need to set the ``operating_system`` to the proper value if you are not using ``sonoma`` (MacOS 14.X).
 
 If you want to install the devtools, you should also add the following under ``packages`` in the ``spack.yaml`` files.
+
 .. code-block:: yaml
+
   # optional, for dev tools
   cppcheck:
     version: [2.14.2]
     buildable: false
     externals:
-    - spec: cppcheck@2.14.1
+    - spec: cppcheck@2.14.2
       prefix: /opt/homebrew
-  # optional, for dev tools
   doxygen:
     version: [1.11.0]
     buildable: false
@@ -331,9 +341,11 @@ Building dependencies
 The invocation of ``uberenv.py`` is slightly modified from the standard instructions above in order to force the use of the Homebrew-installed MPI and compilers:
 
 .. code-block:: bash
+
    $ ./scripts/uberenv/uberenv.py --spack-env-file=scripts/spack/configs/macos_sonoma_aarch64/spack.yaml --prefix=../path/to/install --spec="%clang@18.1.8 ^openmpi@5.0.3_1"
 
 Note: If you want to build with PETSc, you should instead use the command
 
 .. code-block:: bash
+
    $ ./scripts/uberenv/uberenv.py --spack-env-file=scripts/spack/configs/macos_sonoma_aarch64/spack.yaml --prefix=../path/to/install --spec="++petsc %clang@18.1.8 ^openmpi@5.0.3_1 ^petsc+tetgen+scalapack+strumpack"
