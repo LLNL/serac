@@ -111,7 +111,8 @@ spack:
       - spec: zlib@1.3.1
         prefix: /opt/homebrew
 
-  compilers:
+ # The "::" removes all found/known compilers from Spack except for these.
+  compilers::
   - compiler:
       spec: clang@=18.1.8
       paths:
