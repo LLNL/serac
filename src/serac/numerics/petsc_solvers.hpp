@@ -9,7 +9,7 @@
 #include "serac/serac_config.hpp"
 #include "serac/numerics/solver_config.hpp"
 
-#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
+#ifdef SERAC_USE_PETSC
 
 #include "petsc.h"
 #include "petscpc.h"

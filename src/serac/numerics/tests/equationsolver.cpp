@@ -127,7 +127,7 @@ auto nonlinear_solvers = testing::Values(
     ,
     NonlinearSolver::KINFullStep, NonlinearSolver::KINBacktrackingLineSearch, NonlinearSolver::KINPicard
 #endif
-#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
+#ifdef SERAC_USE_PETSC
     ,
     NonlinearSolver::PetscNewton, NonlinearSolver::PetscNewtonBacktracking, NonlinearSolver::PetscNewtonCriticalPoint
 #endif
@@ -138,7 +138,7 @@ auto nonlinear_solvers = testing::Values(
  * If MFEM_USE_PETSC and SERAC_USE_PETSC are set, adds LinearSolver::PetscCG and LinearSolver::PetscGMRES.
  */
 auto linear_solvers = testing::Values(LinearSolver::CG, LinearSolver::GMRES, LinearSolver::SuperLU
-#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
+#ifdef SERAC_USE_PETSC
                                       ,
                                       LinearSolver::PetscCG, LinearSolver::PetscGMRES
 #endif
@@ -147,7 +147,7 @@ auto linear_solvers = testing::Values(LinearSolver::CG, LinearSolver::GMRES, Lin
 auto preconditioners =
     testing::Values(Preconditioner::HypreJacobi, Preconditioner::HypreL1Jacobi, Preconditioner::HypreGaussSeidel,
                     Preconditioner::HypreAMG, Preconditioner::HypreILU
-#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
+#ifdef SERAC_USE_PETSC
                     ,
                     Preconditioner::Petsc
 #endif

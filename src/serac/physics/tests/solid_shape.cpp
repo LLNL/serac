@@ -54,9 +54,10 @@ void shape_test(GeometricNonlinearities geo_nonlin)
   auto linear_options = solid_mechanics::default_linear_options;
 
   // Use tight tolerances as this is a machine precision test
-#ifdef MFEM_USE_PETSC
+#ifdef SERAC_USE_PETSC
+  linear_options.linear_solver        = LinearSolver::PetscCG;
   linear_options.preconditioner       = Preconditioner::Petsc;
-  linear_options.petsc_preconditioner = PetscPCType::GAMG;
+  linear_options.petsc_preconditioner = PetscPCType::HMG;
 #else
   linear_options.preconditioner = Preconditioner::HypreJacobi;
 #endif

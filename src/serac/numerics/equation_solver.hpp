@@ -293,7 +293,7 @@ std::unique_ptr<mfem::Solver> buildPreconditioner(LinearSolverOptions       line
 std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MPI_Comm comm);
 #endif
 
-#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
+#ifdef SERAC_USE_PETSC
 
 #endif
 

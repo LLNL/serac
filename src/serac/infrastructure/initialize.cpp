@@ -62,7 +62,7 @@ std::pair<int, int> initialize(int argc, char* argv[], MPI_Comm comm)
   mfem::Sundials::Init();
 #endif
 
-#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
+#ifdef SERAC_USE_PETSC
   mfem::MFEMInitializePetsc(&argc, &argv);
 #endif
   // Initialize GPU (no-op if not enabled/available)

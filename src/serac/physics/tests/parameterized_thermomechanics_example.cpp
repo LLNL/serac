@@ -92,7 +92,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
   NonlinearSolverOptions nonlinear_opts = solid_mechanics::default_nonlinear_options;
   LinearSolverOptions    linear_opts    = solid_mechanics::default_linear_options;
-#if defined(MFEM_USE_PETSC) && defined(SERAC_USE_PETSC)
+#ifdef SERAC_USE_PETSC
   nonlinear_opts.nonlin_solver = NonlinearSolver::PetscNewton;
 
   linear_opts.linear_solver        = LinearSolver::PetscGMRES;

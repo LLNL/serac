@@ -25,7 +25,6 @@ set(numerics_sources
     )
 
 set(numerics_depends serac_infrastructure serac_functional)
-blt_list_append(TO numerics_depends ELEMENTS PkgConfig::PETSC IF PETSC_FOUND)
 
 blt_add_library(
     NAME        serac_numerics
