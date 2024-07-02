@@ -85,7 +85,6 @@ TEST(Thermomechanics, ParameterizedMaterial)
                                                                         outer_radius,
                                                                         height), serial_refinement, parallel_refinement);
 
-  mesh->Save("mesh.msh");
   // clang-format on
   std::string mesh_tag{"mesh"};
   auto&       pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
