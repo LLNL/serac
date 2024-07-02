@@ -75,11 +75,11 @@ int main()
   double nu = (3 * K - 2 * G) / (2 * (3 * K + G));
   double sigma_y = 165 * sqrt(3.0);
 
-  using Hardening = solid_mechanics::VoceHardening;
+  using Hardening = solid_mechanics::LinearHardening;
   using Material = solid_mechanics::J2Nonlinear<Hardening>;
 
-  Hardening hardening{sigma_y, sigma_y, sigma_y/E};
-  Material material{E, nu, hardening, 0.0, 1.0};
+  Hardening hardening{.sigma_y = sigma_y, .Hi = 0.0};
+  Material material{.E = E, .nu = nu, .hardening = hardening, .Hk = 0.0, .density = 1.0};
   Material::State initial_state{};
 
   tensor<double, 3> epsilon[2] = {{-0.0030000, -0.003, 0.0060000}, {-0.0103923, 0.000, 0.0103923}};
@@ -94,7 +94,7 @@ int main()
   for (auto [t, state, dudx, stress] : history) {
     if (t > 0) {
       double rel_error = norm(stress - analytic_soln(t)) / norm(stress);
-      // std::cout << t << ": " << rel_error << std::endl;
+      std::cout << t << ": " << rel_error << std::endl;
     }
 
     // for generating a plot like in the paper:
