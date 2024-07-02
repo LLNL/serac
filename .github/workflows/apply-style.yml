@@ -29,7 +29,7 @@ jobs:
           fi
 
       - name: Comment on PR
-          run: |
-            COMMENT_URL=$(jq -r .issue.pull_request.url < $GITHUB_EVENT_PATH || jq -r .issue.url < $GITHUB_EVENT_PATH)
-            COMMENT_BODY="Style check completed successfully!"
-            curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -H "Content-Type: application/json" -d "{\"body\":\"$COMMENT_BODY\"}" $COMMENT_URL/comments
+        run: |
+          COMMENT_URL=$(jq -r .issue.pull_request.url < $GITHUB_EVENT_PATH || jq -r .issue.url < $GITHUB_EVENT_PATH)
+          COMMENT_BODY="Style check completed successfully!"
+          curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -H "Content-Type: application/json" -d "{\"body\":\"$COMMENT_BODY\"}" $COMMENT_URL/comments
