@@ -1,0 +1,35 @@
+on:
+  issue_comment:
+    types: [created]
+
+name: Apply Style
+jobs:
+  apply-style:
+    if: startsWith(github.event.comment.body, '/style')
+    name: Apply Style to Source
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Apply style updates
+        uses: ./.github/actions/apply-style
+
+      - name: Push changed files
+        run: |
+          printf "GitHub Actor: ${GITHUB_ACTOR}\n"
+          git config user.name "Agent Style"
+          git config user.email "no-reply@llnl.gov"
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -am 'Apply style updates'
+            git push
+          fi
+
+      - name: Comment on PR
+          run: |
+            COMMENT_URL=$(jq -r .issue.pull_request.url < $GITHUB_EVENT_PATH || jq -r .issue.url < $GITHUB_EVENT_PATH)
+            COMMENT_BODY="Style check completed successfully!"
+            curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -H "Content-Type: application/json" -d "{\"body\":\"$COMMENT_BODY\"}" $COMMENT_URL/comments
