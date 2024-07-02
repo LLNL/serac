@@ -28,7 +28,8 @@
 
 using namespace serac;
 
-std::string path = ".";
+//std::string path = ".";
+
 
 auto get_opts(int max_iters, double abs_tol = 1e-9)
 {

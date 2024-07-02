@@ -59,7 +59,7 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     variant("petsc", default=True,
             description="Enable PETSc support")
-    variant("slepc", default=False, description="Enable SLEPc integration")
+    variant("slepc", default=True, description="Enable SLEPc integration")
     variant("sundials", default=True,
             description="Build MFEM TPL with SUNDIALS nonlinear/ODE solver support")
     variant("umpire",   default=True,
