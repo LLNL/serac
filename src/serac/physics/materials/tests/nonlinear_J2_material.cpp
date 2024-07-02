@@ -30,12 +30,20 @@ TEST(NonlinearJ2Material, PowerLawHardeningWorksWithDuals)
 
 TEST(NonlinearJ2Material, SatisfiesConsistency)
 {
+  // clang-format off
   tensor<double, 3, 3> du_dx{
-      {{0.7551559, 0.3129729, 0.12388372}, {0.548188, 0.8851279, 0.30576992}, {0.82008433, 0.95633745, 0.3566252}}};
-  solid_mechanics::PowerLawHardening hardening_law{.sigma_y = 0.1, .n = 2.0, .eps0 = 0.01};
-  solid_mechanics::J2Nonlinear<solid_mechanics::PowerLawHardening> material{
-      .E = 1.0, .nu = 0.25, .hardening = hardening_law, .density = 1.0};
-  auto                 internal_state = solid_mechanics::J2Nonlinear<solid_mechanics::PowerLawHardening>::State{};
+      {{0.7551559, 0.3129729, 0.12388372},
+       {0.548188, 0.8851279, 0.30576992},
+       {0.82008433, 0.95633745, 0.3566252}}
+  };
+  // clang-format on
+
+  using Hardening = solid_mechanics::PowerLawHardening;
+  using Material  = solid_mechanics::J2Nonlinear<Hardening>;
+
+  Hardening            hardening_law{.sigma_y = 0.1, .n = 2.0, .eps0 = 0.01};
+  Material             material{.E = 1.0, .nu = 0.25, .hardening = hardening_law, .density = 1.0};
+  auto                 internal_state = Material::State{};
   tensor<double, 3, 3> stress         = material(internal_state, du_dx);
   double               mises          = std::sqrt(1.5) * norm(dev(stress));
   double               flow_stress    = hardening_law(internal_state.accumulated_plastic_strain);
@@ -48,16 +56,18 @@ TEST(NonlinearJ2Material, SatisfiesConsistency)
 
 TEST(NonlinearJ2Material, Uniaxial)
 {
-  double                                            E       = 1.0;
-  double                                            nu      = 0.25;
-  double                                            sigma_y = 0.01;
-  double                                            Hi      = E / 100.0;
-  double                                            eps0    = sigma_y / Hi;
-  double                                            n       = 1;
-  solid_mechanics::PowerLawHardening                hardening{.sigma_y = sigma_y, .n = n, .eps0 = eps0};
-  solid_mechanics::J2Nonlinear<decltype(hardening)> material{.E = E, .nu = nu, .hardening = hardening, .density = 1.0};
+  using Hardening = solid_mechanics::LinearHardening;
+  using Material  = solid_mechanics::J2Nonlinear<Hardening>;
 
-  auto internal_state   = solid_mechanics::J2Nonlinear<decltype(hardening)>::State{};
+  double E       = 1.0;
+  double nu      = 0.25;
+  double sigma_y = 0.01;
+  double Hi      = E / 100.0;
+
+  Hardening hardening{.sigma_y = sigma_y, .Hi = Hi};
+  Material  material{.E = E, .nu = nu, .hardening = hardening, .density = 1.0};
+
+  auto internal_state   = Material::State{};
   auto strain           = [=](double t) { return sigma_y / E * t; };
   auto response_history = uniaxial_stress_test(2.0, 4, material, internal_state, strain);
 
@@ -84,14 +94,14 @@ TEST(FiniteDeformationNonlinearJ2Material, Uniaxial)
      and use the Kirchhoff stress as the output.
   */
 
-  using Hardening = solid_mechanics::PowerLawHardening;
+  using Hardening = solid_mechanics::LinearHardening;
   using Material  = solid_mechanics::J2FiniteDeformationNonlinear<Hardening>;
 
   double E       = 1.0;
   double sigma_y = 0.01;
   double Hi      = E / 100.0;
 
-  Hardening hardening{.sigma_y = sigma_y, .n = 1, .eps0 = sigma_y / Hi};
+  Hardening hardening{.sigma_y = sigma_y, .Hi = Hi};
   Material  material{.E = E, .nu = 0.25, .hardening = hardening, .density = 1.0};
 
   auto internal_state   = Material::State{};
@@ -172,10 +182,10 @@ TEST(FiniteDeformationNonlinearJ2Material, DerivativeCorrectness)
 
 TEST(FiniteDeformationNonlinearJ2Material, FrameIndifference)
 {
-  using Hardening = solid_mechanics::PowerLawHardening;
+  using Hardening = solid_mechanics::VoceHardening;
   using Material  = solid_mechanics::J2FiniteDeformationNonlinear<Hardening>;
 
-  Hardening hardening{.sigma_y = 350e6, .n = 3, .eps0 = 0.002};
+  Hardening hardening{.sigma_y = 350e6, .sigma_sat = 700e6, .strain_constant = 0.01};
   Material  material{.E = 200.0e9, .nu = 0.25, .hardening = hardening, .density = 1.0};
 
   // clang-format off
