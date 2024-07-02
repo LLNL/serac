@@ -1,8 +1,9 @@
+name: Apply Style
+
 on:
   issue_comment:
     types: [created]
 
-name: Apply Style
 jobs:
   apply-style:
     if: startsWith(github.event.comment.body, '/style')
