@@ -1128,19 +1128,19 @@ public:
     setPressure(DependsOn<>{}, pressure_function, optional_domain);
   }
 
-  void computeUpdatedCoordinates()
+  void computeUpdatedCoordinates(const mfem::Vector& disp)
   {
     auto reference_nodes = dynamic_cast<const mfem::ParGridFunction*>(mesh_.GetNodes());
-    reference_nodes->ParFESpace()->GetProlongationMatrix()->Mult(displacement_, x_current_);
+    reference_nodes->ParFESpace()->GetProlongationMatrix()->Mult(disp, x_current_);
     x_current_ += *reference_nodes;
     // x_current += shape_displacement_;
   }
 
   void updateConstraintMultipliers()
   {
-    computeUpdatedCoordinates();
+    computeUpdatedCoordinates(displacement_);
     for (auto& constraint : inequality_constraints) {
-      constraint->updateMultipliers(x_current_);
+      constraint->updateMultipliers(x_current_, ode_time_point_);
     }
   }
 
@@ -1162,7 +1162,7 @@ public:
 
           r = res;
 
-          computeUpdatedCoordinates();
+          computeUpdatedCoordinates(u);
           for (auto& constraint : inequality_constraints) {
             constraint->sumConstraintResidual(x_current_, ode_time_point_, r);
           }
@@ -1172,25 +1172,22 @@ public:
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          CALI_MARK_BEGIN("Functional Jacobian assemble");
-          auto [r, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(u), acceleration_,
+          CALI_MARK_BEGIN("functional sparse assemble");
+          auto [_, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(u), acceleration_,
                                         *parameters_[parameter_indices].state...);
-          CALI_MARK_END("Functional Jacobian assemble");
+          CALI_MARK_END("functional sparse assemble");
 
-          CALI_MARK_BEGIN("Assemble sparse matrix");
+          CALI_MARK_BEGIN("assemble sparse matrix");
           J_             = assemble(drdu);
-          CALI_MARK_END("Assemble sparse matrix");
+          CALI_MARK_END("assemble sparse matrix");
 
-          CALI_MARK_BEGIN("Assemble constraint matrix");
-          computeUpdatedCoordinates();
+          CALI_MARK_BEGIN("assemble constraint matrix");
+          computeUpdatedCoordinates(u);
           for (auto& constraint : inequality_constraints) {
             J_ = std::move(constraint->sumConstraintJacobian(x_current_, ode_time_point_, std::move(J_)));
           }
-          CALI_MARK_END("Assemble constraint matrix");
-
-          CALI_MARK_BEGIN("EliminateEssentialsDofs");
+          CALI_MARK_END("assemble constraint matrix");
           J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
-          CALI_MARK_END("EliminateEssentialsDofs");
           return *J_;
         });
   }
@@ -1333,6 +1330,11 @@ public:
 
       reactions_ = (*residual_)(ode_time_point_, shape_displacement_, displacement_, acceleration_,
                                 *parameters_[parameter_indices].state...);
+
+      computeUpdatedCoordinates(displacement_);
+      for (auto& constraint : inequality_constraints) {
+        constraint->sumConstraintResidual(x_current_, ode_time_point_, reactions_);
+      }
 
       residual_->updateQdata(false);
     }
@@ -1794,7 +1796,16 @@ protected:
     // Update the linearized Jacobian matrix
     auto [r, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
                                   *parameters_[parameter_indices].previous_state...);
+    computeUpdatedCoordinates(displacement_);
+    for (auto& constraint : inequality_constraints) {
+      constraint->sumConstraintResidual(x_current_, ode_time_point_, r);
+    }
+                                  
     J_             = assemble(drdu);
+    for (auto& constraint : inequality_constraints) {
+      J_ = std::move(constraint->sumConstraintJacobian(x_current_, ode_time_point_, std::move(J_)));
+    }
+
     J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
 
     du_ = 0.0;

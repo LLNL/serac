@@ -10,6 +10,7 @@
 #include <fstream>
 #include <set>
 #include <string>
+#include <algorithm>
 
 #include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
@@ -28,8 +29,7 @@
 
 using namespace serac;
 
-//std::string path = ".";
-
+std::string mesh_path = ".";
 
 auto get_opts(int max_iters, double abs_tol = 1e-9)
 {
@@ -39,17 +39,17 @@ auto get_opts(int max_iters, double abs_tol = 1e-9)
                                                   //.nonlin_solver = NonlinearSolver::PetscNewtonCriticalPoint, // breaks for snap_cell
                                                   .relative_tol               = 1000 * abs_tol,
                                                   .absolute_tol               = abs_tol,
-                                                  .min_iterations             = 0,
+                                                  .min_iterations             = 1,
                                                   .max_iterations             = 10000,
                                                   .max_line_search_iterations = 20,
                                                   .print_level                = 1};
 
-  serac::LinearSolverOptions linear_options = {//.linear_solver  = LinearSolver::CG,
+  serac::LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::CG,
                                                //.linear_solver  = LinearSolver::PetscGMRES,
-                                               .linear_solver  = LinearSolver::PetscCG,
-                                               //.preconditioner = Preconditioner::HypreJacobi,
-                                               .preconditioner = Preconditioner::Petsc,
-                                               .petsc_preconditioner = PetscPCType::JACOBI,
+                                               //.linear_solver  = LinearSolver::PetscCG,
+                                               .preconditioner = Preconditioner::HypreJacobi,
+                                               //.preconditioner = Preconditioner::Petsc,
+                                               //.petsc_preconditioner = PetscPCType::JACOBI,
                                                //.petsc_preconditioner = PetscPCType::JACOBI_ROWMAX,
                                                //.petsc_preconditioner = PetscPCType::GAMG, 
                                                //.petsc_preconditioner = PetscPCType::HMG,
@@ -136,7 +136,7 @@ void functional_solid_test_nonlinear_arch()
   double loadMagnitude = 1.2e-2; //0.2e-5;  // 2e-2;
 
   std::string meshTag = "mesh";
-  std::string input_file_name = path + "arch.g";
+  std::string input_file_name = mesh_path + "arch.g";
 
   auto initial_mesh = serac::buildMeshFromFile(input_file_name);
   auto           pmesh   = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, initial_mesh);
@@ -151,9 +151,12 @@ void functional_solid_test_nonlinear_arch()
       nonlinear_options, linear_options, serac::solid_mechanics::default_quasistatic_options,
       serac::GeometricNonlinearities::On, "serac_solid", meshTag, std::vector<std::string>{});
 
-  auto constraint = std::make_unique<InequalityConstraint<ORDER, DIM>>(std::make_unique<LevelSetPlane<DIM>>(
-                                                                         std::array<double,DIM>{0.0, -4.0, 0.0}, 
-                                                                         std::array<double,DIM>{0.0, 1.0, 0.0}), 
+  //auto lset = std::make_unique<LevelSetPlane<DIM>>(std::array<double,DIM>{0.0, -4.0, 0.0}, 
+  //                                                 std::array<double,DIM>{0.0, 1.0, 0.0});
+
+  auto lset = std::make_unique<LevelSetSphere<DIM>>(std::array<double,DIM>{-5.0, -5.0, 1.5}, 2.2);
+
+  auto constraint = std::make_unique<InequalityConstraint<ORDER, DIM>>(std::move(lset), 
                                                                        "serac_solid", meshTag);
   seracSolid->addInequalityConstraint(std::move(constraint));
 
@@ -170,9 +173,20 @@ void functional_solid_test_nonlinear_arch()
   //seracSolid->setPressure([&](auto, auto) { return loadMagnitude; }, topSurface);
 
   seracSolid->completeSetup();
-  seracSolid->advanceTimestep(1.0);
+
+  int num_steps = 20;
 
   seracSolid->outputStateToDisk("paraview_arch");
+  for (int step=0; step < num_steps; ++step) {
+    seracSolid->advanceTimestep(1.0 / num_steps);
+    for (int i = 0; i < 10; ++i) {
+      seracSolid->advanceTimestep(0.0);
+      seracSolid->updateConstraintMultipliers();
+    }
+    std::cout << "outputting at step " << step+1 << std::endl;
+    seracSolid->outputStateToDisk("paraview_arch");
+  }
+  
 }
 
 
@@ -193,7 +207,7 @@ void functional_solid_test_nonlinear_snap_cell()
   double loadMagnitude = 4.e-2;
 
   std::string meshTag = "mesh";
-  std::string input_file_name = path + "snap_cell.exo";
+  std::string input_file_name = mesh_path + "snap_cell.exo";
 
   auto initial_mesh = serac::buildMeshFromFile(input_file_name);
   auto           pmesh   = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, initial_mesh);
@@ -250,7 +264,7 @@ void functional_solid_test_nonlinear_snap_chain()
   double loadMagnitude = 1.2e-2;
 
   std::string meshTag = "mesh";
-  std::string input_file_name = path + "snap_chain.exo";
+  std::string input_file_name = mesh_path + "snap_chain.exo";
 
   auto initial_mesh = serac::buildMeshFromFile(input_file_name);
   auto           pmesh   = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, initial_mesh);
@@ -674,7 +688,7 @@ void functional_solid_test_nonlinear_lce()
   std::string inputFilename;
   switch (problemID) {
     case 4:
-      inputFilename = path + "logpile_solid_medium.g";
+      inputFilename = mesh_path + "logpile_solid_medium.g";
       break;
     default:
       std::cout << "...... Wrong problem ID ......" << std::endl;
@@ -726,8 +740,42 @@ TEST(SolidMechanics, nonlinear_solve_arch) { functional_solid_test_nonlinear_arc
 TEST(SolidMechanics, nonlinear_solve_snap_chain) { functional_solid_test_nonlinear_snap_chain(); }
 TEST(SolidMechanics, nonlinear_solve_snap_cell) { functional_solid_test_nonlinear_snap_cell(); }
 
+
+
+class InputParser
+{
+public:
+  InputParser(int& argc, char** argv){
+    for (int i=1; i < argc; ++i) {
+      this->tokens.push_back(std::string(argv[i]));
+      std::cout << "toek = " << tokens.back() << std::endl;
+    }
+  }
+  std::string getCmdOption(const std::string& option) const {
+    std::vector<std::string>::const_iterator itr;
+    itr =  std::find(this->tokens.begin(), this->tokens.end(), option);
+    if (itr != this->tokens.end() && ++itr != this->tokens.end()) {
+        return *itr;
+    }
+    static const std::string empty_string("");
+    return empty_string;
+  }
+  bool cmdOptionExists(const std::string& option) const {
+    return std::find(this->tokens.begin(), this->tokens.end(), option)
+            != this->tokens.end();
+  }
+private:
+  std::vector <std::string> tokens;
+};
+
 int main(int argc, char* argv[])
 {
+  InputParser parser(argc, argv);
+  auto filename = parser.getCmdOption("-p");
+  if (!filename.empty()) {
+    mesh_path = filename;
+  }
+
   ::testing::InitGoogleTest(&argc, argv);
 
   serac::initialize(argc, argv);

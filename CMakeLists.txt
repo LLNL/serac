@@ -125,7 +125,6 @@ include(${PROJECT_SOURCE_DIR}/cmake/SeracMacros.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/SeracBasics.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/SeracCompilerFlags.cmake)
 
-<<<<<<< HEAD
 #------------------------------------------------------------------------------
 # Add Code Checks
 #------------------------------------------------------------------------------
@@ -156,13 +155,11 @@ endif()
 # Setup Dependencies
 #------------------------------------------------------------------------------
 
-=======
 if (APPLE)
   add_link_options(-Wl,-no_compact_unwind)
   add_link_options(-Xlinker -no_warn_duplicate_libraries)
 endif()
 
->>>>>>> f439a26ff (Working on adding rigid contact.)
 # Restore raw compiler flags so subprojects don't end up using Serac's flags
 set(SERAC_CMAKE_C_FLAGS   ${CMAKE_C_FLAGS})
 set(SERAC_CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})

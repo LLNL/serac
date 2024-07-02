@@ -53,6 +53,7 @@ struct LevelSetPlane : public LevelSet { // hard codes as a y plane for now
   mfem::Vector gradient(const mfem::Vector& xyz, double) const override
   {
     mfem::Vector grad = xyz;
+    grad = 0.0;
     for (int i=0; i < dim; ++i) {
       auto i_size_t = static_cast<size_t>(i);
       grad[i] = n[i_size_t];
@@ -78,47 +79,53 @@ struct LevelSetSphere : public LevelSet {
 
   double sq(double v) const { return v*v; }
 
-  double distSquared(const mfem::Vector& xyz) const
+  double distSquared(const mfem::Vector& xyz, const std::array<double,dim>& c) const
   {
     double dist_squared = 0.0;
     for (int i=0; i < dim; ++i) {
-      dist_squared += sq(xyz[i] - center[i]);
+      dist_squared += sq(xyz[i] - c[static_cast<size_t>(i)]);
     }
     return dist_squared;
   }
 
   // positive means constraint is satisfied, i.e., c(x) >= 0
-  double evaluate(const mfem::Vector& xyz, double) const override
+  double evaluate(const mfem::Vector& xyz, double t) const override
   { 
-    return std::sqrt(distSquared(xyz)) - r;
+    auto c = center;
+    c[0] += t * 10.0;
+    return std::sqrt(distSquared(xyz, c)) - r;
   }
 
-  mfem::Vector gradient(const mfem::Vector& x, double) const override
+  mfem::Vector gradient(const mfem::Vector& x, double t) const override
   {
+    auto c = center;
+    c[0] += t * 10.0;
     mfem::Vector grad = x; grad = 0.0;
-    double dist_squared = distSquared(x);
+    double dist_squared = distSquared(x, c);
     if (dist_squared != 0.0) {
       double distInv = 1.0 / std::sqrt(dist_squared);
       for (int i=0; i < dim; ++i) {
-        grad[i] = (x[i] - center[i]) * distInv;
+        grad[i] = (x[i] - c[static_cast<size_t>(i)]) * distInv;
       }
     }
     return grad;
   }
 
-  mfem::Vector hess_vec(const mfem::Vector& x, const mfem::Vector& v, double) const override
+  mfem::Vector hess_vec(const mfem::Vector& x, const mfem::Vector& v, double t) const override
   {
+    auto c = center;
+    c[0] += t * 10.0;
     mfem::Vector hv = x; hv = 0.0;
-    double dist_squared = distSquared(x);
+    double dist_squared = distSquared(x, c);
     if (dist_squared != 0.0) {
       double distInv = 1.0 / std::sqrt(dist_squared);
-      double distM3p5 = distInv / dist_squared;
+      double dist_to_minus_1p5 = distInv / dist_squared;
       double factor = 0.0;
       for (int i=0; i < dim; ++i) {
-        factor += v[i] * (x[i] - center[i]);
+        factor += v[i] * (x[i] - c[static_cast<size_t>(i)]);
       }
       for (int i=0; i < dim; ++i) {
-        hv[i] = distInv * v[i] + 2 * distM3p5 * factor * (x[i] - center[i]);
+        hv[i] = distInv * v[i] - dist_to_minus_1p5 * factor * (x[i] - c[static_cast<size_t>(i)]);
       }
     }
 
@@ -206,11 +213,11 @@ struct InequalityConstraint {
     ConstView<dim> x(x_current);
     View<dim>      residual(res);
 
-    const int numNodes = x.numNodes();
-    SLIC_ERROR_ROOT_IF(numNodes != constraint_.Size(), "Constraint size does not match system size.");
+    const int num_nodes = x.numNodes();
+    SLIC_ERROR_ROOT_IF(num_nodes != constraint_.Size(), "Constraint size does not match system size.");
 
     mfem::Vector currentCoords(dim);
-    for (int n = 0; n < numNodes; ++n) {
+    for (int n = 0; n < num_nodes; ++n) {
       for (int i = 0; i < dim; ++i) {
         currentCoords[i] = x(n, i);
       }
@@ -341,7 +348,7 @@ struct InequalityConstraint {
 
       bool poorProgress = newError > target_decrease_factor * oldError;
 
-      if (poorProgress) constraint_penalty[n] *= 1.5;
+      if (poorProgress) constraint_penalty[n] *= 1.05;
     }
 
     std::cout << "ncp error = " << constraint_ncp_error_.Norml2() << std::endl;
