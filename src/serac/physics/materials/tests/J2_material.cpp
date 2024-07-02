@@ -19,10 +19,15 @@
  * but the implementation below fixes those typos
  */
 
+#include "serac/physics/materials/solid_material.hpp"
+
 #include <iostream>
 
-#include "serac/physics/materials/solid_material.hpp"
+#include <gtest/gtest.h>
+
 #include "serac/physics/materials/material_verification_tools.hpp"
+
+
 
 using namespace serac;
 
@@ -63,7 +68,7 @@ tensor<double, 3, 3> analytic_soln(double t)
   // clang-format on
 }
 
-int main()
+TEST(J2, Verification)
 {
   double tmax      = 2.0;
   size_t num_steps = 64;
@@ -95,10 +100,22 @@ int main()
     if (t > 0) {
       double rel_error = norm(stress - analytic_soln(t)) / norm(stress);
       std::cout << t << ": " << rel_error << std::endl;
+      ASSERT_LT(rel_error, 5e-2);
     }
 
     // for generating a plot like in the paper:
     // std::cout << "{" << t << ", " << stress[0][0] << ", " << stress[1][1] << ", " << stress[2][2] << "}" <<
     // std::endl;
   }
+}
+
+int main(int argc, char* argv[])
+{
+  ::testing::InitGoogleTest(&argc, argv);
+
+  axom::slic::SimpleLogger logger;
+
+  int result = RUN_ALL_TESTS();
+
+  return result;
 }
