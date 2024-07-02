@@ -155,7 +155,7 @@ static PetscErrorCode solverWrapperDestroy(PC pc)
   if (ctx->owns_op) {
     delete ctx->solver;
   }
-  PetscCall(PetscFree(ctx));
+  delete ctx;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -173,10 +173,7 @@ static PetscErrorCode wrapSolverInShellPC(PC pc, mfem::Solver& solver, bool owns
   SolverWrapperCtx* ctx;
 
   PetscFunctionBeginUser;
-  PetscCall(PetscCalloc1(1, &ctx));
-
-  ctx->solver  = &solver;
-  ctx->owns_op = owns_op;
+  ctx = new SolverWrapperCtx{&solver, owns_op};
 
   // In case the PC was already of type SHELL, this will destroy any
   // previous user-defined data structure
@@ -222,8 +219,8 @@ PetscErrorCode convertPCPreSolve(PC pc, [[maybe_unused]] KSP ksp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscPCSolver::PetscPCSolver(MPI_Comm comm, PCType pc_type, const std::string& prefix)
-    : PetscPreconditioner(comm, prefix)
+PetscPCSolver::PetscPCSolver(MPI_Comm comm_, PCType pc_type, const std::string& prefix)
+    : PetscPreconditioner(comm_, prefix)
 {
   PetscCallAbort(GetComm(), PCSetType(*this, pc_type));
   PetscCallAbort(GetComm(), PCSetApplicationContext(*this, this));
@@ -238,8 +235,8 @@ PetscPCSolver::PetscPCSolver(mfem::PetscParMatrix& A, PCType pc_type, const std:
   PetscCallAbort(GetComm(), PCSetPreSolve(*this, convertPCPreSolve));
 }
 
-PetscPCSolver::PetscPCSolver(MPI_Comm comm, Operator& op, PCType pc_type, const std::string& prefix)
-    : PetscPreconditioner(comm, op, prefix)
+PetscPCSolver::PetscPCSolver(MPI_Comm comm_, Operator& op, PCType pc_type, const std::string& prefix)
+    : PetscPreconditioner(comm_, op, prefix)
 {
   PetscCallAbort(GetComm(), PCSetType(*this, pc_type));
   PetscCallAbort(GetComm(), PCSetApplicationContext(*this, this));
@@ -285,8 +282,8 @@ static PetscErrorCode gamg_pre_solve(PC pc, KSP ksp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscGAMGSolver::PetscGAMGSolver(MPI_Comm& comm, const std::string& prefix)
-    : PetscPreconditionerSpaceDependent(comm, PCGAMG, prefix)
+PetscGAMGSolver::PetscGAMGSolver(MPI_Comm& comm_, const std::string& prefix)
+    : PetscPreconditionerSpaceDependent(comm_, PCGAMG, prefix)
 {
   PetscCallAbort(GetComm(), PCSetApplicationContext(*this, this));
   PetscCallAbort(GetComm(), PCSetPreSolve(*this, gamg_pre_solve));
@@ -301,8 +298,8 @@ PetscGAMGSolver::PetscGAMGSolver(mfem::PetscParMatrix& A, const std::string& pre
   Customize();
 }
 
-PetscGAMGSolver::PetscGAMGSolver(MPI_Comm comm, Operator& op, const std::string& prefix)
-    : PetscPreconditionerSpaceDependent(comm, op, PCGAMG, prefix)
+PetscGAMGSolver::PetscGAMGSolver(MPI_Comm comm_, Operator& op, const std::string& prefix)
+    : PetscPreconditionerSpaceDependent(comm_, op, PCGAMG, prefix)
 {
   PetscCallAbort(GetComm(), PCSetApplicationContext(*this, this));
   PetscCallAbort(GetComm(), PCSetPreSolve(*this, gamg_pre_solve));
@@ -522,15 +519,16 @@ PetscErrorCode convertKSPPreSolve(KSP ksp, [[maybe_unused]] Vec rhs, [[maybe_unu
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscKSPSolver::PetscKSPSolver(MPI_Comm comm, KSPType ksp_type, const std::string& prefix, bool wrap, bool iter_mode)
-    : mfem::IterativeSolver(comm), mfem::PetscLinearSolver(comm, prefix, wrap, iter_mode)
+PetscKSPSolver::PetscKSPSolver(MPI_Comm comm_, KSPType ksp_type, const std::string& prefix, bool wrap_op,
+                               bool iter_mode)
+    : mfem::IterativeSolver(comm_), mfem::PetscLinearSolver(comm_, prefix, wrap_op, iter_mode)
 {
   abs_tol  = PETSC_DEFAULT;
   rel_tol  = PETSC_DEFAULT;
   max_iter = PETSC_DEFAULT;
-  PetscCallAbort(comm, KSPConvergedDefaultSetConvergedMaxits(*this, PETSC_TRUE));
-  PetscCallAbort(comm, KSPSetType(*this, ksp_type));
-  PetscCallAbort(comm, KSPSetPreSolve(*this, convertKSPPreSolve, this));
+  PetscCallAbort(GetComm(), KSPConvergedDefaultSetConvergedMaxits(*this, PETSC_TRUE));
+  PetscCallAbort(GetComm(), KSPSetType(*this, ksp_type));
+  PetscCallAbort(GetComm(), KSPSetPreSolve(*this, convertKSPPreSolve, this));
   Customize();
 }
 
@@ -547,9 +545,9 @@ PetscKSPSolver::PetscKSPSolver(const mfem::PetscParMatrix& A, KSPType ksp_type, 
   Customize();
 }
 
-PetscKSPSolver::PetscKSPSolver(const mfem::HypreParMatrix& A, KSPType ksp_type, const std::string& prefix, bool wrap,
+PetscKSPSolver::PetscKSPSolver(const mfem::HypreParMatrix& A, KSPType ksp_type, const std::string& prefix, bool wrap_op,
                                bool iter_mode)
-    : mfem::IterativeSolver(A.GetComm()), mfem::PetscLinearSolver(A, wrap, prefix, iter_mode), wrap_(wrap)
+    : mfem::IterativeSolver(A.GetComm()), mfem::PetscLinearSolver(A, wrap_op, prefix, iter_mode), wrap_(wrap_op)
 {
   abs_tol  = PETSC_DEFAULT;
   rel_tol  = PETSC_DEFAULT;
@@ -734,10 +732,10 @@ PetscErrorCode linesearchPreCheckBackoffOnNan(SNESLineSearch linesearch, Vec X, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscNewtonSolver::PetscNewtonSolver(MPI_Comm comm, SNESType snes_type, SNESLineSearchType linesearch_type,
+PetscNewtonSolver::PetscNewtonSolver(MPI_Comm comm_, SNESType snes_type, SNESLineSearchType linesearch_type,
                                      const std::string& prefix)
-    : mfem::NewtonSolver(comm),
-      mfem::PetscNonlinearSolver(comm, prefix),
+    : mfem::NewtonSolver(comm_),
+      mfem::PetscNonlinearSolver(comm_, prefix),
       snes_type_(snes_type),
       linesearch_type_(linesearch_type)
 {
@@ -751,8 +749,8 @@ PetscNewtonSolver::PetscNewtonSolver(MPI_Comm comm, SNESType snes_type, SNESLine
   NewtonSolver::iterative_mode = PetscNonlinearSolver::iterative_mode = true;
 }
 
-PetscNewtonSolver::PetscNewtonSolver(MPI_Comm comm, NonlinearSolverOptions nonlinear_opts, const std::string& prefix)
-    : PetscNewtonSolver(comm, SNESTypeFromOptions(nonlinear_opts), SNESLineSearchTypeFromOptions(nonlinear_opts),
+PetscNewtonSolver::PetscNewtonSolver(MPI_Comm comm_, NonlinearSolverOptions nonlinear_opts, const std::string& prefix)
+    : PetscNewtonSolver(comm_, SNESTypeFromOptions(nonlinear_opts), SNESLineSearchTypeFromOptions(nonlinear_opts),
                         prefix)
 {
   nonlinear_options_ = nonlinear_opts;
@@ -765,7 +763,7 @@ PetscNewtonSolver::PetscNewtonSolver(MPI_Comm comm, NonlinearSolverOptions nonli
   abs_tol  = nonlinear_options_.absolute_tol;
   max_iter = nonlinear_options_.max_iterations;
   if (nonlinear_options_.min_iterations > 0) {
-    PetscCallAbort(comm, SNESSetForceIteration(*this, PETSC_TRUE));
+    PetscCallAbort(GetComm(), SNESSetForceIteration(*this, PETSC_TRUE));
   }
 }
 
@@ -861,36 +859,7 @@ void PetscNewtonSolver::SetOperator(const mfem::Operator& op)
   Customize();
 }
 
-void PetscNewtonSolver::Mult(const mfem::Vector& b, mfem::Vector& x) const
-{
-  bool b_nonempty = b.Size();
-  auto solver     = dynamic_cast<const PetscNonlinearSolver*>(this);
-  if (!B) {
-    B = new mfem::PetscParVector(PetscObjectComm(obj), *solver, true, !b_nonempty);
-  }
-  if (!X) {
-    X = new mfem::PetscParVector(PetscObjectComm(obj), *solver, false, false);
-  }
-  X->PlaceMemory(x.GetMemory(), PetscNonlinearSolver::iterative_mode);
-  if (b_nonempty) {
-    B->PlaceMemory(b.GetMemory());
-  } else {
-    *B = 0.0;
-  }
-
-  Customize();
-
-  if (!PetscNonlinearSolver::iterative_mode) {
-    *X = 0.;
-  }
-
-  // Solve the system.
-  PetscCallAbort(GetComm(), SNESSolve(*this, *B, *X));
-  X->ResetMemory();
-  if (b_nonempty) {
-    B->ResetMemory();
-  }
-}
+void PetscNewtonSolver::Mult(const mfem::Vector& b, mfem::Vector& x) const { PetscNonlinearSolver::Mult(b, x); }
 
 }  // namespace serac::mfem_ext
 #endif
