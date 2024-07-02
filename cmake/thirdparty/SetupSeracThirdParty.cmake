@@ -137,6 +137,51 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     message(STATUS "Sundials support is ${SERAC_USE_SUNDIALS}")
 
     #------------------------------------------------------------------------------
+    # PETSc
+    #------------------------------------------------------------------------------
+    if (PETSC_DIR)
+        serac_assert_is_directory(DIR_VARIABLE PETSC_DIR)
+        # NOTE: PETSc is built and used through MFEM
+        set(SERAC_USE_PETSC ON CACHE BOOL "")
+        
+        # Note: MFEM *does not* set PETSC_FOUND itself, likely because we skip petsc build tests
+        set(PETSC_FOUND TRUE)
+    else()
+        set(SERAC_USE_PETSC OFF CACHE BOOL "")
+        set(PETSC_FOUND FALSE)
+    endif()
+    message(STATUS "PETSc support is ${SERAC_USE_PETSC}")
+
+    #------------------------------------------------------------------------------
+    # SLEPc
+    #------------------------------------------------------------------------------
+    if (SLEPC_DIR AND SERAC_USE_PETSC)
+        serac_assert_is_directory(DIR_VARIABLE SLEPC_DIR)
+        # NOTE: SLEPc is built and used through MFEM
+        set(SERAC_USE_SLEPC ON CACHE BOOL "")
+        
+        # Note: MFEM sets SLEPC_FOUND itself
+        if (NOT SERAC_ENABLE_CODEVELOP)
+            set(SLEPC_FOUND TRUE)
+        endif()
+    else()
+        set(SERAC_USE_SLEPC OFF CACHE BOOL "")
+        set(SLEPC_FOUND FALSE)
+    endif()
+    message(STATUS "SLEPc support is ${SERAC_USE_SLEPC}")
+
+    #------------------------------------------------------------------------------
+    # ARPACK
+    #------------------------------------------------------------------------------
+    if (ARPACK_DIR AND SERAC_USE_SLEPC)
+        serac_assert_is_directory(DIR_VARIABLE ARPACK_DIR)
+        include(${CMAKE_CURRENT_LIST_DIR}/FindARPACK.cmake)
+    else()
+        set(ARPACK_FOUND FALSE)
+    endif()
+    message(STATUS "ARPACK support is ${ARPACK_FOUND}")
+
+    #------------------------------------------------------------------------------
     # MFEM
     #------------------------------------------------------------------------------
     if(NOT SERAC_ENABLE_CODEVELOP)
@@ -182,8 +227,21 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             set(ParMETIS_DIR ${PARMETIS_DIR} CACHE PATH "")
         endif()
         set(MFEM_USE_OPENMP ${ENABLE_OPENMP} CACHE BOOL "")
-        set(MFEM_USE_PETSC OFF CACHE BOOL "")
-        set(MFEM_USE_SLEPC OFF CACHE BOOL "")
+
+        if(PETSC_DIR)
+            set(MFEM_USE_PETSC ON CACHE BOOL "")
+            set(PETSC_ARCH "" CACHE STRING "")
+            set(PETSC_EXECUTABLE_RUNS "ON" CACHE BOOL "")
+            if(SLEPC_DIR)
+                set(MFEM_USE_SLEPC ON CACHE BOOL "")
+                set(SLEPC_ARCH "" CACHE STRING "")
+                set(SLEPC_VERSION_OK "TRUE" CACHE BOOL "")
+            endif()
+        else()
+            set(MFEM_USE_PETSC OFF CACHE BOOL "")
+            set(MFEM_USE_SLEPC OFF CACHE BOOL "")
+        endif()
+
         set(MFEM_USE_RAJA OFF CACHE BOOL "")
         set(MFEM_USE_SUNDIALS ${SERAC_USE_SUNDIALS} CACHE BOOL "")
         if(SUPERLUDIST_DIR)
@@ -265,38 +323,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endforeach()
 
         set(MFEM_BUILT_WITH_CMAKE TRUE)
-    endif()
-
-    #------------------------------------------------------------------------------
-    # PETSc
-    #------------------------------------------------------------------------------
-    if(PETSC_DIR)
-        serac_assert_is_directory(DIR_VARIABLE PETSC_DIR)
-        include(${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake)
-        serac_assert_find_succeeded(PROJECT_NAME PETSc
-                                    TARGET       PkgConfig::PETSC
-                                    DIR_VARIABLE PETSC_DIR)
-        message(STATUS "PETSc support is ON")
-        set(PETSC_FOUND TRUE)
-    else()
-        message(STATUS "PETSc support is OFF")
-        set(PETSC_FOUND FALSE)
-    endif()
-
-    #------------------------------------------------------------------------------
-    # SLEPC
-    #------------------------------------------------------------------------------
-    if(SLEPC_DIR)
-        serac_assert_is_directory(DIR_VARIABLE SLEPC_DIR)
-        include(${CMAKE_CURRENT_LIST_DIR}/FindSLEPc.cmake)
-        serac_assert_find_succeeded(PROJECT_NAME SLEPC
-                                    TARGET PkgConfig::SLEPC
-                                    DIR_VARIABLE SLEPC_DIR)
-        message(STATUS "SLEPc support is ON")
-        set(SLEPC_FOUND TRUE)
-    else()
-        message(STATUS "SLEPc support is OFF")
-        set(SLEPC_FOUND FALSE)
     endif()
 
     #------------------------------------------------------------------------------
@@ -489,14 +515,14 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     # MPI library/directory but in some cases Spack cannot determine
     # the correct MPI lib directory. This guards against that.
     # https://github.com/spack/spack/issues/24685
+    set(_mfem_targets
+        mfem
+        axom::mfem
+        tribol::mfem)
     if(STRUMPACK_DIR)
         list(GET MPI_C_LIBRARIES 0 _first_mpi_lib)
         get_filename_component(_mpi_lib_dir ${_first_mpi_lib} DIRECTORY)
     
-        set(_mfem_targets
-            mfem
-            axom::mfem
-            tribol::mfem)
         foreach(_target ${_mfem_targets})
             if(TARGET ${_target})
                 message(STATUS "Adding MPI link directory to target [${_target}]")
@@ -504,6 +530,19 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             endif()
         endforeach()
     endif()
+
+    # Add missing ARPACK flags needed by SLEPc by injecting them into the MFEM targets.
+    # https://github.com/mfem/mfem/issues/4364
+    if (ARPACK_FOUND)
+        foreach(_target ${_mfem_targets})
+            if(TARGET ${_target})
+                message(STATUS "Adding arpack libraries and include dirs to target [${_target}]")
+                target_include_directories(${_target} INTERFACE ${ARPACK_INCLUDE_DIRS})
+                target_link_libraries(${_target} INTERFACE ${ARPACK_LIBRARIES})
+            endif()
+        endforeach()
+    endif()
+    unset(_mfem_targets)
 
     # Restore cleared Adiak/Caliper directories, reason at top of file.
     set(ADIAK_DIR ${_adiak_dir} CACHE PATH "" FORCE)

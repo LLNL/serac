@@ -93,6 +93,11 @@ spack:
       externals:
       - spec: curl@7.81.0
         prefix: /usr
+    diffutils:
+      buildable: false
+      externals:
+      - spec: diffutils@3.8
+        prefix: /usr
     gettext:
       buildable: false
       externals:
