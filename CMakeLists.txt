@@ -20,14 +20,18 @@ endif()
 project(serac LANGUAGES CXX C)
 
 # MPI is required in Serac.
-set(ENABLE_MPI ON CACHE BOOL "")
+# Note: for the style only mode, which doesn't need to actually build, we need to ignore this
+if (NOT SERAC_STYLE_ONLY)
+    set(ENABLE_MPI ON CACHE BOOL "")
 
-if (NOT MPI_C_COMPILER OR NOT MPI_CXX_COMPILER)
-    message(FATAL_ERROR 
-            "Serac requires MPI.  It is required to provide the MPI C/C++ "
-            "compiler wrappers via the CMake variables, "
-            "MPI_C_COMPILER and MPI_CXX_COMPILER.")
-endif()
+    if (NOT MPI_C_COMPILER OR NOT MPI_CXX_COMPILER)
+        message(FATAL_ERROR 
+                "Serac requires MPI.  It is required to provide the MPI C/C++ "
+                "compiler wrappers via the CMake variables, "
+                "MPI_C_COMPILER and MPI_CXX_COMPILER.")
+    endif()
+endif
+
 
 # Save off "raw" flags before they are modified by serac/BLT
 set(RAW_CMAKE_C_FLAGS   ${CMAKE_C_FLAGS}   CACHE STRING "")
@@ -114,12 +118,38 @@ endif()
 include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
 
 #------------------------------------------------------------------------------
-# Setup Macros and dependencies
+# Setup Macros/Basics
 #------------------------------------------------------------------------------
 
 include(${PROJECT_SOURCE_DIR}/cmake/SeracMacros.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/SeracBasics.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/SeracCompilerFlags.cmake)
+
+#------------------------------------------------------------------------------
+# Add Code Checks
+#------------------------------------------------------------------------------
+
+message(STATUS "Serac Code Checks: ${SERAC_ENABLE_CODE_CHECKS}")
+
+# Add extra file extensions for code styling
+# Note: Add them also to serac_add_code_checks in cmake/SeracMacros.cmake
+
+# CUDA
+list(APPEND BLT_C_FILE_EXTS ".cuh")
+# Configured C++ files
+list(APPEND BLT_C_FILE_EXTS ".cpp.in" ".hpp.in")
+
+if (SERAC_STYLE_ONLY OR SERAC_ENABLE_CODE_CHECKS)
+    serac_add_code_checks(PREFIX serac)
+endif()
+
+if (SERAC_STYLE_ONLY)
+    return()
+endif()
+
+#------------------------------------------------------------------------------
+# Setup Dependencies
+#------------------------------------------------------------------------------
 
 # Restore raw compiler flags so subprojects don't end up using Serac's flags
 set(SERAC_CMAKE_C_FLAGS   ${CMAKE_C_FLAGS})
@@ -148,24 +178,6 @@ add_subdirectory(examples)
 configure_file(
     ${PROJECT_SOURCE_DIR}/scripts/testing/ats.sh.in
     ${CMAKE_BINARY_DIR}/ats.sh)
-
-#------------------------------------------------------------------------------
-# Add Code Checks
-#------------------------------------------------------------------------------
-
-message(STATUS "Serac Code Checks: ${SERAC_ENABLE_CODE_CHECKS}")
-
-# Add extra file extensions for code styling
-# Note: Add them also to serac_add_code_checks in cmake/SeracMacros.cmake
-
-# CUDA
-list(APPEND BLT_C_FILE_EXTS ".cuh")
-# Configured C++ files
-list(APPEND BLT_C_FILE_EXTS ".cpp.in" ".hpp.in")
-
-if (SERAC_ENABLE_CODE_CHECKS)
-    serac_add_code_checks(PREFIX serac)
-endif()
 
 #------------------------------------------------------------------------------
 # Export Targets

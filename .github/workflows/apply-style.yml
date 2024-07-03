@@ -11,26 +11,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      # Checkout the GitHub created reference for the PR.
+      # The only way to do this is by using the "issue" number
+      # but that is really the PR number in this context.
+      # This is due to using an `issue_comment` event which
+      # is due to the GitHub Actions API that does not have
+      # a `pull_request_comment` event or something similar.
+      # This leaves us in a detached head state which is corrected
+      # in `apply-style/entrypoint.sh`
+      - name: Checkout pull request
+        uses: actions/checkout@v3
         with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
+          ref: refs/pull/${{ github.event.issue.number }}/head
 
       - name: Apply style updates
         uses: ./.github/actions/apply-style
-
-      - name: Push changed files
-        run: |
-          printf "GitHub Actor: ${GITHUB_ACTOR}\n"
-          git config user.name "Agent Style"
-          git config user.email "no-reply@llnl.gov"
-          if [ -n "$(git status --porcelain)" ]; then
-            git commit -am 'Apply style updates'
-            git push
-          fi
-
-      - name: Comment on PR
-        run: |
-          COMMENT_URL=$(jq -r .issue.pull_request.url < $GITHUB_EVENT_PATH || jq -r .issue.url < $GITHUB_EVENT_PATH)
-          COMMENT_BODY="Style check completed successfully!"
-          curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -H "Content-Type: application/json" -d "{\"body\":\"$COMMENT_BODY\"}" $COMMENT_URL/comments
