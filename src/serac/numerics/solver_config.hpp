@@ -127,6 +127,7 @@ enum class NonlinearSolver
   PetscNewton,               /**< PETSc Full Newton */
   PetscNewtonBacktracking,   /**< PETSc Newton with backtracking line search */
   PetscNewtonCriticalPoint,  /**< PETSc Newton with critical point line search */
+  PetscTrustRegion           /**< PETSc trust region solver */
 };
 // _nonlinear_solvers_end
 

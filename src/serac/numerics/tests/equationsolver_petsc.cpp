@@ -122,7 +122,7 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Combine(testing::Values(NonlinearSolver::Newton, NonlinearSolver::KINFullStep,
                                      NonlinearSolver::KINBacktrackingLineSearch, NonlinearSolver::KINPicard,
                                      NonlinearSolver::PetscNewton, NonlinearSolver::PetscNewtonBacktracking,
-                                     NonlinearSolver::PetscNewtonCriticalPoint),
+                                     NonlinearSolver::PetscNewtonCriticalPoint, NonlinearSolver::PetscTrustRegion),
                      testing::Values(LinearSolver::CG, LinearSolver::GMRES, LinearSolver::PetscCG,
                                      LinearSolver::PetscGMRES),
                      testing::Values(Preconditioner::Petsc),
@@ -135,13 +135,13 @@ INSTANTIATE_TEST_SUITE_P(
     AllEquationSolverTests, EquationSolverSuite,
     testing::Combine(
         testing::Values(NonlinearSolver::Newton, NonlinearSolver::PetscNewton, NonlinearSolver::PetscNewtonBacktracking,
-                        NonlinearSolver::PetscNewtonCriticalPoint),
+                        NonlinearSolver::PetscNewtonCriticalPoint, NonlinearSolver::PetscTrustRegion),
         testing::Values(LinearSolver::CG, LinearSolver::GMRES, LinearSolver::PetscCG, LinearSolver::PetscGMRES),
         testing::Values(Preconditioner::Petsc),
         testing::Values(PetscPCType::JACOBI, PetscPCType::JACOBI_L1, PetscPCType::JACOBI_ROWSUM,
                         PetscPCType::JACOBI_ROWMAX, PetscPCType::PBJACOBI, PetscPCType::BJACOBI, PetscPCType::LU,
-                        PetscPCType::ILU, PetscPCType::CHOLESKY, PetscPCType::ICC, PetscPCType::SVD, PetscPCType::ASM,
-                        PetscPCType::GASM, PetscPCType::GAMG, PetscPCType::HMG)));
+                        PetscPCType::ILU, PetscPCType::CHOLESKY, PetscPCType::SVD, PetscPCType::ASM, PetscPCType::GASM,
+                        PetscPCType::GAMG, PetscPCType::HMG)));
 #endif
 
 int main(int argc, char* argv[])

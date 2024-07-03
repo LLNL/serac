@@ -387,6 +387,8 @@ protected:
       case NonlinearSolver::PetscNewtonBacktracking:
       case NonlinearSolver::PetscNewtonCriticalPoint:
         return SNESNEWTONLS;
+      case NonlinearSolver::PetscTrustRegion:
+        return SNESNEWTONTR;
       default:
         return SNESNEWTONLS;
     }
@@ -401,6 +403,8 @@ protected:
         return SNESLINESEARCHBT;
       case NonlinearSolver::PetscNewtonCriticalPoint:
         return SNESLINESEARCHCP;
+      case NonlinearSolver::PetscTrustRegion:
+        return SNESLINESEARCHBASIC;
       default:
         return SNESLINESEARCHBASIC;
     }
