@@ -53,7 +53,6 @@ struct LevelSetPlane : public LevelSet { // hard codes as a y plane for now
   mfem::Vector gradient(const mfem::Vector& xyz, double) const override
   {
     mfem::Vector grad = xyz;
-    grad = 0.0;
     for (int i=0; i < dim; ++i) {
       auto i_size_t = static_cast<size_t>(i);
       grad[i] = n[i_size_t];

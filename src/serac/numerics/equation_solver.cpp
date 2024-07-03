@@ -455,16 +455,16 @@ public:
 
 
   /// estimate the minimum eigenvalue and its eigenvector
-  void estimateExtremalEigenvector(const mfem::Operator& op, mfem::Vector& v, mfem::Vector& w, size_t iters, double changeTol)
-  {
-    CALI_CXX_MARK_FUNCTION;
-    v /= v.Norml2();
-    op.Mult(v, w);
-    double lam = Dot(v, w); // first eigenvalue estimate
-    for (size_t i=0; i < iters; ++i) {
-      w /= w.Norml2();
-    }
-  }
+  //void estimateExtremalEigenvector(const mfem::Operator& op, mfem::Vector& v, mfem::Vector& w, size_t iters, double changeTol)
+  //{
+    //CALI_CXX_MARK_FUNCTION;
+    //v /= v.Norml2();
+    //op.Mult(v, w);
+    //double lam = Dot(v, w); // first eigenvalue estimate
+    //for (size_t i=0; i < iters; ++i) {
+    //  w /= w.Norml2();
+    //}
+  //}
 
   /// @overload
   void Mult(const mfem::Vector&, mfem::Vector& X) const
@@ -574,9 +574,11 @@ public:
 
         doglegStep(trResults.cauchyPoint, trResults.z, trSize, d);
 
+        static constexpr double roundOffTol = 1e-14;
+
         hess_vec_func(d, Hd);
         double dHd            = Dot(d, Hd);
-        double modelObjective = Dot(r, d) + 0.5 * dHd - 1e-12;
+        double modelObjective = Dot(r, d) + 0.5 * dHd - roundOffTol;
 
         add(X, d, x_pred);
 
@@ -584,8 +586,7 @@ public:
         double normPred      = std::numeric_limits<double>::max();
         try {
           normPred      = computeResidual(x_pred, r_pred);
-          realObjective = 0.5 * (Dot(r, d) + Dot(r_pred, d)) - 1e-12;
-          // realObjective = Dot(rPred, d) - 1e-13;
+          realObjective = 0.5 * (Dot(r, d) + Dot(r_pred, d)) - roundOffTol;
         } catch (const std::exception&) {
           realObjective = std::numeric_limits<double>::max();
           normPred      = std::numeric_limits<double>::max();
