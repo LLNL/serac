@@ -75,13 +75,27 @@
  */
 
 #ifndef SERAC_USE_CALIPER
+#ifndef CALI_CXX_MARK_FUNCTION
 #define CALI_CXX_MARK_FUNCTION
+#endif
+#ifndef CALI_CXX_MARK_LOOP_BEGIN
 #define CALI_CXX_MARK_LOOP_BEGIN(id, name)
+#endif
+#ifndef CALI_CXX_MARK_LOOP_ITERATION
 #define CALI_CXX_MARK_LOOP_ITERATION(id, i)
+#endif
+#ifndef CALI_CXX_MARK_LOOP_END
 #define CALI_CXX_MARK_LOOP_END(id)
+#endif
+#ifndef CALI_MARK_BEGIN
 #define CALI_MARK_BEGIN(name)
+#endif
+#ifndef CALI_MARK_END
 #define CALI_MARK_END(name)
+#endif
+#ifndef CALI_CXX_MARK_SCOPE
 #define CALI_CXX_MARK_SCOPE(name)
+#endif
 #endif
 
 /// profiling namespace
