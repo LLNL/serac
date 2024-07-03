@@ -850,6 +850,7 @@ void PetscNewtonSolver::SetOperator(const mfem::Operator& op)
 {
   bool first_set = !operatorset;
   mfem::PetscNonlinearSolver::SetOperator(op);
+  oper = &op;
   // mfem::NewtonSolver::SetOperator sets defaults, we need to override them
   if (first_set) {
     SetSNESType(snes_type_);
@@ -859,7 +860,36 @@ void PetscNewtonSolver::SetOperator(const mfem::Operator& op)
   Customize();
 }
 
-void PetscNewtonSolver::Mult(const mfem::Vector& b, mfem::Vector& x) const { PetscNonlinearSolver::Mult(b, x); }
+void PetscNewtonSolver::Mult(const mfem::Vector& b, mfem::Vector& x) const
+{
+  bool b_nonempty = b.Size();
+  if (!B) {
+    B = new mfem::PetscParVector(GetComm(), *oper, false, false);
+  }
+  if (!X) {
+    X = new mfem::PetscParVector(GetComm(), *oper, false, false);
+  }
+  X->PlaceMemory(x.GetMemory(), NewtonSolver::iterative_mode);
+
+  if (b_nonempty) {
+    B->PlaceMemory(b.GetMemory());
+  } else {
+    *B = 0.0;
+  }
+
+  Customize();
+
+  if (!NewtonSolver::iterative_mode) {
+    *X = 0.;
+  }
+
+  // Solve the system.
+  PetscCallAbort(GetComm(), SNESSolve(*this, *B, *X));
+  X->ResetMemory();
+  if (b_nonempty) {
+    B->ResetMemory();
+  }
+}
 
 }  // namespace serac::mfem_ext
 #endif
