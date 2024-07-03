@@ -178,7 +178,7 @@ enum class PetscPCType
   JACOBI,        /**< Jacobi with diagonal scaling */
   JACOBI_L1,     /**< Jacobi with row-wise L1 norm scaling */
   JACOBI_ROWSUM, /**< Jacobi with row sum (no absolute value) scaling */
-  JACOBI_ROWMAX, /**< Jacobi with L\inf norm scaling */
+  JACOBI_ROWMAX, /**< Jacobi with L-infinity norm scaling */
   PBJACOBI,      /**< Point-block Jacobi with LU factorization on sub-blocks */
   BJACOBI,       /**< Block Jacobi with LU factorization on sub-blocks, set number of blocks with -pc_bjacobi_blocks */
   LU,            /**< Direct solver based on LU factorization */
