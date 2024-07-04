@@ -74,6 +74,9 @@
  * Marks a particular scope for Caliper profiling
  */
 
+// NOTE: The motivation behind wrapping Caliper macros to avoid conflicting macro definitions in the no-op case, and
+// give downstream users the option to disable profiling Serac if it pollutes their timings.
+
 #ifdef SERAC_USE_CALIPER
 #define SERAC_MARK_FUNCTION CALI_CXX_MARK_FUNCTION
 #define SERAC_MARK_LOOP_BEGIN(id, name) CALI_CXX_MARK_LOOP_BEGIN(id, name)
@@ -90,7 +93,7 @@
 #define SERAC_MARK_LOOP_END(id)
 #define SERAC_MARK_BEGIN(name)
 #define SERAC_MARK_END(name)
-#define SERAC_CXX_MARK_SCOPE(name)
+#define SERAC_MARK_SCOPE(name)
 #endif
 
 /// profiling namespace
