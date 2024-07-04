@@ -40,48 +40,57 @@
 #endif
 
 /**
- * @def CALI_CXX_MARK_FUNCTION
- * No-op macro in case Serac is not built with Caliper
+ * @def SERAC_MARK_FUNCTION
+ * Marks a function for Caliper profiling
  */
 
 /**
- * @def CALI_CXX_MARK_LOOP_BEGIN(id, name)
- * No-op macro in case Serac is not built with Caliper
+ * @def SERAC_MARK_LOOP_BEGIN(id, name)
+ * Marks the beginning of a loop block for Caliper profiling
  */
 
 /**
- * @def CALI_CXX_MARK_LOOP_ITERATION(id, i)
- * No-op macro in case Serac is not built with Caliper
+ * @def SERAC_MARK_LOOP_ITER(id, i)
+ * Marks the beginning of a loop iteration for Caliper profiling
  */
 
 /**
- * @def CALI_CXX_MARK_LOOP_END(id)
- * No-op macro in case Serac is not built with Caliper
+ * @def SERAC_MARK_LOOP_END(id)
+ * Marks the end of a loop block for Caliper profiling
  */
 
 /**
- * @def CALI_MARK_BEGIN(name)
- * No-op macro in case Serac is not built with Caliper
+ * @def SERAC_MARK_BEGIN(id)
+ * Marks the start of a region Caliper profiling
  */
 
 /**
- * @def CALI_MARK_END(name)
- * No-op macro in case Serac is not built with Caliper
+ * @def SERAC_MARK_END(id)
+ * Marks the end of a region Caliper profiling
  */
 
 /**
- * @def CALI_CXX_MARK_SCOPE(name)
- * No-op macro in case Serac is not built with Caliper
+ * @def SERAC_PROFILE_SCOPE(name)
+ * Marks a particular scope for Caliper profiling
  */
 
-#ifndef SERAC_USE_CALIPER
-#define CALI_CXX_MARK_FUNCTION
-#define CALI_CXX_MARK_LOOP_BEGIN(id, name)
-#define CALI_CXX_MARK_LOOP_ITERATION(id, i)
-#define CALI_CXX_MARK_LOOP_END(id)
-#define CALI_MARK_BEGIN(name)
-#define CALI_MARK_END(name)
-#define CALI_CXX_MARK_SCOPE(name)
+#ifdef SERAC_USE_CALIPER
+#define SERAC_MARK_FUNCTION CALI_CXX_MARK_FUNCTION
+#define SERAC_MARK_LOOP_BEGIN(id, name) CALI_CXX_MARK_LOOP_BEGIN(id, name)
+#define SERAC_MARK_LOOP_ITERATION(id, i) CALI_CXX_MARK_LOOP_ITERATION(id, i)
+#define SERAC_MARK_LOOP_END(id) CALI_CXX_MARK_LOOP_END(id)
+#define SERAC_MARK_BEGIN(name) CALI_MARK_BEGIN(name)
+#define SERAC_MARK_END(name) CALI_MARK_END(name)
+#define SERAC_MARK_SCOPE(name) CALI_CXX_MARK_SCOPE(name)
+#else
+// Define no-op macros in case Serac has not been configured with Caliper
+#define SERAC_MARK_FUNCTION
+#define SERAC_MARK_LOOP_BEGIN(id, name)
+#define SERAC_MARK_LOOP_ITERATION(id, i)
+#define SERAC_MARK_LOOP_END(id)
+#define SERAC_MARK_BEGIN(name)
+#define SERAC_MARK_END(name)
+#define SERAC_CXX_MARK_SCOPE(name)
 #endif
 
 /// profiling namespace
