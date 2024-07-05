@@ -6,8 +6,8 @@
 #
 
 variables:
-  Clang_14_ImageName: 'seracllnl/tpls:clang-14_05-31-24_19h-38m'
-  GCC_13_ImageName: 'seracllnl/tpls:gcc-13_05-31-24_19h-38m'
+  Clang_14_ImageName: 'seracllnl/tpls:clang-14_06-27-24_19h-46m'
+  GCC_13_ImageName: 'seracllnl/tpls:gcc-13_06-27-24_19h-46m'
   CUDA_12_ImageName: ''
 
 jobs:
@@ -38,6 +38,8 @@ jobs:
           TEST_TARGET: 'linux_gcc13'
           HOST_CONFIG: 'gcc@13.1.0.cmake'
           BUILD_TYPE: 'Release'
+          # gcc@13 + Release hangs in solid_mechanics when > -O2
+          CMAKE_OPTS: '-DCMAKE_CXX_FLAGS_RELEASE=-O2'
       linux_clang14_debug:
           VM_ImageName: 'ubuntu-22.04'
           Compiler_ImageName: $(Clang_14_ImageName)

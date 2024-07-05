@@ -24,6 +24,34 @@
 using namespace serac;
 using namespace serac::profiling;
 
+template <int dim>
+struct TestThermalModelOne {
+  template <typename P, typename Temp>
+  SERAC_HOST_DEVICE auto operator()(double, [[maybe_unused]] P position, [[maybe_unused]] Temp temperature) const
+  {
+    double                d00 = 1.0;
+    constexpr static auto d01 = 1.0 * make_tensor<dim>([](int i) { return i; });
+    constexpr static auto d10 = 1.0 * make_tensor<dim>([](int i) { return 2 * i * i; });
+    constexpr static auto d11 = 1.0 * make_tensor<dim, dim>([](int i, int j) { return i + j * (j + 1) + 1; });
+    auto [X, dX_dxi]          = position;
+    auto [u, du_dx]           = temperature;
+    auto source               = d00 * u + dot(d01, du_dx) - 0.0 * (100 * X[0] * X[1]);
+    auto flux                 = d10 * u + dot(d11, du_dx);
+
+    return serac::tuple{source, flux};
+  }
+};
+
+struct TestThermalModelTwo {
+  template <typename PositionType, typename TempType>
+  SERAC_HOST_DEVICE auto operator()(double, PositionType position, TempType temperature) const
+  {
+    auto [X, dX_dxi] = position;
+    auto [u, du_dxi] = temperature;
+    return X[0] + X[1] - cos(u);
+  }
+};
+
 template <int ptest, int ptrial, int dim>
 void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 {
@@ -48,30 +76,9 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
   // Construct the new functional object using the known test and trial spaces
   Functional<test_space(trial_space)> residual(&test_fespace, {&trial_fespace});
 
-  auto d00 = 1.0;
-  auto d01 = 1.0 * make_tensor<dim>([](int i) { return i; });
-  auto d10 = 1.0 * make_tensor<dim>([](int i) { return 2 * i * i; });
-  auto d11 = 1.0 * make_tensor<dim, dim>([](int i, int j) { return i + j * (j + 1) + 1; });
+  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, TestThermalModelOne<dim>{}, *mesh);
 
-  residual.AddDomainIntegral(
-      Dimension<dim>{}, DependsOn<0>{},
-      [=](double /*t*/, auto position, auto temperature) {
-        auto [X, dX_dxi] = position;
-        auto [u, du_dx]  = temperature;
-        auto source      = d00 * u + dot(d01, du_dx) - 0.0 * (100 * X[0] * X[1]);
-        auto flux        = d10 * u + dot(d11, du_dx);
-        return serac::tuple{source, flux};
-      },
-      *mesh);
-
-  residual.AddBoundaryIntegral(
-      Dimension<dim - 1>{}, DependsOn<0>{},
-      [=](double /*t*/, auto position, auto temperature) {
-        auto [X, dX_dxi] = position;
-        auto [u, du_dxi] = temperature;
-        return X[0] + X[1] - cos(u);
-      },
-      *mesh);
+  residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, TestThermalModelTwo{}, *mesh);
 
   double t = 0.0;
   check_gradient(residual, t, U);

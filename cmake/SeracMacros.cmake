@@ -151,17 +151,20 @@ endmacro(serac_convert_to_native_escaped_file_path)
 
 ##------------------------------------------------------------------------------
 ## serac_add_tests( SOURCES         [source1 [source2 ...]]
+##                  USE_CUDA        [use CUDA if set]
 ##                  DEPENDS_ON      [dep1 [dep2 ...]]
 ##                  NUM_MPI_TASKS   [num tasks]
 ##                  NUM_OMP_THREADS [num threads])
 ##
 ## Creates an executable per given source and then adds the test to CTest
+## If USE_CUDA is set, this macro will compile a CUDA enabled version of
+## of each unit test.
 ##------------------------------------------------------------------------------
 
 macro(serac_add_tests)
 
     set(options )
-    set(singleValueArgs NUM_MPI_TASKS NUM_OMP_THREADS)
+    set(singleValueArgs NUM_MPI_TASKS NUM_OMP_THREADS USE_CUDA)
     set(multiValueArgs SOURCES DEPENDS_ON)
 
     # Parse the arguments to the macro
@@ -178,12 +181,19 @@ macro(serac_add_tests)
 
     foreach(filename ${arg_SOURCES})
         get_filename_component(test_name ${filename} NAME_WE)
+        if (DEFINED arg_USE_CUDA)
+            set(test_name "${test_name}_cuda")
+        endif()
 
         blt_add_executable(NAME        ${test_name}
                            SOURCES     ${filename}
                            OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
                            DEPENDS_ON  ${arg_DEPENDS_ON}
                            FOLDER      serac/tests )
+
+        if (DEFINED arg_USE_CUDA)
+            target_compile_definitions(${test_name} PUBLIC SERAC_USE_CUDA_KERNEL_EVALUATION)
+        endif()
 
         blt_add_test(NAME            ${test_name}
                      COMMAND         ${test_name}
