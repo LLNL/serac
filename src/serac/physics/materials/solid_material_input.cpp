@@ -40,7 +40,7 @@ void SolidMaterialInputOptions::defineInputFileSchema(axom::inlet::Container& co
     std::string model = c["model"];
     if (model == "NeoHookean" || model == "LinearIsotropic") {
       return density_present && mu_present && K_present && !E_present && !nu_present && !hardening_present;
-    } else if (model == "J2Nonlinear") {
+    } else if (model == "J2SmallStrain") {
       return density_present && !mu_present && !K_present && E_present && nu_present && Hk_present
         && hardening_present;
     }
@@ -60,23 +60,23 @@ serac::var_solid_material_t FromInlet<serac::var_solid_material_t>::operator()(c
     result = serac::solid_mechanics::NeoHookean{.density = base["density"], .K = base["K"], .G = base["mu"]};
   } else if (model == "LinearIsotropic") {
     result = serac::solid_mechanics::LinearIsotropic{.density = base["density"], .K = base["K"], .G = base["mu"]};
-  } else if (model == "J2Nonlinear") {
+  } else if (model == "J2SmallStrain") {
     serac::var_hardening_t hardening = base["hardening"].get<serac::var_hardening_t>();
 
     if (std::holds_alternative<serac::solid_mechanics::LinearHardening>(hardening)) {
-      result = serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::LinearHardening>{
+      result = serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::LinearHardening>{
           .E         = base["E"],
           .nu        = base["nu"],
           .hardening = std::get<serac::solid_mechanics::LinearHardening>(hardening),
           .density   = base["density"]};
     } else if (std::holds_alternative<serac::solid_mechanics::PowerLawHardening>(hardening)) {
-      result = serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>{
+      result = serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::PowerLawHardening>{
           .E         = base["E"],
           .nu        = base["nu"],
           .hardening = std::get<serac::solid_mechanics::PowerLawHardening>(hardening),
           .density   = base["density"]};
     } else if (std::holds_alternative<serac::solid_mechanics::VoceHardening>(hardening)) {
-      result = serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::VoceHardening>{
+      result = serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::VoceHardening>{
           .E         = base["E"],
           .nu        = base["nu"],
           .hardening = std::get<serac::solid_mechanics::VoceHardening>(hardening),

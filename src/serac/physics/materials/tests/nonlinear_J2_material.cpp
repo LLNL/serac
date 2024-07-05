@@ -84,7 +84,7 @@ TEST(J2NonlinearMaterial, Verification)
   double sigma_y = 165 * std::sqrt(3.0);
 
   using Hardening = solid_mechanics::LinearHardening;
-  using Material = solid_mechanics::J2Nonlinear<Hardening>;
+  using Material = solid_mechanics::J2SmallStrain<Hardening>;
 
   Hardening hardening{.sigma_y = sigma_y, .Hi = 0.0};
   Material material{.E = E, .nu = nu, .hardening = hardening, .Hk = 0.0, .density = 1.0};
@@ -133,7 +133,7 @@ TEST(NonlinearJ2Material, SatisfiesConsistency)
   // clang-format on
 
   using Hardening = solid_mechanics::PowerLawHardening;
-  using Material  = solid_mechanics::J2Nonlinear<Hardening>;
+  using Material  = solid_mechanics::J2SmallStrain<Hardening>;
 
   Hardening            hardening_law{.sigma_y = 0.1, .n = 2.0, .eps0 = 0.01};
   Material             material{.E = 1.0, .nu = 0.25, .hardening = hardening_law, .density = 1.0};
@@ -151,7 +151,7 @@ TEST(NonlinearJ2Material, SatisfiesConsistency)
 TEST(NonlinearJ2Material, Uniaxial)
 {
   using Hardening = solid_mechanics::LinearHardening;
-  using Material  = solid_mechanics::J2Nonlinear<Hardening>;
+  using Material  = solid_mechanics::J2SmallStrain<Hardening>;
 
   double E       = 1.0;
   double nu      = 0.25;
