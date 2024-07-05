@@ -87,8 +87,8 @@ of the  ``i`` th iteration of a loop, and ``SERAC_MARK_LOOP_END(id)`` immediatel
   SERAC_MARK_END("region_name");
 
 
-Note that the ``id`` argument to the ``CALI_CXX_MARK_LOOP_*`` macros can be any identifier as long as it is consistent
-between all uses of ``CALI_CXX_MARK_LOOP_*`` for a given loop.  
+Note that the ``id`` argument to the ``SERAC_MARK_LOOP_*`` macros can be any identifier as long as it is consistent
+between all uses of ``SERAC_MARK_LOOP_*`` for a given loop.  
 
 To reduce the amount of annotation for regions bounded by a particular scope, use ``SERAC_MARK_SCOPE(name)``. This will follow RAII and works with graceful exception handling. When ``SERAC_MARK_SCOPE`` is instantiated, profiling of this region starts, and when the scope exits, profiling of this region will end.
 
