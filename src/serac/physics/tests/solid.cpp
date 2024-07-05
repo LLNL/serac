@@ -57,17 +57,20 @@ void functional_solid_test_static_J2()
   SolidMechanics<p, dim> solid_solver(nonlinear_options, linear_options, solid_mechanics::default_quasistatic_options,
                                       GeometricNonlinearities::Off, "solid_mechanics", mesh_tag);
   // _solver_params_end
+  
+  using Hardening = solid_mechanics::LinearHardening;
+  using Material = solid_mechanics::J2SmallStrain<Hardening>;
 
-  solid_mechanics::J2 mat{
-      10000,  // Young's modulus
-      0.25,   // Poisson's ratio
-      50.0,   // isotropic hardening constant
-      5.0,    // kinematic hardening constant
-      50.0,   // yield stress
-      1.0     // mass density
+  Hardening hardening{.sigma_y = 50.0, .Hi = 50.0};
+  Material mat{
+      .E = 10000,  // Young's modulus
+      .nu = 0.25,   // Poisson's ratio
+      .hardening = hardening,
+      .Hk = 5.0,    // kinematic hardening constant
+      .density = 1.0     // mass density
   };
 
-  solid_mechanics::J2::State initial_state{};
+  Material::State initial_state{};
 
   auto state = solid_solver.createQuadratureDataBuffer(initial_state);
 
