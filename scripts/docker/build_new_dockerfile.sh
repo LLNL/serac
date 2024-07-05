@@ -9,7 +9,7 @@
 function usage() {
     echo "Usage:          ./build_new_dockerfile.sh <compiler_name> <compiler_full_version> <optional_cuda_version>"
     echo "Example:        ./build_new_dockerfile.sh gcc 13.1.0"
-    echo "Example (cuda): ./build_new_dockerfile.sh gcc 13.1.0 12-3"
+    echo "Example (CUDA): ./build_new_dockerfile.sh gcc 12.3.0 12-3"
 }
 
 # Must be between two and three args
@@ -28,17 +28,23 @@ cuda_ver=$3
 
 maj_ver="${ver%%\.*}"
 
-if [[ "$ver" != *"."*"."* ]] ; then
-    echo "Error: specify full compiler version"
+if [[ ! "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+    echo "Error: specify full compiler version in the format X.Y.Z"
     usage
     exit 1
 fi
 
 if [ $using_cuda = true ] ; then
+    if [[ ! "$cuda_ver" =~ ^[0-9]+-[0-9]+$ ]] ; then
+        echo "Error: specify full CUDA version in the format X-Y"
+        usage
+        exit 1
+    fi
+
     cuda_maj_ver="${cuda_ver%-*}"
     tag_name="cuda-${cuda_maj_ver}"
     image="ghcr.io/llnl/radiuss:cuda-${cuda_ver}-ubuntu-22.04"
-    spec="%${name}@${ver}+cuda+raja+umpire"
+    spec="%${name}@${ver}+cuda+raja+umpire cuda_arch=70"
 else
     tag_name="${name}-${maj_ver}"
     image="ghcr.io/llnl/radiuss:${name}-${maj_ver}-ubuntu-22.04"
