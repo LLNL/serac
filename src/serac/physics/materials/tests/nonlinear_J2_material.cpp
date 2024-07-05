@@ -189,7 +189,7 @@ TEST(FiniteDeformationNonlinearJ2Material, Uniaxial)
   */
 
   using Hardening = solid_mechanics::LinearHardening;
-  using Material  = solid_mechanics::J2FiniteDeformationNonlinear<Hardening>;
+  using Material  = solid_mechanics::J2<Hardening>;
 
   double E       = 1.0;
   double sigma_y = 0.01;
@@ -228,7 +228,7 @@ TEST(FiniteDeformationNonlinearJ2Material, DerivativeCorrectness)
   // solve.
 
   using Hardening = solid_mechanics::PowerLawHardening;
-  using Material  = solid_mechanics::J2FiniteDeformationNonlinear<Hardening>;
+  using Material  = solid_mechanics::J2<Hardening>;
 
   Hardening hardening{.sigma_y = 350e6, .n = 3, .eps0 = 0.00175};
   Material  material{.E = 200e9, .nu = 0.25, .hardening = hardening, .density = 1.0};
@@ -277,7 +277,7 @@ TEST(FiniteDeformationNonlinearJ2Material, DerivativeCorrectness)
 TEST(FiniteDeformationNonlinearJ2Material, FrameIndifference)
 {
   using Hardening = solid_mechanics::VoceHardening;
-  using Material  = solid_mechanics::J2FiniteDeformationNonlinear<Hardening>;
+  using Material  = solid_mechanics::J2<Hardening>;
 
   Hardening hardening{.sigma_y = 350e6, .sigma_sat = 700e6, .strain_constant = 0.01};
   Material  material{.E = 200.0e9, .nu = 0.25, .hardening = hardening, .density = 1.0};
