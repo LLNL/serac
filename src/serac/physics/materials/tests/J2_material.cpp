@@ -71,7 +71,7 @@ tensor<double, 3, 3> verification_analytic_soln(double t)
   // clang-format on
 }
 
-TEST(J2NonlinearMaterial, Verification)
+TEST(J2SmallStrain, Verification)
 {
   double tmax      = 2.0;
   size_t num_steps = 64;
@@ -112,7 +112,7 @@ TEST(J2NonlinearMaterial, Verification)
   }
 }
 
-TEST(NonlinearJ2Material, PowerLawHardeningWorksWithDuals)
+TEST(J2, PowerLawHardeningWorksWithDuals)
 {
   double                             sigma_y = 1.0;
   solid_mechanics::PowerLawHardening hardening_law{.sigma_y = sigma_y, .n = 2.0, .eps0 = 0.01};
@@ -122,7 +122,7 @@ TEST(NonlinearJ2Material, PowerLawHardeningWorksWithDuals)
   EXPECT_GT(flow_stress.gradient, 0.0);
 };
 
-TEST(NonlinearJ2Material, SatisfiesConsistency)
+TEST(J2SmallStrain, SatisfiesConsistency)
 {
   // clang-format off
   tensor<double, 3, 3> du_dx{
@@ -148,7 +148,7 @@ TEST(NonlinearJ2Material, SatisfiesConsistency)
   EXPECT_LT(norm(s - dev(stress)) / norm(s), 1e-9);
 };
 
-TEST(NonlinearJ2Material, Uniaxial)
+TEST(J2SmallStrain, Uniaxial)
 {
   using Hardening = solid_mechanics::LinearHardening;
   using Material  = solid_mechanics::J2SmallStrain<Hardening>;
@@ -181,7 +181,7 @@ TEST(NonlinearJ2Material, Uniaxial)
   }
 };
 
-TEST(FiniteDeformationNonlinearJ2Material, Uniaxial)
+TEST(J2, Uniaxial)
 {
   /* Log strain J2 plasticity has the nice feature that the exact uniaxial stress solution from
      small strain plasticity are applicable, if you replace the lineasr strain with log strain
@@ -219,7 +219,7 @@ TEST(FiniteDeformationNonlinearJ2Material, Uniaxial)
   }
 };
 
-TEST(FiniteDeformationNonlinearJ2Material, DerivativeCorrectness)
+TEST(J2, DerivativeCorrectness)
 {
   // This constitutive function is non-differentiable at the yield point,
   // but should be differentiable everywhere else.
@@ -274,7 +274,7 @@ TEST(FiniteDeformationNonlinearJ2Material, DerivativeCorrectness)
   EXPECT_LT(norm(dsig[0] - dsig[1]), 1e-5 * norm(dsig[1]));
 }
 
-TEST(FiniteDeformationNonlinearJ2Material, FrameIndifference)
+TEST(J2, FrameIndifference)
 {
   using Hardening = solid_mechanics::VoceHardening;
   using Material  = solid_mechanics::J2<Hardening>;
