@@ -50,7 +50,7 @@
  */
 
 /**
- * @def SERAC_MARK_LOOP_ITER(id, i)
+ * @def SERAC_MARK_LOOP_ITERATION(id, i)
  * Marks the beginning of a loop iteration for Caliper profiling
  */
 
@@ -70,7 +70,7 @@
  */
 
 /**
- * @def SERAC_PROFILE_SCOPE(name)
+ * @def SERAC_MARK_SCOPE(name)
  * Marks a particular scope for Caliper profiling
  */
 
