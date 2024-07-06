@@ -205,7 +205,6 @@ void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_d
 
   // Optionally output a paraview datacollection for visualization
   if (paraview_output_dir) {
-    printf("output paraview");
     // Check to see if the paraview data collection exists. If not, create it.
     if (!paraview_dc_) {
       CreateParaviewDataCollection();

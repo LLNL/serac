@@ -183,6 +183,8 @@ public:
               {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = v_, .d2u_dt2 = acceleration_},
               *nonlin_solver_, bcs_),
         geom_nonlin_(geom_nonlin),
+        x_previous_(
+            StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "previous_coordinates"), mesh_tag_)),
         x_current_(
             StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "current_coordinates"), mesh_tag_))
   {
@@ -1128,17 +1130,17 @@ public:
     setPressure(DependsOn<>{}, pressure_function, optional_domain);
   }
 
-  void computeUpdatedCoordinates(const mfem::Vector& disp)
+  void computeUpdatedCoordinates(const mfem::Vector& disp, mfem::Vector& x)
   {
     auto reference_nodes = dynamic_cast<const mfem::ParGridFunction*>(mesh_.GetNodes());
-    reference_nodes->ParFESpace()->GetProlongationMatrix()->Mult(disp, x_current_);
-    x_current_ += *reference_nodes;
-    // x_current += shape_displacement_;
+    reference_nodes->ParFESpace()->GetProlongationMatrix()->Mult(disp, x);
+    x += *reference_nodes;
+    x += shape_displacement_;
   }
 
   void updateConstraintMultipliers()
   {
-    computeUpdatedCoordinates(displacement_);
+    computeUpdatedCoordinates(displacement_, x_current_);
     for (auto& constraint : inequality_constraints) {
       constraint->updateMultipliers(x_current_, ode_time_point_);
     }
@@ -1162,9 +1164,9 @@ public:
 
           r = res;
 
-          computeUpdatedCoordinates(u);
+          computeUpdatedCoordinates(u, x_current_);
           for (auto& constraint : inequality_constraints) {
-            constraint->sumConstraintResidual(x_current_, ode_time_point_, r);
+            constraint->sumConstraintResidual(x_current_, x_previous_, ode_time_point_, dt_, r);
           }
 
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
@@ -1182,12 +1184,16 @@ public:
           CALI_MARK_END("assemble sparse matrix");
 
           CALI_MARK_BEGIN("assemble constraint matrix");
-          computeUpdatedCoordinates(u);
+          computeUpdatedCoordinates(u, x_current_);
           for (auto& constraint : inequality_constraints) {
-            J_ = std::move(constraint->sumConstraintJacobian(x_current_, ode_time_point_, std::move(J_)));
+            J_ = std::move(constraint->sumConstraintJacobian(x_current_, x_previous_, ode_time_point_, dt_, std::move(J_)));
           }
           CALI_MARK_END("assemble constraint matrix");
           J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+
+          //std::cout << "nonzeros J = " << J_->NNZ() << " " << J_->NumRows() << " " << J_->NumCols() << std::endl;
+          //std::cout << "nonzeros Je = " << J_e_->NNZ() << std::endl; // an oddly large #
+
           return *J_;
         });
   }
@@ -1213,7 +1219,6 @@ public:
   /// @overload
   void completeSetup() override
   {
-    CALI_CXX_MARK_FUNCTION;
     // Build the dof array lookup tables
     displacement_.space().BuildDofToArrays();
 
@@ -1292,6 +1297,24 @@ public:
     }
   }
 
+  /// Given a solved displacement, update the internal state variables
+  void advanceStateVariables()
+  {
+    // after finding displacements that satisfy equilibrium,
+    // compute the residual one more time, this time enabling
+    // the material state buffers to be updated
+    residual_->updateQdata(true);
+    reactions_ = (*residual_)(time_, shape_displacement_, displacement_, acceleration_,
+                              *parameters_[parameter_indices].state...);
+
+    computeUpdatedCoordinates(displacement_, x_current_);
+    for (auto& constraint : inequality_constraints) {
+      constraint->sumConstraintResidual(x_current_, x_previous_, time_, dt_, reactions_);
+    }
+    residual_->updateQdata(false);
+  }
+
+
   /// @overload
   void advanceTimestep(double dt) override
   {
@@ -1306,11 +1329,20 @@ public:
     }
 
     if (is_quasistatic_) {
-      quasiStaticSolve(dt);
+      quasiStaticSolve(dt); // dt_ is updated internally
+      int maxAlIteration = 5;
+      if (!inequality_constraints.empty()) {
+        // Set the start of step mesh coordinates for contact
+        computeUpdatedCoordinates(displacement_, x_previous_);
+        for (int i=0; i < maxAlIteration; ++i) {
+          augmentedLagrangeSolve();
+        }
+      }
     } else {
+      dt_ = dt;
       ode2_.Step(displacement_, velocity_, time_, dt);
     }
-
+    
     cycle_ += 1;
 
     if (checkpoint_to_disk_) {
@@ -1322,22 +1354,7 @@ public:
       }
     }
 
-    {
-      // after finding displacements that satisfy equilibrium,
-      // compute the residual one more time, this time enabling
-      // the material state buffers to be updated
-      residual_->updateQdata(true);
-
-      reactions_ = (*residual_)(ode_time_point_, shape_displacement_, displacement_, acceleration_,
-                                *parameters_[parameter_indices].state...);
-
-      computeUpdatedCoordinates(displacement_);
-      for (auto& constraint : inequality_constraints) {
-        constraint->sumConstraintResidual(x_current_, ode_time_point_, reactions_);
-      }
-
-      residual_->updateQdata(false);
-    }
+    advanceStateVariables();
 
     if (cycle_ > max_cycle_) {
       timesteps_.push_back(dt);
@@ -1682,6 +1699,7 @@ protected:
   /// @brief Coefficient containing the essential boundary values
   std::shared_ptr<mfem::Coefficient> component_disp_bdr_coef_;
 
+  FiniteElementState x_previous_;
   FiniteElementState x_current_;
   using InequalityConstraintPtr = std::unique_ptr<InequalityConstraint<order, dim>>;
   std::vector<InequalityConstraintPtr> inequality_constraints;
@@ -1692,38 +1710,49 @@ protected:
   std::array<std::function<decltype((*residual_)(DifferentiateWRT<1>{}, 0.0, shape_displacement_, displacement_,
                                                  acceleration_, *parameters_[parameter_indices].state...))(double)>,
              sizeof...(parameter_indices)>
-      d_residual_d_ = {[&](double t) {
-        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + 1 + parameter_indices>{}, t, shape_displacement_,
-                            displacement_, acceleration_, *parameters_[parameter_indices].state...);
-      }...};
+  d_residual_d_ = {
+    [&](double t) {
+      return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + 1 + parameter_indices>{}, t, shape_displacement_,
+                          displacement_, acceleration_, *parameters_[parameter_indices].state...);
+    }...
+  };
 
-  /// @brief Array functions computing the derivative of the residual with respect to each given parameter evaluated at
-  /// the previous value of state
+  /// @brief Array functions computing the derivative of the residual with respect to each given parameter
   /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
   /// template parameter.
-  std::array<
-      std::function<decltype((*residual_)(DifferentiateWRT<1>{}, 0.0, shape_displacement_, displacement_, acceleration_,
-                                          *parameters_[parameter_indices].previous_state...))(double)>,
-      sizeof...(parameter_indices)>
-      d_residual_d_previous_ = {[&](double t) {
-        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + 1 + parameter_indices>{}, t, shape_displacement_,
-                            displacement_, acceleration_, *parameters_[parameter_indices].previous_state...);
-      }...};
+  std::array<std::function<decltype((*residual_)(DifferentiateWRT<1>{}, 0.0, shape_displacement_, displacement_,
+                                                 acceleration_, *parameters_[parameter_indices].previous_state...))(double)>,
+             sizeof...(parameter_indices)>
+  d_residual_d_previous_ = {
+    [&](double t) {
+      return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + 1 + parameter_indices>{}, t, shape_displacement_,
+                          displacement_, acceleration_, *parameters_[parameter_indices].previous_state...);
+    }...
+  };
+
+  /// solve with nothing updating except the constraint multipliers and penalties
+  void augmentedLagrangeSolve()
+  {
+    updateConstraintMultipliers();
+    nonlin_solver_->solve(displacement_);
+  }
 
   /// @brief Solve the Quasi-static Newton system
   virtual void quasiStaticSolve(double dt)
   {
     CALI_CXX_MARK_FUNCTION;
+
+    // this method is essentially equivalent to the 1-liner
+    // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
     // warm start must be called prior to the time update so that the previous Jacobians can be used consistently
     // throughout.
     warmStartDisplacement(dt);
 
+    dt_ = dt;
     time_ += dt;
     // Set the ODE time point for the time-varying loads in quasi-static problems
     ode_time_point_ = time_;
 
-    // this method is essentially equivalent to the 1-liner
-    // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
     nonlin_solver_->solve(displacement_);
   }
 
@@ -1796,17 +1825,17 @@ protected:
     // Update the linearized Jacobian matrix
     auto [r, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
                                   *parameters_[parameter_indices].previous_state...);
-    computeUpdatedCoordinates(displacement_);
+    computeUpdatedCoordinates(displacement_, x_current_);
     for (auto& constraint : inequality_constraints) {
-      constraint->sumConstraintResidual(x_current_, ode_time_point_, r);
+      constraint->sumConstraintResidual(x_current_, x_previous_, time_, dt_, r);
     }
                                   
-    J_             = assemble(drdu);
+    J_ = assemble(drdu);
     for (auto& constraint : inequality_constraints) {
-      J_ = std::move(constraint->sumConstraintJacobian(x_current_, ode_time_point_, std::move(J_)));
+      J_ = std::move(constraint->sumConstraintJacobian(x_current_, x_previous_, time_, dt_, std::move(J_)));
     }
 
-    J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+    J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
 
     du_ = 0.0;
     for (auto& bc : bcs_.essentials()) {

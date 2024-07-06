@@ -19,6 +19,72 @@
 
 namespace serac {
 
+
+template <int dim>
+struct NodalFriction 
+{
+
+  double mu_;
+  double v_crit_;
+  std::array<double, dim> v;
+
+  NodalFriction(double mu, double v_crit, std::array<double, dim> referenceV) : mu_(mu), v_crit_(v_crit), v(referenceV)
+  {
+  }
+
+  mfem::Vector quasiVariationalResidual(const mfem::Vector& x, const mfem::Vector& x_prev,
+                                        double dt) const
+  {
+    mfem::Vector v_perp = x;
+    v_perp = 0.0;
+    if (dt == 0.0 || mu_ == 0.0) {
+      return v_perp;
+    }
+
+    for (int i=0; i < dim; ++i) v_perp[i] = (x[i] - x_prev[i]) / dt - v[static_cast<size_t>(i)];
+
+    double vv = 0.0; for (int i=0; i < dim; ++i) vv += v_perp[i]*v_perp[i];
+
+    if (vv < v_crit_*v_crit_) {
+      for (int i=0; i < dim; ++i) v_perp[i] = -mu_ * v_perp[i] / v_crit_;
+    } else {
+      for (int i=0; i < dim; ++i) v_perp[i] = -mu_ * v_perp[i] / std::sqrt(vv);
+    }
+    return v_perp;
+  }
+
+  mfem::Vector quasiVariationalHessVec(const mfem::Vector& x, const mfem::Vector& x_prev, const mfem::Vector& w,
+                                       double dt) const
+  {
+    mfem::Vector Hv = x; Hv = 0.0;
+    mfem::Vector v_perp = x; v_perp = 0.0;
+    if (dt == 0.0 || mu_ == 0.0) {
+      return Hv;
+    }
+
+    for (int i=0; i < dim; ++i) v_perp[i] = (x[i] - x_prev[i]) / dt - v[static_cast<size_t>(i)];
+
+    double vv = 0.0; for (int i=0; i < dim; ++i) vv += v_perp[i]*v_perp[i];
+
+    if (vv < v_crit_*v_crit_) {
+      for (int i=0; i < dim; ++i) Hv[i] = -mu_ * w[i] / (dt * v_crit_);
+    } else {
+      double vInv = 1.0 / std::sqrt(vv);
+      double vel_squared_to_minus_1p5 = vInv / vv;
+      double factor = 0.0;
+      for (int i=0; i < dim; ++i) {
+        factor += v_perp[i] * w[i];
+      }
+      for (int i=0; i < dim; ++i) {
+        Hv[i] = -mu_ * (vInv * w[i] - vel_squared_to_minus_1p5 * factor * v_perp[i]) / dt;
+      }
+    }
+    return Hv;
+  }
+
+};
+
+
 struct LevelSet {
   virtual ~LevelSet() {}
   // positive means constraint is satisfied, i.e., c(x) >= 0
@@ -26,7 +92,7 @@ struct LevelSet {
 
   virtual mfem::Vector gradient(const mfem::Vector& x, double t) const = 0;
 
-  virtual mfem::Vector hess_vec(const mfem::Vector& x, const mfem::Vector&, double t) const = 0;
+  virtual mfem::Vector hessVec(const mfem::Vector& x, const mfem::Vector&, double t) const = 0;
 };
 
 template <int dim>
@@ -60,7 +126,7 @@ struct LevelSetPlane : public LevelSet { // hard codes as a y plane for now
     return grad;
   }
 
-  mfem::Vector hess_vec(const mfem::Vector& xyz, const mfem::Vector&, double) const override
+  mfem::Vector hessVec(const mfem::Vector& xyz, const mfem::Vector& /*w*/, double) const override
   {
     mfem::Vector hv = xyz;
     hv              = 0.0;
@@ -68,15 +134,17 @@ struct LevelSetPlane : public LevelSet { // hard codes as a y plane for now
   }
 };
 
+
 template <int dim>
 struct LevelSetSphere : public LevelSet {
 
-  LevelSetSphere(std::array<double,dim> c_, double r_) : center(c_), r(r_) {}
+  LevelSetSphere(std::array<double,dim> c_, double r_, std::array<double,dim> v_) : center(c_), r(r_), v(v_) {}
 
   const std::array<double,dim> center;
   const double r;
+  const std::array<double,dim> v;
 
-  double sq(double v) const { return v*v; }
+  double sq(double a) const { return a*a; }
 
   double distSquared(const mfem::Vector& xyz, const std::array<double,dim>& c) const
   {
@@ -91,14 +159,18 @@ struct LevelSetSphere : public LevelSet {
   double evaluate(const mfem::Vector& xyz, double t) const override
   { 
     auto c = center;
-    c[0] += t * 10.0;
+    for (size_t i=0; i<dim; ++i) {
+      c[i] += t * v[i];
+    }
     return std::sqrt(distSquared(xyz, c)) - r;
   }
 
   mfem::Vector gradient(const mfem::Vector& x, double t) const override
   {
     auto c = center;
-    c[0] += t * 10.0;
+    for (size_t i=0; i<dim; ++i) {
+      c[i] += t * v[i];
+    }
     mfem::Vector grad = x; grad = 0.0;
     double dist_squared = distSquared(x, c);
     if (dist_squared != 0.0) {
@@ -110,10 +182,12 @@ struct LevelSetSphere : public LevelSet {
     return grad;
   }
 
-  mfem::Vector hess_vec(const mfem::Vector& x, const mfem::Vector& v, double t) const override
+  mfem::Vector hessVec(const mfem::Vector& x, const mfem::Vector& w, double t) const override
   {
     auto c = center;
-    c[0] += t * 10.0;
+    for (size_t i=0; i<dim; ++i) {
+      c[i] += t * v[i];
+    }
     mfem::Vector hv = x; hv = 0.0;
     double dist_squared = distSquared(x, c);
     if (dist_squared != 0.0) {
@@ -121,15 +195,16 @@ struct LevelSetSphere : public LevelSet {
       double dist_to_minus_1p5 = distInv / dist_squared;
       double factor = 0.0;
       for (int i=0; i < dim; ++i) {
-        factor += v[i] * (x[i] - c[static_cast<size_t>(i)]);
+        factor += w[i] * (x[i] - c[static_cast<size_t>(i)]);
       }
       for (int i=0; i < dim; ++i) {
-        hv[i] = distInv * v[i] - dist_to_minus_1p5 * factor * (x[i] - c[static_cast<size_t>(i)]);
+        hv[i] = distInv * w[i] - dist_to_minus_1p5 * factor * (x[i] - c[static_cast<size_t>(i)]);
       }
     }
 
     return hv;
   }
+
 };
 
 template <int dim>
@@ -172,8 +247,9 @@ private:
 
 template <int order, int dim>
 struct InequalityConstraint {
-  InequalityConstraint(std::unique_ptr<LevelSet> levelSet, std::string physics_name, std::string mesh_tag)
+  InequalityConstraint(std::unique_ptr<LevelSet> levelSet, std::unique_ptr<NodalFriction<dim>> friction, std::string physics_name, std::string mesh_tag)
       : levelSet_(std::move(levelSet)),
+        friction_(std::move(friction)),
         constraint_(StateManager::newState(H1<order, 1>{}, detail::addPrefix(physics_name, "constraint"), mesh_tag)),
         constraint_multiplier_(
             StateManager::newDual(H1<order, 1>{}, detail::addPrefix(physics_name, "constraint_multiplier"), mesh_tag)),
@@ -191,7 +267,7 @@ struct InequalityConstraint {
   {
     constraint_            = 0.0;
     constraint_multiplier_ = 0.0;
-    constraint_penalty_    = 0.01; //125;
+    constraint_penalty_    = 0.1; //125;
     constraint_ncp_error_  = 0.1 * std::numeric_limits<double>::max();
   }
 
@@ -204,40 +280,53 @@ struct InequalityConstraint {
     StateManager::updateState(constraint_diagonal_stiffness_);
   }
 
-  void sumConstraintResidual(const FiniteElementVector& x_current, double time, mfem::Vector& res)
+  void sumConstraintResidual(const FiniteElementVector& x_current, const FiniteElementVector& x_previous, double time, double dt, mfem::Vector& res)
   {
     View<1>        constraint(constraint_);
     View<1>        constraint_multiplier(constraint_multiplier_);
     View<1>        constraint_penalty(constraint_penalty_);
     ConstView<dim> x(x_current);
+    ConstView<dim> x_prev(x_previous);
     View<dim>      residual(res);
 
     const int num_nodes = x.numNodes();
     SLIC_ERROR_ROOT_IF(num_nodes != constraint_.Size(), "Constraint size does not match system size.");
+    SLIC_ERROR_ROOT_IF(num_nodes != x_prev.numNodes(), "Constraint size does not match system size.");
 
-    mfem::Vector currentCoords(dim);
+    mfem::Vector coord(dim);
+    mfem::Vector coord_prev(dim);
     for (int n = 0; n < num_nodes; ++n) {
       for (int i = 0; i < dim; ++i) {
-        currentCoords[i] = x(n, i);
+        coord[i] = x(n, i);
+        coord_prev[i] = x_prev(n, i);
       }
 
-      const double c   = levelSet_->evaluate(currentCoords, time);
+      const double c   = levelSet_->evaluate(coord, time);
       constraint[n]    = c;
       const double lam = constraint_multiplier[n];
       const double k   = constraint_penalty[n];
 
-      const mfem::Vector gradC = levelSet_->gradient(currentCoords, time);
-
+      const mfem::Vector gradC = levelSet_->gradient(coord, time);
       if (lam >= k * c) {
         for (int i = 0; i < dim; ++i) {
           residual(n, i) += gradC[i] * (-lam + k * c);
         }
       }
+
+      const mfem::Vector qviRes = friction_->quasiVariationalResidual(coord, coord_prev, dt);
+      if (lam > 0.0) {
+        for (int i = 0; i < dim; ++i) {
+          residual(n, i) += lam * qviRes[i];
+        }
+      }
     }
   }
 
-  std::unique_ptr<mfem::HypreParMatrix> sumConstraintJacobian(const FiniteElementVector&            x_current,
+
+  std::unique_ptr<mfem::HypreParMatrix> sumConstraintJacobian(const FiniteElementVector& x_current,
+                                                              const FiniteElementVector& x_previous,
                                                               double time,
+                                                              double dt,
                                                               std::unique_ptr<mfem::HypreParMatrix> J)
   {
     constraint_diagonal_stiffness_ = 0.0;
@@ -246,31 +335,44 @@ struct InequalityConstraint {
     View<1>         constraint_multiplier(constraint_multiplier_);
     View<1>         constraint_penalty(constraint_penalty_);
     ConstView<dim>  x(x_current);
+    ConstView<dim>  x_prev(x_previous);
     View<dim * dim> constraint_diagonal_stiffness(constraint_diagonal_stiffness_);
 
     const int numNodes = x.numNodes();
     SLIC_ERROR_ROOT_IF(numNodes != constraint_.Size(), "Constraint size does not match system size.");
 
-    mfem::Vector currentCoords(dim);  // switch to stack vectors eventually
+    mfem::Vector coord(dim);  // switch to stack vectors eventually
+    mfem::Vector coord_prev(dim);  // switch to stack vectors eventually
     mfem::Vector xyz_dirs(dim);
 
     for (int n = 0; n < numNodes; ++n) {
       for (int i = 0; i < dim; ++i) {
-        currentCoords[i] = x(n, i);
+        coord[i] = x(n, i);
+        coord_prev[i] = x_prev(n, i);
       }
-      const double c   = levelSet_->evaluate(currentCoords, time);
+      const double c   = levelSet_->evaluate(coord, time);
       constraint[n]    = c;
       const double lam = constraint_multiplier[n];
       const double k   = constraint_penalty[n];
 
       if (lam >= k * c) {
-        const mfem::Vector gradC = levelSet_->gradient(currentCoords, time);
+        const mfem::Vector gradC = levelSet_->gradient(coord, time);
         for (int i = 0; i < dim; ++i) {
           xyz_dirs                 = 0.0;
           xyz_dirs[i]              = 1.0;
-          const mfem::Vector hessI = levelSet_->hess_vec(currentCoords, xyz_dirs, time);
+          const mfem::Vector hessI = levelSet_->hessVec(coord, xyz_dirs, time);
           for (int j = 0; j < dim; ++j) {
             constraint_diagonal_stiffness(n, dim * i + j) += k * gradC[i] * gradC[j] + hessI[j] * (-lam + k * c);
+          }
+        }
+      }
+      if (lam > 0.0) {
+        for (int i = 0; i < dim; ++i) {
+          xyz_dirs                 = 0.0;
+          xyz_dirs[i]              = 1.0;
+          const mfem::Vector hessI = friction_->quasiVariationalHessVec(coord, coord_prev, xyz_dirs, dt);
+          for (int j = 0; j < dim; ++j) {
+            constraint_diagonal_stiffness(n, dim * i + j) += lam * hessI[j];
           }
         }
       }
@@ -336,10 +438,11 @@ struct InequalityConstraint {
       const double c = levelSet_->evaluate(currentCoords, time);
       constraint[n]  = c;
 
-      const double lam = constraint_multiplier[n];
+      double lam = constraint_multiplier[n];
       const double k   = constraint_penalty[n];
       // update multiplier
-      constraint_multiplier[n] = std::max(lam - k * c, 0.0);
+      lam = std::max(lam - k * c, 0.0);
+      constraint_multiplier[n] = lam;
 
       double oldError         = constraint_ncp_error[n];
       double newError         = std::abs(fischer_burmeister_ncp_error(c, lam, k));
@@ -359,7 +462,8 @@ struct InequalityConstraint {
   }
 
 protected:
-  std::unique_ptr<LevelSet> levelSet_;
+  const std::unique_ptr<LevelSet> levelSet_;
+  const std::unique_ptr<NodalFriction<3>> friction_;
 
   FiniteElementState constraint_;
   FiniteElementDual  constraint_multiplier_;
