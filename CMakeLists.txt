@@ -144,6 +144,10 @@ if (SERAC_STYLE_ONLY OR SERAC_ENABLE_CODE_CHECKS)
 endif()
 
 if (SERAC_STYLE_ONLY)
+    # Exit processing the rest of the build in style only build to avoid any possible
+    # CMake configuration issues outside of just enabling `make style`. This build,
+    # is not capable of building Serac and should not be advertised. It is for CI 
+    # purposes only.
     return()
 endif()
 
