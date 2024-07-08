@@ -166,37 +166,37 @@ int main(int argc, char* argv[])
   // Add metadata
   SERAC_SET_METADATA("test", "thermal_functional");
 
-  CALI_MARK_BEGIN("2D Linear Static");
+  SERAC_MARK_BEGIN("2D Linear Static");
   functional_test_static<1, 2>();
-  CALI_MARK_END("2D Linear Static");
+  SERAC_MARK_END("2D Linear Static");
 
-  CALI_MARK_BEGIN("2D Quadratic Static");
+  SERAC_MARK_BEGIN("2D Quadratic Static");
   functional_test_static<2, 2>();
-  CALI_MARK_END("2D Quadratic Static");
+  SERAC_MARK_END("2D Quadratic Static");
 
-  CALI_MARK_BEGIN("3D Linear Static");
+  SERAC_MARK_BEGIN("3D Linear Static");
   functional_test_static<1, 3>();
-  CALI_MARK_END("3D Linear Static");
+  SERAC_MARK_END("3D Linear Static");
 
-  CALI_MARK_BEGIN("3D Quadratic Static");
+  SERAC_MARK_BEGIN("3D Quadratic Static");
   functional_test_static<2, 3>();
-  CALI_MARK_END("3D Quadratic Static");
+  SERAC_MARK_END("3D Quadratic Static");
 
-  CALI_MARK_BEGIN("2D Linear Dynamic");
+  SERAC_MARK_BEGIN("2D Linear Dynamic");
   functional_test_dynamic<1, 2>();
-  CALI_MARK_END("2D Linear Dynamic");
+  SERAC_MARK_END("2D Linear Dynamic");
 
-  CALI_MARK_BEGIN("2D Quadratic Dynamic");
+  SERAC_MARK_BEGIN("2D Quadratic Dynamic");
   functional_test_dynamic<2, 2>();
-  CALI_MARK_END("2D Quadratic Dynamic");
+  SERAC_MARK_END("2D Quadratic Dynamic");
 
-  CALI_MARK_BEGIN("3D Linear Dynamic");
+  SERAC_MARK_BEGIN("3D Linear Dynamic");
   functional_test_dynamic<1, 3>();
-  CALI_MARK_END("3D Linear Dynamic");
+  SERAC_MARK_END("3D Linear Dynamic");
 
-  CALI_MARK_BEGIN("3D Quadratic Dynamic");
+  SERAC_MARK_BEGIN("3D Quadratic Dynamic");
   functional_test_dynamic<2, 3>();
-  CALI_MARK_END("3D Quadratic Dynamic");
+  SERAC_MARK_END("3D Quadratic Dynamic");
 
   // Finalize profiling
   serac::profiling::finalize();

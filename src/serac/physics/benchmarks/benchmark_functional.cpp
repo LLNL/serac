@@ -60,21 +60,21 @@ void functional_test(int parallel_refinement)
   // Compute the residual using functional
   double t = 0.0;
 
-  CALI_MARK_BEGIN("residual evaluation");
+  SERAC_MARK_BEGIN("residual evaluation");
   mfem::Vector r1 = residual(t, U);
-  CALI_MARK_END("residual evaluation");
+  SERAC_MARK_END("residual evaluation");
 
-  CALI_MARK_BEGIN("compute gradient");
+  SERAC_MARK_BEGIN("compute gradient");
   auto [r2, drdU] = residual(t, serac::differentiate_wrt(U));
-  CALI_MARK_END("compute gradient");
+  SERAC_MARK_END("compute gradient");
 
-  CALI_MARK_BEGIN("apply gradient");
+  SERAC_MARK_BEGIN("apply gradient");
   mfem::Vector g = drdU(U);
-  CALI_MARK_END("apply gradient");
+  SERAC_MARK_END("apply gradient");
 
-  CALI_MARK_BEGIN("assemble gradient");
+  SERAC_MARK_BEGIN("assemble gradient");
   auto g_mat = assemble(drdU);
-  CALI_MARK_END("assemble gradient");
+  SERAC_MARK_END("assemble gradient");
 }
 
 int main(int argc, char* argv[])
@@ -88,45 +88,45 @@ int main(int argc, char* argv[])
   // Initialize profiling
   serac::profiling::initialize();
 
-  CALI_MARK_BEGIN("scalar H1");
+  SERAC_MARK_BEGIN("scalar H1");
 
-  CALI_MARK_BEGIN("dimension 2, order 1");
+  SERAC_MARK_BEGIN("dimension 2, order 1");
   functional_test<1, 2, 1>(parallel_refinement);
-  CALI_MARK_END("dimension 2, order 1");
+  SERAC_MARK_END("dimension 2, order 1");
 
-  CALI_MARK_BEGIN("dimension 2, order 2");
+  SERAC_MARK_BEGIN("dimension 2, order 2");
   functional_test<2, 2, 1>(parallel_refinement);
-  CALI_MARK_END("dimension 2, order 2");
+  SERAC_MARK_END("dimension 2, order 2");
 
-  CALI_MARK_BEGIN("dimension 3, order 1");
+  SERAC_MARK_BEGIN("dimension 3, order 1");
   functional_test<1, 3, 1>(parallel_refinement);
-  CALI_MARK_END("dimension 3, order 1");
+  SERAC_MARK_END("dimension 3, order 1");
 
-  CALI_MARK_BEGIN("dimension 3, order 2");
+  SERAC_MARK_BEGIN("dimension 3, order 2");
   functional_test<2, 3, 1>(parallel_refinement);
-  CALI_MARK_END("dimension 3, order 2");
+  SERAC_MARK_END("dimension 3, order 2");
 
-  CALI_MARK_END("scalar H1");
+  SERAC_MARK_END("scalar H1");
 
-  CALI_MARK_BEGIN("vector H1");
+  SERAC_MARK_BEGIN("vector H1");
 
-  CALI_MARK_BEGIN("dimension 2, order 1");
+  SERAC_MARK_BEGIN("dimension 2, order 1");
   functional_test<1, 2, 2>(parallel_refinement);
-  CALI_MARK_END("dimension 2, order 1");
+  SERAC_MARK_END("dimension 2, order 1");
 
-  CALI_MARK_BEGIN("dimension 2, order 2");
+  SERAC_MARK_BEGIN("dimension 2, order 2");
   functional_test<2, 2, 2>(parallel_refinement);
-  CALI_MARK_END("dimension 2, order 2");
+  SERAC_MARK_END("dimension 2, order 2");
 
-  CALI_MARK_BEGIN("dimension 3, order 1");
+  SERAC_MARK_BEGIN("dimension 3, order 1");
   functional_test<1, 3, 3>(parallel_refinement);
-  CALI_MARK_END("dimension 3, order 1");
+  SERAC_MARK_END("dimension 3, order 1");
 
-  CALI_MARK_BEGIN("dimension 3, order 2");
+  SERAC_MARK_BEGIN("dimension 3, order 2");
   functional_test<2, 3, 3>(parallel_refinement);
-  CALI_MARK_END("dimension 3, order 2");
+  SERAC_MARK_END("dimension 3, order 2");
 
-  CALI_MARK_END("vector H1");
+  SERAC_MARK_END("vector H1");
 
   // Finalize profiling
   serac::profiling::finalize();
