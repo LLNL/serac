@@ -88,7 +88,7 @@ struct NodalFriction
     double vv = 0.0; for (int i=0; i < dim; ++i) vv += v_perp[i]*v_perp[i];
 
     if (vv < v_crit_*v_crit_) {
-      for (int i=0; i < dim; ++i) Hv[i] = -mu_ * w[i] / (dt * v_crit_);
+      for (int i=0; i < dim; ++i) Hv[i] = mu_ * w[i] / (dt * v_crit_);
     } else {
       double vInv = 1.0 / std::sqrt(vv);
       double vel_squared_to_minus_1p5 = vInv / vv;
@@ -399,7 +399,6 @@ struct InequalityConstraint {
           }
         }
       }
-
       if (lam > 0.0) {
         for (int i = 0; i < dim; ++i) {
           xyz_dirs                 = 0.0;
