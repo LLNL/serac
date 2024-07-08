@@ -16,40 +16,45 @@
 
 from common_build_functions import *
 
-from optparse import OptionParser
+from argparse import ArgumentParser
 
 import os
 
 
 def parse_args():
     "Parses args from command line"
-    parser = OptionParser()
+    parser = ArgumentParser()
     # Location of source directory to build
-    parser.add_option("-d", "--directory",
+    parser.add_argument("-d", "--directory",
                       dest="directory",
                       default="",
                       help="Location to build all TPL's, timestamp directory will be created (Defaults to shared location)")
-    parser.add_option("--short-path",
+    parser.add_argument("--short-path",
                       action="store_true",
                       dest="short_path",
                       default=False,
                       help="Does not add sys_type or timestamp to tpl directory (useful for CI and debugging).")
+    parser.add_option("-v", "--verbose",
+                      action="store_true",
+                      dest="verbose",
+                      default=False,
+                      help="Output logs to screen as well as to files")
     ###############
     # parse args
     ###############
-    opts, extras = parser.parse_args()
+    args, extra_args = parser.parse_known_args()
     # we want a dict b/c the values could 
-    # be passed without using optparse
-    opts = vars(opts)
-    return opts
+    # be passed without using argparse
+    args = vars(args)
+    return args
 
 
 def main():
-    opts = parse_args()
+    args = parse_args()
 
     # Determine location to do all the building
-    if opts["directory"] != "":
-        build_dir = opts["directory"]
+    if args["directory"] != "":
+        build_dir = args["directory"]
         if not os.path.exists(build_dir):
             os.makedirs(build_dir)
     else:
@@ -62,7 +67,7 @@ def main():
         original_wd = os.getcwd()
         os.chdir(repo_dir)
 
-        res = build_devtools(build_dir, get_timestamp(), opts["short_path"])
+        res = build_devtools(build_dir, get_timestamp(), args["short_path"], args["verbose"])
     finally:
         os.chdir(original_wd)
 

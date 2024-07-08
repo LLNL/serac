@@ -568,8 +568,8 @@ const ScalarSolverOptions default_solver_options{.xtol = 1e-8, .rtol = 0, .max_i
 /// search interval are updated automatically to maintain a bracket around the root. If the sign
 /// of the residual is the same at both @p lower_bound and @p upper_bound, the solver aborts.
 template <typename function, typename... ParamTypes>
-auto solve_scalar_equation(function&& f, double x0, double lower_bound, double upper_bound, ScalarSolverOptions options,
-                           ParamTypes... params)
+auto solve_scalar_equation(const function& f, double x0, double lower_bound, double upper_bound,
+                           ScalarSolverOptions options, ParamTypes... params)
 {
   double x, df_dx;
   double fl = f(lower_bound, get_value(params)...);
@@ -689,7 +689,7 @@ auto solve_scalar_equation(function&& f, double x0, double lower_bound, double u
  * @return A root of @p f.
  */
 template <typename function, int n>
-auto find_root(function&& f, tensor<double, n> x0)
+auto find_root(const function& f, tensor<double, n> x0)
 {
   static_assert(std::is_same_v<decltype(f(x0)), tensor<double, n>>,
                 "error: f(x) must have the same number of equations as unknowns");
@@ -752,6 +752,306 @@ auto eigenvalues(const serac::tensor<T, size, size>& A)
   }
 
   return output;
+}
+
+/**
+ * @brief Signum, returns sign of input
+ *
+ * @param val Input value.
+ * @return 0 when input is negative, 0 when input is 0, 1 when input is positive.
+ */
+template <typename T>
+int sgn(T val)
+{
+  // Should we implement the derivative?
+  // It should be NaN when val = 0
+  return (T(0) < val) - (val < T(0));
+}
+
+/**
+ * @brief Find indices that would sort a 3-vector
+ *
+ * @param v 3-vector to sort.
+ * @return 3-vector of indices that would sort \p v in ascending order.
+ */
+template <typename T>
+SERAC_HOST_DEVICE tensor<int, 3> argsort(const tensor<T, 3>& v)
+{
+  auto swap = [](int& first, int& second) {
+    int tmp = first;
+    first   = second;
+    second  = tmp;
+  };
+  tensor<int, 3> order{0, 1, 2};
+  if (v[0] > v[1]) swap(order[0], order[1]);
+  if (v[order[1]] > v[order[2]]) swap(order[1], order[2]);
+  if (v[order[0]] > v[order[1]]) swap(order[0], order[1]);
+  return order;
+}
+
+/** Eigendecomposition for a symmetric 3x3 matrix
+ *
+ * @param A Matrix for which the eigendecomposition will be computed. Must be
+ * symmetric, this is not checked.
+ * @return tuple with the eigenvalues in the first element, and the matrix of
+ * eigenvectors (columnwise) in the second element.
+ *
+ * @note based on "A robust algorithm for finding the eigenvalues and
+ * eigenvectors of 3x3 symmetric matrices", by Scherzinger & Dohrmann
+ */
+inline SERAC_HOST_DEVICE tuple<vec3, mat3> eig_symm(const mat3& A)
+{
+  // We know of optimizations for this routine. When this becomes the
+  // bottleneck, we can revisit. See OptimiSM for details.
+
+  tensor<double, 3>    eta{};
+  tensor<double, 3, 3> Q = DenseIdentity<3>();
+
+  auto   A_dev = dev(A);
+  double J2    = 0.5 * inner(A_dev, A_dev);
+  double J3    = det(A_dev);
+
+  if (J2 > 0.0) {
+    // angle used to find eigenvalues
+    double tmp   = (0.5 * J3) * std::pow(3.0 / J2, 1.5);
+    double alpha = std::acos(fmin(fmax(tmp, -1.0), 1.0)) / 3.0;
+
+    // consider the most distinct eigenvalue first
+    if (6.0 * alpha < M_PI) {
+      eta[0] = 2 * std::sqrt(J2 / 3.0) * std::cos(alpha);
+    } else {
+      eta[0] = 2 * std::sqrt(J2 / 3.0) * std::cos(alpha + 2.0 * M_PI / 3.0);
+    }
+
+    // find the eigenvector for that eigenvalue
+    mat3 r;
+
+    int    imax     = -1;
+    double norm_max = -1.0;
+
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        r[i][j] = A_dev(j, i) - (i == j) * eta(0);
+      }
+
+      double norm_r = norm(r[i]);
+      if (norm_max < norm_r) {
+        imax     = i;
+        norm_max = norm_r;
+      }
+    }
+
+    vec3 s0, s1, t1, t2, v0, v1, v2, w;
+
+    s0 = normalize(r[imax]);
+    t1 = r[(imax + 1) % 3] - dot(r[(imax + 1) % 3], s0) * s0;
+    t2 = r[(imax + 2) % 3] - dot(r[(imax + 2) % 3], s0) * s0;
+    s1 = normalize((norm(t1) > norm(t2)) ? t1 : t2);
+
+    // record the first eigenvector
+    v0 = cross(s0, s1);
+    for (int i = 0; i < 3; i++) {
+      Q[i][0] = v0[i];
+    }
+
+    // get the other two eigenvalues by solving the
+    // remaining quadratic characteristic polynomial
+    auto A_dev_s0 = dot(A_dev, s0);
+    auto A_dev_s1 = dot(A_dev, s1);
+
+    double A11 = dot(s0, A_dev_s0);
+    double A12 = dot(s0, A_dev_s1);
+    double A21 = dot(s1, A_dev_s0);
+    double A22 = dot(s1, A_dev_s1);
+
+    double delta = 0.5 * sgn(A11 - A22) * std::sqrt((A11 - A22) * (A11 - A22) + 4 * A12 * A21);
+
+    eta(1) = 0.5 * (A11 + A22) - delta;
+    eta(2) = 0.5 * (A11 + A22) + delta;
+
+    // if the remaining eigenvalues are exactly the same
+    // then just use the basis for the orthogonal complement
+    // found earlier
+    if (fabs(delta) <= 1.0e-15) {
+      for (int i = 0; i < 3; i++) {
+        Q[i][1] = s0(i);
+        Q[i][2] = s1(i);
+      }
+
+      // otherwise compute the remaining eigenvectors
+    } else {
+      t1 = A_dev_s0 - eta(1) * s0;
+      t2 = A_dev_s1 - eta(1) * s1;
+
+      w = normalize((norm(t1) > norm(t2)) ? t1 : t2);
+
+      v1 = normalize(cross(w, v0));
+      for (int i = 0; i < 3; i++) Q[i][1] = v1(i);
+
+      // define the last eigenvector as
+      // the direction perpendicular to the
+      // first two directions
+      v2 = normalize(cross(v0, v1));
+      for (int i = 0; i < 3; i++) Q[i][2] = v2(i);
+    }
+  }
+  // eta are actually eigenvalues of A_dev, so
+  // shift them to get eigenvalues of A
+  for (int i = 0; i < 3; i++) eta[i] += tr(A) / 3.0;
+
+  // sort eigenvalues into ascending order
+  auto order = argsort(eta);
+  vec3 eigvals{{eta[order[0]], eta[order[1]], eta[order[2]]}};
+  // clang-format off
+  mat3 eigvecs{{{Q[0][order[0]], Q[0][order[1]], Q[0][order[2]]},
+                {Q[1][order[0]], Q[1][order[1]], Q[1][order[2]]},
+                {Q[2][order[0]], Q[2][order[1]], Q[2][order[2]]}}};
+  // clang-format on
+
+  return {eigvals, eigvecs};
+}
+
+/*
+// Should we provide this fallback, or force the author to consider how to
+// write a numerically stable version on a case-by-case basis?
+// The convenience of this is somewhat undermined by the fact that it would
+// only work for functions that already have a dual number overload.
+template <typename Function>
+double generic_eigenvalue_tangent(double lam1, double lam2, const Function& f)
+{
+  if (lam1 == lam2) {
+    return f(make_dual(lam1));
+  } else {
+    return (f(lam1) - f(lam2))/(lam1 - lam2);
+  }
+}
+*/
+
+/**
+ * @brief Constructs an isotropic tensor-valued function of a symmetric 3x3 tensor from a scalar function
+ *
+ * This allows one to use a scalar-valued function of a scalar to construct an
+ * isotropic tensor-valued function of a symmetric tensor. The scalar function
+ * is applied to the principal values of the matrix, and then rotated back into
+ * the external coordinate system with the eigenvector matrix.
+ *
+ * If A = V diag(lambda_0, lambda_1, lambda_2) V^T,
+ * then f(A) = V diag(f(lambda_0), f(lambda_1), f(lambda_2)) V^T
+ *
+ * The function \p g, which we call the eigenvalue secant function, is only used
+ * if the derivative of the function is sought by having a dual number input
+ * tensor \p A. It must compute
+ *                 | df/dx, if lam1 = lam2
+ * g(lam1, lam2) = |
+ *                 | ( f(lam1) - f(lam2) ) / (lam1 - lam2), otherwise
+ *
+ * Analytically, this is a continuous function. However, in floating point arithmetic
+ * the direct implementation will often suffer from catastrophic cancellation. The
+ * presence of the \p g argument gives you a way to write this function in a numerically
+ * stable way (and thus preserve accuracy in the derivative of the tensor function).
+ *
+ * @tparam T The datatype stored in the tensor
+ * @tparam Function Type for the functor object representing the scalar function
+ * @tparam EigvalSecantFunction Type for the functor object representing the secant eigenvalue function (see below)
+ *
+ * @param A The matrix to apply the isotropic tensor function to.
+ * @param f A scalar-valued function of a scalar. This is applied to the eigenvalues of \p A.
+ * @param g The eigenvalue secant function
+ * @return The tensor f(A).
+ */
+template <typename T, typename Function, typename EigvalSecantFunction>
+auto symmetric_mat3_function(tensor<T, 3, 3> A, const Function& f, const EigvalSecantFunction& g)
+{
+  auto [lambda, Q] = eig_symm(get_value(A));
+  vec3 y;
+  for (int i = 0; i < 3; i++) {
+    y[i] = f(lambda[i]);
+  }
+  auto f_A = dot(Q, dot(diag(y), transpose(Q)));
+
+  if constexpr (!is_dual_number<T>::value) {
+    return f_A;
+  } else {
+    return symmetric_mat3_function_with_derivative(A, f_A, lambda, Q, g);
+  }
+}
+
+/// Helper function for defining the derivative
+template <typename Gradient, typename Function>
+SERAC_HOST_DEVICE constexpr auto symmetric_mat3_function_with_derivative(tensor<dual<Gradient>, 3, 3> A,
+                                                                         tensor<double, 3, 3> f_A, vec3 lambda, mat3 Q,
+                                                                         const Function& g)
+{
+  return make_tensor<3, 3>([&](int i, int j) {
+    auto     value = f_A[i][j];
+    Gradient gradient{};
+    for (int k = 0; k < 3; k++) {
+      for (int l = 0; l < 3; l++) {
+        for (int a = 0; a < 3; a++) {
+          for (int b = 0; b < 3; b++) {
+            gradient += g(lambda[a], lambda[b]) * Q[k][a] * Q[l][b] * Q[i][a] * Q[j][b] * A[k][l].gradient;
+          }
+        }
+      }
+    }
+    return dual<Gradient>{value, gradient};
+  });
+}
+
+/**
+ * @brief Logarithm of a symmetric matrix
+ *
+ * @param A Matrix to operate on. Must be SPD. This is not checked.
+ * @return The logarithmic mapping of \p A.
+ */
+template <typename T>
+auto log_symm(tensor<T, 3, 3> A)
+{
+  auto g = [](double lam1, double lam2) {
+    if (lam1 == lam2) {
+      return 1 / lam1;
+    } else {
+      double y = lam1 / lam2;
+      return (std::log(y) / (y - 1.0)) / lam2;
+    }
+  };
+  return symmetric_mat3_function(
+      A, [](double x) { return std::log(x); }, g);
+}
+
+/**
+ * @brief Exponential of a symmetric matrix
+ *
+ * @param A Matrix to operate on. Must be symmetric. This is not checked.
+ * @return Exponential mapping of \p A.
+ */
+template <typename T>
+auto exp_symm(tensor<T, 3, 3> A)
+{
+  auto g = [](double lam1, double lam2) {
+    if (lam1 == lam2) {
+      return std::exp(lam1);
+    } else {
+      double arg = lam1 - lam2;
+      return std::exp(lam2) * std::expm1(arg) / arg;
+    }
+  };
+  return symmetric_mat3_function(
+      A, [](double x) { return std::exp(x); }, g);
+}
+
+/**
+ * @brief Square root of a symmetric matrix
+ *
+ * @param A Matrix to operate on. Must be SPD. This is not checked.
+ * @return Matrix B such that B*B = A
+ */
+template <typename T>
+auto sqrt_symm(tensor<T, 3, 3> A)
+{
+  auto g = [](double lam1, double lam2) { return 1.0 / (std::sqrt(lam1) + std::sqrt(lam2)); };
+  return symmetric_mat3_function(
+      A, [](double x) { return std::sqrt(x); }, g);
 }
 
 }  // namespace serac

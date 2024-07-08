@@ -7,6 +7,7 @@
 
 #include <array>
 
+#include "serac/serac_config.hpp"
 #include "serac/numerics/functional/quadrature_data.hpp"
 #include "serac/numerics/functional/differentiate_wrt.hpp"
 
@@ -75,7 +76,7 @@ struct QFunctionArgument<L2<p, c>, Dimension<dim>> {
 /// @overload
 SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <typename lambda, typename T, int... i>
-SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, double t, const tensor<double, 2>& x_q, const T& arg_tuple,
+SERAC_HOST_DEVICE auto apply_qf_helper(const lambda& qf, double t, const tensor<double, 2>& x_q, const T& arg_tuple,
                                        std::integer_sequence<int, i...>)
 {
   tensor<double, 2> J_q{};
@@ -85,7 +86,7 @@ SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, double t, const tensor<doubl
 /// @overload
 SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <typename lambda, typename T, int... i>
-SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, double t, const tensor<double, 3>& x_q, const T& arg_tuple,
+SERAC_HOST_DEVICE auto apply_qf_helper(const lambda& qf, double t, const tensor<double, 3>& x_q, const T& arg_tuple,
                                        std::integer_sequence<int, i...>)
 {
   constexpr int                dim = 3;
@@ -95,7 +96,7 @@ SERAC_HOST_DEVICE auto apply_qf_helper(lambda&& qf, double t, const tensor<doubl
 
 /// @overload
 template <typename lambda, typename coords_type, typename... T>
-SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, double t, coords_type&& x_q, const serac::tuple<T...>& arg_tuple)
+SERAC_HOST_DEVICE auto apply_qf(const lambda& qf, double t, const coords_type& x_q, const serac::tuple<T...>& arg_tuple)
 {
   return apply_qf_helper(qf, t, x_q, arg_tuple, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>{});
 }
@@ -109,8 +110,8 @@ auto get_derivative_type(lambda qf)
 };
 
 template <typename lambda, int n, typename... T>
-auto batch_apply_qf(lambda qf, double t, const tensor<double, 2, n>& positions,
-                    const tensor<double, 1, 2, n>& jacobians, const T&... inputs)
+SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, 2, n>& positions,
+                                      const tensor<double, 1, 2, n>& jacobians, const T&... inputs)
 {
   constexpr int dim = 2;
   using first_arg_t = serac::tuple<tensor<double, dim>, tensor<double, dim>>;
@@ -131,8 +132,8 @@ auto batch_apply_qf(lambda qf, double t, const tensor<double, 2, n>& positions,
 }
 
 template <typename lambda, int n, typename... T>
-auto batch_apply_qf(lambda qf, double t, const tensor<double, 3, n>& positions,
-                    const tensor<double, 2, 3, n>& jacobians, const T&... inputs)
+SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, 3, n>& positions,
+                                      const tensor<double, 2, 3, n>& jacobians, const T&... inputs)
 {
   constexpr int dim = 3;
   using first_arg_t = serac::tuple<tensor<double, dim>, tensor<double, dim, dim - 1>>;
@@ -205,7 +206,7 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
 
 //clang-format off
 template <typename S, typename T>
-auto chain_rule(const S& dfdx, const T& dx)
+SERAC_HOST_DEVICE auto chain_rule(const S& dfdx, const T& dx)
 {
   return serac::chain_rule(serac::get<0>(serac::get<0>(dfdx)), serac::get<0>(dx)) +
          serac::chain_rule(serac::get<1>(serac::get<0>(dfdx)), serac::get<1>(dx));
@@ -213,7 +214,7 @@ auto chain_rule(const S& dfdx, const T& dx)
 //clang-format on
 
 template <typename derivative_type, int n, typename T>
-auto batch_apply_chain_rule(derivative_type* qf_derivatives, const tensor<T, n>& inputs)
+SERAC_HOST_DEVICE auto batch_apply_chain_rule(derivative_type* qf_derivatives, const tensor<T, n>& inputs)
 {
   using return_type = decltype(chain_rule(derivative_type{}, T{}));
   tensor<tuple<return_type, zero>, n> outputs{};

@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/numerics/equation_solver.hpp"
+
 #include <iomanip>
 #include <sstream>
 #include <ios>
@@ -13,26 +14,34 @@
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
 #include "serac/serac_config.hpp"
+#include "serac/infrastructure/profiling.hpp"
 
 namespace serac {
 
+/// Newton solver with a 2-way line-search.  Reverts to regular Newton if max_line_search_iterations is set to 0.
 class NewtonSolver : public mfem::NewtonSolver {
 protected:
-  mutable mfem::Vector   x0;
+  /// initial solution vector to do line-search off of
+  mutable mfem::Vector x0;
+  /// nonlinear solver options
   NonlinearSolverOptions nonlinear_options;
 
 public:
+  /// constructor
   NewtonSolver(const NonlinearSolverOptions& nonlinear_opts) : nonlinear_options(nonlinear_opts) {}
 
 #ifdef MFEM_USE_MPI
+  /// parallel constructor
   NewtonSolver(MPI_Comm comm_, const NonlinearSolverOptions& nonlinear_opts)
       : mfem::NewtonSolver(comm_), nonlinear_options(nonlinear_opts)
   {
   }
 #endif
 
-  double evaluate_norm(const mfem::Vector& x, mfem::Vector& rOut) const
+  /// Evaluate the residual, put in rOut and return its norm.
+  double evaluateNorm(const mfem::Vector& x, mfem::Vector& rOut) const
   {
+    CALI_CXX_MARK_FUNCTION;
     double normEval = std::numeric_limits<double>::max();
     try {
       oper->Mult(x, rOut);
@@ -43,6 +52,28 @@ public:
     return normEval;
   }
 
+  /// assemble the jacobian
+  void assembleJacobian(const mfem::Vector& x) const
+  {
+    CALI_CXX_MARK_FUNCTION;
+    grad = &oper->GetGradient(x);
+  }
+
+  /// set the preconditioner for the linear solver
+  void setPreconditioner() const
+  {
+    CALI_CXX_MARK_FUNCTION;
+    prec->SetOperator(*grad);
+  }
+
+  /// solve the linear system
+  void solveLinearSystem(const mfem::Vector& r_, mfem::Vector& c_) const
+  {
+    CALI_CXX_MARK_FUNCTION;
+    prec->Mult(r_, c_);  // c = [DF(x_i)]^{-1} [F(x_i)-b]
+  }
+
+  /// @overload
   void Mult(const mfem::Vector&, mfem::Vector& x) const
   {
     MFEM_ASSERT(oper != NULL, "the Operator is not set (use SetOperator).");
@@ -51,9 +82,8 @@ public:
     using real_t = mfem::real_t;
 
     real_t norm, norm_goal;
-    oper->Mult(x, r);
+    norm = initial_norm = evaluateNorm(x, r);
 
-    norm = initial_norm = Norm(r);
     if (print_options.first_and_last && !print_options.iterations) {
       mfem::out << "Newton iteration " << std::setw(3) << 0 << " : ||r|| = " << std::setw(13) << norm << "...\n";
     }
@@ -82,10 +112,9 @@ public:
 
       real_t norm_nm1 = norm;
 
-      grad = &oper->GetGradient(x);
-      prec->SetOperator(*grad);
-
-      prec->Mult(r, c);  // c = [DF(x_i)]^{-1} [F(x_i)-b]
+      assembleJacobian(x);
+      setPreconditioner();
+      solveLinearSystem(r, c);
 
       // there must be a better way to do this?
       x0.SetSize(x.Size());
@@ -94,16 +123,16 @@ public:
 
       real_t stepScale = 1.0;
       add(x0, -stepScale, c, x);
-      norm = evaluate_norm(x, r);
+      norm = evaluateNorm(x, r);
 
       const int               max_ls_iters = nonlinear_options.max_line_search_iterations;
       static constexpr real_t reduction    = 0.5;
 
-      const double cMagnitudeInR         = std::abs(Dot(c, r)) / norm_nm1;
-      const double sufficientDegreeParam = 0.0;  // 1e-15;
+      const double sufficientDecreaseParam = 0.0;  // 1e-15;
+      const double cMagnitudeInR           = sufficientDecreaseParam != 0.0 ? std::abs(Dot(c, r)) / norm_nm1 : 0.0;
 
       auto is_improved = [=](real_t currentNorm, real_t c_scale) {
-        return currentNorm < norm_nm1 - sufficientDegreeParam * c_scale * cMagnitudeInR;
+        return currentNorm < norm_nm1 - sufficientDecreaseParam * c_scale * cMagnitudeInR;
       };
 
       // back-track linesearch
@@ -112,29 +141,29 @@ public:
       for (; !is_improved(norm, stepScale) && ls_iter < max_ls_iters; ++ls_iter, ++ls_iter_sum) {
         stepScale *= reduction;
         add(x0, -stepScale, c, x);
-        norm = evaluate_norm(x, r);
+        norm = evaluateNorm(x, r);
       }
 
       // try the opposite direction and linesearch back from there
-      if (ls_iter == max_ls_iters && !is_improved(norm, stepScale)) {
+      if (max_ls_iters > 0 && ls_iter == max_ls_iters && !is_improved(norm, stepScale)) {
         stepScale = 1.0;
         add(x0, stepScale, c, x);
-        norm = evaluate_norm(x, r);
+        norm = evaluateNorm(x, r);
 
         ls_iter = 0;
         for (; !is_improved(norm, stepScale) && ls_iter < max_ls_iters; ++ls_iter, ++ls_iter_sum) {
           stepScale *= reduction;
           add(x0, stepScale, c, x);
-          norm = evaluate_norm(x, r);
+          norm = evaluateNorm(x, r);
         }
 
         // ok, the opposite direction was also terrible, lets go back, cut in half 1 last time and accept it hoping for
         // the best
-        if (max_ls_iters > 0 && ls_iter == max_ls_iters && !is_improved(norm, stepScale)) {
+        if (ls_iter == max_ls_iters && !is_improved(norm, stepScale)) {
           ++ls_iter_sum;
           stepScale *= reduction;
           add(x0, -stepScale, c, x);
-          norm = evaluate_norm(x, r);
+          norm = evaluateNorm(x, r);
         }
       }
 
@@ -162,19 +191,31 @@ public:
   }
 };
 
+/// Internal structure for storing trust region settings
 struct TrustRegionSettings {
-  double cgTol                  = 1e-8;
-  size_t maxCgIterations        = 10000;  // should be around # of system dofs
+  /// cg tol
+  double cgTol = 1e-8;
+  /// max cg iters should be around # of system dofs
+  size_t maxCgIterations = 10000;  //
+  /// max cumulative iterations
   size_t maxCumulativeIteration = 1;
-  double min_tr_size            = 1e-13;
-  double t1                     = 0.25;
-  double t2                     = 1.75;
-  double eta1                   = 1e-9;
-  double eta2                   = 0.1;
-  double eta3                   = 0.6;
+  /// minimum trust region size
+  double min_tr_size = 1e-13;
+  /// trust region decrease factor
+  double t1 = 0.25;
+  /// trust region increase factor
+  double t2 = 1.75;
+  /// worse case energy drop ratio.  trust region accepted if energy drop is better than this.
+  double eta1 = 1e-9;
+  /// non-ideal energy drop ratio.  trust region decreases if energy drop is worse than this.
+  double eta2 = 0.1;
+  /// ideal energy drop ratio.  trust region increases if energy drop is better than this.
+  double eta3 = 0.6;
 };
 
+/// Internal structure for storing trust region stateful data
 struct TrustRegionResults {
+  /// Constructor takes the size of the solution vector
   TrustRegionResults(int size)
   {
     z.SetSize(size);
@@ -184,12 +225,14 @@ struct TrustRegionResults {
     cauchyPoint.SetSize(size);
   }
 
+  /// resets trust region results for a new outer iteration
   void reset()
   {
     z           = 0.0;
     cauchyPoint = 0.0;
   }
 
+  /// enumerates the possible final status of the trust region steps
   enum class Status
   {
     Interior,
@@ -197,15 +240,23 @@ struct TrustRegionResults {
     OnBoundary,
   };
 
-  mfem::Vector z;   // step direction
-  mfem::Vector d;   // incrementalCG direction
-  mfem::Vector Pr;  // preconditioned residual
-  mfem::Vector Hd;  // action of hessian on direction d
+  /// step direction
+  mfem::Vector z;
+  /// incrementalCG direction
+  mfem::Vector d;
+  /// preconditioned residual
+  mfem::Vector Pr;
+  /// action of hessian on direction d
+  mfem::Vector Hd;
+  /// cauchy point
   mfem::Vector cauchyPoint;
-  Status       interiorStatus    = Status::Interior;
-  size_t       cgIterationsCount = 0;
+  /// specifies if step is interior, exterior, negative curvature, etc.
+  Status interiorStatus = Status::Interior;
+  /// iteration counter
+  size_t cgIterationsCount = 0;
 };
 
+/// trust region printing utility function
 void print_trust_region_info(double realObjective, double modelObjective, size_t cgIters, double trSize,
                              bool willAccept)
 {
@@ -214,18 +265,35 @@ void print_trust_region_info(double realObjective, double modelObjective, size_t
             << trSize << ", accepting = " << willAccept << std::endl;
 }
 
+/**
+ * @brief Equation solver class based on a standard preconditioned trust-region algorithm
+ *
+ * This is a fairly standard implementation of 'The Conjugate Gradient Method and Trust Regions in Large Scale
+ * Optimization' by T. Steihaug It is also called the Steihaug-Toint CG trust region algorithm (see also Trust Region
+ * Methods by Conn, Gould, and Toint). One important difference is we do not compute an explicit energy.  Instead we
+ * rely on an incremental work approximation: 0.5 (f^n + f^{n+1}) dot (u^{n+1} - u^n).  While less theoretically sound,
+ * it appears to be very effective in practice.
+ */
 class TrustRegion : public mfem::NewtonSolver {
 protected:
+  /// predicted solution
   mutable mfem::Vector xPred;
+  /// predicted residual
   mutable mfem::Vector rPred;
+  /// extra vector of scratch space for doing temporary calculations
   mutable mfem::Vector scratch;
 
+  /// nonlinear solution options
   NonlinearSolverOptions nonlinear_options;
-  LinearSolverOptions    linear_options;
-  Solver&                trPrecond;
+  /// linear solution options
+  LinearSolverOptions linear_options;
+  /// handle to the preconditioner used by the trust region, it ignores the linear solver as a SPD preconditioner is
+  /// currently required
+  Solver& trPrecond;
 
 public:
 #ifdef MFEM_USE_MPI
+  /// constructor
   TrustRegion(MPI_Comm comm_, const NonlinearSolverOptions& nonlinear_opts, const LinearSolverOptions& linear_opts,
               Solver& tPrec)
       : mfem::NewtonSolver(comm_), nonlinear_options(nonlinear_opts), linear_options(linear_opts), trPrecond(tPrec)
@@ -233,18 +301,18 @@ public:
   }
 #endif
 
+  /// finds tau s.t. (z + tau*d)^2 = trSize^2
   void project_to_boundary_with_coefs(mfem::Vector& z, const mfem::Vector& d, double trSize, double zz, double zd,
                                       double dd) const
   {
-    // find tau s.t. (z + tau*d)^2 = trSize^2
     double tau = (std::sqrt((trSize * trSize - zz) * dd + zd * zd) - zd) / dd;
     z.Add(tau, d);
   }
 
+  /// finds tau s.t. (z + tau*(y-z))^2 = trSize^2
   void project_to_boundary_between_with_coefs(mfem::Vector& z, const mfem::Vector& y, double trSize, double zz,
                                               double zy, double yy) const
   {
-    // find tau s.t. (z + tau*(y-z))^2 = trSize^2
     double dd  = yy - 2 * zy + zz;
     double zd  = zy - zz;
     double tau = (std::sqrt((trSize * trSize - zz) * dd + zd * zd) - zd) / dd;
@@ -252,13 +320,10 @@ public:
     z.Add(tau, y);
   }
 
-  double update_step_length_squared(double alpha_, double zz, double zd, double dd) const
-  {
-    return zz + 2 * alpha_ * zd + alpha_ * alpha_ * dd;
-  }
-
+  /// take a dogleg step in direction s, solution norm must be within trSize
   void dogleg_step(const mfem::Vector& cp, const mfem::Vector& newtonP, double trSize, mfem::Vector& s) const
   {
+    CALI_CXX_MARK_FUNCTION;
     // MRT, could optimize some of these eventually, compute on the outside and save
     double cc = Dot(cp, cp);
     double nn = Dot(newtonP, newtonP);
@@ -281,11 +346,13 @@ public:
     }
   }
 
+  /// Minimize quadratic sub-problem given residual vector, the action of the stiffness and a preconditioner
   template <typename HessVecFunc, typename PrecondFunc>
   void solve_trust_region_minimization(const mfem::Vector& r0, mfem::Vector& rCurrent, HessVecFunc hess_vec_func,
                                        PrecondFunc precond, const TrustRegionSettings& settings, double& trSize,
                                        TrustRegionResults& results) const
   {
+    CALI_CXX_MARK_FUNCTION;
     // minimize r@z + 0.5*z@J@z
     results.interiorStatus    = TrustRegionResults::Status::Interior;
     results.cgIterationsCount = 0;
@@ -356,6 +423,36 @@ public:
     }
   }
 
+  /// assemble the jacobian
+  void assemble_jacobian(const mfem::Vector& x) const
+  {
+    CALI_CXX_MARK_FUNCTION;
+    grad = &oper->GetGradient(x);
+  }
+
+  /// evaluate the nonlinear residual
+  mfem::real_t computeResidual(const mfem::Vector& x_, mfem::Vector& r_) const
+  {
+    CALI_CXX_MARK_FUNCTION;
+    oper->Mult(x_, r_);
+    return Norm(r_);
+  }
+
+  /// apply the action of the assembled Jacobian matrix to a vector
+  void hess_vec(const mfem::Vector& x_, mfem::Vector& v_) const
+  {
+    CALI_CXX_MARK_FUNCTION;
+    grad->Mult(x_, v_);
+  }
+
+  /// apply trust region specific preconditioner
+  void precond(const mfem::Vector& x_, mfem::Vector& v_) const
+  {
+    CALI_CXX_MARK_FUNCTION;
+    trPrecond.Mult(x_, v_);
+  };
+
+  /// @overload
   void Mult(const mfem::Vector&, mfem::Vector& X) const
   {
     MFEM_ASSERT(oper != NULL, "the Operator is not set (use SetOperator).");
@@ -364,9 +461,7 @@ public:
     using real_t = mfem::real_t;
 
     real_t norm, norm_goal;
-    oper->Mult(X, r);
-
-    norm = initial_norm = Norm(r);
+    norm = initial_norm = computeResidual(X, r);
     norm_goal           = std::max(rel_tol * initial_norm, abs_tol);
     if (print_options.first_and_last && !print_options.iterations) {
       mfem::out << "Newton iteration " << std::setw(3) << 0 << " : ||r|| = " << std::setw(13) << norm << "...\n";
@@ -408,10 +503,11 @@ public:
         break;
       }
 
-      auto K = &oper->GetGradient(X);
+      assemble_jacobian(X);
+
       if (it == 0 || (trResults.cgIterationsCount >= settings.maxCgIterations ||
                       cumulativeCgIters >= settings.maxCumulativeIteration)) {
-        trPrecond.SetOperator(*K);
+        trPrecond.SetOperator(*grad);
         cumulativeCgIters = 0;
         if (print_options.iterations) {
           // currently it will always be updated
@@ -419,8 +515,8 @@ public:
         }
       }
 
-      auto hess_vec_func = [=](const mfem::Vector& x_, mfem::Vector& v_) { K->Mult(x_, v_); };
-      auto precond_func  = [=](const mfem::Vector& x_, mfem::Vector& v_) { trPrecond.Mult(x_, v_); };
+      auto hess_vec_func = [&](const mfem::Vector& x_, mfem::Vector& v_) { hess_vec(x_, v_); };
+      auto precond_func  = [&](const mfem::Vector& x_, mfem::Vector& v_) { precond(x_, v_); };
 
       double cauchyPointNormSquared = trSize * trSize;
       trResults.reset();
@@ -473,9 +569,8 @@ public:
         double realObjective = std::numeric_limits<double>::max();
         double normPred      = std::numeric_limits<double>::max();
         try {
-          oper->Mult(xPred, rPred);
+          normPred      = computeResidual(xPred, rPred);
           realObjective = 0.5 * (Dot(r, d) + Dot(rPred, d));
-          normPred      = Norm(rPred);
         } catch (const std::exception&) {
           realObjective = std::numeric_limits<double>::max();
           normPred      = std::numeric_limits<double>::max();
@@ -540,14 +635,6 @@ public:
     }
   }
 };
-
-bool usePreconditionerInsteadOfLinearSolve(const mfem::NewtonSolver* const nonlinearSolver)
-{
-  if (dynamic_cast<const TrustRegion*>(nonlinearSolver)) {
-    return true;
-  }
-  return false;
-}
 
 EquationSolver::EquationSolver(NonlinearSolverOptions nonlinear_opts, LinearSolverOptions lin_opts, MPI_Comm comm)
 {
@@ -698,11 +785,12 @@ std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(const NonlinearSolverOp
 
   if (nonlinear_opts.nonlin_solver == NonlinearSolver::Newton) {
     SLIC_ERROR_ROOT_IF(nonlinear_opts.min_iterations != 0 || nonlinear_opts.max_line_search_iterations != 0,
-                       "Newton's method does not support min_iterations or max_line_search_iterations");
-    nonlinear_solver = std::make_unique<mfem::NewtonSolver>(comm);
+                       "Newton's method does not support nonzero min_iterations or max_line_search_iterations");
+    nonlinear_solver = std::make_unique<NewtonSolver>(comm, nonlinear_opts);
+    // nonlinear_solver = std::make_unique<mfem::NewtonSolver>(comm);
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::LBFGS) {
     SLIC_ERROR_ROOT_IF(nonlinear_opts.min_iterations != 0 || nonlinear_opts.max_line_search_iterations != 0,
-                       "LBFGS does not support min_iterations or max_line_search_iterations");
+                       "LBFGS does not support nonzero min_iterations or max_line_search_iterations");
     nonlinear_solver = std::make_unique<mfem::LBFGSSolver>(comm);
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::NewtonLineSearch) {
     nonlinear_solver = std::make_unique<NewtonSolver>(comm, nonlinear_opts);

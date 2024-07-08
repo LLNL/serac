@@ -192,7 +192,7 @@ int main(int argc, char* argv[])
   solid_solver.setParameter(SHEAR_MODULUS_INDEX, GmodParam);
 
   // Set material
-  solid_mechanics::ParameterizedNeoHookeanSolid<dim> neoMaterial{density, maxElasticityParam, minElasticityParam};
+  solid_mechanics::ParameterizedNeoHookeanSolid neoMaterial{density, maxElasticityParam, minElasticityParam};
   solid_solver.setMaterial(DependsOn<ELASTICITY_MODULUS_INDEX, SHEAR_MODULUS_INDEX>{}, neoMaterial);
 
   // Boundary conditions:
