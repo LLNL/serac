@@ -758,7 +758,6 @@ void PetscKSPSolver::SetOperator(const mfem::Operator& op)
     if (is_nest) {
       SLIC_ERROR_IF(!petsc_pc->fieldsplit_pc_, "Failed to create fieldsplit preconditioner");
       PetscCallAbort(GetComm(), KSPSetPC(*this, *petsc_pc->fieldsplit_pc_));
-      // PetscCallAbort(GetComm(), KSPSetOperators(*this, A, A));
     }
   } else if (prec) {
     prec->SetOperator(op);
