@@ -32,6 +32,27 @@ struct NodalFriction
   {
   }
 
+  double quasiVariationalPotential(const mfem::Vector& x, const mfem::Vector& x_prev,
+                                   double dt) const
+  {
+    if (dt == 0.0 || mu_ == 0.0) {
+      return 0.0;
+    }
+
+    mfem::Vector v_perp = x;
+    v_perp = 0.0;
+
+    for (int i=0; i < dim; ++i) v_perp[i] = (x[i] - x_prev[i]) / dt - v[static_cast<size_t>(i)];
+
+    double vv = 0.0; for (int i=0; i < dim; ++i) vv += v_perp[i]*v_perp[i];
+
+    if (vv < v_crit_*v_crit_) {
+      return 0.5 * dt * mu_ * vv / v_crit_;
+    } else {
+      return dt * mu_ * std::sqrt(vv);
+    }
+  }
+
   mfem::Vector quasiVariationalResidual(const mfem::Vector& x, const mfem::Vector& x_prev,
                                         double dt) const
   {
@@ -46,9 +67,9 @@ struct NodalFriction
     double vv = 0.0; for (int i=0; i < dim; ++i) vv += v_perp[i]*v_perp[i];
 
     if (vv < v_crit_*v_crit_) {
-      for (int i=0; i < dim; ++i) v_perp[i] = -mu_ * v_perp[i] / v_crit_;
+      for (int i=0; i < dim; ++i) v_perp[i] = mu_ * v_perp[i] / v_crit_;
     } else {
-      for (int i=0; i < dim; ++i) v_perp[i] = -mu_ * v_perp[i] / std::sqrt(vv);
+      for (int i=0; i < dim; ++i) v_perp[i] = mu_ * v_perp[i] / std::sqrt(vv);
     }
     return v_perp;
   }
@@ -76,7 +97,7 @@ struct NodalFriction
         factor += v_perp[i] * w[i];
       }
       for (int i=0; i < dim; ++i) {
-        Hv[i] = -mu_ * (vInv * w[i] - vel_squared_to_minus_1p5 * factor * v_perp[i]) / dt;
+        Hv[i] = mu_ * (vInv * w[i] - vel_squared_to_minus_1p5 * factor * v_perp[i]) / dt;
       }
     }
     return Hv;
@@ -247,9 +268,12 @@ private:
 
 template <int order, int dim>
 struct InequalityConstraint {
-  InequalityConstraint(std::unique_ptr<LevelSet> levelSet, std::unique_ptr<NodalFriction<dim>> friction, std::string physics_name, std::string mesh_tag)
+  InequalityConstraint(std::unique_ptr<LevelSet> levelSet, std::unique_ptr<NodalFriction<dim>> friction,
+                       std::string physics_name, std::string mesh_tag,
+                       double initial_penalty)
       : levelSet_(std::move(levelSet)),
         friction_(std::move(friction)),
+        initial_penalty_(initial_penalty),
         constraint_(StateManager::newState(H1<order, 1>{}, detail::addPrefix(physics_name, "constraint"), mesh_tag)),
         constraint_multiplier_(
             StateManager::newDual(H1<order, 1>{}, detail::addPrefix(physics_name, "constraint_multiplier"), mesh_tag)),
@@ -267,7 +291,7 @@ struct InequalityConstraint {
   {
     constraint_            = 0.0;
     constraint_multiplier_ = 0.0;
-    constraint_penalty_    = 0.1; //125;
+    constraint_penalty_    = initial_penalty_;
     constraint_ncp_error_  = 0.1 * std::numeric_limits<double>::max();
   }
 
@@ -306,19 +330,21 @@ struct InequalityConstraint {
       const double lam = constraint_multiplier[n];
       const double k   = constraint_penalty[n];
 
+      // min_x (1 / 2k) * (lam - k * c(x))^2 + (lam - k * c(x)) * qvPotential(x)
       const mfem::Vector gradC = levelSet_->gradient(coord, time);
+      //const double qvPotential = friction_->quasiVariationalPotential(coord, coord_prev, dt);
+      const mfem::Vector qvRes = friction_->quasiVariationalResidual(coord, coord_prev, dt);
       if (lam >= k * c) {
         for (int i = 0; i < dim; ++i) {
           residual(n, i) += gradC[i] * (-lam + k * c);
         }
       }
-
-      const mfem::Vector qviRes = friction_->quasiVariationalResidual(coord, coord_prev, dt);
       if (lam > 0.0) {
         for (int i = 0; i < dim; ++i) {
-          residual(n, i) += lam * qviRes[i];
+          residual(n, i) += lam * qvRes[i];
         }
       }
+
     }
   }
 
@@ -357,22 +383,30 @@ struct InequalityConstraint {
 
       if (lam >= k * c) {
         const mfem::Vector gradC = levelSet_->gradient(coord, time);
+        //const double qvPotential = friction_->quasiVariationalPotential(coord, coord_prev, dt);
+        //const mfem::Vector qvRes = friction_->quasiVariationalResidual(coord, coord_prev, dt);
         for (int i = 0; i < dim; ++i) {
           xyz_dirs                 = 0.0;
           xyz_dirs[i]              = 1.0;
           const mfem::Vector hessI = levelSet_->hessVec(coord, xyz_dirs, time);
+          //const mfem::Vector qvHessI = friction_->quasiVariationalHessVec(coord, coord_prev, xyz_dirs, dt);
           for (int j = 0; j < dim; ++j) {
             constraint_diagonal_stiffness(n, dim * i + j) += k * gradC[i] * gradC[j] + hessI[j] * (-lam + k * c);
+            //constraint_diagonal_stiffness(n, dim * i + j) += (lam - k * c) * qvHessI[j];
+            //constraint_diagonal_stiffness(n, dim * i + j) -= k * gradC[j] * qvRes[i];
+            //constraint_diagonal_stiffness(n, dim * i + j) -= k * gradC[i] * qvRes[j];
+            //constraint_diagonal_stiffness(n, dim * i + j) -= k * hessI[j] * qvPotential;
           }
         }
       }
+
       if (lam > 0.0) {
         for (int i = 0; i < dim; ++i) {
           xyz_dirs                 = 0.0;
           xyz_dirs[i]              = 1.0;
-          const mfem::Vector hessI = friction_->quasiVariationalHessVec(coord, coord_prev, xyz_dirs, dt);
+          const mfem::Vector qvHessI = friction_->quasiVariationalHessVec(coord, coord_prev, xyz_dirs, dt);
           for (int j = 0; j < dim; ++j) {
-            constraint_diagonal_stiffness(n, dim * i + j) += lam * hessI[j];
+            constraint_diagonal_stiffness(n, dim * i + j) += lam * qvHessI[j];
           }
         }
       }
@@ -464,6 +498,7 @@ struct InequalityConstraint {
 protected:
   const std::unique_ptr<LevelSet> levelSet_;
   const std::unique_ptr<NodalFriction<3>> friction_;
+  double initial_penalty_;
 
   FiniteElementState constraint_;
   FiniteElementDual  constraint_multiplier_;

@@ -1330,12 +1330,13 @@ public:
 
     if (is_quasistatic_) {
       quasiStaticSolve(dt); // dt_ is updated internally
-      int maxAlIteration = 5;
+      int maxAlIteration = 7;
       if (!inequality_constraints.empty()) {
         // Set the start of step mesh coordinates for contact
         computeUpdatedCoordinates(displacement_, x_previous_);
         for (int i=0; i < maxAlIteration; ++i) {
-          augmentedLagrangeSolve();
+          printf("al solve\n");
+          nonlinearSolve();
         }
       }
     } else {
@@ -1731,9 +1732,11 @@ protected:
   };
 
   /// solve with nothing updating except the constraint multipliers and penalties
-  void augmentedLagrangeSolve()
+  void nonlinearSolve()
   {
-    updateConstraintMultipliers();
+    if (!inequality_constraints.empty()) {
+      updateConstraintMultipliers();
+    }
     nonlin_solver_->solve(displacement_);
   }
 
@@ -1753,7 +1756,7 @@ protected:
     // Set the ODE time point for the time-varying loads in quasi-static problems
     ode_time_point_ = time_;
 
-    nonlin_solver_->solve(displacement_);
+    nonlinearSolve();
   }
 
   /**
