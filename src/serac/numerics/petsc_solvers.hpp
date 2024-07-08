@@ -15,6 +15,8 @@
 #include "petscpc.h"
 
 namespace serac::mfem_ext {
+class PetscKSPSolver;
+
 /**
  * @brief Wrapper around mfem::Preconditioner to allow for better interoperability with HYPRE-based mfem solvers
  */
@@ -25,6 +27,8 @@ protected:
   /// @brief Matrix passed to SetOperator() converted to MATAIJ format, if such a conversion was needed.  Mutable, as
   /// this may be set by a PETSc callback within Mult(), which is marked as const.
   mutable std::unique_ptr<mfem::PetscParMatrix> converted_matrix_;
+
+  mutable std::unique_ptr<PetscPreconditioner> fieldsplit_pc_;
 
   /**
    * @brief Pre-solve callback used to convert the matrix type to MATAIJ, which is needed for most PETSc preconditioners
@@ -38,16 +42,19 @@ protected:
    * wrapped PC.
    */
   friend PetscErrorCode convertPCPreSolve(PC pc, KSP);
+  friend PetscErrorCode convertKSPPreSolve(KSP, Vec, Vec, void*);
+  friend class PetscKSPSolver;
 
 public:
   /**
-   * @brief Construct a PETSc-based preconditioner of a particular PCType. The operator must be set with SetOperator().
+   * @brief Construct a PETSc-based preconditioner of a particular PCType. The operator must be set with
+   * SetOperator().
    * @param comm The MPI communicator used by the vectors and matrices in the solve
    * @param pc_type The PETSc PCType of the preconditioner
    * @param prefix The command-line prefix for all arguments passed to the preconditioner
    *
-   * @note Additional arguments for the preconditioner can be set via the command line, e.g. `-pc_jacobi_type rowsum`.
-   * Use `-pc_type TYPE -help` for a complete list of options.
+   * @note Additional arguments for the preconditioner can be set via the command line, e.g. `-pc_jacobi_type
+   * rowsum`. Use `-pc_type TYPE -help` for a complete list of options.
    * @note If @a prefix is provided, the options should be set as `-[prefix]_[option] [value]`.
    */
   PetscPCSolver(MPI_Comm comm, PCType pc_type = PCJACOBI, const std::string& prefix = std::string());
@@ -77,6 +84,10 @@ public:
    */
   PetscPCSolver(MPI_Comm comm, mfem::Operator& op, PCType pc_type = PCJACOBI,
                 const std::string& prefix = std::string());
+
+  virtual void SetOperator(const Operator& op);
+  virtual void Mult(const mfem::Vector& b, mfem::Vector& x) const;
+  virtual void MultTranspose(const mfem::Vector& b, mfem::Vector& x) const;
 };
 
 /**
@@ -209,7 +220,7 @@ public:
  * @param comm The communicator for the underlying operator and HypreParVectors
  * @return The constructed PETSc preconditioner
  */
-std::unique_ptr<mfem_ext::PetscPCSolver> buildPetscPreconditioner(PetscPCType pc_type, const MPI_Comm comm);
+std::unique_ptr<PetscPCSolver> buildPetscPreconditioner(PetscPCType pc_type, const MPI_Comm comm);
 
 /**
  * @brief Convert a string to the corresponding PetscPCType
@@ -236,6 +247,7 @@ private:
   /// @brief Flag which is true if SetOperator is never called and the preconditioner is not a PETSc preconditioner.
   /// Mutable, as this may be set by a PETSc callback within Mult(), which is marked as const.
   mutable bool needs_hypre_wrapping_ = false;
+  // mutable PC   fieldsplit_preconditioner_ = nullptr;
   /**
    * @brief Pre-solve callback passed to KSPSetPresolve
    *

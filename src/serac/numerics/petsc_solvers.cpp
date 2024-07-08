@@ -210,7 +210,7 @@ PetscErrorCode convertPCPreSolve(PC pc, [[maybe_unused]] KSP ksp)
     PetscCall(MatGetType(A, &mat_type));
     PetscCall(PetscStrstr(mat_type, "aij", &found));
     if (found) PetscFunctionReturn(PETSC_SUCCESS);
-    SLIC_INFO_ROOT("convertPCPreSolve(...) - Converting operators to MATAIJ format.");
+    SLIC_DEBUG_ROOT("convertPCPreSolve(...) - Converting operators to MATAIJ format.");
     mfem::PetscParMatrix temp_mat(A, true);
     solver->converted_matrix_ = std::make_unique<mfem::PetscParMatrix>(temp_mat, mfem::Operator::PETSC_MATAIJ);
     PetscCall(PCSetOperators(pc, *solver->converted_matrix_, *solver->converted_matrix_));
@@ -225,6 +225,8 @@ PetscPCSolver::PetscPCSolver(MPI_Comm comm_, PCType pc_type, const std::string& 
   PetscCallAbort(GetComm(), PCSetType(*this, pc_type));
   PetscCallAbort(GetComm(), PCSetApplicationContext(*this, this));
   PetscCallAbort(GetComm(), PCSetPreSolve(*this, convertPCPreSolve));
+  clcustom = false;
+  Customize();
 }
 
 PetscPCSolver::PetscPCSolver(mfem::PetscParMatrix& A, PCType pc_type, const std::string& prefix)
@@ -233,6 +235,8 @@ PetscPCSolver::PetscPCSolver(mfem::PetscParMatrix& A, PCType pc_type, const std:
   PetscCallAbort(GetComm(), PCSetType(*this, pc_type));
   PetscCallAbort(GetComm(), PCSetApplicationContext(*this, this));
   PetscCallAbort(GetComm(), PCSetPreSolve(*this, convertPCPreSolve));
+  clcustom = false;
+  Customize();
 }
 
 PetscPCSolver::PetscPCSolver(MPI_Comm comm_, Operator& op, PCType pc_type, const std::string& prefix)
@@ -241,6 +245,82 @@ PetscPCSolver::PetscPCSolver(MPI_Comm comm_, Operator& op, PCType pc_type, const
   PetscCallAbort(GetComm(), PCSetType(*this, pc_type));
   PetscCallAbort(GetComm(), PCSetApplicationContext(*this, this));
   PetscCallAbort(GetComm(), PCSetPreSolve(*this, convertPCPreSolve));
+  clcustom = false;
+  Customize();
+}
+
+void PetscPCSolver::SetOperator(const mfem::Operator& op)
+{
+  PetscBool is_nest;
+  bool      delete_pA = false;
+
+  auto* pA = const_cast<mfem::PetscParMatrix*>(dynamic_cast<const mfem::PetscParMatrix*>(&op));
+  if (!pA) {
+    pA        = new mfem::PetscParMatrix(GetComm(), &op, PETSC_MATAIJ);
+    delete_pA = true;
+  }
+  PetscCallAbort(GetComm(), PetscObjectTypeCompare(*pA, MATNEST, &is_nest));
+  if (!is_nest) {
+    SLIC_DEBUG_ROOT("Not a MATNEST, setting operator directly");
+    serac::logger::flush();
+    fieldsplit_pc_.reset();
+    mfem::PetscPreconditioner::SetOperator(*pA);
+    if (delete_pA) delete pA;
+    return;
+  }
+  SLIC_DEBUG_ROOT("MATNEST detected, setting up fieldsplit");
+
+  if (fieldsplit_pc_) {
+    SLIC_DEBUG_ROOT("Fieldsplit exists, setting operator");
+    fieldsplit_pc_->SetOperator(*pA);
+  } else {
+    SLIC_DEBUG_ROOT("Creating fieldsplit");
+    fieldsplit_pc_ = std::make_unique<mfem::PetscFieldSplitSolver>(GetComm(), *pA, "nest");
+    PetscCallAbort(GetComm(), PCFieldSplitSetType(*fieldsplit_pc_, PC_COMPOSITE_ADDITIVE));
+    PetscCallAbort(GetComm(), PCSetFromOptions(*fieldsplit_pc_));
+    PetscCallAbort(GetComm(), PCSetUp(*fieldsplit_pc_));
+    KSP*     sub_ksps;
+    PetscInt n = 1;
+    PetscCallAbort(GetComm(), PCFieldSplitGetSubKSP(*fieldsplit_pc_, &n, &sub_ksps));
+    PetscCallAbort(GetComm(), KSPSetPC(sub_ksps[0], *this));
+    PC sub_pc_1;
+    PetscCallAbort(GetComm(), KSPGetPC(sub_ksps[1], &sub_pc_1));
+    PetscCallAbort(GetComm(), PCSetType(sub_pc_1, PCNONE));
+    PetscCallAbort(GetComm(), KSPSetFromOptions(sub_ksps[1]));
+    PetscCallAbort(GetComm(), PetscFree(sub_ksps));
+  }
+  Mat A11;
+  PetscCallAbort(GetComm(), MatNestGetSubMat(*pA, 0, 0, &A11));
+  mfem::PetscParMatrix pA11(A11, true);
+  mfem::PetscPreconditioner::SetOperator(pA11);
+  Mat A22;
+  Vec zero;
+  PetscCallAbort(GetComm(), MatNestGetSubMat(*pA, 1, 1, &A22));
+  // Make sure all diagonal elements are set
+  PetscCallAbort(GetComm(), MatSetOption(A22, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE));
+  PetscCallAbort(GetComm(), MatCreateVecs(A22, &zero, NULL));
+  PetscCallAbort(GetComm(), VecSet(zero, 0));
+  PetscCallAbort(GetComm(), MatDiagonalSet(A22, zero, ADD_VALUES));
+  if (delete_pA) delete pA;
+  serac::logger::flush();
+}
+
+void PetscPCSolver::Mult(const mfem::Vector& b, mfem::Vector& x) const
+{
+  if (fieldsplit_pc_) {
+    fieldsplit_pc_->Mult(b, x);
+  } else {
+    mfem::PetscPreconditioner::Mult(b, x);
+  }
+}
+
+void PetscPCSolver::MultTranspose(const mfem::Vector& b, mfem::Vector& x) const
+{
+  if (fieldsplit_pc_) {
+    fieldsplit_pc_->MultTranspose(b, x);
+  } else {
+    mfem::PetscPreconditioner::MultTranspose(b, x);
+  }
 }
 
 // PetscPreconditionerSpaceDependent methods
@@ -295,7 +375,6 @@ PetscGAMGSolver::PetscGAMGSolver(mfem::PetscParMatrix& A, const std::string& pre
 {
   PetscCallAbort(GetComm(), PCSetApplicationContext(*this, this));
   PetscCallAbort(GetComm(), PCSetPreSolve(*this, gamg_pre_solve));
-  Customize();
 }
 
 PetscGAMGSolver::PetscGAMGSolver(MPI_Comm comm_, Operator& op, const std::string& prefix)
@@ -303,7 +382,6 @@ PetscGAMGSolver::PetscGAMGSolver(MPI_Comm comm_, Operator& op, const std::string
 {
   PetscCallAbort(GetComm(), PCSetApplicationContext(*this, this));
   PetscCallAbort(GetComm(), PCSetPreSolve(*this, gamg_pre_solve));
-  Customize();
 }
 
 static void func_coords(const mfem::Vector& x, mfem::Vector& y) { y = x; }
@@ -326,15 +404,11 @@ void PetscGAMGSolver::SetupNearNullSpace()
   PetscInt sdim = fespace_->GetParMesh()->SpaceDimension();
   int      vdim = fespace_->GetVDim();
 
-  // Ideally, the block size should be set at matrix creation
-  // but the MFEM assembly does not allow us to do so
-  PetscCallAbort(GetComm(), MatSetBlockSize(pA, vdim));
-
   // coordinates
   const mfem::FiniteElementCollection* fec     = fespace_->FEColl();
   bool                                 h1space = dynamic_cast<const mfem::H1_FECollection*>(fec);
   if (h1space) {
-    SLIC_INFO_ROOT("PetscGAMGSolver::SetupNearNullSpace(...) - Setting up near null space");
+    SLIC_DEBUG_ROOT("PetscGAMGSolver::SetupNearNullSpace(...) - Setting up near null space");
     mfem::ParFiniteElementSpace* fespace_coords = fespace_;
 
     sdim = fespace_->GetParMesh()->SpaceDimension();
@@ -367,7 +441,7 @@ void PetscGAMGSolver::SetupNearNullSpace()
   }
   PetscCallAbort(GetComm(), MatGetNearNullSpace(pA, &nnsp));
   SLIC_WARNING_ROOT_IF(!nnsp, "Global near null space was not set successfully, expect slow (or no) convergence.");
-  SLIC_INFO_ROOT_IF(nnsp, "PetscGAMGSolver::SetupNearNullSpace(...) - Near null space set successfully.");
+  SLIC_DEBUG_ROOT_IF(nnsp, "PetscGAMGSolver::SetupNearNullSpace(...) - Near null space set successfully.");
 }
 
 void PetscGAMGSolver::SetOperator(const Operator& op)
@@ -382,75 +456,77 @@ void PetscGAMGSolver::SetOperator(const Operator& op)
 
 // Helper functions
 
-std::unique_ptr<mfem_ext::PetscPCSolver> buildPetscPreconditioner(PetscPCType pc_type, MPI_Comm comm)
+std::unique_ptr<PetscPCSolver> buildPetscPreconditioner(PetscPCType pc_type, MPI_Comm comm)
 {
-  std::unique_ptr<mfem_ext::PetscPCSolver> preconditioner;
+  std::unique_ptr<PetscPCSolver> preconditioner;
   switch (pc_type) {
     case PetscPCType::JACOBI:
-      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCJACOBI);
+      preconditioner = std::make_unique<PetscPCSolver>(comm, PCJACOBI);
       PetscCallAbort(comm, PCJacobiSetType(*preconditioner, PC_JACOBI_DIAGONAL));
       break;
     case PetscPCType::JACOBI_L1:
-      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCJACOBI);
+      preconditioner = std::make_unique<PetscPCSolver>(comm, PCJACOBI);
       PetscCallAbort(comm, PCJacobiSetType(*preconditioner, PC_JACOBI_ROWL1));
       break;
     case PetscPCType::JACOBI_ROWMAX:
-      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCJACOBI);
+      preconditioner = std::make_unique<PetscPCSolver>(comm, PCJACOBI);
       PetscCallAbort(comm, PCJacobiSetType(*preconditioner, PC_JACOBI_ROWMAX));
       break;
     case PetscPCType::JACOBI_ROWSUM:
-      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCJACOBI);
+      preconditioner = std::make_unique<PetscPCSolver>(comm, PCJACOBI);
       PetscCallAbort(comm, PCJacobiSetType(*preconditioner, PC_JACOBI_ROWSUM));
       break;
     case PetscPCType::PBJACOBI:
-      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCPBJACOBI);
+      preconditioner = std::make_unique<PetscPCSolver>(comm, PCPBJACOBI);
       break;
     case PetscPCType::BJACOBI:
-      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCBJACOBI);
+      preconditioner = std::make_unique<PetscPCSolver>(comm, PCBJACOBI);
       break;
     case PetscPCType::LU:
-      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCLU);
+      preconditioner = std::make_unique<PetscPCSolver>(comm, PCLU);
       // Automatically shift the LU factorization to ensure positive definiteness
       PetscCallAbort(comm, PCFactorSetShiftType(*preconditioner, MAT_SHIFT_POSITIVE_DEFINITE));
       break;
     case PetscPCType::ILU:
-      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCILU);
+      preconditioner = std::make_unique<PetscPCSolver>(comm, PCILU);
       // Automatically shift the ILU factorization to ensure positive definiteness
       PetscCallAbort(comm, PCFactorSetShiftType(*preconditioner, MAT_SHIFT_POSITIVE_DEFINITE));
       break;
     case PetscPCType::CHOLESKY:
-      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCCHOLESKY);
+      preconditioner = std::make_unique<PetscPCSolver>(comm, PCCHOLESKY);
       // Automatically shift the ILU factorization to ensure positive definiteness
       PetscCallAbort(comm, PCFactorSetShiftType(*preconditioner, MAT_SHIFT_POSITIVE_DEFINITE));
       break;
     case PetscPCType::SVD:
-      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCSVD);
+      preconditioner = std::make_unique<PetscPCSolver>(comm, PCSVD);
       break;
     case PetscPCType::ASM:
-      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCASM);
+      preconditioner = std::make_unique<PetscPCSolver>(comm, PCASM);
       break;
     case PetscPCType::GASM:
-      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCGASM);
+      preconditioner = std::make_unique<PetscPCSolver>(comm, PCGASM);
       break;
     case PetscPCType::HMG: {
-      preconditioner = std::make_unique<mfem_ext::PetscPreconditionerSpaceDependent>(comm, PCHMG);
+      preconditioner = std::make_unique<PetscPreconditionerSpaceDependent>(comm, PCHMG);
       // Coarsen using component-based subspaces
       PetscCallAbort(comm, PCHMGSetUseSubspaceCoarsening(*preconditioner, PETSC_TRUE));
       // Reuse interpolation matrices to speed up computation
       PetscCallAbort(comm, PCHMGSetReuseInterpolation(*preconditioner, PETSC_TRUE));
       // Use GAMG for the inner preconditioner (faster)
       PetscCallAbort(comm, PCHMGSetInnerPCType(*preconditioner, PCGAMG));
+      PetscCallAbort(comm, PCSetFromOptions(*preconditioner));
       break;
     }
     case PetscPCType::GAMG: {
       // Special type, as we need to attach near null space
-      preconditioner = std::make_unique<mfem_ext::PetscGAMGSolver>(comm);
+      preconditioner = std::make_unique<PetscGAMGSolver>(comm);
       // Automatically shift the LU factorization to ensure positive definiteness
       PetscOptionsInsertString(nullptr, "-mg_coarse_sub_pc_factor_shift_type positive_definite");
+      PetscCallAbort(comm, PCSetFromOptions(*preconditioner));
       break;
     }
     case PetscPCType::NONE:
-      preconditioner = std::make_unique<mfem_ext::PetscPCSolver>(comm, PCNONE);
+      preconditioner = std::make_unique<PetscPCSolver>(comm, PCNONE);
       break;
   }
   // Allow further customization via command-line arguments (PETSc has many)
@@ -486,13 +562,33 @@ PetscErrorCode convertKSPPreSolve(KSP ksp, [[maybe_unused]] Vec rhs, [[maybe_unu
 {
   PetscKSPSolver* solver;
   Mat             A;
+  PetscBool       is_nest;
 
   PetscFunctionBeginUser;
-  solver                              = static_cast<PetscKSPSolver*>(ctx);
-  auto*                      prec     = solver->prec;
-  mfem::PetscPreconditioner* petsc_pc = dynamic_cast<mfem::PetscPreconditioner*>(prec);
+  solver                  = static_cast<PetscKSPSolver*>(ctx);
+  auto*          prec     = solver->prec;
+  PetscPCSolver* petsc_pc = dynamic_cast<PetscPCSolver*>(prec);
+  PetscCall(KSPGetOperators(ksp, NULL, &A));
+  if (petsc_pc) {
+    PetscCall(PetscObjectTypeCompare(reinterpret_cast<PetscObject>(A), MATNEST, &is_nest));
+    PC        pc_orig;
+    PetscBool is_fieldsplit;
+    PetscCall(KSPGetPC(ksp, &pc_orig));
+    PetscCall(PetscObjectTypeCompare(reinterpret_cast<PetscObject>(pc_orig), PCFIELDSPLIT, &is_fieldsplit));
+    if (is_nest && !is_fieldsplit) {
+      SLIC_ERROR_ROOT_IF(!petsc_pc, "MATNEST only supported for PETSc preconditioners");
+      SLIC_DEBUG_ROOT_IF(is_nest, "convertKSPPreSolve(...) - Using MATNEST, must set up fieldsplit preconditioner.");
+      serac::logger::flush();
+      mfem::PetscParMatrix pA(A, true);
+      petsc_pc->SetOperator(pA);
+      SLIC_ERROR_ROOT_IF(!petsc_pc->fieldsplit_pc_, "Fieldsplit was not created successfully.");
+      PetscCall(KSPSetPC(ksp, *petsc_pc->fieldsplit_pc_));
+      PetscFunctionReturn(PETSC_SUCCESS);
+    } else if (is_fieldsplit && !is_nest) {
+      PetscCall(KSPSetPC(ksp, *petsc_pc));
+    }
+  }
   if (!solver->checked_for_convert_ || solver->needs_hypre_wrapping_) {
-    PetscCall(KSPGetOperators(ksp, NULL, &A));
     PetscBool is_hypre;
     PetscCall(PetscObjectTypeCompare(reinterpret_cast<PetscObject>(A), MATHYPRE, &is_hypre));
     SLIC_WARNING_ROOT_IF(
@@ -508,10 +604,10 @@ PetscErrorCode convertKSPPreSolve(KSP ksp, [[maybe_unused]] Vec rhs, [[maybe_unu
       old_hypre_csr = *solver->wrapped_matrix_;
     }
     if (old_hypre_csr != hypre_csr || !solver->wrapped_matrix_) {
-      SLIC_INFO_ROOT("convertKSPPreSolve(...) - Rebuilding HypreParMatrix wrapper");
+      SLIC_DEBUG_ROOT("convertKSPPreSolve(...) - Rebuilding HypreParMatrix wrapper");
       solver->wrapped_matrix_ = std::make_unique<mfem::HypreParMatrix>(hypre_csr, false);
     }
-    SLIC_INFO_ROOT("convertKSPPreSolve(...) - Setting operator for preconditioner");
+    SLIC_DEBUG_ROOT("convertKSPPreSolve(...) - Setting operator for preconditioner");
     if (prec) prec->SetOperator(*solver->wrapped_matrix_);
     solver->needs_hypre_wrapping_ = true;
   }
@@ -529,6 +625,7 @@ PetscKSPSolver::PetscKSPSolver(MPI_Comm comm_, KSPType ksp_type, const std::stri
   PetscCallAbort(GetComm(), KSPConvergedDefaultSetConvergedMaxits(*this, PETSC_TRUE));
   PetscCallAbort(GetComm(), KSPSetType(*this, ksp_type));
   PetscCallAbort(GetComm(), KSPSetPreSolve(*this, convertKSPPreSolve, this));
+  clcustom = false;
   Customize();
 }
 
@@ -542,6 +639,7 @@ PetscKSPSolver::PetscKSPSolver(const mfem::PetscParMatrix& A, KSPType ksp_type, 
   PetscCallAbort(GetComm(), KSPConvergedDefaultSetConvergedMaxits(*this, PETSC_TRUE));
   PetscCallAbort(GetComm(), KSPSetType(*this, ksp_type));
   PetscCallAbort(GetComm(), KSPSetPreSolve(*this, convertKSPPreSolve, this));
+  clcustom = false;
   Customize();
 }
 
@@ -555,6 +653,7 @@ PetscKSPSolver::PetscKSPSolver(const mfem::HypreParMatrix& A, KSPType ksp_type, 
   PetscCallAbort(GetComm(), KSPConvergedDefaultSetConvergedMaxits(*this, PETSC_TRUE));
   PetscCallAbort(GetComm(), KSPSetType(*this, ksp_type));
   PetscCallAbort(GetComm(), KSPSetPreSolve(*this, convertKSPPreSolve, this));
+  clcustom = false;
   Customize();
 }
 
@@ -580,7 +679,7 @@ void PetscKSPSolver::SetOperator(const mfem::Operator& op)
   SetTolerances();
 
   // Check if preconditioner can use HYPRE matrices
-  mfem::PetscPreconditioner* petsc_pc = dynamic_cast<mfem::PetscPreconditioner*>(prec);
+  PetscPCSolver* petsc_pc = dynamic_cast<PetscPCSolver*>(prec);
 
   // delete existing matrix, if created
   if (pA_) delete pA_;
@@ -590,7 +689,7 @@ void PetscKSPSolver::SetOperator(const mfem::Operator& op)
     if (hA) {
       // Create MATSHELL object or convert into a format suitable to construct preconditioners
       if (PETSC_HAVE_HYPRE && !petsc_pc) {
-        SLIC_INFO_ROOT("PetscKSPSolver::SetOperator(...) - Wrapping existing HYPRE matrix");
+        SLIC_DEBUG_ROOT("PetscKSPSolver::SetOperator(...) - Wrapping existing HYPRE matrix");
         pA = new mfem::PetscParMatrix(hA, wrap_ ? PETSC_MATSHELL : PETSC_MATHYPRE);
       } else {
         SLIC_WARNING_ROOT(
@@ -609,6 +708,7 @@ void PetscKSPSolver::SetOperator(const mfem::Operator& op)
     }
     pA_ = pA;
   }
+  serac::logger::flush();
   MFEM_VERIFY(pA, "PetscKSPSolver::SetOperator(...) - Unsupported operation!");
 
   // Set operators into PETSc KSP
@@ -631,9 +731,18 @@ void PetscKSPSolver::SetOperator(const mfem::Operator& op)
       X = B = NULL;
     }
   }
+  PetscBool is_nest;
+  MatType   type;
+  MatGetType(*pA, &type);
+  PetscCallAbort(GetComm(), PetscObjectTypeCompare(*pA, MATNEST, &is_nest));
+  SLIC_DEBUG_ROOT(axom::fmt::format("PetscKSPSolver::SetOperator(...) - Mat type: {}", type));
 
-  mfem::PetscParMatrix op_wrapped(GetComm(), &op);
-  PetscCallAbort(GetComm(), KSPSetOperators(ksp, op_wrapped, A));
+  PetscObjectTypeCompare(*pA, MATNEST, &is_nest);
+  SLIC_DEBUG_ROOT_IF(is_nest, "Using MATNEST");
+  serac::logger::flush();
+
+  // mfem::PetscParMatrix op_wrapped(GetComm(), &op);
+  PetscCallAbort(GetComm(), KSPSetOperators(ksp, A, A));
 
   // Update PetscSolver
   operatorset = true;
@@ -644,8 +753,13 @@ void PetscKSPSolver::SetOperator(const mfem::Operator& op)
   IterativeSolver::width    = pA->Width();
   PetscLinearSolver::width  = pA->Width();
 
-  if (prec && petsc_pc) {
+  if (petsc_pc) {
     prec->SetOperator(*pA);
+    if (is_nest) {
+      SLIC_ERROR_IF(!petsc_pc->fieldsplit_pc_, "Failed to create fieldsplit preconditioner");
+      PetscCallAbort(GetComm(), KSPSetPC(*this, *petsc_pc->fieldsplit_pc_));
+      // PetscCallAbort(GetComm(), KSPSetOperators(*this, A, A));
+    }
   } else if (prec) {
     prec->SetOperator(op);
   }
@@ -745,6 +859,7 @@ PetscNewtonSolver::PetscNewtonSolver(MPI_Comm comm_, SNESType snes_type, SNESLin
   SetJacobianType(ANY_TYPE);
   PetscCallVoid(SNESSetType(*this, snes_type_));
   PetscCallVoid(SNESSetMaxNonlinearStepFailures(*this, 5));
+  clcustom = false;
   Customize();
   NewtonSolver::iterative_mode = PetscNonlinearSolver::iterative_mode = true;
 }
@@ -813,6 +928,7 @@ void PetscNewtonSolver::SetLineSearchType(SNESLineSearchType linesearch_type)
     PetscCallAbort(GetComm(), SNESLineSearchSetType(linesearch, linesearch_type_));
   }
   SetTolerances();
+  clcustom = false;
   Customize();
 }
 
@@ -820,6 +936,7 @@ void PetscNewtonSolver::SetSNESType(SNESType snes_type)
 {
   snes_type_ = snes_type;
   PetscCallAbort(GetComm(), SNESSetType(*this, snes_type_));
+  clcustom = false;
   Customize();
 }
 
@@ -834,10 +951,10 @@ void PetscNewtonSolver::SetSolver(mfem::Solver& solver)
       auto* inner_prec       = ksp_solver->GetPreconditioner();
       auto* petsc_inner_prec = dynamic_cast<mfem::PetscPreconditioner*>(inner_prec);
       if (petsc_inner_prec) {
-        SLIC_INFO_ROOT("PetscNewtonSolver::SetSolver(...) - Set Jacobian type to PETSC_MATAIJ");
+        SLIC_DEBUG_ROOT("PetscNewtonSolver::SetSolver(...) - Set Jacobian type to PETSC_MATAIJ");
         SetJacobianType(PETSC_MATAIJ);
       } else {
-        SLIC_INFO_ROOT("PetscNewtonSolver::SetSolver(...) - Set Jacobian type to PETSC_MATHYPRE");
+        SLIC_DEBUG_ROOT("PetscNewtonSolver::SetSolver(...) - Set Jacobian type to PETSC_MATHYPRE");
         SetJacobianType(ANY_TYPE);
       }
     }
@@ -857,6 +974,7 @@ void PetscNewtonSolver::SetOperator(const mfem::Operator& op)
     SetLineSearchType(linesearch_type_);
   }
   SetTolerances();
+  clcustom = false;
   Customize();
 }
 
@@ -875,6 +993,25 @@ void PetscNewtonSolver::Mult(const mfem::Vector& b, mfem::Vector& x) const
     B->PlaceMemory(b.GetMemory());
   } else {
     *B = 0.0;
+  }
+
+  KSP ksp;
+  PetscCallAbort(GetComm(), SNESGetKSP(*this, &ksp));
+  PetscBool is_set;
+  PetscCallAbort(GetComm(), KSPGetOperatorsSet(ksp, &is_set, NULL));
+  if (is_set) {
+    Mat      A;
+    PetscInt nheight, nwidth;
+    int      oheight = B->GlobalSize();
+    int      owidth  = X->GlobalSize();
+    PetscCallAbort(GetComm(), KSPGetOperators(ksp, &A, NULL));
+    PetscCallAbort(GetComm(), MatGetSize(A, &nheight, &nwidth));
+    if (nheight != oheight || nwidth != owidth) {
+      // reinit without destroying the KSP
+      // communicator remains the same
+      SLIC_WARNING_ROOT("PetscKSPSolver::SetOperator(...) - Rebuilding KSP");
+      PetscCallAbort(GetComm(), KSPReset(ksp));
+    }
   }
 
   Customize();
