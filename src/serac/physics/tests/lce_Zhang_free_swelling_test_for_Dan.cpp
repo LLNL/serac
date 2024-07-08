@@ -68,13 +68,13 @@ int main(int argc, char* argv[])
   // ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛--> x
 
   // LinearSolverOptions linear_options = {.linear_solver = LinearSolver::SuperLU};
-  const LinearSolverOptions linear_options = {.linear_solver = LinearSolver::Strumpack, .print_level = 0};
+  // const LinearSolverOptions linear_options = {.linear_solver = LinearSolver::Strumpack, .print_level = 0};
 
-  // const LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::CG,
-  //                                              .preconditioner = Preconditioner::HypreJacobi,
-  //                                              .relative_tol   = 1.0e-6,
-  //                                              .absolute_tol   = 1.0e-12,
-  //                                              .max_iterations = 3 * Nx * Ny * Nz};
+  const LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::CG,
+                                               .preconditioner = Preconditioner::HypreJacobi,
+                                               .relative_tol   = 1.0e-6,
+                                               .absolute_tol   = 1.0e-12,
+                                               .max_iterations = 3 * Nx * Ny * Nz};
   NonlinearSolverOptions nonlinear_options = {
                                               // .nonlin_solver  = serac::NonlinearSolver::Newton,
                                               // .nonlin_solver  = serac::NonlinearSolver::TrustRegion,
