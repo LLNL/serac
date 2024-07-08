@@ -30,7 +30,7 @@ if (NOT SERAC_STYLE_ONLY)
                 "compiler wrappers via the CMake variables, "
                 "MPI_C_COMPILER and MPI_CXX_COMPILER.")
     endif()
-endif
+endif()
 
 
 # Save off "raw" flags before they are modified by serac/BLT
