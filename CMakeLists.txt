@@ -21,7 +21,7 @@ project(serac LANGUAGES CXX C)
 
 # MPI is required in Serac.
 # Note: for the style only mode, which doesn't need to actually build, we need to ignore this
-if (NOT SERAC_STYLE_ONLY)
+if (NOT SERAC_STYLE_CI_ONLY)
     set(ENABLE_MPI ON CACHE BOOL "")
 
     if (NOT MPI_C_COMPILER OR NOT MPI_CXX_COMPILER)
@@ -139,11 +139,11 @@ list(APPEND BLT_C_FILE_EXTS ".cuh")
 # Configured C++ files
 list(APPEND BLT_C_FILE_EXTS ".cpp.in" ".hpp.in")
 
-if (SERAC_STYLE_ONLY OR SERAC_ENABLE_CODE_CHECKS)
+if (SERAC_STYLE_CI_ONLY OR SERAC_ENABLE_CODE_CHECKS)
     serac_add_code_checks(PREFIX serac)
 endif()
 
-if (SERAC_STYLE_ONLY)
+if (SERAC_STYLE_CI_ONLY)
     # Exit processing the rest of the build in style only build to avoid any possible
     # CMake configuration issues outside of just enabling `make style`. This build,
     # is not capable of building Serac and should not be advertised. It is for CI 

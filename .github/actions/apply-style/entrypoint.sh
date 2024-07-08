@@ -5,7 +5,7 @@
 CMAKE_ARGS=-DCMAKE_CXX_COMPILER=clang++
 CMAKE_ARGS="$CMAKE_ARGS -DENABLE_CLANGFORMAT=ON"
 CMAKE_ARGS="$CMAKE_ARGS -DCLANGFORMAT_EXECUTABLE=/usr/bin/clang-format"
-CMAKE_ARGS="$CMAKE_ARGS -DSERAC_STYLE_ONLY=ON"
+CMAKE_ARGS="$CMAKE_ARGS -DSERAC_STYLE_CI_ONLY=ON"
 
 # Avoid error "fatal: detected dubious ownership in repository at '/github/workspace'"
 REPO_PATH=/github/workspace
