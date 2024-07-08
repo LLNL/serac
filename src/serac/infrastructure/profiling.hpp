@@ -41,37 +41,37 @@
 
 /**
  * @def SERAC_MARK_FUNCTION
- * Marks a function for Caliper profiling
+ * Marks a function for Caliper profiling. No-op macro when ENABLE_PROFILING is off.
  */
 
 /**
  * @def SERAC_MARK_LOOP_BEGIN(id, name)
- * Marks the beginning of a loop block for Caliper profiling
+ * Marks the beginning of a loop block for Caliper profiling. No-op macro when ENABLE_PROFILING is off.
  */
 
 /**
  * @def SERAC_MARK_LOOP_ITERATION(id, i)
- * Marks the beginning of a loop iteration for Caliper profiling
+ * Marks the beginning of a loop iteration for Caliper profiling. No-op macro when ENABLE_PROFILING is off.
  */
 
 /**
  * @def SERAC_MARK_LOOP_END(id)
- * Marks the end of a loop block for Caliper profiling
+ * Marks the end of a loop block for Caliper profiling. No-op macro when ENABLE_PROFILING is off.
  */
 
 /**
  * @def SERAC_MARK_BEGIN(id)
- * Marks the start of a region Caliper profiling
+ * Marks the start of a region Caliper profiling. No-op macro when ENABLE_PROFILING is off.
  */
 
 /**
  * @def SERAC_MARK_END(id)
- * Marks the end of a region Caliper profiling
+ * Marks the end of a region Caliper profiling. No-op macro when ENABLE_PROFILING is off.
  */
 
 /**
  * @def SERAC_MARK_SCOPE(name)
- * Marks a particular scope for Caliper profiling
+ * Marks a particular scope for Caliper profiling. No-op macro when ENABLE_PROFILING is off.
  */
 
 // NOTE: The motivation behind wrapping Caliper macros to avoid conflicting macro definitions in the no-op case, and
