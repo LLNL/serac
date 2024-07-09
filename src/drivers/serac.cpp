@@ -49,9 +49,7 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet)
   inlet.addDouble("dt", "Time step.").defaultValue(0.25);
 
   // The mesh options
-  auto& mesh_table =
-
-      inlet.addStruct("main_mesh", "The main mesh for the problem");
+  auto& mesh_table = inlet.addStruct("main_mesh", "The main mesh for the problem");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
 
   // The solid mechanics options
