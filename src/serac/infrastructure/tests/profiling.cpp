@@ -21,7 +21,7 @@ namespace serac {
 TEST(Profiling, MeshRefinement)
 {
   // profile mesh refinement
-  CALI_CXX_MARK_FUNCTION;
+  SERAC_MARK_FUNCTION;
   MPI_Barrier(MPI_COMM_WORLD);
   serac::profiling::initialize();
 
@@ -30,20 +30,20 @@ TEST(Profiling, MeshRefinement)
   // the following string is a proxy for templated test names
   std::string test_name = "_profiling";
 
-  CALI_MARK_BEGIN(profiling::concat("RefineAndLoadMesh", test_name).c_str());
+  SERAC_MARK_BEGIN(profiling::concat("RefineAndLoadMesh", test_name).c_str());
   auto pmesh = mesh::refineAndDistribute(buildMeshFromFile(mesh_file));
-  CALI_MARK_END(profiling::concat("RefineAndLoadMesh", test_name).c_str());
+  SERAC_MARK_END(profiling::concat("RefineAndLoadMesh", test_name).c_str());
 
-  CALI_CXX_MARK_LOOP_BEGIN(refinement_loop, "refinement_loop");
+  SERAC_MARK_LOOP_BEGIN(refinement_loop, "refinement_loop");
   for (int i = 0; i < 2; i++) {
-    CALI_CXX_MARK_LOOP_ITERATION(refinement_loop, i);
+    SERAC_MARK_LOOP_ITERATION(refinement_loop, i);
     pmesh->UniformRefinement();
   }
-  CALI_CXX_MARK_LOOP_END(refinement_loop);
+  SERAC_MARK_LOOP_END(refinement_loop);
 
-  // Refine once more and utilize CALI_CXX_MARK_SCOPE
+  // Refine once more and utilize SERAC_MARK_SCOPE
   {
-    CALI_CXX_MARK_SCOPE("RefineOnceMore");
+    SERAC_MARK_SCOPE("RefineOnceMore");
     pmesh->UniformRefinement();
   }
 
@@ -83,9 +83,9 @@ TEST(Profiling, Exception)
   serac::profiling::initialize();
 
   {
-    CALI_CXX_MARK_SCOPE("Non-exceptionScope");
+    SERAC_MARK_SCOPE("Non-exceptionScope");
     try {
-      CALI_CXX_MARK_SCOPE("Exception scope");
+      SERAC_MARK_SCOPE("Exception scope");
       throw std::runtime_error("Caliper to verify RAII");
     } catch (std::exception& e) {
       std::cout << e.what() << "\n";
