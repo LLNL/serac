@@ -45,11 +45,18 @@ namespace serac {
 void defineInputFileSchema(axom::inlet::Inlet& inlet)
 {
   // Simulation time parameters
-  inlet.addDouble("t_final", "Final time for simulation.").defaultValue(1.0);
-  inlet.addDouble("dt", "Time step.").defaultValue(0.25);
+  inlet.addDouble(
+    "t_final", "Final time for simulation.").defaultValue(1.0);
+  inlet.addDouble("dt", "Time step.").defaultValue(
+0.25);
 
   // The mesh options
-  auto& mesh_table = inlet.addStruct("main_mesh", "The main mesh for the problem");
+  auto& mesh_table =
+
+
+
+
+inlet.addStruct("main_mesh", "The main mesh for the problem");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
 
   // The solid mechanics options
