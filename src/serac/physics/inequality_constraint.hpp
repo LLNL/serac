@@ -64,6 +64,11 @@ struct NodalFriction
       return v_perp;
     }
 
+    if (std::abs(normal.Norml2() - 1.0) > 1e-9) {
+      printf("bad norm\n");
+    }
+    std::cout << "t, dt = " << " " << dt << std::endl;
+
     for (int i=0; i < dim; ++i) v_perp[i] = (x[i] - x_prev[i]) / dt - v[static_cast<size_t>(i)];
     double vn = 0.0; for (int i=0; i < dim; ++i) vn += v_perp[i]*normal[i];
     for (int i=0; i < dim; ++i) v_perp[i] -= normal[i] * vn;
@@ -75,7 +80,7 @@ struct NodalFriction
     }
 
 
-    if (false && vv < v_crit_*v_crit_) {
+    if (true || vv < v_crit_*v_crit_) {
       //printf("slow\n");
       for (int i=0; i < dim; ++i) v_perp[i] = mu_ * v_perp[i] / v_crit_;
     } else {
@@ -106,7 +111,7 @@ struct NodalFriction
       return Hv;
     }
 
-    if (false && vv < v_crit_*v_crit_) {
+    if (true || vv < v_crit_*v_crit_) {
       for (int i=0; i < dim; ++i) Hv[i] = mu_ * w_perp[i] / (dt * v_crit_);
     } else {
       //double vInv = 1.0 / std::sqrt(vv);
@@ -336,6 +341,8 @@ struct InequalityConstraint {
     SLIC_ERROR_ROOT_IF(num_nodes != constraint_.Size(), "Constraint size does not match system size.");
     SLIC_ERROR_ROOT_IF(num_nodes != x_prev.numNodes(), "Constraint size does not match system size.");
 
+    size_t activeCount = 0;
+
     mfem::Vector coord(dim);
     mfem::Vector coord_prev(dim);
     for (int n = 0; n < num_nodes; ++n) {
@@ -350,6 +357,7 @@ struct InequalityConstraint {
       const double k   = constraint_penalty[n];
 
       if (lam >= k * c) {
+        ++activeCount;
         const mfem::Vector gradC = levelSet_->gradient(coord, time);
         for (int i = 0; i < dim; ++i) {
           residual(n, i) += gradC[i] * (-lam + k * c);
@@ -357,13 +365,16 @@ struct InequalityConstraint {
       }
       if (lam > 0.0) {
         const mfem::Vector gradCOld = levelSet_->gradient(coord_prev, time);
+        //std::cout << "prev coord = " << gradCOld.Norml2() << std::endl;
         const mfem::Vector qvRes = friction_->quasiVariationalResidual(coord, coord_prev, gradCOld, dt);
+
         for (int i = 0; i < dim; ++i) {
           residual(n, i) += lam * qvRes[i];
         }
       }
 
     }
+    std::cout << "num active constraints = " << activeCount << std::endl;
   }
 
 
@@ -398,7 +409,12 @@ struct InequalityConstraint {
       constraint[n]    = c;
       const double lam = constraint_multiplier[n];
       const double k   = constraint_penalty[n];
-
+      //if (lam >= k * c) {
+        //const mfem::Vector gradC = levelSet_->gradient(coord, time);
+        //for (int i = 0; i < dim; ++i) {
+          //residual(n, i) += gradC[i] * (-lam + k * c);
+        //}
+      //}
       if (lam >= k * c) {
         const mfem::Vector gradC = levelSet_->gradient(coord, time);
         for (int i = 0; i < dim; ++i) {
@@ -495,9 +511,10 @@ struct InequalityConstraint {
 
       bool poorProgress = newError > target_decrease_factor * oldError;
 
-      if (poorProgress) constraint_penalty[n] *= 1.0;//1;
+      if (poorProgress) constraint_penalty[n] *= 1.1;//1;
     }
 
+    std::cout << "lam norm = " << constraint_multiplier_.Norml2() << std::endl;
     std::cout << "ncp error = " << constraint_ncp_error_.Norml2() << std::endl;
 
     // ncpError = np.abs( alObjective.ncp(x) )

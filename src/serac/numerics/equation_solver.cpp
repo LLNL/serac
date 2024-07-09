@@ -281,6 +281,8 @@ class TrustRegion : public mfem::NewtonSolver {
 protected:
   /// predicted solution
   mutable mfem::Vector x_pred;
+  /// solution increment
+  mutable mfem::Vector x_incr;
   /// predicted residual
   mutable mfem::Vector r_pred;
   /// extra vector of scratch space for doing temporary calculations
@@ -492,6 +494,8 @@ public:
     r_pred = 0.0;
     scratch.SetSize(X.Size());
     scratch = 0.0;
+    x_incr.SetSize(X.Size());
+    x_incr = 0.0;
 
     TrustRegionResults  trResults(X.Size());
     TrustRegionSettings settings;
@@ -508,6 +512,7 @@ public:
         mfem::out << "Newton iteration " << std::setw(3) << it << " : ||r|| = " << std::setw(13) << norm;
         if (it > 0) {
           mfem::out << ", ||r||/||r_0|| = " << std::setw(13) << norm / initial_norm;
+          mfem::out << ", x_incr = " << std::setw(13) << x_incr.Norml2();
         }
         mfem::out << '\n';
       }
@@ -577,13 +582,14 @@ public:
 
         doglegStep(trResults.cauchy_point, trResults.z, trSize, d);
 
-        static constexpr double roundOffTol = 1e-14;
+        static constexpr double roundOffTol = 0.0; //1e-14;
 
         hess_vec_func(d, Hd);
         double dHd            = Dot(d, Hd);
         double modelObjective = Dot(r, d) + 0.5 * dHd - roundOffTol;
 
         add(X, d, x_pred);
+        x_incr = d;
 
         double realObjective = std::numeric_limits<double>::max();
         double normPred      = std::numeric_limits<double>::max();
