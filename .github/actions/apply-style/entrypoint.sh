@@ -32,8 +32,8 @@ branches=$(git branch -r --contains $current_commit_sha)
 branch=""
 num_branches_found=0
 for _possible_branch in $branches; do
-  # Skip items that start with "refs/"
-  if [[ $_possible_branch == refs/* ]]; then
+  # Skip items that start with "pull/"
+  if [[ $_possible_branch == pull/* ]]; then
     continue
   fi
   if [[ $_possible_branch == origin/* ]]; then
