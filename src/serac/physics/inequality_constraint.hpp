@@ -32,6 +32,7 @@ struct NodalFriction
   {
   }
 
+  /*
   double quasiVariationalPotential(const mfem::Vector& x, const mfem::Vector& x_prev,
                                    double dt) const
   {
@@ -52,8 +53,9 @@ struct NodalFriction
       return dt * mu_ * std::sqrt(vv);
     }
   }
+  */
 
-  mfem::Vector quasiVariationalResidual(const mfem::Vector& x, const mfem::Vector& x_prev,
+  mfem::Vector quasiVariationalResidual(const mfem::Vector& x, const mfem::Vector& x_prev, const mfem::Vector& normal,
                                         double dt) const
   {
     mfem::Vector v_perp = x;
@@ -63,10 +65,18 @@ struct NodalFriction
     }
 
     for (int i=0; i < dim; ++i) v_perp[i] = (x[i] - x_prev[i]) / dt - v[static_cast<size_t>(i)];
-
+    double vn = 0.0; for (int i=0; i < dim; ++i) vn += v_perp[i]*normal[i];
+    for (int i=0; i < dim; ++i) v_perp[i] -= normal[i] * vn;
     double vv = 0.0; for (int i=0; i < dim; ++i) vv += v_perp[i]*v_perp[i];
 
-    if (vv < v_crit_*v_crit_) {
+    if (vv == 0.0) {
+      v_perp = 0.0;
+      return v_perp;
+    }
+
+
+    if (false && vv < v_crit_*v_crit_) {
+      //printf("slow\n");
       for (int i=0; i < dim; ++i) v_perp[i] = mu_ * v_perp[i] / v_crit_;
     } else {
       for (int i=0; i < dim; ++i) v_perp[i] = mu_ * v_perp[i] / std::sqrt(vv);
@@ -74,30 +84,39 @@ struct NodalFriction
     return v_perp;
   }
 
-  mfem::Vector quasiVariationalHessVec(const mfem::Vector& x, const mfem::Vector& x_prev, const mfem::Vector& w,
+  mfem::Vector quasiVariationalHessVec(const mfem::Vector& x, const mfem::Vector& x_prev, const mfem::Vector& normal, const mfem::Vector& w,
                                        double dt) const
   {
     mfem::Vector Hv = x; Hv = 0.0;
     mfem::Vector v_perp = x; v_perp = 0.0;
+    mfem::Vector w_perp = x; w_perp = 0.0;
     if (dt == 0.0 || mu_ == 0.0) {
       return Hv;
     }
 
     for (int i=0; i < dim; ++i) v_perp[i] = (x[i] - x_prev[i]) / dt - v[static_cast<size_t>(i)];
-
+    double vn = 0.0; for (int i=0; i < dim; ++i) vn += v_perp[i]*normal[i];
+    for (int i=0; i < dim; ++i) v_perp[i] -= normal[i] * vn;
     double vv = 0.0; for (int i=0; i < dim; ++i) vv += v_perp[i]*v_perp[i];
 
-    if (vv < v_crit_*v_crit_) {
-      for (int i=0; i < dim; ++i) Hv[i] = mu_ * w[i] / (dt * v_crit_);
+    double wn = 0.0; for (int i=0; i < dim; ++i) wn += w[i] * normal[i];
+    for (int i=0; i < dim; ++i) w_perp[i] = w[i] - normal[i] * wn;
+
+    if (vv == 0.0) {
+      return Hv;
+    }
+
+    if (false && vv < v_crit_*v_crit_) {
+      for (int i=0; i < dim; ++i) Hv[i] = mu_ * w_perp[i] / (dt * v_crit_);
     } else {
-      double vInv = 1.0 / std::sqrt(vv);
-      double vel_squared_to_minus_1p5 = vInv / vv;
+      //double vInv = 1.0 / std::sqrt(vv);
+      double vel_squared_to_minus_1p5 = std::pow(vv, -1.5); //vInv / vv;
       double factor = 0.0;
       for (int i=0; i < dim; ++i) {
-        factor += v_perp[i] * w[i];
+        factor += v_perp[i] * w_perp[i];
       }
       for (int i=0; i < dim; ++i) {
-        Hv[i] = mu_ * (vInv * w[i] - vel_squared_to_minus_1p5 * factor * v_perp[i]) / dt;
+        Hv[i] = mu_ * (w_perp[i] / std::sqrt(vv) - vel_squared_to_minus_1p5 * factor * v_perp[i]) / dt;
       }
     }
     return Hv;
@@ -330,16 +349,15 @@ struct InequalityConstraint {
       const double lam = constraint_multiplier[n];
       const double k   = constraint_penalty[n];
 
-      // min_x (1 / 2k) * (lam - k * c(x))^2 + (lam - k * c(x)) * qvPotential(x)
-      const mfem::Vector gradC = levelSet_->gradient(coord, time);
-      //const double qvPotential = friction_->quasiVariationalPotential(coord, coord_prev, dt);
-      const mfem::Vector qvRes = friction_->quasiVariationalResidual(coord, coord_prev, dt);
       if (lam >= k * c) {
+        const mfem::Vector gradC = levelSet_->gradient(coord, time);
         for (int i = 0; i < dim; ++i) {
           residual(n, i) += gradC[i] * (-lam + k * c);
         }
       }
       if (lam > 0.0) {
+        const mfem::Vector gradCOld = levelSet_->gradient(coord_prev, time);
+        const mfem::Vector qvRes = friction_->quasiVariationalResidual(coord, coord_prev, gradCOld, dt);
         for (int i = 0; i < dim; ++i) {
           residual(n, i) += lam * qvRes[i];
         }
@@ -383,27 +401,21 @@ struct InequalityConstraint {
 
       if (lam >= k * c) {
         const mfem::Vector gradC = levelSet_->gradient(coord, time);
-        //const double qvPotential = friction_->quasiVariationalPotential(coord, coord_prev, dt);
-        //const mfem::Vector qvRes = friction_->quasiVariationalResidual(coord, coord_prev, dt);
         for (int i = 0; i < dim; ++i) {
           xyz_dirs                 = 0.0;
           xyz_dirs[i]              = 1.0;
           const mfem::Vector hessI = levelSet_->hessVec(coord, xyz_dirs, time);
-          //const mfem::Vector qvHessI = friction_->quasiVariationalHessVec(coord, coord_prev, xyz_dirs, dt);
           for (int j = 0; j < dim; ++j) {
             constraint_diagonal_stiffness(n, dim * i + j) += k * gradC[i] * gradC[j] + hessI[j] * (-lam + k * c);
-            //constraint_diagonal_stiffness(n, dim * i + j) += (lam - k * c) * qvHessI[j];
-            //constraint_diagonal_stiffness(n, dim * i + j) -= k * gradC[j] * qvRes[i];
-            //constraint_diagonal_stiffness(n, dim * i + j) -= k * gradC[i] * qvRes[j];
-            //constraint_diagonal_stiffness(n, dim * i + j) -= k * hessI[j] * qvPotential;
           }
         }
       }
       if (lam > 0.0) {
+        const mfem::Vector gradCOld = levelSet_->gradient(coord_prev, time);
         for (int i = 0; i < dim; ++i) {
           xyz_dirs                 = 0.0;
           xyz_dirs[i]              = 1.0;
-          const mfem::Vector qvHessI = friction_->quasiVariationalHessVec(coord, coord_prev, xyz_dirs, dt);
+          const mfem::Vector qvHessI = friction_->quasiVariationalHessVec(coord, coord_prev, gradCOld, xyz_dirs, dt);
           for (int j = 0; j < dim; ++j) {
             constraint_diagonal_stiffness(n, dim * i + j) += lam * qvHessI[j];
           }
@@ -483,7 +495,7 @@ struct InequalityConstraint {
 
       bool poorProgress = newError > target_decrease_factor * oldError;
 
-      if (poorProgress) constraint_penalty[n] *= 1.05;
+      if (poorProgress) constraint_penalty[n] *= 1.0;//1;
     }
 
     std::cout << "ncp error = " << constraint_ncp_error_.Norml2() << std::endl;

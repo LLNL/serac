@@ -195,11 +195,13 @@ public:
 /// Internal structure for storing trust region settings
 struct TrustRegionSettings {
   /// cg tol
-  double cgTol = 1e-8;
+  double cg_tol = 1e-8;
+  /// min cg iters
+  size_t min_cg_iterations = 0;  //
   /// max cg iters should be around # of system dofs
-  size_t maxCgIterations = 10000;  //
+  size_t max_cg_iterations = 10000;  //
   /// max cumulative iterations
-  size_t maxCumulativeIteration = 1;
+  size_t max_cumulative_iteration = 1;
   /// minimum trust region size
   double min_tr_size = 1e-13;
   /// trust region decrease factor
@@ -223,14 +225,14 @@ struct TrustRegionResults {
     d.SetSize(size);
     Pr.SetSize(size);
     Hd.SetSize(size);
-    cauchyPoint.SetSize(size);
+    cauchy_point.SetSize(size);
   }
 
   /// resets trust region results for a new outer iteration
   void reset()
   {
     z           = 0.0;
-    cauchyPoint = 0.0;
+    cauchy_point = 0.0;
   }
 
   /// enumerates the possible final status of the trust region steps
@@ -250,11 +252,11 @@ struct TrustRegionResults {
   /// action of hessian on direction d
   mfem::Vector Hd;
   /// cauchy point
-  mfem::Vector cauchyPoint;
+  mfem::Vector cauchy_point;
   /// specifies if step is interior, exterior, negative curvature, etc.
-  Status interiorStatus = Status::Interior;
+  Status interior_status = Status::Interior;
   /// iteration counter
-  size_t cgIterationsCount = 0;
+  size_t cg_iterations_count = 0;
 };
 
 /// trust region printing utility function
@@ -290,14 +292,14 @@ protected:
   LinearSolverOptions linear_options;
   /// handle to the preconditioner used by the trust region, it ignores the linear solver as a SPD preconditioner is
   /// currently required
-  Solver& trPrecond;
+  Solver& tr_precond;
 
 public:
 #ifdef MFEM_USE_MPI
   /// constructor
   TrustRegion(MPI_Comm comm_, const NonlinearSolverOptions& nonlinear_opts, const LinearSolverOptions& linear_opts,
               Solver& tPrec)
-      : mfem::NewtonSolver(comm_), nonlinear_options(nonlinear_opts), linear_options(linear_opts), trPrecond(tPrec)
+      : mfem::NewtonSolver(comm_), nonlinear_options(nonlinear_opts), linear_options(linear_opts), tr_precond(tPrec)
   {
   }
 #endif
@@ -355,18 +357,18 @@ public:
   {
     SERAC_MARK_FUNCTION;
     // minimize r@z + 0.5*z@J@z
-    results.interiorStatus    = TrustRegionResults::Status::Interior;
-    results.cgIterationsCount = 0;
+    results.interior_status    = TrustRegionResults::Status::Interior;
+    results.cg_iterations_count = 0;
 
     auto& z      = results.z;
-    auto& cgIter = results.cgIterationsCount;
+    auto& cgIter = results.cg_iterations_count;
     auto& d      = results.d;
     auto& Pr     = results.Pr;
     auto& Hd     = results.Hd;
 
-    const double cgTolSquared = settings.cgTol * settings.cgTol;
+    const double cg_tol_squared = settings.cg_tol * settings.cg_tol;
 
-    if (Dot(r0, r0) < cgTolSquared) {
+    if (Dot(r0, r0) <= cg_tol_squared && cgIter >= settings.min_cg_iterations) {
       return;
     }
 
@@ -381,7 +383,7 @@ public:
     double zd  = 0.0;
     double dd  = Dot(d, d);
 
-    for (cgIter = 1; cgIter <= settings.maxCgIterations; ++cgIter) {
+    for (cgIter = 1; cgIter <= settings.max_cg_iterations; ++cgIter) {
       hess_vec_func(d, Hd);
       const double curvature = Dot(d, Hd);
       const double alphaCg   = rPr / curvature;
@@ -393,12 +395,12 @@ public:
       if (curvature <= 0) {
         // mfem::out << "negative curvature found.\n";
         projectToBoundaryWithCoefs(z, d, trSize, zz, zd, dd);
-        results.interiorStatus = TrustRegionResults::Status::NegativeCurvature;
+        results.interior_status = TrustRegionResults::Status::NegativeCurvature;
         return;
       } else if (zzNp1 > (trSize * trSize)) {
         // mfem::out << "step outside trust region.\n";
         projectToBoundaryWithCoefs(z, d, trSize, zz, zd, dd);
-        results.interiorStatus = TrustRegionResults::Status::OnBoundary;
+        results.interior_status = TrustRegionResults::Status::OnBoundary;
         return;
       }
 
@@ -410,7 +412,7 @@ public:
       precond(rCurrent, Pr);
       double rPrNp1 = Dot(rCurrent, Pr);
 
-      if (Dot(rCurrent, rCurrent) <= cgTolSquared) {
+      if (Dot(rCurrent, rCurrent) <= cg_tol_squared && cgIter >= settings.min_cg_iterations) {
         return;
       }
 
@@ -450,7 +452,7 @@ public:
   void precond(const mfem::Vector& x_, mfem::Vector& v_) const
   {
     SERAC_MARK_FUNCTION;
-    trPrecond.Mult(x_, v_);
+    tr_precond.Mult(x_, v_);
   };
 
 
@@ -481,7 +483,7 @@ public:
       mfem::out << "Newton iteration " << std::setw(3) << 0 << " : ||r|| = " << std::setw(13) << norm << "...\n";
     }
     prec->iterative_mode     = false;
-    trPrecond.iterative_mode = false;
+    tr_precond.iterative_mode = false;
 
     // local arrays
     x_pred.SetSize(X.Size());
@@ -493,8 +495,9 @@ public:
 
     TrustRegionResults  trResults(X.Size());
     TrustRegionSettings settings;
-    settings.maxCgIterations = static_cast<size_t>(linear_options.max_iterations);
-    settings.cgTol           = 0.2 * norm_goal;
+    settings.min_cg_iterations = static_cast<size_t>(nonlinear_options.min_iterations);
+    settings.max_cg_iterations = static_cast<size_t>(linear_options.max_iterations);
+    settings.cg_tol           = 0.2 * norm_goal;
     double trSize            = 100.0;
     size_t cumulativeCgIters = 0;
 
@@ -519,9 +522,9 @@ public:
 
       assembleJacobian(X);
 
-      if (it == 0 || (trResults.cgIterationsCount >= settings.maxCgIterations ||
-                      cumulativeCgIters >= settings.maxCumulativeIteration)) {
-        trPrecond.SetOperator(*grad);
+      if (it == 0 || (trResults.cg_iterations_count >= settings.max_cg_iterations ||
+                      cumulativeCgIters >= settings.max_cumulative_iteration)) {
+        tr_precond.SetOperator(*grad);
         cumulativeCgIters = 0;
         if (print_options.iterations) {
           // currently it will always be updated
@@ -539,11 +542,11 @@ public:
       const double gKg = Dot(r, trResults.Hd);
       if (gKg > 0) {
         const double alphaCp = -Dot(r, r) / gKg;
-        add(trResults.cauchyPoint, alphaCp, r, trResults.cauchyPoint);
-        cauchyPointNormSquared = Dot(trResults.cauchyPoint, trResults.cauchyPoint);
+        add(trResults.cauchy_point, alphaCp, r, trResults.cauchy_point);
+        cauchyPointNormSquared = Dot(trResults.cauchy_point, trResults.cauchy_point);
       } else {
         const double alphaTr = -trSize / std::sqrt(Dot(r, r));
-        add(trResults.cauchyPoint, alphaTr, r, trResults.cauchyPoint);
+        add(trResults.cauchy_point, alphaTr, r, trResults.cauchy_point);
         if (print_options.iterations) {
           mfem::out << "Negative curvature un-preconditioned cauchy point direction found."
                     << "\n";
@@ -555,15 +558,15 @@ public:
           mfem::out << "Un-preconditioned gradient cauchy point outside trust region, step size = "
                     << std::sqrt(cauchyPointNormSquared) << "\n";
         }
-        trResults.cauchyPoint *= (trSize / std::sqrt(cauchyPointNormSquared));
-        trResults.z                 = trResults.cauchyPoint;
-        trResults.cgIterationsCount = 1;
-        trResults.interiorStatus    = TrustRegionResults::Status::OnBoundary;
+        trResults.cauchy_point *= (trSize / std::sqrt(cauchyPointNormSquared));
+        trResults.z                 = trResults.cauchy_point;
+        trResults.cg_iterations_count = 1;
+        trResults.interior_status    = TrustRegionResults::Status::OnBoundary;
       } else {
-        settings.cgTol = std::max(0.2 * norm_goal, 1e-3 * norm);
+        settings.cg_tol = std::max(0.2 * norm_goal, 1e-3 * norm);
         solveTrustRegionMinimization(r, scratch, hess_vec_func, precond_func, settings, trSize, trResults);
       }
-      cumulativeCgIters += trResults.cgIterationsCount;
+      cumulativeCgIters += trResults.cg_iterations_count;
 
       bool happyAboutTrSize = false;
       int  lineSearchIter   = 0;
@@ -572,7 +575,7 @@ public:
         auto& d  = trResults.d;   // reuse, dangerous!
         auto& Hd = trResults.Hd;  // reuse, dangerous!
 
-        doglegStep(trResults.cauchyPoint, trResults.z, trSize, d);
+        doglegStep(trResults.cauchy_point, trResults.z, trSize, d);
 
         static constexpr double roundOffTol = 1e-14;
 
@@ -598,8 +601,8 @@ public:
           norm             = normPred;
           happyAboutTrSize = true;
           if (print_options.iterations) {
-            printTrustRegionInfo(realObjective, modelObjective, trResults.cgIterationsCount, trSize, true);
-            trResults.cgIterationsCount = 0; // zero this output so it doesn't look like the linesearch is doing cg iterations
+            printTrustRegionInfo(realObjective, modelObjective, trResults.cg_iterations_count, trSize, true);
+            trResults.cg_iterations_count = 0; // zero this output so it doesn't look like the linesearch is doing cg iterations
           }
           break;
         }
@@ -617,7 +620,7 @@ public:
 
         if (!(rho >= settings.eta2)) {  // write it this way to handle NaNs
           trSize *= settings.t1;
-        } else if ((rho > settings.eta3) && (trResults.interiorStatus == TrustRegionResults::Status::OnBoundary)) {
+        } else if ((rho > settings.eta3) && (trResults.interior_status == TrustRegionResults::Status::OnBoundary)) {
           trSize *= settings.t2;
         }
 
@@ -628,8 +631,8 @@ public:
         bool willAccept = rho >= settings.eta1;  // or (rho >= -0 and realResNorm <= gNorm)
 
         if (print_options.iterations) {
-          printTrustRegionInfo(realObjective, modelObjective, trResults.cgIterationsCount, trSize, willAccept);
-          trResults.cgIterationsCount = 0; // zero this output so it doesn't look like the linesearch is doing cg iterations
+          printTrustRegionInfo(realObjective, modelObjective, trResults.cg_iterations_count, trSize, willAccept);
+          trResults.cg_iterations_count = 0; // zero this output so it doesn't look like the linesearch is doing cg iterations
         }
 
         if (willAccept) {

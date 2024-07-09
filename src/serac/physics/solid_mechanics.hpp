@@ -1329,11 +1329,13 @@ public:
     }
 
     if (is_quasistatic_) {
-      quasiStaticSolve(dt); // dt_ is updated internally
-      int maxAlIteration = 7;
       if (!inequality_constraints.empty()) {
         // Set the start of step mesh coordinates for contact
         computeUpdatedCoordinates(displacement_, x_previous_);
+      }
+      quasiStaticSolve(dt); // dt_ is updated internally
+      int maxAlIteration = 15;
+      if (!inequality_constraints.empty()) {
         for (int i=0; i < maxAlIteration; ++i) {
           printf("al solve\n");
           nonlinearSolve();

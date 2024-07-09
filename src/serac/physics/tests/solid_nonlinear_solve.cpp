@@ -138,13 +138,13 @@ void functional_solid_test_friction_box()
   double Lz = 9.3;
 
   double density       = 1.0;
-  double E             = 1.0;
-  double v             = 0.34;
+  double E             = 10.0;
+  double v             = 0.33;
   double bulkMod       = E / (3. * (1. - 2. * v));
   double shearMod      = E / (2. * (1. + v));
-  double loadMagnitude = 1e-4; //0.2e-5;  // 2e-2;
-  double eta = 0.2;
-  double mu = 0.23;
+  double loadMagnitude = 1e-7; //0.2e-5;  // 2e-2;
+  double eta = 0.45;
+  double mu = 0.2;
 
   std::string    meshTag = "mesh";
   mfem::Mesh     mesh    = mfem::Mesh::MakeCartesian3D(Nx, Ny, Nz, mfem::Element::HEXAHEDRON, Lx, Ly, Lz);
@@ -154,21 +154,21 @@ void functional_solid_test_friction_box()
   // solid mechanics
   using seracSolidType = serac::SolidMechanics<ORDER, DIM, serac::Parameters<>>;
 
-  auto [nonlinear_options, linear_options] = get_opts(Nx*Ny*Nz, 1e-8);
+  auto [nonlinear_options, linear_options] = get_opts(Nx*Ny*Nz, 1e-6);
 
   auto seracSolid = std::make_unique<seracSolidType>(
       nonlinear_options, linear_options, serac::solid_mechanics::default_quasistatic_options,
       serac::GeometricNonlinearities::On, "serac_solid", meshTag, std::vector<std::string>{});
 
-  double initial_penalty = 10.0;
+  double initial_penalty = 100.0;
   std::array<double,DIM> rigid_velo{0.0, 0.0, 0.0};
-  std::array<double,DIM> corner{-0.01, -0.01, -0.01};
+  std::array<double,DIM> corner{-0.1, -0.1, -0.1};
   std::array<double,DIM> plane_normal;
   for (size_t i=0; i < DIM; ++i) {
     plane_normal = {};
     plane_normal[i] = 1.0;
     auto lset = std::make_unique<LevelSetPlane<DIM>>(corner, plane_normal);
-    auto friction = std::make_unique<NodalFriction<DIM>>(mu, 1e-4, rigid_velo);
+    auto friction = std::make_unique<NodalFriction<DIM>>(mu, 1e-2, rigid_velo);
     auto constraint = std::make_unique<InequalityConstraint<ORDER, DIM>>(std::move(lset), std::move(friction),
                                                                          "serac_solid_"+std::to_string(i), meshTag,
                                                                          initial_penalty);
@@ -182,17 +182,28 @@ void functional_solid_test_friction_box()
 
   serac::Domain topSurface = serac::Domain::ofBoundaryElements(*meshPtr, serac::by_attr<DIM>(6));
 
+  double total_time = 10.0;
+  int num_time_steps = 10;
+  double dt = total_time / num_time_steps;
+
   const tensor<double, DIM> nx{1.0, 0.0, 0.0};
   const tensor<double, DIM> ny{0.0, 1.0, 0.0};
   const tensor<double, DIM> nz{0.0, 0.0, 1.0};
-  seracSolid->setTraction([&](auto, auto, auto) {
-    return -loadMagnitude * nx - eta * loadMagnitude * ny - eta * loadMagnitude * nz;
+  seracSolid->setTraction([&](auto, auto, double t) {
+    //printf("t = %g\n", t);
+    auto sideLoad = eta * (t / total_time) * loadMagnitude;
+    return -loadMagnitude * ny - sideLoad / std::sqrt(2.0) * nx - sideLoad / std::sqrt(2.0) * nz;
   }, topSurface);
+
   seracSolid->completeSetup();
 
   seracSolid->outputStateToDisk("paraview_friction_box");
-  seracSolid->advanceTimestep(1.0);
-  seracSolid->outputStateToDisk("paraview_friction_box");
+  //seracSolid->advanceTimestep(0.0);
+  //seracSolid->outputStateToDisk("paraview_friction_box");
+  for (int i=0; i < num_time_steps; ++i) {
+    seracSolid->advanceTimestep(dt);
+    seracSolid->outputStateToDisk("paraview_friction_box");
+  }
 }
 
 void functional_solid_test_nonlinear_arch()
@@ -406,8 +417,6 @@ public:
 private:
   std::vector <std::string> tokens;
 };
-
-//#include "solid_lce_solve.cpp"
 
 int main(int argc, char* argv[])
 {
