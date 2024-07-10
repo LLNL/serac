@@ -5,6 +5,11 @@ echo "EXTRA_BUILD_OPTIONS=${EXTRA_BUILD_OPTIONS}"
 echo "EXTRA_CMAKE_OPTIONS=${EXTRA_CMAKE_OPTIONS}"
 echo "HOST_CONFIG=${HOST_CONFIG}"
 
+# EXTRA_CMAKE_OPTIONS needs quotes wrapped around it, since it may contain spaces, and we want them all to be a part of
+# one large string. (e.g. "-DSERAC_ENABLE_CODEVELOP=ON -DENABLE_DOCS=OFF")
+# EXTRA_BUILD_OPTIONS does not need quotes because - while it also may contain spaces, are seperate build_src.py
+# arguments (e.g. --skip-install --jobs=8).
+
 # Build source, run unit tests, and test install examples
 python3 scripts/llnl/build_src.py -v \
     --host-config ${HOST_CONFIG} \
