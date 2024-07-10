@@ -227,6 +227,9 @@ struct NonlinearSolverOptions {
 
   /// Debug print level
   int print_level = 0;
+
+  /// Should the gradient be converted to a monolithic matrix
+  bool force_monolithic = false;
 };
 // _nonlinear_options_end
 
