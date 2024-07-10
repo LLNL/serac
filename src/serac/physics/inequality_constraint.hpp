@@ -17,8 +17,9 @@
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/shape_aware_functional.hpp"
 
-namespace serac {
+//#define USE_SMOOTH_AL
 
+namespace serac {
 
 template <int dim>
 struct NodalFriction 
@@ -67,7 +68,7 @@ struct NodalFriction
     if (std::abs(normal.Norml2() - 1.0) > 1e-9) {
       printf("bad norm\n");
     }
-    std::cout << "t, dt = " << " " << dt << std::endl;
+    //std::cout << "t, dt = " << " " << dt << std::endl;
 
     for (int i=0; i < dim; ++i) v_perp[i] = (x[i] - x_prev[i]) / dt - v[static_cast<size_t>(i)];
     double vn = 0.0; for (int i=0; i < dim; ++i) vn += v_perp[i]*normal[i];
@@ -314,7 +315,7 @@ struct InequalityConstraint {
   void reset()
   {
     constraint_            = 0.0;
-    constraint_multiplier_ = 0.0;
+    constraint_multiplier_ = 0.1;
     constraint_penalty_    = initial_penalty_;
     constraint_ncp_error_  = 0.1 * std::numeric_limits<double>::max();
   }
@@ -326,6 +327,31 @@ struct InequalityConstraint {
     StateManager::updateState(constraint_penalty_);
     StateManager::updateState(constraint_ncp_error_);
     StateManager::updateState(constraint_diagonal_stiffness_);
+  }
+
+
+  double phi(double t) const {
+    if (t <= 0.5 ) {
+      return -t + 0.5 * t * t;  // -0.5 + 0.5 * 0.5 * 0.5 = -4/8 + 1/8 = -3/8
+    } else {
+      return -0.25 * std::log(2*t) - 3.0 / 8.0;
+    }
+  }
+
+  double dphi(double t) const {
+    if (t <= 0.5 ) {
+      return -1.0 + t; // -1 + t = -0.5
+    } else {
+      return -0.25 / t; //-1/4t  *  + t = -0.5
+    }
+  }
+
+  double ddphi(double t) const {
+    if (t <= 0.5 ) {
+      return 1.0;
+    } else {
+      return 0.25 / (t*t);
+    }
   }
 
   void sumConstraintResidual(const FiniteElementVector& x_current, const FiniteElementVector& x_previous, double time, double dt, mfem::Vector& res)
@@ -356,13 +382,32 @@ struct InequalityConstraint {
       const double lam = constraint_multiplier[n];
       const double k   = constraint_penalty[n];
 
+#if !defined(USE_SMOOTH_AL)
       if (lam >= k * c) {
         ++activeCount;
+        //std::cout << "grc = " << gradC[0] <<" " << gradC[1] << " " << gradC[2] << std::endl;
+      //}
+#else
+      if ( k * c  < 0.5 * lam) ++activeCount;
+#endif
+      
+        // objective = lam * lam / k * phi( k * c / lam )
         const mfem::Vector gradC = levelSet_->gradient(coord, time);
+        
+#if defined(USE_SMOOTH_AL)
+        double phip = dphi(k * c / lam);
+#endif
+
         for (int i = 0; i < dim; ++i) {
+#if defined(USE_SMOOTH_AL)
+          residual(n, i) += lam * phip * gradC[i];
+#else
           residual(n, i) += gradC[i] * (-lam + k * c);
+#endif
         }
+#if !defined(USE_SMOOTH_AL)
       }
+#endif
       if (lam > 0.0) {
         const mfem::Vector gradCOld = levelSet_->gradient(coord_prev, time);
         //std::cout << "prev coord = " << gradCOld.Norml2() << std::endl;
@@ -409,23 +454,29 @@ struct InequalityConstraint {
       constraint[n]    = c;
       const double lam = constraint_multiplier[n];
       const double k   = constraint_penalty[n];
-      //if (lam >= k * c) {
-        //const mfem::Vector gradC = levelSet_->gradient(coord, time);
-        //for (int i = 0; i < dim; ++i) {
-          //residual(n, i) += gradC[i] * (-lam + k * c);
-        //}
-      //}
+#if defined(USE_SMOOTH_AL)
+        double phipp = ddphi(k * c / lam);
+        double phip = dphi(k * c / lam);
+#else
       if (lam >= k * c) {
+#endif
+
         const mfem::Vector gradC = levelSet_->gradient(coord, time);
         for (int i = 0; i < dim; ++i) {
           xyz_dirs                 = 0.0;
           xyz_dirs[i]              = 1.0;
           const mfem::Vector hessI = levelSet_->hessVec(coord, xyz_dirs, time);
           for (int j = 0; j < dim; ++j) {
+#if defined(USE_SMOOTH_AL)
+            constraint_diagonal_stiffness(n, dim * i + j) += k * gradC[i] * phipp * gradC[j] + k * hessI[j] * phip * phip; // + hessI[j] * (-lam + k * c);
+#else
             constraint_diagonal_stiffness(n, dim * i + j) += k * gradC[i] * gradC[j] + hessI[j] * (-lam + k * c);
+#endif
           }
         }
+#if !defined(USE_SMOOTH_AL)
       }
+#endif
       if (lam > 0.0) {
         const mfem::Vector gradCOld = levelSet_->gradient(coord_prev, time);
         for (int i = 0; i < dim; ++i) {
@@ -502,7 +553,11 @@ struct InequalityConstraint {
       double lam = constraint_multiplier[n];
       const double k   = constraint_penalty[n];
       // update multiplier
+#if defined(USE_SMOOTH_AL)
+      lam *= -dphi( c * k / lam );
+#else
       lam = std::max(lam - k * c, 0.0);
+#endif
       constraint_multiplier[n] = lam;
 
       double oldError         = constraint_ncp_error[n];
@@ -511,7 +566,7 @@ struct InequalityConstraint {
 
       bool poorProgress = newError > target_decrease_factor * oldError;
 
-      if (poorProgress) constraint_penalty[n] *= 1.1;//1;
+      if (poorProgress) constraint_penalty[n] *= 1.4; //0.1;//1;
     }
 
     std::cout << "lam norm = " << constraint_multiplier_.Norml2() << std::endl;
