@@ -41,8 +41,7 @@ void SolidMaterialInputOptions::defineInputFileSchema(axom::inlet::Container& co
     if (model == "NeoHookean" || model == "LinearIsotropic") {
       return density_present && mu_present && K_present && !E_present && !nu_present && !hardening_present;
     } else if (model == "J2SmallStrain") {
-      return density_present && !mu_present && !K_present && E_present && nu_present && Hk_present
-        && hardening_present;
+      return density_present && !mu_present && !K_present && E_present && nu_present && Hk_present && hardening_present;
     }
 
     return false;

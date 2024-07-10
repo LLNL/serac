@@ -21,7 +21,7 @@ namespace serac {
 using namespace serac;
 
 /**
-* @brief a verification problem for the J2 material model, taken from example 2 of
+ * @brief a verification problem for the J2 material model, taken from example 2 of
  * R. M. Brannon · S. Leelavanichkul (2009)
  * A multi-stage return algorithm for solving the classical
  * damage component of constitutive models for rocks,
@@ -79,15 +79,15 @@ TEST(J2SmallStrain, Verification)
   double G = 79000;
   double K = 10 * G;
 
-  double E  = 9 * K * G / (3 * K + G);
-  double nu = (3 * K - 2 * G) / (2 * (3 * K + G));
+  double E       = 9 * K * G / (3 * K + G);
+  double nu      = (3 * K - 2 * G) / (2 * (3 * K + G));
   double sigma_y = 165 * std::sqrt(3.0);
 
   using Hardening = solid_mechanics::LinearHardening;
-  using Material = solid_mechanics::J2SmallStrain<Hardening>;
+  using Material  = solid_mechanics::J2SmallStrain<Hardening>;
 
-  Hardening hardening{.sigma_y = sigma_y, .Hi = 0.0};
-  Material material{.E = E, .nu = nu, .hardening = hardening, .Hk = 0.0, .density = 1.0};
+  Hardening       hardening{.sigma_y = sigma_y, .Hi = 0.0};
+  Material        material{.E = E, .nu = nu, .hardening = hardening, .Hk = 0.0, .density = 1.0};
   Material::State initial_state{};
 
   tensor<double, 3> epsilon[2] = {{-0.0030000, -0.003, 0.0060000}, {-0.0103923, 0.000, 0.0103923}};
