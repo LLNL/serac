@@ -320,7 +320,8 @@ struct J2 {
     // Mandel stress
     auto M = s + p * I;
     // convert to Cauchy
-    return dot(dot(Fe, M), inv(Fe)) / det(F);
+    auto FeT = transpose(Fe);
+    return dot(dot(inv(FeT), M), FeT) / det(F);
   }
 };
 
