@@ -282,30 +282,32 @@ public:
         setMaterial(std::get<serac::solid_mechanics::NeoHookean>(mat));
       } else if (std::holds_alternative<serac::solid_mechanics::LinearIsotropic>(mat)) {
         setMaterial(std::get<serac::solid_mechanics::LinearIsotropic>(mat));
-      } else if (std::holds_alternative<serac::solid_mechanics::J2>(mat)) {
+      } else if (std::holds_alternative<serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::LinearHardening>>(
+                     mat)) {
         if constexpr (dim == 3) {
-          solid_mechanics::J2::State initial_state{};
-          setMaterial(std::get<serac::solid_mechanics::J2>(mat), createQuadratureDataBuffer(initial_state));
+          serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::LinearHardening>::State initial_state{};
+          setMaterial(std::get<serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::LinearHardening>>(mat),
+                      createQuadratureDataBuffer(initial_state));
         } else {
           SLIC_ERROR_ROOT("J2 materials only work for 3D simulations");
         }
-      } else if (std::holds_alternative<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>>(
-                     mat)) {
+      } else if (std::holds_alternative<
+                     serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::PowerLawHardening>>(mat)) {
         if constexpr (dim == 3) {
-          serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>::State initial_state{};
-          setMaterial(std::get<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>>(mat),
+          serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::PowerLawHardening>::State initial_state{};
+          setMaterial(std::get<serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::PowerLawHardening>>(mat),
                       createQuadratureDataBuffer(initial_state));
         } else {
-          SLIC_ERROR_ROOT("J2Nonlinear materials only work for 3D simulations");
+          SLIC_ERROR_ROOT("J2 materials only work for 3D simulations");
         }
-      } else if (std::holds_alternative<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::VoceHardening>>(
+      } else if (std::holds_alternative<serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::VoceHardening>>(
                      mat)) {
         if constexpr (dim == 3) {
-          serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::VoceHardening>::State initial_state{};
-          setMaterial(std::get<serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::VoceHardening>>(mat),
+          serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::VoceHardening>::State initial_state{};
+          setMaterial(std::get<serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::VoceHardening>>(mat),
                       createQuadratureDataBuffer(initial_state));
         } else {
-          SLIC_ERROR_ROOT("J2Nonlinear materials only work for 3D simulations");
+          SLIC_ERROR_ROOT("J2 materials only work for 3D simulations");
         }
       } else {
         SLIC_ERROR("Invalid material type.");
