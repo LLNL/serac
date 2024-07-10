@@ -68,18 +68,21 @@ serac::var_solid_material_t FromInlet<serac::var_solid_material_t>::operator()(c
           .E         = base["E"],
           .nu        = base["nu"],
           .hardening = std::get<serac::solid_mechanics::LinearHardening>(hardening),
+          .Hk        = base["Hk"],
           .density   = base["density"]};
     } else if (std::holds_alternative<serac::solid_mechanics::PowerLawHardening>(hardening)) {
       result = serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::PowerLawHardening>{
           .E         = base["E"],
           .nu        = base["nu"],
           .hardening = std::get<serac::solid_mechanics::PowerLawHardening>(hardening),
+          .Hk        = base["Hk"],
           .density   = base["density"]};
     } else if (std::holds_alternative<serac::solid_mechanics::VoceHardening>(hardening)) {
       result = serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::VoceHardening>{
           .E         = base["E"],
           .nu        = base["nu"],
           .hardening = std::get<serac::solid_mechanics::VoceHardening>(hardening),
+          .Hk        = base["Hk"],
           .density   = base["density"]};
     }
   }
