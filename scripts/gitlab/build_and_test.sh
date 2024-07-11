@@ -12,8 +12,8 @@ echo "HOST_CONFIG=${HOST_CONFIG}"
 
 # Build source, run unit tests, and test install examples
 python3 scripts/llnl/build_src.py -v \
-    --host-config ${HOST_CONFIG} \
-    --extra-cmake-options "${EXTRA_CMAKE_OPTIONS}" \
+    --host-config=${HOST_CONFIG} \
+    --extra-cmake-options="${EXTRA_CMAKE_OPTIONS}" \
     ${EXTRA_BUILD_OPTIONS}
 if [ $? -ne 0 ]; then { echo "ERROR: build_src.py failed." ; exit 1; } fi
 
