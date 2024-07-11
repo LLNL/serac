@@ -195,16 +195,17 @@ struct VoceHardening {
   };
 };
 
-/// @brief J2 material with nonlinear isotropic hardening.
+/// @brief J2 material with nonlinear isotropic hardening and linear kinematic hardening
 template <typename HardeningType>
-struct J2Nonlinear {
+struct J2SmallStrain {
   static constexpr int    dim = 3;      ///< spatial dimension
   static constexpr double tol = 1e-10;  ///< relative tolerance on residual mag to judge convergence of return map
 
   double        E;          ///< Young's modulus
   double        nu;         ///< Poisson's ratio
   HardeningType hardening;  ///< Flow stress hardening model
-  double        density;    ///< mass density
+  double        Hk;         ///< Kinematic hardening modulus
+  double        density;    ///< Mass density
 
   /// @brief variables required to characterize the hysteresis response
   struct State {
@@ -225,12 +226,14 @@ struct J2Nonlinear {
     auto el_strain = sym(du_dX) - state.plastic_strain;
     auto p         = K * tr(el_strain);
     auto s         = 2.0 * G * dev(el_strain);
-    auto q         = sqrt(1.5) * norm(s);
+    auto sigma_b   = 2.0 / 3.0 * Hk * state.plastic_strain;
+    auto eta       = s - sigma_b;
+    auto q         = sqrt(1.5) * norm(eta);
 
     // (ii) admissibility
     const double eqps_old = state.accumulated_plastic_strain;
-    auto         residual = [eqps_old, G, *this](auto delta_eqps, auto trial_mises) {
-      return trial_mises - 3.0 * G * delta_eqps - this->hardening(eqps_old + delta_eqps);
+    auto         residual = [eqps_old, G, *this](auto delta_eqps, auto trial_q) {
+      return trial_q - (3.0 * G + Hk) * delta_eqps - this->hardening(eqps_old + delta_eqps);
     };
     if (residual(0.0, get_value(q)) > tol * hardening.sigma_y) {
       // (iii) return mapping
@@ -240,10 +243,10 @@ struct J2Nonlinear {
       // variables, the return map won't be repeated.
       ScalarSolverOptions opts{.xtol = 0, .rtol = tol * hardening.sigma_y, .max_iter = 25};
       double              lower_bound = 0.0;
-      double              upper_bound = (get_value(q) - hardening(eqps_old)) / (3.0 * G);
+      double              upper_bound = (get_value(q) - hardening(eqps_old)) / (3.0 * G + Hk);
       auto [delta_eqps, status]       = solve_scalar_equation(residual, 0.0, lower_bound, upper_bound, opts, q);
 
-      auto Np = 1.5 * s / q;
+      auto Np = 1.5 * eta / q;
 
       s = s - 2.0 * G * delta_eqps * Np;
       state.accumulated_plastic_strain += get_value(delta_eqps);
@@ -254,70 +257,9 @@ struct J2Nonlinear {
   }
 };
 
-/// @brief a 3D constitutive model for a J2 material with linear isotropic and kinematic hardening.
-struct J2 {
-  /// this material is written for 3D
-  static constexpr int dim = 3;
-
-  double E;        ///< Young's modulus
-  double nu;       ///< Poisson's ratio
-  double Hi;       ///< isotropic hardening constant
-  double Hk;       ///< kinematic hardening constant
-  double sigma_y;  ///< yield stress
-  double density;  ///< mass density
-
-  /// @brief variables required to characterize the hysteresis response
-  struct State {
-    tensor<double, dim, dim> beta;                        ///< back-stress tensor
-    tensor<double, dim, dim> plastic_strain;              ///< plastic strain
-    double                   accumulated_plastic_strain;  ///< incremental plastic strain
-  };
-
-  /** @brief calculate the Cauchy stress, given the displacement gradient and previous material state */
-  template <typename T>
-  auto operator()(State& state, const T du_dX) const
-  {
-    using std::sqrt;
-    constexpr auto I = Identity<3>();
-    const double   K = E / (3.0 * (1.0 - 2.0 * nu));
-    const double   G = 0.5 * E / (1.0 + nu);
-
-    //
-    // see pg. 260, box 7.5,
-    // in "Computational Methods for Plasticity"
-    //
-
-    // (i) elastic predictor
-    auto el_strain = sym(du_dX) - state.plastic_strain;
-    auto p         = K * tr(el_strain);
-    auto s         = 2.0 * G * dev(el_strain);
-    auto eta       = s - state.beta;
-    auto q         = sqrt(3.0 / 2.0) * norm(eta);
-    auto phi       = q - (sigma_y + Hi * state.accumulated_plastic_strain);
-
-    // (ii) admissibility
-    if (phi > 0.0) {
-      // see (7.207) on pg. 261
-      auto plastic_strain_inc = phi / (3 * G + Hk + Hi);
-
-      // from here on, only normalize(eta) is required
-      // so we overwrite eta with its normalized version
-      eta = normalize(eta);
-
-      // (iii) return mapping
-      s = s - sqrt(6.0) * G * plastic_strain_inc * eta;
-      state.accumulated_plastic_strain += get_value(plastic_strain_inc);
-      state.plastic_strain += sqrt(3.0 / 2.0) * get_value(plastic_strain_inc) * get_value(eta);
-      state.beta = state.beta + sqrt(2.0 / 3.0) * Hk * get_value(plastic_strain_inc) * get_value(eta);
-    }
-
-    return s + p * I;
-  }
-};
-
 /// @brief Finite deformation version of J2 material with nonlinear isotropic hardening.
 template <typename HardeningType>
-struct J2FiniteDeformationNonlinear {
+struct J2 {
   static constexpr int    dim = 3;      ///< spatial dimension
   static constexpr double tol = 1e-10;  ///< relative tolerance on residual mag to judge convergence of return map
 
@@ -378,7 +320,8 @@ struct J2FiniteDeformationNonlinear {
     // Mandel stress
     auto M = s + p * I;
     // convert to Cauchy
-    return dot(dot(Fe, M), inv(Fe)) / det(F);
+    auto FeT = transpose(Fe);
+    return dot(dot(inv(FeT), M), FeT) / det(F);
   }
 };
 
