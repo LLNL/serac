@@ -17,12 +17,6 @@ jobs:
       HOSTCONFIG_LOC: /home/serac/export_hostconfig
       DOCKERFILE_PREFIX: ./scripts/docker/dockerfile_
     steps:
-    - name: Maximize build space
-      uses: easimon/maximize-build-space@master
-      with:
-        remove-dotnet: 'true' 
-        remove-android: 'true' 
-        remove-haskell: 'true' 
     - name: Extract branch name
       shell: bash
       run: |
@@ -41,6 +35,9 @@ jobs:
         echo "repo_plus_tag=$repo_plus_tag" >> $GITHUB_OUTPUT
         echo "repo_plus_latest=$(echo ${REPO}:${{ matrix.dockerfile_suffix }}_latest)" >> $GITHUB_OUTPUT
       id: repo_name
+
+    - name: Maximize build space
+      uses: easimon/maximize-build-space@master
 
     - name: Checkout
       uses: actions/checkout@v4
