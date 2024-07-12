@@ -17,6 +17,12 @@ jobs:
       HOSTCONFIG_LOC: /home/serac/export_hostconfig
       DOCKERFILE_PREFIX: ./scripts/docker/dockerfile_
     steps:
+    - name: Maximize build space
+      uses: easimon/maximize-build-space@master
+      with:
+        root-reserve-mb: 512
+        swap-size-mb: 1024
+        remove-dotnet: 'true' 
     - name: Extract branch name
       shell: bash
       run: |
