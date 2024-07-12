@@ -41,6 +41,21 @@ spack:
         fc: /usr/bin/gfortran-13
       spec: gcc@13.1.0
       target: x86_64
+  - compiler:
+      environment: {}
+      extra_rpaths: []
+      flags:
+        cflags: -pthread
+        cxxflags: -pthread
+      modules: []
+      operating_system: ubuntu22.04
+      paths:
+        cc: /usr/bin/gcc
+        cxx: /usr/bin/g++
+        f77: /usr/bin/gfortran-12
+        fc: /usr/bin/gfortran-12
+      spec: gcc@12.3.0
+      target: x86_64
 
   # Regular TPLs do not need views
   view: false
