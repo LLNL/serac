@@ -1627,24 +1627,24 @@ protected:
                             displacement_, acceleration_, *parameters_[parameter_indices].state...);
       }...};
 
-
-  /// @brief Array functions computing the derivative of the residual with respect to each given parameter evaluated at the previous value of state
+  /// @brief Array functions computing the derivative of the residual with respect to each given parameter evaluated at
+  /// the previous value of state
   /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
   /// template parameter.
-  std::array<std::function<decltype((*residual_)(DifferentiateWRT<1>{}, 0.0, shape_displacement_, displacement_,
-                                                 acceleration_, *parameters_[parameter_indices].previous_state...))(double)>,
-             sizeof...(parameter_indices)>
-  d_residual_d_previous_ = {
-    [&](double t) {
-      return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + 1 + parameter_indices>{}, t, shape_displacement_,
-                          displacement_, acceleration_, *parameters_[parameter_indices].previous_state...);
-    }...
-  };
+  std::array<
+      std::function<decltype((*residual_)(DifferentiateWRT<1>{}, 0.0, shape_displacement_, displacement_, acceleration_,
+                                          *parameters_[parameter_indices].previous_state...))(double)>,
+      sizeof...(parameter_indices)>
+      d_residual_d_previous_ = {[&](double t) {
+        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + 1 + parameter_indices>{}, t, shape_displacement_,
+                            displacement_, acceleration_, *parameters_[parameter_indices].previous_state...);
+      }...};
 
   /// @brief Solve the Quasi-static Newton system
   virtual void quasiStaticSolve(double dt)
   {
-    // warm start must be called prior to the time update so that the previous Jacobians can be used consistently throughout.
+    // warm start must be called prior to the time update so that the previous Jacobians can be used consistently
+    // throughout.
     warmStartDisplacement(dt);
 
     time_ += dt;
@@ -1730,7 +1730,7 @@ protected:
     du_ = 0.0;
     for (auto& bc : bcs_.essentials()) {
       // apply the future boundary conditions, but use the most recent Jacobians stiffness.
-      bc.setDofs(du_, time_+dt);
+      bc.setDofs(du_, time_ + dt);
     }
 
     auto& constrained_dofs = bcs_.allEssentialTrueDofs();
