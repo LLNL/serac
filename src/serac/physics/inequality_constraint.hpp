@@ -414,8 +414,8 @@ struct InequalityConstraint {
     SLIC_ERROR_ROOT_IF(num_nodes != constraint_.Size(), "Constraint size does not match system size.");
     SLIC_ERROR_ROOT_IF(num_nodes != x_prev.numNodes(), "Constraint size does not match system size.");
 
-    size_t active_count = 0;
-    size_t fast_count = 0;
+    //size_t active_count = 0;
+    //size_t fast_count = 0;
 
     mfem::Vector coord(dim);
     mfem::Vector coord_rcnt(dim);
@@ -434,7 +434,7 @@ struct InequalityConstraint {
 
 #if !defined(USE_SMOOTH_AL)
       if (lam >= k * c) {
-        ++active_count;
+        //++active_count;
 #else
       //if ( k * c  < 0.5 * lam) ++activeCount;
 #endif
@@ -459,7 +459,7 @@ struct InequalityConstraint {
         const mfem::Vector gradCOld = levelSet_->gradient(coord_rcnt, time);
         //std::cout << "prev coord = " << gradCOld.Norml2() << std::endl;
         auto [qvRes, is_fast] = friction_->quasiVariationalResidual(coord, coord_prev, gradCOld, dt);
-        if (is_fast) fast_count++;
+        //if (is_fast) fast_count++;
         for (int i = 0; i < dim; ++i) {
           residual(n, i) += lam * qvRes[i];
         }
@@ -495,8 +495,8 @@ struct InequalityConstraint {
     mfem::Vector coord_prev(dim);  // switch to stack vectors eventually
     mfem::Vector xyz_dirs(dim);
 
-    size_t active_count = 0;
-    size_t fast_count = 0;
+    //size_t active_count = 0;
+    //size_t fast_count = 0;
 
     for (int n = 0; n < numNodes; ++n) {
       for (int i = 0; i < dim; ++i) {
@@ -513,7 +513,7 @@ struct InequalityConstraint {
         double phip = dphi(k * c / lam);
 #else
       if (lam >= k * c) {
-        ++active_count;
+        //++active_count;
 #endif
 
         const mfem::Vector gradC = levelSet_->gradient(coord, time);
@@ -538,7 +538,7 @@ struct InequalityConstraint {
           xyz_dirs                 = 0.0;
           xyz_dirs[i]              = 1.0;
           auto [qvHessI, is_fast] = friction_->quasiVariationalHessVec(coord, coord_prev, gradCOld, xyz_dirs, dt);
-          if (is_fast) fast_count++;
+          //if (is_fast) fast_count++;
           for (int j = 0; j < dim; ++j) {
             constraint_diagonal_stiffness(n, dim * i + j) += lam * qvHessI[j];
           }
