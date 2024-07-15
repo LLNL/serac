@@ -67,7 +67,7 @@ public:
   {
     const int dim = mesh.Dimension();
 
-    const auto ordering = mfem::Ordering::byNODES;
+    const auto ordering = mfem::Ordering::byVDIM;
 
     switch (FunctionSpace::family) {
       case Family::H1:

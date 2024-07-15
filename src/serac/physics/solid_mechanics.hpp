@@ -241,12 +241,9 @@ public:
     // to be the displacement
     auto* amg_prec = dynamic_cast<mfem::HypreBoomerAMG*>(&nonlin_solver_->preconditioner());
     if (amg_prec) {
-      // amg_prec->SetElasticityOptions(&displacement_.space());
-
-      // TODO: The above call was seg faulting in the HYPRE_BoomerAMGSetInterpRefine(amg_precond, interp_refine)
-      // method as of Hypre version v2.26.0. Instead, we just set the system size for Hypre. This is a temporary work
-      // around as it will decrease the effectiveness of the preconditioner.
-      amg_prec->SetSystemsOptions(dim, true);
+      // ZRA - Iterative refinement tends to be more expensive than it is worth
+      // We should add a flag allowing users to enable it
+      amg_prec->SetElasticityOptions(&displacement_.space(), false);
     }
 
     int true_size = velocity_.space().TrueVSize();
@@ -1670,7 +1667,7 @@ protected:
         mfem::Array<int> node_dofs;
         for (int d = 0; d < dim; d++) {
           // Get the local dof number for the prescribed component
-          int local_vector_dof = mfem::Ordering::Map<mfem::Ordering::byNODES>(
+          int local_vector_dof = mfem::Ordering::Map<mfem::Ordering::byVDIM>(
               nodal_positions.FESpace()->GetNDofs(), nodal_positions.FESpace()->GetVDim(), i, d);
 
           // Save the spatial position for this coordinate dof

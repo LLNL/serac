@@ -75,8 +75,8 @@ inline void check_for_missing_nodal_gridfunc(const mfem::Mesh& mesh)
   if (mesh.GetNodes() == nullptr) {
     SLIC_ERROR_ROOT(
         R"errmsg(
-      the provided mesh does not have a nodal gridfunction. 
-      If you created an mfem::Mesh manually, make sure that the 
+      the provided mesh does not have a nodal gridfunction.
+      If you created an mfem::Mesh manually, make sure that the
       following member functions are invoked before use
 
       > mfem::Mesh::EnsureNodes();
@@ -113,7 +113,7 @@ generateParFiniteElementSpace(mfem::ParMesh* mesh)
 {
   const int                                      dim = mesh->Dimension();
   std::unique_ptr<mfem::FiniteElementCollection> fec;
-  const auto                                     ordering = mfem::Ordering::byNODES;
+  const auto                                     ordering = mfem::Ordering::byVDIM;
 
   switch (function_space::family) {
     case Family::H1:
@@ -199,7 +199,7 @@ class Functional<test(trials...), exec> {
   class Gradient;
 
   // clang-format off
-  template <uint32_t i> 
+  template <uint32_t i>
   struct operator_paren_return {
     using type = typename std::conditional<
         i == NO_DIFFERENTIATION,               // if `i` indicates that we want to skip differentiation
