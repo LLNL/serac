@@ -56,19 +56,17 @@ struct NodalFriction
   }
   */
 
-  mfem::Vector quasiVariationalResidual(const mfem::Vector& x, const mfem::Vector& x_prev, const mfem::Vector& normal,
+  auto quasiVariationalResidual(const mfem::Vector& x, const mfem::Vector& x_prev, const mfem::Vector& normal,
                                         double dt) const
   {
-    mfem::Vector v_perp = x;
-    v_perp = 0.0;
+    mfem::Vector v_perp = x; v_perp = 0.0;
     if (dt == 0.0 || mu_ == 0.0) {
-      return v_perp;
+      return std::make_pair(v_perp, false);
     }
 
     if (std::abs(normal.Norml2() - 1.0) > 1e-9) {
       printf("bad norm\n");
     }
-    //std::cout << "t, dt = " << " " << dt << std::endl;
 
     for (int i=0; i < dim; ++i) v_perp[i] = (x[i] - x_prev[i]) / dt - v[static_cast<size_t>(i)];
     double vn = 0.0; for (int i=0; i < dim; ++i) vn += v_perp[i]*normal[i];
@@ -77,27 +75,42 @@ struct NodalFriction
 
     if (vv == 0.0) {
       v_perp = 0.0;
-      return v_perp;
+      return std::make_pair(v_perp, false);
     }
 
+    bool is_fast = false;
 
-    if (true || vv < v_crit_*v_crit_) {
-      //printf("slow\n");
+    if (vv < v_crit_*v_crit_) {
       for (int i=0; i < dim; ++i) v_perp[i] = mu_ * v_perp[i] / v_crit_;
     } else {
-      for (int i=0; i < dim; ++i) v_perp[i] = mu_ * v_perp[i] / std::sqrt(vv);
+      is_fast = true;
+      double sqrtvv = std::sqrt(vv);
+      if (sqrtvv != sqrtvv || sqrtvv == 0.0) {
+        v_perp = 0.0;
+      } else {
+        for (int i=0; i < dim; ++i) v_perp[i] = mu_ * (v_perp[i] / sqrtvv);
+      }
     }
-    return v_perp;
+
+    // mu / dt * I / sqrtvv * d(v_perp) * P 
+    // mu / dt * vp * (-1) vp / sqrtvv^3
+
+    return std::make_pair(v_perp, is_fast);
   }
 
-  mfem::Vector quasiVariationalHessVec(const mfem::Vector& x, const mfem::Vector& x_prev, const mfem::Vector& normal, const mfem::Vector& w,
+  auto quasiVariationalHessVec(const mfem::Vector& x, const mfem::Vector& x_prev, const mfem::Vector& normal, const mfem::Vector& w,
                                        double dt) const
   {
-    mfem::Vector Hv = x; Hv = 0.0;
+    mfem::Vector Hw = x; Hw = 0.0;
     mfem::Vector v_perp = x; v_perp = 0.0;
-    mfem::Vector w_perp = x; w_perp = 0.0;
+    mfem::Vector w_perp = w;
     if (dt == 0.0 || mu_ == 0.0) {
-      return Hv;
+      return std::make_pair(Hw, false);
+    }
+
+    if (std::abs(normal.Norml2() - 1.0) > 1e-9) {
+      printf("bad norm\n");
+      exit(1);
     }
 
     for (int i=0; i < dim; ++i) v_perp[i] = (x[i] - x_prev[i]) / dt - v[static_cast<size_t>(i)];
@@ -105,27 +118,60 @@ struct NodalFriction
     for (int i=0; i < dim; ++i) v_perp[i] -= normal[i] * vn;
     double vv = 0.0; for (int i=0; i < dim; ++i) vv += v_perp[i]*v_perp[i];
 
-    double wn = 0.0; for (int i=0; i < dim; ++i) wn += w[i] * normal[i];
-    for (int i=0; i < dim; ++i) w_perp[i] = w[i] - normal[i] * wn;
+    //double wn = 0.0; for (int i=0; i < dim; ++i) wn += w[i]*normal[i];
+    //for (int i=0; i < dim; ++i) w_perp[i] = w[i] * wn;
 
     if (vv == 0.0) {
-      return Hv;
+      return std::make_pair(Hw, false);
     }
 
-    if (true || vv < v_crit_*v_crit_) {
-      for (int i=0; i < dim; ++i) Hv[i] = mu_ * w_perp[i] / (dt * v_crit_);
+    bool fast = true;
+
+    if (vv < v_crit_*v_crit_) {
+      //printf("slow\n");
+      fast = false;
+      for (int i=0; i < dim; ++i) Hw[i] = (mu_ / (dt * v_crit_)) * w_perp[i];
     } else {
-      //double vInv = 1.0 / std::sqrt(vv);
-      double vel_squared_to_minus_1p5 = std::pow(vv, -1.5); //vInv / vv;
-      double factor = 0.0;
-      for (int i=0; i < dim; ++i) {
-        factor += v_perp[i] * w_perp[i];
-      }
-      for (int i=0; i < dim; ++i) {
-        Hv[i] = mu_ * (w_perp[i] / std::sqrt(vv) - vel_squared_to_minus_1p5 * factor * v_perp[i]) / dt;
+      double sqrtvv = std::sqrt(vv);
+      if (sqrtvv != sqrtvv || sqrtvv == 0.0) {
+        Hw = 0.0;
+      } else {
+        for (int i=0; i < dim; ++i) v_perp[i] /= sqrtvv;
+        double vw = 0.0; for (int i=0; i < dim; ++i) vw += v_perp[i] * w_perp[i];
+        for (int i=0; i < dim; ++i) Hw[i] = (mu_ / (dt * sqrtvv)) * (w_perp[i] - vw * v_perp[i]);
       }
     }
-    return Hv;
+
+    double Hvn = 0.0; for (int i=0; i < dim; ++i) Hvn += Hw[i]*normal[i];
+    for (int i=0; i < dim; ++i) Hw[i] -= normal[i] * Hvn;
+    
+    /*
+    double eps = 1e-8;
+    mfem::Vector Hw_fd = x; Hw_fd = 0.0;
+    auto r = quasiVariationalResidual(x, x_prev, normal, dt);
+
+
+     // drj_dxi
+    for (int i=0; i < dim; ++i) {
+      mfem::Vector xp = x;
+      xp[i] += eps;
+      auto rplus = quasiVariationalResidual(xp, x_prev, normal, dt);
+      // dr[j]/dx[i]*w[i];
+      for (int j=0; j < dim; ++j) {
+        Hw_fd[j] += (rplus[j] - r[j]) * w[i] / eps;
+      }
+    }
+    double error = 0.0; for (int i=0; i < dim; ++i) error += std::abs(Hw[i] - Hw_fd[i]);
+    if (false && error > 1e-5) {
+      if (vv < v_crit_*v_crit_) std::cout << "case slow\n";
+      else std::cout << "case fast\n";
+      std::cout << "Hw  , = " << Hw[0] << " " << Hw[1] << " " << Hw[2] << std::endl;
+      std::cout << "Hwfd, = " << Hw_fd[0] << " " << Hw_fd[1] << " " << Hw_fd[2] << std::endl;
+      std::cout << "error = " << error << std::endl;
+    }
+    */
+
+    return std::make_pair(Hw, fast);
   }
 
 };
@@ -354,12 +400,13 @@ struct InequalityConstraint {
     }
   }
 
-  void sumConstraintResidual(const FiniteElementVector& x_current, const FiniteElementVector& x_previous, double time, double dt, mfem::Vector& res)
+  void sumConstraintResidual(const FiniteElementVector& x_current, const FiniteElementVector& x_recent, const FiniteElementVector& x_previous, double time, double dt, mfem::Vector& res)
   {
     View<1>        constraint(constraint_);
     View<1>        constraint_multiplier(constraint_multiplier_);
     View<1>        constraint_penalty(constraint_penalty_);
     ConstView<dim> x(x_current);
+    ConstView<dim> x_recnt(x_recent);
     ConstView<dim> x_prev(x_previous);
     View<dim>      residual(res);
 
@@ -367,13 +414,16 @@ struct InequalityConstraint {
     SLIC_ERROR_ROOT_IF(num_nodes != constraint_.Size(), "Constraint size does not match system size.");
     SLIC_ERROR_ROOT_IF(num_nodes != x_prev.numNodes(), "Constraint size does not match system size.");
 
-    size_t activeCount = 0;
+    size_t active_count = 0;
+    size_t fast_count = 0;
 
     mfem::Vector coord(dim);
+    mfem::Vector coord_rcnt(dim);
     mfem::Vector coord_prev(dim);
     for (int n = 0; n < num_nodes; ++n) {
       for (int i = 0; i < dim; ++i) {
         coord[i] = x(n, i);
+        coord_rcnt[i] = x_recnt(n, i);
         coord_prev[i] = x_prev(n, i);
       }
 
@@ -384,13 +434,10 @@ struct InequalityConstraint {
 
 #if !defined(USE_SMOOTH_AL)
       if (lam >= k * c) {
-        ++activeCount;
-        //std::cout << "grc = " << gradC[0] <<" " << gradC[1] << " " << gradC[2] << std::endl;
-      //}
+        ++active_count;
 #else
-      if ( k * c  < 0.5 * lam) ++activeCount;
+      //if ( k * c  < 0.5 * lam) ++activeCount;
 #endif
-      
         // objective = lam * lam / k * phi( k * c / lam )
         const mfem::Vector gradC = levelSet_->gradient(coord, time);
         
@@ -409,21 +456,22 @@ struct InequalityConstraint {
       }
 #endif
       if (lam > 0.0) {
-        const mfem::Vector gradCOld = levelSet_->gradient(coord_prev, time);
+        const mfem::Vector gradCOld = levelSet_->gradient(coord_rcnt, time);
         //std::cout << "prev coord = " << gradCOld.Norml2() << std::endl;
-        const mfem::Vector qvRes = friction_->quasiVariationalResidual(coord, coord_prev, gradCOld, dt);
-
+        auto [qvRes, is_fast] = friction_->quasiVariationalResidual(coord, coord_prev, gradCOld, dt);
+        if (is_fast) fast_count++;
         for (int i = 0; i < dim; ++i) {
           residual(n, i) += lam * qvRes[i];
         }
       }
 
     }
-    std::cout << "num active constraints = " << activeCount << std::endl;
+    // std::cout << "num active, fast constraints res = " << active_count << " " << fast_count << std::endl;
   }
 
 
   std::unique_ptr<mfem::HypreParMatrix> sumConstraintJacobian(const FiniteElementVector& x_current,
+                                                              const FiniteElementVector& x_recent,
                                                               const FiniteElementVector& x_previous,
                                                               double time,
                                                               double dt,
@@ -435,6 +483,7 @@ struct InequalityConstraint {
     View<1>         constraint_multiplier(constraint_multiplier_);
     View<1>         constraint_penalty(constraint_penalty_);
     ConstView<dim>  x(x_current);
+    ConstView<dim> x_recnt(x_recent);
     ConstView<dim>  x_prev(x_previous);
     View<dim * dim> constraint_diagonal_stiffness(constraint_diagonal_stiffness_);
 
@@ -442,12 +491,17 @@ struct InequalityConstraint {
     SLIC_ERROR_ROOT_IF(numNodes != constraint_.Size(), "Constraint size does not match system size.");
 
     mfem::Vector coord(dim);  // switch to stack vectors eventually
+    mfem::Vector coord_rcnt(dim);
     mfem::Vector coord_prev(dim);  // switch to stack vectors eventually
     mfem::Vector xyz_dirs(dim);
+
+    size_t active_count = 0;
+    size_t fast_count = 0;
 
     for (int n = 0; n < numNodes; ++n) {
       for (int i = 0; i < dim; ++i) {
         coord[i] = x(n, i);
+        coord_rcnt[i] = x_recnt(n, i);
         coord_prev[i] = x_prev(n, i);
       }
       const double c   = levelSet_->evaluate(coord, time);
@@ -459,6 +513,7 @@ struct InequalityConstraint {
         double phip = dphi(k * c / lam);
 #else
       if (lam >= k * c) {
+        ++active_count;
 #endif
 
         const mfem::Vector gradC = levelSet_->gradient(coord, time);
@@ -478,11 +533,12 @@ struct InequalityConstraint {
       }
 #endif
       if (lam > 0.0) {
-        const mfem::Vector gradCOld = levelSet_->gradient(coord_prev, time);
+        const mfem::Vector gradCOld = levelSet_->gradient(coord_rcnt, time);
         for (int i = 0; i < dim; ++i) {
           xyz_dirs                 = 0.0;
           xyz_dirs[i]              = 1.0;
-          const mfem::Vector qvHessI = friction_->quasiVariationalHessVec(coord, coord_prev, gradCOld, xyz_dirs, dt);
+          auto [qvHessI, is_fast] = friction_->quasiVariationalHessVec(coord, coord_prev, gradCOld, xyz_dirs, dt);
+          if (is_fast) fast_count++;
           for (int j = 0; j < dim; ++j) {
             constraint_diagonal_stiffness(n, dim * i + j) += lam * qvHessI[j];
           }
@@ -521,10 +577,12 @@ struct InequalityConstraint {
       }
     }
 
+    //std::cout << "num active, fast constraints hv = " << active_count << " " << fast_count/3 << std::endl;
+
     return J;
   }
 
-  void updateMultipliers(const FiniteElementVector& x_current, double time)
+  double updateMultipliers(const FiniteElementVector& x_current, double time)
   {
     double target_decrease_factor = 0.75;
 
@@ -566,11 +624,13 @@ struct InequalityConstraint {
 
       bool poorProgress = newError > target_decrease_factor * oldError;
 
-      if (poorProgress) constraint_penalty[n] *= 1.4; //0.1;//1;
+      if (poorProgress) constraint_penalty[n] *= 1.0; //0.1;//1;
     }
 
-    std::cout << "lam norm = " << constraint_multiplier_.Norml2() << std::endl;
+    //std::cout << "lam norm = " << constraint_multiplier_.Norml2() << std::endl;
     std::cout << "ncp error = " << constraint_ncp_error_.Norml2() << std::endl;
+
+    return constraint_ncp_error_.Norml2();
 
     // ncpError = np.abs( alObjective.ncp(x) )
     //# check if each constraint is making progress, or if they are already small relative to the specificed constraint

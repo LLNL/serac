@@ -185,6 +185,8 @@ public:
         geom_nonlin_(geom_nonlin),
         x_previous_(
             StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "previous_coordinates"), mesh_tag_)),
+        x_mid_(
+            StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "last_coordinates"), mesh_tag_)),
         x_current_(
             StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "current_coordinates"), mesh_tag_))
   {
@@ -1138,12 +1140,14 @@ public:
     x += shape_displacement_;
   }
 
-  void updateConstraintMultipliers()
+  double updateConstraintMultipliers()
   {
     computeUpdatedCoordinates(displacement_, x_current_);
+    double maxNcpError = 0.0;
     for (auto& constraint : inequality_constraints) {
-      constraint->updateMultipliers(x_current_, ode_time_point_);
+      maxNcpError = std::max(maxNcpError, constraint->updateMultipliers(x_current_, ode_time_point_));
     }
+    return maxNcpError;
   }
 
   /// @brief Build the quasi-static operator corresponding to the total Lagrangian formulation
@@ -1166,7 +1170,7 @@ public:
 
           computeUpdatedCoordinates(u, x_current_);
           for (auto& constraint : inequality_constraints) {
-            constraint->sumConstraintResidual(x_current_, x_previous_, ode_time_point_, dt_, r);
+            constraint->sumConstraintResidual(x_current_, x_mid_, x_previous_, ode_time_point_, dt_, r);
           }
 
           r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
@@ -1186,7 +1190,7 @@ public:
           CALI_MARK_BEGIN("assemble constraint matrix");
           computeUpdatedCoordinates(u, x_current_);
           for (auto& constraint : inequality_constraints) {
-            J_ = std::move(constraint->sumConstraintJacobian(x_current_, x_previous_, ode_time_point_, dt_, std::move(J_)));
+            J_ = std::move(constraint->sumConstraintJacobian(x_current_, x_mid_, x_previous_, ode_time_point_, dt_, std::move(J_)));
           }
           CALI_MARK_END("assemble constraint matrix");
           J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
@@ -1309,7 +1313,7 @@ public:
 
     computeUpdatedCoordinates(displacement_, x_current_);
     for (auto& constraint : inequality_constraints) {
-      constraint->sumConstraintResidual(x_current_, x_previous_, time_, dt_, reactions_);
+      constraint->sumConstraintResidual(x_current_, x_mid_, x_previous_, time_, dt_, reactions_);
     }
     residual_->updateQdata(false);
   }
@@ -1332,13 +1336,16 @@ public:
       if (!inequality_constraints.empty()) {
         // Set the start of step mesh coordinates for contact
         computeUpdatedCoordinates(displacement_, x_previous_);
+        computeUpdatedCoordinates(displacement_, x_mid_);
       }
       quasiStaticSolve(dt); // dt_ is updated internally
-      int maxAlIteration = 15;
+      int maxAlIteration = 20;
       if (!inequality_constraints.empty()) {
         for (int i=0; i < maxAlIteration; ++i) {
-          printf("al solve\n");
-          nonlinearSolve();
+          computeUpdatedCoordinates(displacement_, x_mid_);
+          if (nonlinearSolve()) {
+            break;
+          }
         }
       }
     } else {
@@ -1703,6 +1710,7 @@ protected:
   std::shared_ptr<mfem::Coefficient> component_disp_bdr_coef_;
 
   FiniteElementState x_previous_;
+  FiniteElementState x_mid_;
   FiniteElementState x_current_;
   using InequalityConstraintPtr = std::unique_ptr<InequalityConstraint<order, dim>>;
   std::vector<InequalityConstraintPtr> inequality_constraints;
@@ -1734,12 +1742,14 @@ protected:
   };
 
   /// solve with nothing updating except the constraint multipliers and penalties
-  void nonlinearSolve()
+  bool nonlinearSolve()
   {
+    double ncpError = 0.0;
     if (!inequality_constraints.empty()) {
-      updateConstraintMultipliers();
+      ncpError = updateConstraintMultipliers();
     }
     nonlin_solver_->solve(displacement_);
+    return ncpError < 1e-4;
   }
 
   /// @brief Solve the Quasi-static Newton system
@@ -1832,12 +1842,12 @@ protected:
                                   *parameters_[parameter_indices].previous_state...);
     computeUpdatedCoordinates(displacement_, x_current_);
     for (auto& constraint : inequality_constraints) {
-      constraint->sumConstraintResidual(x_current_, x_previous_, time_, dt_, r);
+      constraint->sumConstraintResidual(x_current_, x_mid_, x_previous_, time_, dt_, r);
     }
                                   
     J_ = assemble(drdu);
     for (auto& constraint : inequality_constraints) {
-      J_ = std::move(constraint->sumConstraintJacobian(x_current_, x_previous_, time_, dt_, std::move(J_)));
+      J_ = std::move(constraint->sumConstraintJacobian(x_current_, x_mid_, x_previous_, time_, dt_, std::move(J_)));
     }
 
     J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);

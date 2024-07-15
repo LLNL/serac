@@ -281,10 +281,12 @@ class TrustRegion : public mfem::NewtonSolver {
 protected:
   /// predicted solution
   mutable mfem::Vector x_pred;
-  /// solution increment
-  mutable mfem::Vector x_incr;
+  /// predicted solution
+  mutable mfem::Vector x_mid;
   /// predicted residual
   mutable mfem::Vector r_pred;
+  /// mid residual
+  mutable mfem::Vector r_mid;
   /// extra vector of scratch space for doing temporary calculations
   mutable mfem::Vector scratch;
 
@@ -490,20 +492,25 @@ public:
     // local arrays
     x_pred.SetSize(X.Size());
     x_pred = 0.0;
+    x_mid.SetSize(X.Size());
+    x_mid = 0.0;
     r_pred.SetSize(X.Size());
     r_pred = 0.0;
+    r_mid.SetSize(X.Size());
+    r_mid = 0.0;
     scratch.SetSize(X.Size());
     scratch = 0.0;
-    x_incr.SetSize(X.Size());
-    x_incr = 0.0;
 
     TrustRegionResults  trResults(X.Size());
     TrustRegionSettings settings;
     settings.min_cg_iterations = static_cast<size_t>(nonlinear_options.min_iterations);
     settings.max_cg_iterations = static_cast<size_t>(linear_options.max_iterations);
-    settings.cg_tol           = 0.2 * norm_goal;
+    settings.cg_tol           = 0.5 * norm_goal;
     double trSize            = 100.0;
     size_t cumulativeCgIters = 0;
+
+    auto& d  = trResults.d;   // reuse, maybe dangerous!
+    auto& Hd = trResults.Hd;  // reuse, maybe dangerous!
 
     int it = 0;
     for (; true; it++) {
@@ -512,7 +519,7 @@ public:
         mfem::out << "Newton iteration " << std::setw(3) << it << " : ||r|| = " << std::setw(13) << norm;
         if (it > 0) {
           mfem::out << ", ||r||/||r_0|| = " << std::setw(13) << norm / initial_norm;
-          mfem::out << ", x_incr = " << std::setw(13) << x_incr.Norml2();
+          mfem::out << ", x_incr = " << std::setw(13) << d.Norml2();
         }
         mfem::out << '\n';
       }
@@ -568,7 +575,7 @@ public:
         trResults.cg_iterations_count = 1;
         trResults.interior_status    = TrustRegionResults::Status::OnBoundary;
       } else {
-        settings.cg_tol = std::max(0.2 * norm_goal, 1e-3 * norm);
+        settings.cg_tol = std::max(0.5 * norm_goal, 1e-4 * norm);
         solveTrustRegionMinimization(r, scratch, hess_vec_func, precond_func, settings, trSize, trResults);
       }
       cumulativeCgIters += trResults.cg_iterations_count;
@@ -577,8 +584,6 @@ public:
       int  lineSearchIter   = 0;
       while (!happyAboutTrSize && lineSearchIter <= nonlinear_options.max_line_search_iterations) {
         ++lineSearchIter;
-        auto& d  = trResults.d;   // reuse, dangerous!
-        auto& Hd = trResults.Hd;  // reuse, dangerous!
 
         doglegStep(trResults.cauchy_point, trResults.z, trSize, d);
 
@@ -589,13 +594,19 @@ public:
         double modelObjective = Dot(r, d) + 0.5 * dHd - roundOffTol;
 
         add(X, d, x_pred);
-        x_incr = d;
 
         double realObjective = std::numeric_limits<double>::max();
         double normPred      = std::numeric_limits<double>::max();
         try {
           normPred      = computeResidual(x_pred, r_pred);
-          realObjective = 0.5 * (Dot(r, d) + Dot(r_pred, d)) - roundOffTol;
+          double obj1 = 0.5 * (Dot(r, d) + Dot(r_pred, d)) - roundOffTol; // can collapse
+
+          // midstep work estimate
+          // add(X, 0.5, d, x_mid);
+          // computeResidual(x_mid, r_mid);
+          // double obj2 = Dot(r_mid, d);
+
+          realObjective = obj1; //0.5 * obj1 + 0.5 * obj2;
         } catch (const std::exception&) {
           realObjective = std::numeric_limits<double>::max();
           normPred      = std::numeric_limits<double>::max();

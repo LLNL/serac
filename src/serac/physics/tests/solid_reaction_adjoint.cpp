@@ -96,7 +96,12 @@ double computeSolidMechanicsQoi(BasePhysics& solid_solver)
   const FiniteElementDual& reactions = solid_solver.dual("reactions");
 
   auto reactionDirections = createReactionDirection(solid_solver, 0);
-  return innerProduct(reactions, reactionDirections);
+
+  double totalReaction = innerProduct(reactions, reactionDirections);
+
+  std::cout << "found reaction = " << totalReaction << std::endl;
+
+  return totalReaction;
 }
 
 auto computeSolidMechanicsQoiSensitivities(BasePhysics& solid_solver)

@@ -63,6 +63,7 @@ void BasePhysics::initializeBasePhysicsStates(int cycle, double time)
 {
   timesteps_.clear();
 
+  dt_ = 0.0;
   time_           = time;
   max_time_       = time;
   min_time_       = time;
