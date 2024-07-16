@@ -10,9 +10,6 @@ echo "HOST_CONFIG=${HOST_CONFIG}"
 # EXTRA_BUILD_OPTIONS does not need quotes because - while it also may contain spaces, are seperate build_src.py
 # arguments (e.g. --skip-install --jobs=8).
 
-echo "Size before build src"
-df -h
-
 # Build source, run unit tests, and test install examples
 python3 scripts/llnl/build_src.py -v \
     --host-config=${HOST_CONFIG} \
