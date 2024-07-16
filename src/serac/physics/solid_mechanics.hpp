@@ -1627,18 +1627,32 @@ protected:
                             displacement_, acceleration_, *parameters_[parameter_indices].state...);
       }...};
 
+  /// @brief Array functions computing the derivative of the residual with respect to each given parameter evaluated at
+  /// the previous value of state
+  /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
+  /// template parameter.
+  std::array<
+      std::function<decltype((*residual_)(DifferentiateWRT<1>{}, 0.0, shape_displacement_, displacement_, acceleration_,
+                                          *parameters_[parameter_indices].previous_state...))(double)>,
+      sizeof...(parameter_indices)>
+      d_residual_d_previous_ = {[&](double t) {
+        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + 1 + parameter_indices>{}, t, shape_displacement_,
+                            displacement_, acceleration_, *parameters_[parameter_indices].previous_state...);
+      }...};
+
   /// @brief Solve the Quasi-static Newton system
   virtual void quasiStaticSolve(double dt)
   {
-    time_ += dt;
+    // warm start must be called prior to the time update so that the previous Jacobians can be used consistently
+    // throughout.
+    warmStartDisplacement(dt);
 
+    time_ += dt;
     // Set the ODE time point for the time-varying loads in quasi-static problems
     ode_time_point_ = time_;
 
     // this method is essentially equivalent to the 1-liner
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
-    warmStartDisplacement();
-
     nonlin_solver_->solve(displacement_);
   }
 
@@ -1705,17 +1719,18 @@ protected:
   /**
    * @brief Sets the Dirichlet BCs for the current time and computes an initial guess for parameters and displacement
    */
-  void warmStartDisplacement()
+  void warmStartDisplacement(double dt)
   {
     // Update the linearized Jacobian matrix
-    auto [r, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
-                                  *parameters_[parameter_indices].state...);
+    auto [r, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
+                                  *parameters_[parameter_indices].previous_state...);
     J_             = assemble(drdu);
     J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
 
     du_ = 0.0;
     for (auto& bc : bcs_.essentials()) {
-      bc.setDofs(du_, time_);
+      // apply the future boundary conditions, but use the most recent Jacobians stiffness.
+      bc.setDofs(du_, time_ + dt);
     }
 
     auto& constrained_dofs = bcs_.allEssentialTrueDofs();
@@ -1734,14 +1749,12 @@ protected:
       parameter_difference -= *parameters_[parameter_index].previous_state;
 
       // Compute a linearized estimate of the residual forces due to this change in parameter
-      auto drdparam        = serac::get<DERIVATIVE>(d_residual_d_[parameter_index](ode_time_point_));
+      auto drdparam        = serac::get<DERIVATIVE>(d_residual_d_previous_[parameter_index](time_));
       auto residual_update = drdparam(parameter_difference);
 
       // Flip the sign to get the RHS of the Newton update system
       // J^-1 du = - residual
-      residual_update *= -1.0;
-
-      dr_ += residual_update;
+      dr_ -= residual_update;
 
       // Save the current parameter value for the next timestep
       *parameters_[parameter_index].previous_state = *parameters_[parameter_index].state;
