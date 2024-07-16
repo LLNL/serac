@@ -58,3 +58,9 @@ sed -e "s/<VER>/$ver/g" \
     -e "s/<NAME>/$name/g" \
     -e "s/<SPEC>/$spec/g" \
     -e "s@<IMAGE>@$image@g" dockerfile.in > "$dockerfile_name"
+
+# Remove extra sections to save disk space and not `make test`, since runners don't have GPUs
+if [ $using_cuda = true ] ; then
+    sed -i "s/make -j4 test && //g" "$dockerfile_name"
+    sed -i "s/texlive-full //g" "$dockerfile_name"
+fi
