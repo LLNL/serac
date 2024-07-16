@@ -1722,7 +1722,7 @@ protected:
   void warmStartDisplacement(double dt)
   {
     // Update the linearized Jacobian matrix
-    auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
+    auto [r, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
                                   *parameters_[parameter_indices].previous_state...);
     J_             = assemble(drdu);
     J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
