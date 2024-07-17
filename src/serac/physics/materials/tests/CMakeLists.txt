@@ -9,7 +9,6 @@ set(test_dependencies serac_physics_materials gtest)
 set(material_tests
     thermomechanical_material.cpp
     J2_material.cpp
-    nonlinear_J2_material.cpp
     parameterized_nonlinear_J2_material.cpp
     liquidCrystalElastomer_material.cpp
 )

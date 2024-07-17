@@ -41,7 +41,7 @@ public:
   /// Evaluate the residual, put in rOut and return its norm.
   double evaluateNorm(const mfem::Vector& x, mfem::Vector& rOut) const
   {
-    CALI_CXX_MARK_FUNCTION;
+    SERAC_MARK_FUNCTION;
     double normEval = std::numeric_limits<double>::max();
     try {
       oper->Mult(x, rOut);
@@ -55,21 +55,21 @@ public:
   /// assemble the jacobian
   void assembleJacobian(const mfem::Vector& x) const
   {
-    CALI_CXX_MARK_FUNCTION;
+    SERAC_MARK_FUNCTION;
     grad = &oper->GetGradient(x);
   }
 
   /// set the preconditioner for the linear solver
   void setPreconditioner() const
   {
-    CALI_CXX_MARK_FUNCTION;
+    SERAC_MARK_FUNCTION;
     prec->SetOperator(*grad);
   }
 
   /// solve the linear system
   void solveLinearSystem(const mfem::Vector& r_, mfem::Vector& c_) const
   {
-    CALI_CXX_MARK_FUNCTION;
+    SERAC_MARK_FUNCTION;
     prec->Mult(r_, c_);  // c = [DF(x_i)]^{-1} [F(x_i)-b]
   }
 
@@ -323,7 +323,7 @@ public:
   /// take a dogleg step in direction s, solution norm must be within trSize
   void dogleg_step(const mfem::Vector& cp, const mfem::Vector& newtonP, double trSize, mfem::Vector& s) const
   {
-    CALI_CXX_MARK_FUNCTION;
+    SERAC_MARK_FUNCTION;
     // MRT, could optimize some of these eventually, compute on the outside and save
     double cc = Dot(cp, cp);
     double nn = Dot(newtonP, newtonP);
@@ -352,7 +352,7 @@ public:
                                        PrecondFunc precond, const TrustRegionSettings& settings, double& trSize,
                                        TrustRegionResults& results) const
   {
-    CALI_CXX_MARK_FUNCTION;
+    SERAC_MARK_FUNCTION;
     // minimize r@z + 0.5*z@J@z
     results.interiorStatus    = TrustRegionResults::Status::Interior;
     results.cgIterationsCount = 0;
@@ -426,14 +426,14 @@ public:
   /// assemble the jacobian
   void assemble_jacobian(const mfem::Vector& x) const
   {
-    CALI_CXX_MARK_FUNCTION;
+    SERAC_MARK_FUNCTION;
     grad = &oper->GetGradient(x);
   }
 
   /// evaluate the nonlinear residual
   mfem::real_t computeResidual(const mfem::Vector& x_, mfem::Vector& r_) const
   {
-    CALI_CXX_MARK_FUNCTION;
+    SERAC_MARK_FUNCTION;
     oper->Mult(x_, r_);
     return Norm(r_);
   }
@@ -441,14 +441,14 @@ public:
   /// apply the action of the assembled Jacobian matrix to a vector
   void hess_vec(const mfem::Vector& x_, mfem::Vector& v_) const
   {
-    CALI_CXX_MARK_FUNCTION;
+    SERAC_MARK_FUNCTION;
     grad->Mult(x_, v_);
   }
 
   /// apply trust region specific preconditioner
   void precond(const mfem::Vector& x_, mfem::Vector& v_) const
   {
-    CALI_CXX_MARK_FUNCTION;
+    SERAC_MARK_FUNCTION;
     trPrecond.Mult(x_, v_);
   };
 
