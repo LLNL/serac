@@ -145,8 +145,6 @@ void BasePhysics::CreateParaviewDataCollection() const
   max_order_in_fields = std::max(max_order_in_fields, shape_displacement_.space().GetOrder(0));
 
   shape_sensitivity_grid_function_ = std::make_unique<mfem::ParGridFunction>(&shape_displacement_sensitivity_->space());
-  shape_displacement_sensitivity_->space().GetRestrictionMatrix()->MultTranspose(*shape_displacement_sensitivity_,
-                                                                                 *shape_sensitivity_grid_function_);
   max_order_in_fields = std::max(max_order_in_fields, shape_displacement_sensitivity_->space().GetOrder(0));
   paraview_dc_->RegisterField(shape_displacement_sensitivity_->name(), shape_sensitivity_grid_function_.get());
 
@@ -163,16 +161,16 @@ void BasePhysics::UpdateParaviewDataCollection(const std::string& paraview_outpu
     state->gridFunction();  // update grid function values
   }
   for (const FiniteElementDual* dual : duals_) {
-    // These are really const calls, but MFEM doesn't label them as such
     serac::FiniteElementDual* non_const_dual = const_cast<serac::FiniteElementDual*>(dual);
-    non_const_dual->space().GetRestrictionMatrix()->MultTranspose(*dual, *paraview_dual_grid_functions_[dual->name()]);
+    non_const_dual->linearForm().ParallelAssemble(paraview_dual_grid_functions_[dual->name()]->GetTrueVector());
+    paraview_dual_grid_functions_[dual->name()]->SetFromTrueVector();
   }
   for (auto& parameter : parameters_) {
     parameter.state->gridFunction();
   }
   shape_displacement_.gridFunction();
-  shape_displacement_sensitivity_->space().GetRestrictionMatrix()->MultTranspose(*shape_displacement_sensitivity_,
-                                                                                 *shape_sensitivity_grid_function_);
+  shape_displacement_sensitivity_->linearForm().ParallelAssemble(shape_sensitivity_grid_function_->GetTrueVector());
+  shape_sensitivity_grid_function_->SetFromTrueVector();
 
   // Set the current time, cycle, and requested paraview directory
   paraview_dc_->SetCycle(cycle_);
