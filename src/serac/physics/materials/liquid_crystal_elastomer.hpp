@@ -284,19 +284,19 @@ struct LiquidCrystalElastomerBertoldi {
     auto S_stress_1 = lambda * tr(E) * I;
     auto S_stress_2 = 2 * mu * E;
     auto S_stress_3 = -0.5 * beta_parameter_ * (St - S0) * (3 * outer(normal, normal) - I);
-// std::cout<< ".... young_modulus_ = "<< young_modulus_ << std::endl;
-// std::cout<< ".... poisson_ratio_ = "<< poisson_ratio_ << std::endl;
-// std::cout<< ".... beta_parameter_ = "<< beta_parameter_ << std::endl;
-// std::cout<< ".... normal = "<< normal[0] << std::endl;
-// std::cout<< ".... St = "<< St << " .... S0 = "<< S0 << std::endl;
-// std::cout<< ".... S_stress_1 = " << std::endl;
-// std::cout<<S_stress_1;
-// std::cout<< ".... S_stress_2 = " << std::endl;
-// std::cout<<S_stress_2;
-// std::cout<< ".... S_stress_3 = " << std::endl;
-// std::cout<<S_stress_3;
-// std::cout<< std::endl;
-// exit(0);
+    // std::cout<< ".... young_modulus_ = "<< young_modulus_ << std::endl;
+    // std::cout<< ".... poisson_ratio_ = "<< poisson_ratio_ << std::endl;
+    // std::cout<< ".... beta_parameter_ = "<< beta_parameter_ << std::endl;
+    // std::cout<< ".... normal = "<< normal[0] << std::endl;
+    // std::cout<< ".... St = "<< St << " .... S0 = "<< S0 << std::endl;
+    // std::cout<< ".... S_stress_1 = " << std::endl;
+    // std::cout<<S_stress_1;
+    // std::cout<< ".... S_stress_2 = " << std::endl;
+    // std::cout<<S_stress_2;
+    // std::cout<< ".... S_stress_3 = " << std::endl;
+    // std::cout<<S_stress_3;
+    // std::cout<< std::endl;
+    // exit(0);
     // transform from second Piola-Lichhoff to Cauchy stress
     auto stress = 1.0 / J * F * (S_stress_1 + S_stress_2 + S_stress_3) * transpose(F);
 
@@ -368,8 +368,8 @@ struct LiquidCrystalElastomerBertoldi {
 
 /**
  * @brief Zhang's liquid crystal elastomer model
- * Paper: Li, W., & Zhang, X. S. (2023). Arbitrary curvature programming of thermo-active liquid 
- * crystal elastomer via topology optimization. Computer Methods in Applied Mechanics and 
+ * Paper: Li, W., & Zhang, X. S. (2023). Arbitrary curvature programming of thermo-active liquid
+ * crystal elastomer via topology optimization. Computer Methods in Applied Mechanics and
  * Engineering, 417, 116393..
  */
 struct LiquidCrystalElastomerZhang {
@@ -387,8 +387,8 @@ struct LiquidCrystalElastomerZhang {
    * @param omega_param Parameter for degree of swelling
    * @param bulk_mod Bulk modulus of the material
    */
-  LiquidCrystalElastomerZhang(double rho, double shear_mod, double initial_order_param, 
-                              double omega_param, double bulk_mod)
+  LiquidCrystalElastomerZhang(double rho, double shear_mod, double initial_order_param, double omega_param,
+                              double bulk_mod)
       : density(rho),
         shear_mod_(shear_mod),
         initial_order_param_(initial_order_param),
@@ -397,7 +397,8 @@ struct LiquidCrystalElastomerZhang {
   {
     SLIC_ERROR_ROOT_IF(density <= 0.0, "Density must be positive in the LCE material model.");
     SLIC_ERROR_ROOT_IF(shear_mod_ <= 0.0, "Shear modulus must be positive in the LCE material model.");
-    SLIC_ERROR_ROOT_IF(initial_order_param_ <= 0.0, "Initial order parameter must be positive in the LCE material model.");
+    SLIC_ERROR_ROOT_IF(initial_order_param_ <= 0.0,
+                       "Initial order parameter must be positive in the LCE material model.");
     SLIC_ERROR_ROOT_IF(omega_param_ <= 0.0, "Omega parameter must be positive in the LCE material model.");
     SLIC_ERROR_ROOT_IF(bulk_mod_ <= 0.0, "Bulk modulus must be positive in the LCE material model.");
   }
@@ -431,55 +432,55 @@ struct LiquidCrystalElastomerZhang {
     tensor normal{{cos(gamma) * cos(eta), sin(gamma) * cos(eta), 0.0 * gamma + sin(eta)}};
 
     // Get order parameters
-    auto   St = get<0>(inst_order_param_tuple);
-    const double S0 = initial_order_param_;
-    const double mu   = shear_mod_;
-    const double bulk = bulk_mod_;
+    auto         St    = get<0>(inst_order_param_tuple);
+    const double S0    = initial_order_param_;
+    const double mu    = shear_mod_;
+    const double bulk  = bulk_mod_;
     const double omega = omega_param_;
 
     // Kinematics
-    auto I    = Identity<dim>();
-    auto F    = displacement_grad + I;
-    auto Finv = inv(F);
-    auto J    = det(F);
-    auto Fbar = pow(J, -1.0/3.0) * F;
+    auto I       = Identity<dim>();
+    auto F       = displacement_grad + I;
+    auto Finv    = inv(F);
+    auto J       = det(F);
+    auto Fbar    = pow(J, -1.0 / 3.0) * F;
     auto FbarInv = inv(Fbar);
-    auto Cbar = dot(transpose(Fbar), Fbar);
+    auto Cbar    = dot(transpose(Fbar), Fbar);
 
-  // Compute partial derivatives of strain energy wrt Cbar
-    auto dWLCEdCbar_1 = mu/2.0*(1.0-S0)/(1.0-St) * I;
-    auto dWLCEdCbar_2 = mu/2.0*((3.0*S0)/(1.0+2.0*St) - omega) * outer(normal, normal);
-    auto dWLCEdCbar_3 = -mu/2.0*((3.0*St)*(1.0-S0)/(1.0-St)/(1.0+2.0*St) - omega) / dot(normal, dot(Cbar,normal)) * 
-                    ( outer(normal, dot(Cbar,normal)) + 
-                      outer(dot(transpose(Cbar),normal), normal) - 
-                      inner(normal, dot(dot(Cbar,Cbar), normal)) * outer(normal, normal)/dot(normal, dot(Cbar,normal)) 
-                    );
+    // Compute partial derivatives of strain energy wrt Cbar
+    auto dWLCEdCbar_1 = mu / 2.0 * (1.0 - S0) / (1.0 - St) * I;
+    auto dWLCEdCbar_2 = mu / 2.0 * ((3.0 * S0) / (1.0 + 2.0 * St) - omega) * outer(normal, normal);
+    auto dWLCEdCbar_3 =
+        -mu / 2.0 * ((3.0 * St) * (1.0 - S0) / (1.0 - St) / (1.0 + 2.0 * St) - omega) / dot(normal, dot(Cbar, normal)) *
+        (outer(normal, dot(Cbar, normal)) + outer(dot(transpose(Cbar), normal), normal) -
+         inner(normal, dot(dot(Cbar, Cbar), normal)) * outer(normal, normal) / dot(normal, dot(Cbar, normal)));
 
     auto dWLCEdCbar = dWLCEdCbar_1 + dWLCEdCbar_2 + dWLCEdCbar_3;
 
     // Compute partial derivative os Cbar wrt strain
     auto dCbardF = make_tensor<3, 3, 3, 3>([&](auto i, auto j, auto m, auto n) {
-        return pow(J, -1.0/3.0) * ( Fbar(m,j)*I(i,n) + Fbar(m,i)*I(j,n) - 2.0/3.0*Cbar(i,j)*FbarInv(n,m));
-      });
+      return pow(J, -1.0 / 3.0) *
+             (Fbar(m, j) * I(i, n) + Fbar(m, i) * I(j, n) - 2.0 / 3.0 * Cbar(i, j) * FbarInv(n, m));
+    });
 
     // Compute strain energy derivatives wrt strain (PK stress)
     auto dWLCEdF = make_tensor<3, 3>([&](auto m, auto n) {
-        auto temp = 0.0 * dWLCEdCbar(0,0) * dCbardF(0,0,0,0);
-        for ( int i=0; i<3; i++)
-          for ( int j=0; j<3; j++) {
-            temp = temp + dWLCEdCbar(i,j) * dCbardF(i,j,m,n); 
-          }
-        return temp;
-      });
+      auto temp = 0.0 * dWLCEdCbar(0, 0) * dCbardF(0, 0, 0, 0);
+      for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++) {
+          temp = temp + dWLCEdCbar(i, j) * dCbardF(i, j, m, n);
+        }
+      return temp;
+    });
 
     // Compute incompressibility component
-    auto dWIncdF = bulk*log(J)*transpose(Finv) + 0.0*dWLCEdF ;
+    auto dWIncdF = bulk * log(J) * transpose(Finv) + 0.0 * dWLCEdF;
 
     // Compute total dW/dF
-    auto dWdF  = dWLCEdF + dWIncdF;
+    auto dWdF = dWLCEdF + dWIncdF;
 
     // Transform from first Piola-Kirchhoff (dWdF) to Cauchy stress
-    return 1.0 / J * dWdF* transpose(F);
+    return 1.0 / J * dWdF * transpose(F);
   }
 
   /// -------------------------------------------------------
@@ -512,25 +513,25 @@ struct LiquidCrystalElastomerZhang {
     tensor normal{{cos(gamma) * cos(eta), sin(gamma) * cos(eta), 0.0 * gamma + sin(eta)}};
 
     // Get order parameters
-    auto   St = get<0>(inst_order_param_tuple);
-    const double S0 = initial_order_param_;
-    const double mu   = shear_mod_;
-    const double bulk = bulk_mod_;
+    auto         St    = get<0>(inst_order_param_tuple);
+    const double S0    = initial_order_param_;
+    const double mu    = shear_mod_;
+    const double bulk  = bulk_mod_;
     const double omega = omega_param_;
 
     // kinematics
     auto I    = Identity<dim>();
     auto F    = displacement_grad + I;
     auto J    = det(F);
-    auto Fbar = pow(J, -1.0/3.0) * F;
+    auto Fbar = pow(J, -1.0 / 3.0) * F;
     auto Cbar = dot(transpose(Fbar), Fbar);
 
     // Compute the strain_energy
-    auto W_1 = mu/2.0 * ( (1.0-S0)/(1.0-St) * tr(Cbar) + 0.0*inner(normal, dot(Cbar,normal)) );
-    auto W_2 = mu/2.0 * ( (3.0*S0)/(1.0+2.0*St) - omega ) * inner(normal, dot(Cbar,normal));
-    auto W_3 = -mu/2.0 * ((3.0*St)*(1.0-S0)/(1.0-St)/(1.0+2.0*St) - omega) * 
-                    ( inner(normal, dot(dot(Cbar,Cbar), normal)) / inner(normal, dot(Cbar,normal)) );
-    auto W_Inc = bulk/2.0*log(J)*log(J) + 0.0*W_2 ;
+    auto W_1 = mu / 2.0 * ((1.0 - S0) / (1.0 - St) * tr(Cbar) + 0.0 * inner(normal, dot(Cbar, normal)));
+    auto W_2 = mu / 2.0 * ((3.0 * S0) / (1.0 + 2.0 * St) - omega) * inner(normal, dot(Cbar, normal));
+    auto W_3 = -mu / 2.0 * ((3.0 * St) * (1.0 - S0) / (1.0 - St) / (1.0 + 2.0 * St) - omega) *
+               (inner(normal, dot(dot(Cbar, Cbar), normal)) / inner(normal, dot(Cbar, normal)));
+    auto W_Inc = bulk / 2.0 * log(J) * log(J) + 0.0 * W_2;
 
     auto W = W_1 + W_2 + W_3 + W_Inc;
 

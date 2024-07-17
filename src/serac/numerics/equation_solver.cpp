@@ -191,7 +191,6 @@ public:
   }
 };
 
-
 /// Internal structure for storing trust region settings
 struct TrustRegionSettings {
   /// cg tol
@@ -231,7 +230,7 @@ struct TrustRegionResults {
   /// resets trust region results for a new outer iteration
   void reset()
   {
-    z           = 0.0;
+    z            = 0.0;
     cauchy_point = 0.0;
   }
 
@@ -260,8 +259,7 @@ struct TrustRegionResults {
 };
 
 /// trust region printing utility function
-void printTrustRegionInfo(double realObjective, double modelObjective, size_t cgIters, double trSize,
-                          bool willAccept)
+void printTrustRegionInfo(double realObjective, double modelObjective, size_t cgIters, double trSize, bool willAccept)
 {
   mfem::out << "real energy = " << std::setw(13) << realObjective << ", model energy = " << std::setw(13)
             << modelObjective << ", cg iter = " << std::setw(7) << cgIters << ", next tr size = " << std::setw(8)
@@ -310,15 +308,15 @@ public:
 
   /// finds tau s.t. (z + tau*d)^2 = trSize^2
   void projectToBoundaryWithCoefs(mfem::Vector& z, const mfem::Vector& d, double trSize, double zz, double zd,
-                                      double dd) const
+                                  double dd) const
   {
     double tau = (std::sqrt((trSize * trSize - zz) * dd + zd * zd) - zd) / dd;
     z.Add(tau, d);
   }
 
   /// finds tau s.t. (z + tau*(y-z))^2 = trSize^2
-  void projectToBoundaryBetweenWithCoefs(mfem::Vector& z, const mfem::Vector& y, double trSize, double zz,
-                                              double zy, double yy) const
+  void projectToBoundaryBetweenWithCoefs(mfem::Vector& z, const mfem::Vector& y, double trSize, double zz, double zy,
+                                         double yy) const
   {
     double dd  = yy - 2 * zy + zz;
     double zd  = zy - zz;
@@ -361,7 +359,7 @@ public:
   {
     SERAC_MARK_FUNCTION;
     // minimize r@z + 0.5*z@J@z
-    results.interior_status    = TrustRegionResults::Status::Interior;
+    results.interior_status     = TrustRegionResults::Status::Interior;
     results.cg_iterations_count = 0;
 
     auto& z      = results.z;
@@ -459,17 +457,17 @@ public:
     tr_precond.Mult(x_, v_);
   };
 
-
   /// estimate the minimum eigenvalue and its eigenvector
-  //void estimateExtremalEigenvector(const mfem::Operator& op, mfem::Vector& v, mfem::Vector& w, size_t iters, double changeTol)
+  // void estimateExtremalEigenvector(const mfem::Operator& op, mfem::Vector& v, mfem::Vector& w, size_t iters, double
+  // changeTol)
   //{
-    //CALI_CXX_MARK_FUNCTION;
-    //v /= v.Norml2();
-    //op.Mult(v, w);
-    //double lam = Dot(v, w); // first eigenvalue estimate
-    //for (size_t i=0; i < iters; ++i) {
-    //  w /= w.Norml2();
-    //}
+  // CALI_CXX_MARK_FUNCTION;
+  // v /= v.Norml2();
+  // op.Mult(v, w);
+  // double lam = Dot(v, w); // first eigenvalue estimate
+  // for (size_t i=0; i < iters; ++i) {
+  //   w /= w.Norml2();
+  // }
   //}
 
   /// @overload
@@ -486,7 +484,7 @@ public:
     if (print_options.first_and_last && !print_options.iterations) {
       mfem::out << "Newton iteration " << std::setw(3) << 0 << " : ||r|| = " << std::setw(13) << norm << "...\n";
     }
-    prec->iterative_mode     = false;
+    prec->iterative_mode      = false;
     tr_precond.iterative_mode = false;
 
     // local arrays
@@ -505,9 +503,9 @@ public:
     TrustRegionSettings settings;
     settings.min_cg_iterations = static_cast<size_t>(nonlinear_options.min_iterations);
     settings.max_cg_iterations = static_cast<size_t>(linear_options.max_iterations);
-    settings.cg_tol           = 0.5 * norm_goal;
-    double trSize            = 100.0;
-    size_t cumulativeCgIters = 0;
+    settings.cg_tol            = 0.5 * norm_goal;
+    double trSize              = 100.0;
+    size_t cumulativeCgIters   = 0;
 
     auto& d  = trResults.d;   // reuse, maybe dangerous!
     auto& Hd = trResults.Hd;  // reuse, maybe dangerous!
@@ -571,9 +569,9 @@ public:
                     << std::sqrt(cauchyPointNormSquared) << "\n";
         }
         trResults.cauchy_point *= (trSize / std::sqrt(cauchyPointNormSquared));
-        trResults.z                 = trResults.cauchy_point;
+        trResults.z                   = trResults.cauchy_point;
         trResults.cg_iterations_count = 1;
-        trResults.interior_status    = TrustRegionResults::Status::OnBoundary;
+        trResults.interior_status     = TrustRegionResults::Status::OnBoundary;
       } else {
         settings.cg_tol = std::max(0.5 * norm_goal, 1e-4 * norm);
         solveTrustRegionMinimization(r, scratch, hess_vec_func, precond_func, settings, trSize, trResults);
@@ -587,7 +585,7 @@ public:
 
         doglegStep(trResults.cauchy_point, trResults.z, trSize, d);
 
-        static constexpr double roundOffTol = 0.0; //1e-14;
+        static constexpr double roundOffTol = 0.0;  // 1e-14;
 
         hess_vec_func(d, Hd);
         double dHd            = Dot(d, Hd);
@@ -598,15 +596,15 @@ public:
         double realObjective = std::numeric_limits<double>::max();
         double normPred      = std::numeric_limits<double>::max();
         try {
-          normPred      = computeResidual(x_pred, r_pred);
-          double obj1 = 0.5 * (Dot(r, d) + Dot(r_pred, d)) - roundOffTol; // can collapse
+          normPred    = computeResidual(x_pred, r_pred);
+          double obj1 = 0.5 * (Dot(r, d) + Dot(r_pred, d)) - roundOffTol;  // can collapse
 
           // midstep work estimate
           // add(X, 0.5, d, x_mid);
           // computeResidual(x_mid, r_mid);
           // double obj2 = Dot(r_mid, d);
 
-          realObjective = obj1; //0.5 * obj1 + 0.5 * obj2;
+          realObjective = obj1;  // 0.5 * obj1 + 0.5 * obj2;
         } catch (const std::exception&) {
           realObjective = std::numeric_limits<double>::max();
           normPred      = std::numeric_limits<double>::max();
@@ -619,7 +617,8 @@ public:
           happyAboutTrSize = true;
           if (print_options.iterations) {
             printTrustRegionInfo(realObjective, modelObjective, trResults.cg_iterations_count, trSize, true);
-            trResults.cg_iterations_count = 0; // zero this output so it doesn't look like the linesearch is doing cg iterations
+            trResults.cg_iterations_count =
+                0;  // zero this output so it doesn't look like the linesearch is doing cg iterations
           }
           break;
         }
@@ -649,7 +648,8 @@ public:
 
         if (print_options.iterations) {
           printTrustRegionInfo(realObjective, modelObjective, trResults.cg_iterations_count, trSize, willAccept);
-          trResults.cg_iterations_count = 0; // zero this output so it doesn't look like the linesearch is doing cg iterations
+          trResults.cg_iterations_count =
+              0;  // zero this output so it doesn't look like the linesearch is doing cg iterations
         }
 
         if (willAccept) {

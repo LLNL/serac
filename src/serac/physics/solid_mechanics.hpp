@@ -183,8 +183,8 @@ public:
               {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = v_, .d2u_dt2 = acceleration_},
               *nonlin_solver_, bcs_),
         geom_nonlin_(geom_nonlin),
-        x_previous_(
-            StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "previous_coordinates"), mesh_tag_)),
+        x_previous_(StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "previous_coordinates"),
+                                           mesh_tag_)),
         x_mid_(
             StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "last_coordinates"), mesh_tag_)),
         x_current_(
@@ -1184,19 +1184,20 @@ public:
           SERAC_MARK_END("functional sparse assemble");
 
           SERAC_MARK_BEGIN("assemble sparse matrix");
-          J_             = assemble(drdu);
+          J_ = assemble(drdu);
           SERAC_MARK_END("assemble sparse matrix");
 
           SERAC_MARK_BEGIN("assemble constraint matrix");
           computeUpdatedCoordinates(u, x_current_);
           for (auto& constraint : inequality_constraints) {
-            J_ = std::move(constraint->sumConstraintJacobian(x_current_, x_mid_, x_previous_, ode_time_point_, dt_, std::move(J_)));
+            J_ = std::move(constraint->sumConstraintJacobian(x_current_, x_mid_, x_previous_, ode_time_point_, dt_,
+                                                             std::move(J_)));
           }
           SERAC_MARK_END("assemble constraint matrix");
           J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
 
-          //std::cout << "nonzeros J = " << J_->NNZ() << " " << J_->NumRows() << " " << J_->NumCols() << std::endl;
-          //std::cout << "nonzeros Je = " << J_e_->NNZ() << std::endl; // an oddly large #
+          // std::cout << "nonzeros J = " << J_->NNZ() << " " << J_->NumRows() << " " << J_->NumCols() << std::endl;
+          // std::cout << "nonzeros Je = " << J_e_->NNZ() << std::endl; // an oddly large #
 
           return *J_;
         });
@@ -1318,7 +1319,6 @@ public:
     residual_->updateQdata(false);
   }
 
-
   /// @overload
   void advanceTimestep(double dt) override
   {
@@ -1338,10 +1338,10 @@ public:
         computeUpdatedCoordinates(displacement_, x_previous_);
         computeUpdatedCoordinates(displacement_, x_mid_);
       }
-      quasiStaticSolve(dt); // dt_ is updated internally
+      quasiStaticSolve(dt);  // dt_ is updated internally
       int maxAlIteration = 20;
       if (!inequality_constraints.empty()) {
-        for (int i=0; i < maxAlIteration; ++i) {
+        for (int i = 0; i < maxAlIteration; ++i) {
           computeUpdatedCoordinates(displacement_, x_mid_);
           if (nonlinearSolve()) {
             break;
@@ -1352,7 +1352,7 @@ public:
       dt_ = dt;
       ode2_.Step(displacement_, velocity_, time_, dt);
     }
-    
+
     cycle_ += 1;
 
     if (checkpoint_to_disk_) {
@@ -1721,25 +1721,22 @@ protected:
   std::array<std::function<decltype((*residual_)(DifferentiateWRT<1>{}, 0.0, shape_displacement_, displacement_,
                                                  acceleration_, *parameters_[parameter_indices].state...))(double)>,
              sizeof...(parameter_indices)>
-  d_residual_d_ = {
-    [&](double t) {
-      return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + 1 + parameter_indices>{}, t, shape_displacement_,
-                          displacement_, acceleration_, *parameters_[parameter_indices].state...);
-    }...
-  };
+      d_residual_d_ = {[&](double t) {
+        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + 1 + parameter_indices>{}, t, shape_displacement_,
+                            displacement_, acceleration_, *parameters_[parameter_indices].state...);
+      }...};
 
   /// @brief Array functions computing the derivative of the residual with respect to each given parameter
   /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
   /// template parameter.
-  std::array<std::function<decltype((*residual_)(DifferentiateWRT<1>{}, 0.0, shape_displacement_, displacement_,
-                                                 acceleration_, *parameters_[parameter_indices].previous_state...))(double)>,
-             sizeof...(parameter_indices)>
-  d_residual_d_previous_ = {
-    [&](double t) {
-      return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + 1 + parameter_indices>{}, t, shape_displacement_,
-                          displacement_, acceleration_, *parameters_[parameter_indices].previous_state...);
-    }...
-  };
+  std::array<
+      std::function<decltype((*residual_)(DifferentiateWRT<1>{}, 0.0, shape_displacement_, displacement_, acceleration_,
+                                          *parameters_[parameter_indices].previous_state...))(double)>,
+      sizeof...(parameter_indices)>
+      d_residual_d_previous_ = {[&](double t) {
+        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + 1 + parameter_indices>{}, t, shape_displacement_,
+                            displacement_, acceleration_, *parameters_[parameter_indices].previous_state...);
+      }...};
 
   /// solve with nothing updating except the constraint multipliers and penalties
   bool nonlinearSolve()
@@ -1844,7 +1841,7 @@ protected:
     for (auto& constraint : inequality_constraints) {
       constraint->sumConstraintResidual(x_current_, x_mid_, x_previous_, time_, dt_, r);
     }
-                                  
+
     J_ = assemble(drdu);
     for (auto& constraint : inequality_constraints) {
       J_ = std::move(constraint->sumConstraintJacobian(x_current_, x_mid_, x_previous_, time_, dt_, std::move(J_)));
