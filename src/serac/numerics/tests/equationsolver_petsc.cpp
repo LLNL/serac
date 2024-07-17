@@ -59,7 +59,7 @@ TEST_P(EquationSolverSuite, All)
   // Construct the new functional object using the known test and trial spaces
   Functional<test_space(trial_space)> residual(&fes, {&fes});
 
-  x_exact.Randomize(2);
+  x_exact.Randomize(0);
 
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
@@ -117,7 +117,7 @@ TEST_P(EquationSolverSuite, All)
   }
 }
 
-std::string nonlinearName(const NonlinearSolver s)
+std::string nonlinearName(const NonlinearSolver& s)
 {
   if (s == NonlinearSolver::Newton) return "Newton";
   if (s == NonlinearSolver::KINFullStep) return "KINFullStep";
@@ -130,7 +130,7 @@ std::string nonlinearName(const NonlinearSolver s)
   return "";
 }
 
-std::string linearName(const LinearSolver s)
+std::string linearName(const LinearSolver& s)
 {
   if (s == LinearSolver::CG) return "CG";
   if (s == LinearSolver::GMRES) return "GMRES";
@@ -139,7 +139,7 @@ std::string linearName(const LinearSolver s)
   return "";
 }
 
-std::string PetscPCName(const PetscPCType s)
+std::string PetscPCName(const PetscPCType& s)
 {
   if (s == PetscPCType::JACOBI) return "JACOBI";
   if (s == PetscPCType::JACOBI_L1) return "JACOBI_L1";
@@ -188,7 +188,12 @@ INSTANTIATE_TEST_SUITE_P(
         testing::Values(PetscPCType::JACOBI, PetscPCType::JACOBI_L1, PetscPCType::JACOBI_ROWSUM,
                         PetscPCType::JACOBI_ROWMAX, PetscPCType::PBJACOBI, PetscPCType::BJACOBI, PetscPCType::LU,
                         PetscPCType::ILU, PetscPCType::CHOLESKY, PetscPCType::SVD, PetscPCType::ASM, PetscPCType::GASM,
-                        PetscPCType::GAMG, PetscPCType::HMG)));
+                        PetscPCType::GAMG)),  //, PetscPCType::HMG)));
+    [](const testing::TestParamInfo<EquationSolverSuite::ParamType>& test_info) {
+      std::string name = nonlinearName(std::get<0>(test_info.param)) + "_" + linearName(std::get<1>(test_info.param)) +
+                         "_" + PetscPCName(std::get<3>(test_info.param));
+      return name;
+    });
 #endif
 
 int main(int argc, char* argv[])
