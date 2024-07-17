@@ -190,7 +190,7 @@ public:
         x_current_(
             StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "current_coordinates"), mesh_tag_))
   {
-    CALI_CXX_MARK_FUNCTION;
+    SERAC_MARK_FUNCTION;
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension, {0}, and runtime mesh dimension, {1}, mismatch", dim,
                                          mesh_.Dimension()));
@@ -1178,21 +1178,21 @@ public:
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          CALI_MARK_BEGIN("functional sparse assemble");
+          SERAC_MARK_BEGIN("functional sparse assemble");
           auto [_, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(u), acceleration_,
                                         *parameters_[parameter_indices].state...);
-          CALI_MARK_END("functional sparse assemble");
+          SERAC_MARK_END("functional sparse assemble");
 
-          CALI_MARK_BEGIN("assemble sparse matrix");
+          SERAC_MARK_BEGIN("assemble sparse matrix");
           J_             = assemble(drdu);
-          CALI_MARK_END("assemble sparse matrix");
+          SERAC_MARK_END("assemble sparse matrix");
 
-          CALI_MARK_BEGIN("assemble constraint matrix");
+          SERAC_MARK_BEGIN("assemble constraint matrix");
           computeUpdatedCoordinates(u, x_current_);
           for (auto& constraint : inequality_constraints) {
             J_ = std::move(constraint->sumConstraintJacobian(x_current_, x_mid_, x_previous_, ode_time_point_, dt_, std::move(J_)));
           }
-          CALI_MARK_END("assemble constraint matrix");
+          SERAC_MARK_END("assemble constraint matrix");
           J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
 
           //std::cout << "nonzeros J = " << J_->NNZ() << " " << J_->NumRows() << " " << J_->NumCols() << std::endl;
@@ -1322,7 +1322,7 @@ public:
   /// @overload
   void advanceTimestep(double dt) override
   {
-    CALI_CXX_MARK_FUNCTION;
+    SERAC_MARK_FUNCTION;
     SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in SolidMechanics.");
 
     // If this is the first call, initialize the previous parameter values as the initial values
@@ -1419,7 +1419,7 @@ public:
   /// @overload
   void reverseAdjointTimestep() override
   {
-    CALI_CXX_MARK_FUNCTION;
+    SERAC_MARK_FUNCTION;
     auto& lin_solver = nonlin_solver_->linearSolver();
 
     // By default, use a homogeneous essential boundary condition
@@ -1487,7 +1487,7 @@ public:
   /// @overload
   std::unordered_map<std::string, FiniteElementState> getCheckpointedStates(int cycle_to_load) const override
   {
-    CALI_CXX_MARK_FUNCTION;
+    SERAC_MARK_FUNCTION;
     std::unordered_map<std::string, FiniteElementState> previous_states;
 
     if (checkpoint_to_disk_) {
@@ -1512,7 +1512,7 @@ public:
   /// @overload
   FiniteElementDual& computeTimestepSensitivity(size_t parameter_field) override
   {
-    CALI_CXX_MARK_FUNCTION;
+    SERAC_MARK_FUNCTION;
     SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
                     axom::fmt::format("Invalid parameter index '{}' requested for sensitivity."));
 
@@ -1527,7 +1527,7 @@ public:
   /// @overload
   FiniteElementDual& computeTimestepShapeSensitivity() override
   {
-    CALI_CXX_MARK_FUNCTION;
+    SERAC_MARK_FUNCTION;
     auto drdshape =
         serac::get<DERIVATIVE>((*residual_)(ode_time_point_, differentiate_wrt(shape_displacement_), displacement_,
                                             acceleration_, *parameters_[parameter_indices].state...));
@@ -1755,7 +1755,7 @@ protected:
   /// @brief Solve the Quasi-static Newton system
   virtual void quasiStaticSolve(double dt)
   {
-    CALI_CXX_MARK_FUNCTION;
+    SERAC_MARK_FUNCTION;
 
     // this method is essentially equivalent to the 1-liner
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
@@ -1836,7 +1836,7 @@ protected:
    */
   void warmStartDisplacement(double dt)
   {
-    CALI_CXX_MARK_FUNCTION;
+    SERAC_MARK_FUNCTION;
     // Update the linearized Jacobian matrix
     auto [r, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
                                   *parameters_[parameter_indices].previous_state...);

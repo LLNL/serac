@@ -183,7 +183,7 @@ void BasePhysics::UpdateParaviewDataCollection(const std::string& paraview_outpu
 
 void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_dir) const
 {
-  CALI_CXX_MARK_FUNCTION;
+  SERAC_MARK_FUNCTION;
   // Update the states and duals in the state manager
   for (auto& state : states_) {
     StateManager::updateState(*state);

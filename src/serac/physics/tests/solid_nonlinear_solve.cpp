@@ -726,7 +726,7 @@ void functional_solid_test_nonlinear_arch()
   double v             = 0.33;
   double bulkMod       = E / (3. * (1. - 2. * v));
   double shearMod      = E / (2. * (1. + v));
-  double loadMagnitude = 1.2e-2; //0.2e-5;  // 2e-2;
+  //double loadMagnitude = 1.2e-2; //0.2e-5;  // 2e-2;
 
   std::string meshTag = "mesh";
   std::string input_file_name = mesh_path + "arch.g";
