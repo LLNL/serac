@@ -191,58 +191,63 @@ void functional_solid_spatial_essential_bc()
   // This exact solution is only correct when two MPI ranks are used
   // It is based on a poisson ratio of 0.125 with a prescribed z strain of 10%
   if (size == 2) {
+    auto vdim  = solid_solver.displacement().space().GetVDim();
+    auto ndofs = solid_solver.displacement().space().GetTrueVSize() / vdim;
+    auto dof   = [ndofs, vdim](auto node, auto component) {
+      return mfem::Ordering::Map<mfem::Ordering::byVDIM>(ndofs, vdim, node, component);
+    };
     // This is a vector of pairs containing the exact solution index and value for the known analytical dofs.
     // These exact indices and values are chosen to avoid dependence on solver tolerances.
     std::vector<std::pair<int, double>> rank_0_exact_solution;
 
-    rank_0_exact_solution.emplace_back(std::pair{0, 0.0});
-    rank_0_exact_solution.emplace_back(std::pair{1, 0.0125});
-    rank_0_exact_solution.emplace_back(std::pair{4, 0.00625});
-    rank_0_exact_solution.emplace_back(std::pair{8, 0.0});
-    rank_0_exact_solution.emplace_back(std::pair{9, 0.0125});
-    rank_0_exact_solution.emplace_back(std::pair{12, 0.00625});
-    rank_0_exact_solution.emplace_back(std::pair{18, 0.0});
-    rank_0_exact_solution.emplace_back(std::pair{20, 0.0125});
-    rank_0_exact_solution.emplace_back(std::pair{25, 0.00625});
-    rank_0_exact_solution.emplace_back(std::pair{26, 0.0});
-    rank_0_exact_solution.emplace_back(std::pair{29, 0.0125});
-    rank_0_exact_solution.emplace_back(std::pair{33, 0.00625});
-    rank_0_exact_solution.emplace_back(std::pair{36, -0.1});
-    rank_0_exact_solution.emplace_back(std::pair{37, -0.1});
-    rank_0_exact_solution.emplace_back(std::pair{38, -0.1});
-    rank_0_exact_solution.emplace_back(std::pair{39, -0.1});
-    rank_0_exact_solution.emplace_back(std::pair{40, -0.1});
-    rank_0_exact_solution.emplace_back(std::pair{41, -0.1});
-    rank_0_exact_solution.emplace_back(std::pair{42, -0.1});
-    rank_0_exact_solution.emplace_back(std::pair{43, -0.1});
-    rank_0_exact_solution.emplace_back(std::pair{44, -0.05});
-    rank_0_exact_solution.emplace_back(std::pair{45, -0.05});
-    rank_0_exact_solution.emplace_back(std::pair{46, -0.05});
-    rank_0_exact_solution.emplace_back(std::pair{47, -0.05});
-    rank_0_exact_solution.emplace_back(std::pair{48, -0.05});
-    rank_0_exact_solution.emplace_back(std::pair{49, -0.05});
-    rank_0_exact_solution.emplace_back(std::pair{50, -0.05});
-    rank_0_exact_solution.emplace_back(std::pair{51, -0.05});
-    rank_0_exact_solution.emplace_back(std::pair{52, -0.1});
-    rank_0_exact_solution.emplace_back(std::pair{53, -0.05});
+    rank_0_exact_solution.emplace_back(std::pair{dof(0, 0), 0.0});
+    rank_0_exact_solution.emplace_back(std::pair{dof(1, 0), 0.0125});
+    rank_0_exact_solution.emplace_back(std::pair{dof(4, 0), 0.00625});
+    rank_0_exact_solution.emplace_back(std::pair{dof(8, 0), 0.0});
+    rank_0_exact_solution.emplace_back(std::pair{dof(9, 0), 0.0125});
+    rank_0_exact_solution.emplace_back(std::pair{dof(12, 0), 0.00625});
+    rank_0_exact_solution.emplace_back(std::pair{dof(0, 1), 0.0});
+    rank_0_exact_solution.emplace_back(std::pair{dof(2, 1), 0.0125});
+    rank_0_exact_solution.emplace_back(std::pair{dof(7, 1), 0.00625});
+    rank_0_exact_solution.emplace_back(std::pair{dof(8, 1), 0.0});
+    rank_0_exact_solution.emplace_back(std::pair{dof(11, 1), 0.0125});
+    rank_0_exact_solution.emplace_back(std::pair{dof(15, 1), 0.00625});
+    rank_0_exact_solution.emplace_back(std::pair{dof(0, 2), -0.1});
+    rank_0_exact_solution.emplace_back(std::pair{dof(1, 2), -0.1});
+    rank_0_exact_solution.emplace_back(std::pair{dof(2, 2), -0.1});
+    rank_0_exact_solution.emplace_back(std::pair{dof(3, 2), -0.1});
+    rank_0_exact_solution.emplace_back(std::pair{dof(4, 2), -0.1});
+    rank_0_exact_solution.emplace_back(std::pair{dof(5, 2), -0.1});
+    rank_0_exact_solution.emplace_back(std::pair{dof(6, 2), -0.1});
+    rank_0_exact_solution.emplace_back(std::pair{dof(7, 2), -0.1});
+    rank_0_exact_solution.emplace_back(std::pair{dof(8, 2), -0.05});
+    rank_0_exact_solution.emplace_back(std::pair{dof(9, 2), -0.05});
+    rank_0_exact_solution.emplace_back(std::pair{dof(10, 2), -0.05});
+    rank_0_exact_solution.emplace_back(std::pair{dof(11, 2), -0.05});
+    rank_0_exact_solution.emplace_back(std::pair{dof(12, 2), -0.05});
+    rank_0_exact_solution.emplace_back(std::pair{dof(13, 2), -0.05});
+    rank_0_exact_solution.emplace_back(std::pair{dof(14, 2), -0.05});
+    rank_0_exact_solution.emplace_back(std::pair{dof(15, 2), -0.05});
+    rank_0_exact_solution.emplace_back(std::pair{dof(16, 2), -0.1});
+    rank_0_exact_solution.emplace_back(std::pair{dof(17, 2), -0.05});
 
     std::vector<std::pair<int, double>> rank_1_exact_solution;
 
-    rank_1_exact_solution.emplace_back(std::pair{0, 0.0});
-    rank_1_exact_solution.emplace_back(std::pair{1, 0.0125});
-    rank_1_exact_solution.emplace_back(std::pair{4, 0.00625});
-    rank_1_exact_solution.emplace_back(std::pair{9, 0.0});
-    rank_1_exact_solution.emplace_back(std::pair{11, 0.0125});
-    rank_1_exact_solution.emplace_back(std::pair{16, 0.00625});
-    rank_1_exact_solution.emplace_back(std::pair{18, 0.0});
-    rank_1_exact_solution.emplace_back(std::pair{19, 0.0});
-    rank_1_exact_solution.emplace_back(std::pair{20, 0.0});
-    rank_1_exact_solution.emplace_back(std::pair{21, 0.0});
-    rank_1_exact_solution.emplace_back(std::pair{22, 0.0});
-    rank_1_exact_solution.emplace_back(std::pair{23, 0.0});
-    rank_1_exact_solution.emplace_back(std::pair{24, 0.0});
-    rank_1_exact_solution.emplace_back(std::pair{25, 0.0});
-    rank_1_exact_solution.emplace_back(std::pair{26, 0.0});
+    rank_1_exact_solution.emplace_back(std::pair{dof(0, 0), 0.0});
+    rank_1_exact_solution.emplace_back(std::pair{dof(1, 0), 0.0125});
+    rank_1_exact_solution.emplace_back(std::pair{dof(4, 0), 0.00625});
+    rank_1_exact_solution.emplace_back(std::pair{dof(0, 1), 0.0});
+    rank_1_exact_solution.emplace_back(std::pair{dof(2, 1), 0.0125});
+    rank_1_exact_solution.emplace_back(std::pair{dof(7, 1), 0.00625});
+    rank_1_exact_solution.emplace_back(std::pair{dof(0, 2), 0.0});
+    rank_1_exact_solution.emplace_back(std::pair{dof(1, 2), 0.0});
+    rank_1_exact_solution.emplace_back(std::pair{dof(2, 2), 0.0});
+    rank_1_exact_solution.emplace_back(std::pair{dof(3, 2), 0.0});
+    rank_1_exact_solution.emplace_back(std::pair{dof(4, 2), 0.0});
+    rank_1_exact_solution.emplace_back(std::pair{dof(5, 2), 0.0});
+    rank_1_exact_solution.emplace_back(std::pair{dof(6, 2), 0.0});
+    rank_1_exact_solution.emplace_back(std::pair{dof(7, 2), 0.0});
+    rank_1_exact_solution.emplace_back(std::pair{dof(8, 2), 0.0});
 
     if (rank == 0) {
       for (auto exact_entry : rank_0_exact_solution) {
