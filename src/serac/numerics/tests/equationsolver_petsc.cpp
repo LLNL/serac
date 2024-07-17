@@ -6,6 +6,7 @@
 
 #include <array>
 #include <fstream>
+#include <ostream>
 #include <functional>
 
 #include <gtest/gtest.h>
@@ -58,7 +59,7 @@ TEST_P(EquationSolverSuite, All)
   // Construct the new functional object using the known test and trial spaces
   Functional<test_space(trial_space)> residual(&fes, {&fes});
 
-  x_exact.Randomize(0);
+  x_exact.Randomize(2);
 
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
@@ -116,6 +117,45 @@ TEST_P(EquationSolverSuite, All)
   }
 }
 
+
+std::string nonlinearName(const NonlinearSolver s) {
+  if (s == NonlinearSolver::Newton) return "Newton";
+  if ( s== NonlinearSolver::KINFullStep) return "KINFullStep";
+  if (s==  NonlinearSolver::KINBacktrackingLineSearch) return "KINBacktrackingLineSearch";
+  if (s== NonlinearSolver::KINPicard) return "KINPicard";
+  if (s == NonlinearSolver::PetscNewton) return "PetscNewton";
+  if (s== NonlinearSolver::PetscNewtonBacktracking) return "PetscNewtonBacktracking";
+  if (s==NonlinearSolver::PetscNewtonCriticalPoint) return "PetscNewtonCriticalPoint";
+  if (s== NonlinearSolver::PetscTrustRegion) return "PetscTrustRegion";
+  return "";
+}
+
+std::string linearName(const LinearSolver s) {
+  if (s == LinearSolver::CG) return "CG";
+  if (s == LinearSolver::GMRES) return "GMRES";
+  if (s== LinearSolver::PetscCG) return "PetscCG";
+  if (s==LinearSolver::PetscGMRES) return "PetscGMRES";
+  return "";
+}
+
+std::string PetscPCName(const PetscPCType s) {
+  if (s==PetscPCType::JACOBI) return "JACOBI";
+  if (s==PetscPCType::JACOBI_L1) return "JACOBI_L1";
+  if (s==PetscPCType::JACOBI_ROWSUM) return "JACOBI_ROWSUM";
+  if (s==PetscPCType::JACOBI_ROWMAX) return "JACOBI_ROWMAX";
+  if (s==PetscPCType::PBJACOBI) return "PBJACOBI";
+  if (s==PetscPCType::BJACOBI) return "BJACOBI";
+  if (s==PetscPCType::LU) return "LU";
+  if (s==PetscPCType::ILU) return "ILU";
+  if (s==PetscPCType::CHOLESKY) return "CHOLESKY";
+  if (s==PetscPCType::SVD) return "SVD";
+  if (s==PetscPCType::ASM) return "ASM";
+  if (s==PetscPCType::GASM) return "GASM";
+  if (s==PetscPCType::GAMG) return "GAMG";
+  if (s==PetscPCType::HMG) return "HMG";
+  return "";
+}
+
 #ifdef SERAC_USE_SUNDIALS
 INSTANTIATE_TEST_SUITE_P(
     AllEquationSolverTests, EquationSolverSuite,
@@ -129,7 +169,15 @@ INSTANTIATE_TEST_SUITE_P(
                      testing::Values(PetscPCType::JACOBI, PetscPCType::JACOBI_L1, PetscPCType::JACOBI_ROWSUM,
                                      PetscPCType::JACOBI_ROWMAX, PetscPCType::PBJACOBI, PetscPCType::BJACOBI,
                                      PetscPCType::LU, PetscPCType::ILU, PetscPCType::CHOLESKY, PetscPCType::SVD,
-                                     PetscPCType::ASM, PetscPCType::GASM, PetscPCType::GAMG, PetscPCType::HMG)));
+                                     PetscPCType::ASM, PetscPCType::GASM, PetscPCType::GAMG)), //, PetscPCType::HMG)),
+                     [](const testing::TestParamInfo<EquationSolverSuite::ParamType>& test_info) {
+                        std::string name = 
+                        nonlinearName(std::get<0>(test_info.param)) + "_" +
+                        linearName(std::get<1>(test_info.param)) + "_" +
+                        PetscPCName(std::get<3>(test_info.param));
+                        return name;
+                     }
+                     );
 #else
 INSTANTIATE_TEST_SUITE_P(
     AllEquationSolverTests, EquationSolverSuite,
