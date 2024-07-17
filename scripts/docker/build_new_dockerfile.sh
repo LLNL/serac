@@ -44,11 +44,11 @@ if [ $using_cuda = true ] ; then
     cuda_maj_ver="${cuda_ver%-*}"
     tag_name="cuda-${cuda_maj_ver}"
     image="ghcr.io/llnl/radiuss:cuda-${cuda_ver}-ubuntu-22.04"
-    spec="%${name}@${ver}+cuda+raja+umpire cuda_arch=70"
+    spec="%${name}@${ver}+cuda+raja+umpire+shared cuda_arch=70"
 else
     tag_name="${name}-${maj_ver}"
     image="ghcr.io/llnl/radiuss:${name}-${maj_ver}-ubuntu-22.04"
-    spec="%${name}@${ver}"
+    spec="%${name}@${ver}+shared"
 fi
 
 dockerfile_name="dockerfile_$tag_name"
