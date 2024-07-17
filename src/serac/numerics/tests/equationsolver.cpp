@@ -154,7 +154,12 @@ auto preconditioners =
     );
 
 INSTANTIATE_TEST_SUITE_P(AllEquationSolverTests, EquationSolverSuite,
-                         testing::Combine(nonlinear_solvers, linear_solvers, preconditioners));
+                         testing::Combine(nonlinear_solvers, linear_solvers, preconditioners),
+                         [](const testing::TestParamInfo<EquationSolverSuite::ParamType>& test_info) {
+                           std::string name = nonlinearName(std::get<0>(test_info.param)) + "_" + linearName(std::get<1>(test_info.param)) +
+                          "_" + std::to_string(static_cast<int>(std::get<2>(test_info.param)));
+                          return name;
+                         });
 
 int main(int argc, char* argv[])
 {

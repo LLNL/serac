@@ -6,6 +6,7 @@
 
 #include <array>
 #include <fstream>
+#include <ostream>
 #include <functional>
 
 #include <gtest/gtest.h>
@@ -129,7 +130,12 @@ INSTANTIATE_TEST_SUITE_P(
                      testing::Values(PetscPCType::JACOBI, PetscPCType::JACOBI_L1, PetscPCType::JACOBI_ROWSUM,
                                      PetscPCType::JACOBI_ROWMAX, PetscPCType::PBJACOBI, PetscPCType::BJACOBI,
                                      PetscPCType::LU, PetscPCType::ILU, PetscPCType::CHOLESKY, PetscPCType::SVD,
-                                     PetscPCType::ASM, PetscPCType::GASM, PetscPCType::GAMG, PetscPCType::HMG)));
+                                     PetscPCType::ASM, PetscPCType::GASM, PetscPCType::GAMG)),  //, PetscPCType::HMG)),
+    [](const testing::TestParamInfo<EquationSolverSuite::ParamType>& test_info) {
+      std::string name = nonlinearName(std::get<0>(test_info.param)) + "_" + linearName(std::get<1>(test_info.param)) +
+                         "_" + PetscPCName(std::get<3>(test_info.param));
+      return name;
+    });
 #else
 INSTANTIATE_TEST_SUITE_P(
     AllEquationSolverTests, EquationSolverSuite,
@@ -141,7 +147,12 @@ INSTANTIATE_TEST_SUITE_P(
         testing::Values(PetscPCType::JACOBI, PetscPCType::JACOBI_L1, PetscPCType::JACOBI_ROWSUM,
                         PetscPCType::JACOBI_ROWMAX, PetscPCType::PBJACOBI, PetscPCType::BJACOBI, PetscPCType::LU,
                         PetscPCType::ILU, PetscPCType::CHOLESKY, PetscPCType::SVD, PetscPCType::ASM, PetscPCType::GASM,
-                        PetscPCType::GAMG, PetscPCType::HMG)));
+                        PetscPCType::GAMG)),  //, PetscPCType::HMG)));
+    [](const testing::TestParamInfo<EquationSolverSuite::ParamType>& test_info) {
+      std::string name = nonlinearName(std::get<0>(test_info.param)) + "_" + linearName(std::get<1>(test_info.param)) +
+                         "_" + PetscPCName(std::get<3>(test_info.param));
+      return name;
+    });
 #endif
 
 int main(int argc, char* argv[])

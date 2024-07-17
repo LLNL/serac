@@ -109,6 +109,18 @@ enum class LinearSolver
 };
 // _linear_solvers_end
 
+/// Convert linear solver enums to their string names
+inline std::string linearName(const LinearSolver& s)
+{
+  if (s == LinearSolver::CG) return "CG";
+  if (s == LinearSolver::GMRES) return "GMRES";
+  if (s == LinearSolver::SuperLU) return "SuperLU";
+  if (s == LinearSolver::Strumpack) return "Strumpack";
+  if (s == LinearSolver::PetscCG) return "PetscCG";
+  if (s == LinearSolver::PetscGMRES) return "PetscGMRES";
+  return "";
+}
+
 // Add a custom list of strings? conduit node?
 // Arbitrary string (e.g. json) to define parameters?
 
@@ -119,7 +131,6 @@ enum class NonlinearSolver
   Newton,           /**< MFEM-native Newton-Raphson */
   LBFGS,            /**< MFEM-native Limited memory BFGS */
   NewtonLineSearch, /**< Custom solver using preconditioned earch direction with backtracking line search */
-  Nesterov,         /**< Custom solver using Nesterov dynamic (damped) dynamics for accelerating implicit solves */
   TrustRegion,      /**< Custom solver using a trust region solver */
   KINFullStep,      /**< KINSOL Full Newton (Sundials must be enabled) */
   KINBacktrackingLineSearch, /**< KINSOL Newton with Backtracking Line Search (Sundials must be enabled) */
@@ -130,6 +141,22 @@ enum class NonlinearSolver
   PetscTrustRegion           /**< PETSc trust region solver */
 };
 // _nonlinear_solvers_end
+
+/// Convert nonlinear linear solver enums to their string names
+inline std::string nonlinearName(const NonlinearSolver& s)
+{
+  if (s == NonlinearSolver::Newton) return "Newton";
+  if (s == NonlinearSolver::LBFGS) return "LBFGS";
+  if (s == NonlinearSolver::NewtonLineSearch) return "NewtonLineSearch";
+  if (s == NonlinearSolver::KINFullStep) return "KINFullStep";
+  if (s == NonlinearSolver::KINBacktrackingLineSearch) return "KINBacktrackingLineSearch";
+  if (s == NonlinearSolver::KINPicard) return "KINPicard";
+  if (s == NonlinearSolver::PetscNewton) return "PetscNewton";
+  if (s == NonlinearSolver::PetscNewtonBacktracking) return "PetscNewtonBacktracking";
+  if (s == NonlinearSolver::PetscNewtonCriticalPoint) return "PetscNewtonCriticalPoint";
+  if (s == NonlinearSolver::PetscTrustRegion) return "PetscTrustRegion";
+  return "";
+}
 
 /**
  * @brief Solver types supported by AMGX
@@ -193,6 +220,26 @@ enum class PetscPCType
   HMG,  /**< Hierarchical AMG for multi-component PDE problems */
   NONE, /**< No preconditioner, or type set via -pc_type CLI flag */
 };
+
+/// Convert Petsc preconditioner enums to their string names
+inline std::string PetscPCName(const PetscPCType& s)
+{
+  if (s == PetscPCType::JACOBI) return "JACOBI";
+  if (s == PetscPCType::JACOBI_L1) return "JACOBI_L1";
+  if (s == PetscPCType::JACOBI_ROWSUM) return "JACOBI_ROWSUM";
+  if (s == PetscPCType::JACOBI_ROWMAX) return "JACOBI_ROWMAX";
+  if (s == PetscPCType::PBJACOBI) return "PBJACOBI";
+  if (s == PetscPCType::BJACOBI) return "BJACOBI";
+  if (s == PetscPCType::LU) return "LU";
+  if (s == PetscPCType::ILU) return "ILU";
+  if (s == PetscPCType::CHOLESKY) return "CHOLESKY";
+  if (s == PetscPCType::SVD) return "SVD";
+  if (s == PetscPCType::ASM) return "ASM";
+  if (s == PetscPCType::GASM) return "GASM";
+  if (s == PetscPCType::GAMG) return "GAMG";
+  if (s == PetscPCType::HMG) return "HMG";
+  return "";
+}
 
 // _preconditioners_start
 /// The type of preconditioner to be used
