@@ -251,7 +251,7 @@ public:
    */
   std::unique_ptr<mfem::HypreParMatrix> eliminateAllEssentialDofsFromMatrix(mfem::HypreParMatrix& matrix) const
   {
-    CALI_CXX_MARK_FUNCTION;
+    SERAC_MARK_FUNCTION;
     return std::unique_ptr<mfem::HypreParMatrix>(matrix.EliminateRowsCols(allEssentialTrueDofs()));
   }
 
