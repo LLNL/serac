@@ -112,26 +112,29 @@ TEST_P(EquationSolverSuite, All)
 
   eq_solver.solve(x_computed);
 
+  EXPECT_EQ(x_computed.Size(), x_exact.Size());
   for (int i = 0; i < x_computed.Size(); ++i) {
     EXPECT_LT(std::abs((x_computed(i) - x_exact(i))) / x_exact(i), 1.0e-6);
   }
 }
 
+// Note: HMG is excluded due to strange failures on Lassen
+// It is still tested elsewhere, e.g. tests/solid_shape
 #ifdef SERAC_USE_SUNDIALS
 INSTANTIATE_TEST_SUITE_P(
     AllEquationSolverTests, EquationSolverSuite,
-    testing::Combine(testing::Values(NonlinearSolver::Newton, NonlinearSolver::KINFullStep,
-                                     NonlinearSolver::KINBacktrackingLineSearch, NonlinearSolver::KINPicard,
-                                     NonlinearSolver::PetscNewton, NonlinearSolver::PetscNewtonBacktracking,
-                                     NonlinearSolver::PetscNewtonCriticalPoint, NonlinearSolver::PetscTrustRegion),
-                     testing::Values(LinearSolver::CG, LinearSolver::GMRES, LinearSolver::PetscCG,
-                                     LinearSolver::PetscGMRES),
-                     testing::Values(Preconditioner::Petsc),
-                     testing::Values(PetscPCType::JACOBI, PetscPCType::JACOBI_L1, PetscPCType::JACOBI_ROWSUM,
-                                     PetscPCType::JACOBI_ROWMAX, PetscPCType::PBJACOBI, PetscPCType::BJACOBI,
-                                     PetscPCType::LU, PetscPCType::ILU, PetscPCType::CHOLESKY, PetscPCType::SVD,
-                                     PetscPCType::ASM, PetscPCType::GASM, PetscPCType::GAMG)),  //, PetscPCType::HMG)),
-    [](const testing::TestParamInfo<EquationSolverSuite::ParamType>& test_info) {
+    testing::Combine(
+        testing::Values(NonlinearSolver::Newton, NonlinearSolver::KINFullStep,
+                        NonlinearSolver::KINBacktrackingLineSearch, NonlinearSolver::KINPicard,
+                        NonlinearSolver::PetscNewton, NonlinearSolver::PetscNewtonBacktracking,
+                        NonlinearSolver::PetscNewtonCriticalPoint, NonlinearSolver::PetscTrustRegion),
+        testing::Values(LinearSolver::CG, LinearSolver::GMRES, LinearSolver::PetscCG, LinearSolver::PetscGMRES),
+        testing::Values(Preconditioner::Petsc),
+        testing::Values(PetscPCType::JACOBI, PetscPCType::JACOBI_L1, PetscPCType::JACOBI_ROWSUM,
+                        PetscPCType::JACOBI_ROWMAX, PetscPCType::PBJACOBI, PetscPCType::BJACOBI, PetscPCType::LU,
+                        PetscPCType::ILU, PetscPCType::CHOLESKY, PetscPCType::SVD, PetscPCType::ASM, PetscPCType::GASM,
+                        PetscPCType::GAMG)),  //, PetscPCType::HMG)),
+    [](const testing::TestParamInfo<EquationSolverSuite::ParamType>& test_info) -> std::string {
       std::string name = axom::fmt::format("{}_{}_{}_{}", std::get<0>(test_info.param), std::get<1>(test_info.param),
                                            std::get<2>(test_info.param), std::get<3>(test_info.param));
       return name;
@@ -157,15 +160,11 @@ INSTANTIATE_TEST_SUITE_P(
 
 int main(int argc, char* argv[])
 {
-  int result = 0;
-
-  ::testing::InitGoogleTest(&argc, argv);
+  testing::InitGoogleTest(&argc, argv);
 
   serac::initialize(argc, argv);
 
-  axom::slic::SimpleLogger logger;
-
-  result = RUN_ALL_TESTS();
+  int result = RUN_ALL_TESTS();
 
   serac::exitGracefully(result);
 }

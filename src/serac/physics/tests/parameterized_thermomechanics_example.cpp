@@ -165,6 +165,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
   double initial_qoi = qoi(time, simulation.displacement());
   SLIC_INFO_ROOT(axom::fmt::format("vertical displacement integrated over the top surface: {}", initial_qoi));
+  EXPECT_NEAR(initial_qoi, 0.000883477, 1e-5);
 
   Functional<double(H1<p, dim>)> area({&simulation.displacement().space()});
   area.AddSurfaceIntegral(
@@ -182,12 +183,16 @@ TEST(Thermomechanics, ParameterizedMaterial)
   double exact_area = M_PI_4 * ((outer_radius * outer_radius) - (inner_radius * inner_radius));
 
   SLIC_INFO_ROOT(axom::fmt::format("exact area of the top surface: {}", exact_area));
+  EXPECT_NEAR(top_area, exact_area, 1e-3);
 
   double avg_disp = qoi(time, simulation.displacement()) / area(time, simulation.displacement());
 
   SLIC_INFO_ROOT(axom::fmt::format("average vertical displacement: {}", avg_disp));
 
-  SLIC_INFO_ROOT(axom::fmt::format("expected average vertical displacement: {}", alpha0 * deltaT * height));
+  double exact_avg_disp = alpha0 * deltaT * height;
+
+  SLIC_INFO_ROOT(axom::fmt::format("expected average vertical displacement: {}", exact_avg_disp));
+  EXPECT_NEAR(avg_disp, exact_avg_disp, 1e-5);
 
   serac::FiniteElementDual adjoint_load(simulation.displacement().space(), "adjoint_load");
   auto                     dqoi_du = get<1>(qoi(DifferentiateWRT<0>{}, time, simulation.displacement()));
@@ -237,11 +242,9 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
 int main(int argc, char* argv[])
 {
-  ::testing::InitGoogleTest(&argc, argv);
+  testing::InitGoogleTest(&argc, argv);
 
   serac::initialize(argc, argv);
-
-  axom::slic::setLoggingMsgLevel(axom::slic::message::Info);
 
   int result = RUN_ALL_TESTS();
 
