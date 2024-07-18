@@ -127,7 +127,8 @@ inline std::string linearName(const LinearSolver& s)
     case LinearSolver::PetscGMRES:
       return "PetscGMRES";
   }
-  return "";
+  // This cannot happen, but GCC doesn't know that
+  return "UNKNOWN";
 }
 
 /// output linear solver string representation to a stream
@@ -181,6 +182,8 @@ inline std::string nonlinearName(const NonlinearSolver& s)
     case NonlinearSolver::PetscTrustRegion:
       return "PetscTrustRegion";
   }
+  // This cannot happen, but GCC doesn't know that
+  return "UNKNOWN";
 }
 
 /// output nonlinear solver string representation to a stream
@@ -284,6 +287,8 @@ inline std::string petscPCName(const PetscPCType& s)
     case PetscPCType::NONE:
       return "NONE";
   }
+  // This cannot happen, but GCC doesn't know that
+  return "UNKNOWN";
 }
 
 /// output PETSc preconditioner string representation to a stream
@@ -325,6 +330,8 @@ inline std::string preconditionerName(Preconditioner p)
     case Preconditioner::None:
       return "None";
   }
+  // This cannot happen, but GCC doesn't know that
+  return "UNKNOWN";
 }
 
 /// output preconditioner string representation to a stream
