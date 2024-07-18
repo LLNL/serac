@@ -101,7 +101,7 @@ TEST(FiniteElementVector, SetVectorFieldOver2DDomain)
   auto vdim  = u.space().GetVDim();
   auto ndofs = u.space().GetTrueVSize() / vdim;
   auto dof   = [ndofs, vdim](auto node, auto component) {
-    return mfem::Ordering::Map<mfem::Ordering::byVDIM>(ndofs, vdim, node, component);
+    return mfem::Ordering::Map<serac::ordering>(ndofs, vdim, node, component);
   };
 
   EXPECT_NEAR(u[dof(0, 0)], 1.0, 1.0e-15);

@@ -14,6 +14,7 @@
 
 #include "mfem.hpp"
 
+#include "serac/infrastructure/mfem_configs.hpp"
 #include "serac/infrastructure/logger.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/quadrature.hpp"
@@ -113,7 +114,6 @@ generateParFiniteElementSpace(mfem::ParMesh* mesh)
 {
   const int                                      dim = mesh->Dimension();
   std::unique_ptr<mfem::FiniteElementCollection> fec;
-  const auto                                     ordering = mfem::Ordering::byVDIM;
 
   switch (function_space::family) {
     case Family::H1:
@@ -135,7 +135,8 @@ generateParFiniteElementSpace(mfem::ParMesh* mesh)
       break;
   }
 
-  auto fes = std::make_unique<mfem::ParFiniteElementSpace>(mesh, fec.get(), function_space::components, ordering);
+  auto fes =
+      std::make_unique<mfem::ParFiniteElementSpace>(mesh, fec.get(), function_space::components, serac::ordering);
 
   return std::pair(std::move(fes), std::move(fec));
 }

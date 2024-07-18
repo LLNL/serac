@@ -194,7 +194,7 @@ void functional_solid_spatial_essential_bc()
     auto vdim  = solid_solver.displacement().space().GetVDim();
     auto ndofs = solid_solver.displacement().space().GetTrueVSize() / vdim;
     auto dof   = [ndofs, vdim](auto node, auto component) {
-      return mfem::Ordering::Map<mfem::Ordering::byVDIM>(ndofs, vdim, node, component);
+      return mfem::Ordering::Map<serac::ordering>(ndofs, vdim, node, component);
     };
     // This is a vector of pairs containing the exact solution index and value for the known analytical dofs.
     // These exact indices and values are chosen to avoid dependence on solver tolerances.

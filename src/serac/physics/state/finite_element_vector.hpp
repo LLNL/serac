@@ -18,6 +18,7 @@
 #include "mfem.hpp"
 
 #include "serac/infrastructure/variant.hpp"
+#include "serac/infrastructure/mfem_configs.hpp"
 #include "serac/numerics/functional/functional.hpp"
 
 namespace serac {
@@ -67,8 +68,6 @@ public:
   {
     const int dim = mesh.Dimension();
 
-    const auto ordering = mfem::Ordering::byVDIM;
-
     switch (FunctionSpace::family) {
       case Family::H1:
         coll_ = std::make_unique<mfem::H1_FECollection>(FunctionSpace::order, dim);
@@ -88,7 +87,8 @@ public:
         break;
     }
 
-    space_ = std::make_unique<mfem::ParFiniteElementSpace>(&mesh, coll_.get(), FunctionSpace::components, ordering);
+    space_ =
+        std::make_unique<mfem::ParFiniteElementSpace>(&mesh, coll_.get(), FunctionSpace::components, serac::ordering);
 
     // Construct a hypre par vector based on the new finite element space
     HypreParVector new_vector(space_.get());

@@ -14,6 +14,7 @@
 
 #include "mfem.hpp"
 
+#include "serac/infrastructure/mfem_configs.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/physics/common.hpp"
 #include "serac/physics/solid_mechanics_input.hpp"
@@ -23,6 +24,7 @@
 #include "serac/numerics/functional/shape_aware_functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/materials/solid_material.hpp"
+#include "serac/infrastructure/mfem_configs.hpp"
 
 namespace serac {
 
@@ -1676,13 +1678,15 @@ protected:
     for (int i = 0; i < num_nodes; i++) {
       // Determine if this "local" node (L-vector node) is in the local true vector. I.e. ensure this node is not a
       // shared node owned by another processor
-      if (nodal_positions.ParFESpace()->GetLocalTDofNumber(i) >= 0) {
+      int idof = mfem::Ordering::Map<serac::ordering>(nodal_positions.FESpace()->GetNDofs(),
+                                                      nodal_positions.FESpace()->GetVDim(), i, 0);
+      if (nodal_positions.ParFESpace()->GetLocalTDofNumber(idof) >= 0) {
         mfem::Vector     node_coords(dim);
         mfem::Array<int> node_dofs;
         for (int d = 0; d < dim; d++) {
           // Get the local dof number for the prescribed component
-          int local_vector_dof = mfem::Ordering::Map<mfem::Ordering::byVDIM>(
-              nodal_positions.FESpace()->GetNDofs(), nodal_positions.FESpace()->GetVDim(), i, d);
+          int local_vector_dof = mfem::Ordering::Map<serac::ordering>(nodal_positions.FESpace()->GetNDofs(),
+                                                                      nodal_positions.FESpace()->GetVDim(), i, d);
 
           // Save the spatial position for this coordinate dof
           node_coords(d) = nodal_positions(local_vector_dof);
