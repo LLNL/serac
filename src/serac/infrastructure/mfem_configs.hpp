@@ -18,6 +18,6 @@
 namespace serac {
 
 /// The mfem ordering / memory layout used for finite element vectors throughout serac
-constexpr auto ordering = mfem::Ordering::byNODES;
+constexpr auto ordering = mfem::Ordering::byVDIM;
 
 }  // namespace serac
