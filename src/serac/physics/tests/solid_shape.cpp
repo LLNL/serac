@@ -197,11 +197,11 @@ TEST(SolidMechanics, MoveShapeNonlinear) { shape_test(GeometricNonlinearities::O
 
 int main(int argc, char* argv[])
 {
-  ::testing::InitGoogleTest(&argc, argv);
+  testing::InitGoogleTest(&argc, argv);
+
   serac::initialize(argc, argv);
 
-  axom::slic::SimpleLogger logger;
-
   int result = RUN_ALL_TESTS();
+
   serac::exitGracefully(result);
 }

@@ -131,10 +131,11 @@ INSTANTIATE_TEST_SUITE_P(tribol, ContactTest,
 
 int main(int argc, char* argv[])
 {
-  ::testing::InitGoogleTest(&argc, argv);
-  axom::slic::SimpleLogger logger;
+  testing::InitGoogleTest(&argc, argv);
+
   serac::initialize(argc, argv);
 
   int result = RUN_ALL_TESTS();
+
   serac::exitGracefully(result);
 }

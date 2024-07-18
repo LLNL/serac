@@ -108,6 +108,7 @@ TEST_P(EquationSolverSuite, All)
 
   eq_solver.solve(x_computed);
 
+  EXPECT_EQ(x_computed.Size(), x_exact.Size());
   for (int i = 0; i < x_computed.Size(); ++i) {
     EXPECT_LT(std::abs((x_computed(i) - x_exact(i))) / x_exact(i), 1.0e-6);
   }
@@ -155,23 +156,19 @@ auto preconditioners =
 INSTANTIATE_TEST_SUITE_P(AllEquationSolverTests, EquationSolverSuite,
                          testing::Combine(nonlinear_solvers, linear_solvers, preconditioners),
                          [](const testing::TestParamInfo<EquationSolverSuite::ParamType>& test_info) {
-                           std::string name = nonlinearName(std::get<0>(test_info.param)) + "_" +
-                                              linearName(std::get<1>(test_info.param)) + "_" +
-                                              std::to_string(static_cast<int>(std::get<2>(test_info.param)));
+                           std::string name =
+                               axom::fmt::format("{}_{}_{}", std::get<0>(test_info.param), std::get<1>(test_info.param),
+                                                 std::get<2>(test_info.param));
                            return name;
                          });
 
 int main(int argc, char* argv[])
 {
-  int result = 0;
-
-  ::testing::InitGoogleTest(&argc, argv);
+  testing::InitGoogleTest(&argc, argv);
 
   serac::initialize(argc, argv);
 
-  axom::slic::SimpleLogger logger;
-
-  result = RUN_ALL_TESTS();
+  int result = RUN_ALL_TESTS();
 
   serac::exitGracefully(result);
 }
