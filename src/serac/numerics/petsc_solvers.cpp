@@ -209,7 +209,9 @@ PetscErrorCode convertPCPreSolve(PC pc, [[maybe_unused]] KSP ksp)
     MatType mat_type;
     PetscCall(MatGetType(A, &mat_type));
     PetscCall(PetscStrstr(mat_type, "aij", &found));
-    if (found) PetscFunctionReturn(PETSC_SUCCESS);
+    if (found) {
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
     SLIC_DEBUG_ROOT("convertPCPreSolve(...) - Converting operators to MATAIJ format.");
     mfem::PetscParMatrix temp_mat(A, true);
     solver->converted_matrix_ = std::make_unique<mfem::PetscParMatrix>(temp_mat, mfem::Operator::PETSC_MATAIJ);
@@ -265,7 +267,9 @@ void PetscPCSolver::SetOperator(const mfem::Operator& op)
     serac::logger::flush();
     fieldsplit_pc_.reset();
     mfem::PetscPreconditioner::SetOperator(*pA);
-    if (delete_pA) delete pA;
+    if (delete_pA) {
+      delete pA;
+    }
     return;
   }
   SLIC_DEBUG_ROOT("MATNEST detected, setting up fieldsplit");
@@ -301,7 +305,9 @@ void PetscPCSolver::SetOperator(const mfem::Operator& op)
   PetscCallAbort(GetComm(), MatCreateVecs(A22, &zero, NULL));
   PetscCallAbort(GetComm(), VecSet(zero, 0));
   PetscCallAbort(GetComm(), MatDiagonalSet(A22, zero, ADD_VALUES));
-  if (delete_pA) delete pA;
+  if (delete_pA) {
+    delete pA;
+  }
   serac::logger::flush();
 }
 
@@ -392,14 +398,18 @@ void PetscGAMGSolver::SetupNearNullSpace()
   PetscCallAbort(GetComm(), PCGetOperators(*this, NULL, &pA));
   MatNullSpace nnsp;
   PetscCallAbort(GetComm(), MatGetNearNullSpace(pA, &nnsp));
-  if (!fespace_ || nnsp) return;
+  if (!fespace_ || nnsp) {
+    return;
+  }
 
   // get PETSc object
   PC pc = *this;
 
   PetscBool is_op_set;
   PetscCallAbort(GetComm(), PCGetOperatorsSet(pc, nullptr, &is_op_set));
-  if (!is_op_set) return;
+  if (!is_op_set) {
+    return;
+  }
 
   PetscInt sdim = fespace_->GetParMesh()->SpaceDimension();
   int      vdim = fespace_->GetVDim();
@@ -608,7 +618,9 @@ PetscErrorCode convertKSPPreSolve(KSP ksp, [[maybe_unused]] Vec rhs, [[maybe_unu
       solver->wrapped_matrix_ = std::make_unique<mfem::HypreParMatrix>(hypre_csr, false);
     }
     SLIC_DEBUG_ROOT("convertKSPPreSolve(...) - Setting operator for preconditioner");
-    if (prec) prec->SetOperator(*solver->wrapped_matrix_);
+    if (prec) {
+      prec->SetOperator(*solver->wrapped_matrix_);
+    }
     solver->needs_hypre_wrapping_ = true;
   }
   solver->checked_for_convert_ = true;
@@ -682,7 +694,9 @@ void PetscKSPSolver::SetOperator(const mfem::Operator& op)
   PetscPCSolver* petsc_pc = dynamic_cast<PetscPCSolver*>(prec);
 
   // delete existing matrix, if created
-  if (pA_) delete pA_;
+  if (pA_) {
+    delete pA_;
+  }
   pA_ = nullptr;
   // update base classes: Operator, Solver, PetscLinearSolver
   if (!pA) {
@@ -697,8 +711,8 @@ void PetscKSPSolver::SetOperator(const mfem::Operator& op)
             "conversion costs");
         pA = new mfem::PetscParMatrix(hA, wrap_ ? PETSC_MATSHELL : PETSC_MATAIJ);
       }
-    } else if (oA)  // fallback to general operator
-    {
+    } else if (oA) {
+      // fallback to general operator
       // Create MATSHELL or MATNEST (if oA is a BlockOperator) object
       // If oA is a BlockOperator, Operator::Type is relevant to the subblocks
       SLIC_WARNING_ROOT(
@@ -806,13 +820,15 @@ PetscErrorCode linesearchPreCheckBackoffOnNan(SNESLineSearch linesearch, Vec X, 
   // This is faster, but will fail if the step leads to a nan or inf value
   while (num_failures++ < max_failures) {
     PetscCall(VecWAXPY(W, -lambda_orig, Y, X));
-    if (linesearch->ops->viproject) PetscCall((*linesearch->ops->viproject)(snes, W));
+    if (linesearch->ops->viproject) {
+      PetscCall((*linesearch->ops->viproject)(snes, W));
+    }
     PetscCall((*linesearch->ops->snesfunc)(snes, W, Ftemp));
     PetscCall(VecDot(Ftemp, Y, &fty));
     if (!PetscIsInfOrNanScalar(fty)) {
       if (monitor) {
         PetscCall(PetscViewerASCIIAddTab(monitor, linesearch_obj->tablevel));
-        auto msg = axom::fmt::format("    Line search: dot(F,Y) = {}, no back-off steps needed", fty, lambda);
+        auto msg = axom::fmt::format("    Line search: dot(F,Y) = {}, no back-off steps needed", fty);
         PetscCall(PetscViewerASCIIPrintf(monitor, "%s\n", msg.c_str()));
         PetscCall(PetscViewerASCIISubtractTab(monitor, linesearch_obj->tablevel));
       }
