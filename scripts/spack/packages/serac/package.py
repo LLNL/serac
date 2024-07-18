@@ -171,10 +171,7 @@ class Serac(CachedCMakePackage, CudaPackage):
         depends_on("{0}~shared".format(dep), when="+profiling~shared")
 
     # Required
-    # NOTE: Don't put HDF5 in this list, for the following reasons:
-    #  "hdf5+shared" causes Axom to not find HDF5
-    #  "hdf5 build_type=Release" causes netcdf-c to not find HDF5 on Ubuntu 20
-    for dep in ["axom", "conduit", "metis", "parmetis", "superlu-dist"]:
+    for dep in ["axom", "conduit", "hdf5", "metis", "parmetis", "superlu-dist"]:
         depends_on("{0} build_type=Debug".format(dep), when="build_type=Debug")
         depends_on("{0}+shared".format(dep), when="+shared")
         depends_on("{0}~shared".format(dep), when="~shared")
@@ -198,9 +195,12 @@ class Serac(CachedCMakePackage, CudaPackage):
         depends_on("{0}+debug".format(dep), when="build_type=Debug")
         depends_on("{0}+shared".format(dep), when="+shared")
         depends_on("{0}~shared".format(dep), when="~shared")
-    # MFEM has a static variant
-    depends_on("{0}+static".format(dep), when="~shared")
-    depends_on("{0}~static".format(dep), when="+shared")
+
+    # MFEM and sundials have a static variant
+    depends_on("{0}+static".format("mfem"), when="~shared")
+    depends_on("{0}~static".format("mfem"), when="+shared")
+    depends_on("{0}+static".format("sundials"), when="+sundials~shared")
+    depends_on("{0}~static".format("sundials"), when="+sundials+shared")
 
     #
     # Conflicts

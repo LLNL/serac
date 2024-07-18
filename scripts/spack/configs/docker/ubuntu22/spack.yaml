@@ -30,8 +30,8 @@ spack:
       environment: {}
       extra_rpaths: []
       flags:
-        cflags: -pthread
-        cxxflags: -pthread
+        cflags: -fPIC -pthread
+        cxxflags: -fPIC -pthread
       modules: []
       operating_system: ubuntu22.04
       paths:
@@ -45,8 +45,8 @@ spack:
       environment: {}
       extra_rpaths: []
       flags:
-        cflags: -pthread
-        cxxflags: -pthread
+        cflags: -fPIC -pthread
+        cxxflags: -fPIC -pthread
       modules: []
       operating_system: ubuntu22.04
       paths:
