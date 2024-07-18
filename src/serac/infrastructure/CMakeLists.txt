@@ -26,6 +26,7 @@ set(infrastructure_headers
     input.hpp
     logger.hpp
     mpi_fstream.hpp
+    mfem_configs.hpp
     output.hpp
     profiling.hpp
     terminator.hpp
