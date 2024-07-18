@@ -32,7 +32,7 @@ variables:
     # integration tests
     - echo -e "section_start:$(date +%s):src_build_and_unit_test\r\e[0K
       Source Build and Unit Tests ${CI_PROJECT_NAME}"
-    - ${ALLOC_COMMAND} scripts/gitlab/build_and_test.sh
+    - ./scripts/gitlab/build_and_test.sh
     - echo -e "section_end:$(date +%s):src_build_and_unit_test\r\e[0K"
   artifacts:
     expire_in: 2 weeks
@@ -65,10 +65,9 @@ variables:
     reports:
       junit: ${FULL_BUILD_ROOT}/${SYS_TYPE}/*/_serac_build_and_test_*/build-*/junit.xml
 
-# This is where jobs are included for each machine
+# This is where jobs are included for each system
 include:
-  - local: .gitlab/build_lassen.yml
-  # Note: Cannot move to ruby until users have access to eng bank
-  - local: .gitlab/build_quartz.yml
+  - local: .gitlab/build_blueos.yml
+  - local: .gitlab/build_toss4.yml
   - project: 'lc-templates/id_tokens'
     file: 'id_tokens.yml'
