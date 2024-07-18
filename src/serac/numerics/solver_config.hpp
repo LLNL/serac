@@ -130,6 +130,7 @@ inline std::string linearName(const LinearSolver& s)
   return "";
 }
 
+/// output linear solver string representation to a stream
 inline std::ostream& operator<<(std::ostream& os, LinearSolver s) { return os << linearName(s); }
 
 // Add a custom list of strings? conduit node?
@@ -182,6 +183,7 @@ inline std::string nonlinearName(const NonlinearSolver& s)
   }
 }
 
+/// output nonlinear solver string representation to a stream
 inline std::ostream& operator<<(std::ostream& os, NonlinearSolver s) { return os << nonlinearName(s); }
 
 /**
@@ -284,6 +286,7 @@ inline std::string petscPCName(const PetscPCType& s)
   }
 }
 
+/// output PETSc preconditioner string representation to a stream
 inline std::ostream& operator<<(std::ostream& os, PetscPCType s) { return os << petscPCName(s); }
 
 // _preconditioners_start
@@ -301,6 +304,7 @@ enum class Preconditioner
 };
 // _preconditioners_end
 
+/// Convert preconditioner enums to their string names
 inline std::string preconditionerName(Preconditioner p)
 {
   switch (p) {
@@ -323,6 +327,7 @@ inline std::string preconditionerName(Preconditioner p)
   }
 }
 
+/// output preconditioner string representation to a stream
 inline std::ostream& operator<<(std::ostream& os, Preconditioner p) { return os << preconditionerName(p); }
 
 // _linear_options_start
@@ -386,21 +391,23 @@ struct NonlinearSolverOptions {
 }  // namespace serac
 
 // fmt support for serac::NonlinearSolver
+namespace axom::fmt {
 template <>
-struct axom::fmt::formatter<serac::NonlinearSolver> : axom::fmt::ostream_formatter {
+struct formatter<serac::NonlinearSolver> : ostream_formatter {
 };
 
 // fmt support for serac::LinearSolver
 template <>
-struct axom::fmt::formatter<serac::LinearSolver> : axom::fmt::ostream_formatter {
+struct formatter<serac::LinearSolver> : ostream_formatter {
 };
 
 // fmt support for serac::Preconditioner
 template <>
-struct axom::fmt::formatter<serac::Preconditioner> : axom::fmt::ostream_formatter {
+struct formatter<serac::Preconditioner> : ostream_formatter {
 };
 
 // fmt support for serac::PetscPCType
 template <>
-struct axom::fmt::formatter<serac::PetscPCType> : axom::fmt::ostream_formatter {
+struct formatter<serac::PetscPCType> : ostream_formatter {
 };
+}  // namespace axom::fmt
