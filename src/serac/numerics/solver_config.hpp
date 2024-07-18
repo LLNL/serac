@@ -112,12 +112,20 @@ enum class LinearSolver
 /// Convert linear solver enums to their string names
 inline std::string linearName(const LinearSolver& s)
 {
-  if (s == LinearSolver::CG) return "CG";
-  if (s == LinearSolver::GMRES) return "GMRES";
-  if (s == LinearSolver::SuperLU) return "SuperLU";
-  if (s == LinearSolver::Strumpack) return "Strumpack";
-  if (s == LinearSolver::PetscCG) return "PetscCG";
-  if (s == LinearSolver::PetscGMRES) return "PetscGMRES";
+  switch (s) {
+    case LinearSolver::CG:
+      return "CG";
+    case LinearSolver::GMRES:
+      return "GMRES";
+    case LinearSolver::SuperLU:
+      return "SuperLU";
+    case LinearSolver::Strumpack:
+      return "Strumpack";
+    case LinearSolver::PetscCG:
+      return "PetscCG";
+    case LinearSolver::PetscGMRES:
+      return "PetscGMRES";
+  }
   return "";
 }
 
@@ -145,17 +153,30 @@ enum class NonlinearSolver
 /// Convert nonlinear linear solver enums to their string names
 inline std::string nonlinearName(const NonlinearSolver& s)
 {
-  if (s == NonlinearSolver::Newton) return "Newton";
-  if (s == NonlinearSolver::LBFGS) return "LBFGS";
-  if (s == NonlinearSolver::NewtonLineSearch) return "NewtonLineSearch";
-  if (s == NonlinearSolver::KINFullStep) return "KINFullStep";
-  if (s == NonlinearSolver::KINBacktrackingLineSearch) return "KINBacktrackingLineSearch";
-  if (s == NonlinearSolver::KINPicard) return "KINPicard";
-  if (s == NonlinearSolver::PetscNewton) return "PetscNewton";
-  if (s == NonlinearSolver::PetscNewtonBacktracking) return "PetscNewtonBacktracking";
-  if (s == NonlinearSolver::PetscNewtonCriticalPoint) return "PetscNewtonCriticalPoint";
-  if (s == NonlinearSolver::PetscTrustRegion) return "PetscTrustRegion";
-  return "";
+  switch (s) {
+    case NonlinearSolver::Newton:
+      return "Newton";
+    case NonlinearSolver::LBFGS:
+      return "LBFGS";
+    case NonlinearSolver::NewtonLineSearch:
+      return "NewtonLineSearch";
+    case NonlinearSolver::TrustRegion:
+      return "TrustRegion";
+    case NonlinearSolver::KINFullStep:
+      return "KINFullStep";
+    case NonlinearSolver::KINBacktrackingLineSearch:
+      return "KINBacktrackingLineSearch";
+    case NonlinearSolver::KINPicard:
+      return "KINPicard";
+    case NonlinearSolver::PetscNewton:
+      return "PetscNewton";
+    case NonlinearSolver::PetscNewtonBacktracking:
+      return "PetscNewtonBacktracking";
+    case NonlinearSolver::PetscNewtonCriticalPoint:
+      return "PetscNewtonCriticalPoint";
+    case NonlinearSolver::PetscTrustRegion:
+      return "PetscTrustRegion";
+  }
 }
 
 /**
@@ -224,21 +245,38 @@ enum class PetscPCType
 /// Convert Petsc preconditioner enums to their string names
 inline std::string PetscPCName(const PetscPCType& s)
 {
-  if (s == PetscPCType::JACOBI) return "JACOBI";
-  if (s == PetscPCType::JACOBI_L1) return "JACOBI_L1";
-  if (s == PetscPCType::JACOBI_ROWSUM) return "JACOBI_ROWSUM";
-  if (s == PetscPCType::JACOBI_ROWMAX) return "JACOBI_ROWMAX";
-  if (s == PetscPCType::PBJACOBI) return "PBJACOBI";
-  if (s == PetscPCType::BJACOBI) return "BJACOBI";
-  if (s == PetscPCType::LU) return "LU";
-  if (s == PetscPCType::ILU) return "ILU";
-  if (s == PetscPCType::CHOLESKY) return "CHOLESKY";
-  if (s == PetscPCType::SVD) return "SVD";
-  if (s == PetscPCType::ASM) return "ASM";
-  if (s == PetscPCType::GASM) return "GASM";
-  if (s == PetscPCType::GAMG) return "GAMG";
-  if (s == PetscPCType::HMG) return "HMG";
-  return "";
+  switch (s) {
+    case PetscPCType::JACOBI:
+      return "JACOBI";
+    case PetscPCType::JACOBI_L1:
+      return "JACOBI_L1";
+    case PetscPCType::JACOBI_ROWSUM:
+      return "JACOBI_ROWSUM";
+    case PetscPCType::JACOBI_ROWMAX:
+      return "JACOBI_ROWMAX";
+    case PetscPCType::PBJACOBI:
+      return "PBJACOBI";
+    case PetscPCType::BJACOBI:
+      return "BJACOBI";
+    case PetscPCType::LU:
+      return "LU";
+    case PetscPCType::ILU:
+      return "ILU";
+    case PetscPCType::CHOLESKY:
+      return "CHOLESKY";
+    case PetscPCType::SVD:
+      return "SVD";
+    case PetscPCType::ASM:
+      return "ASM";
+    case PetscPCType::GASM:
+      return "GASM";
+    case PetscPCType::GAMG:
+      return "GAMG";
+    case PetscPCType::HMG:
+      return "HMG";
+    case PetscPCType::NONE:
+      return "NONE";
+  }
 }
 
 // _preconditioners_start
