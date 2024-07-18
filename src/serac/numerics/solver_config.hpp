@@ -15,6 +15,7 @@
 #include <variant>
 
 #include "mfem.hpp"
+#include "axom/fmt.hpp"
 
 namespace serac {
 
@@ -129,6 +130,8 @@ inline std::string linearName(const LinearSolver& s)
   return "";
 }
 
+inline std::ostream& operator<<(std::ostream& os, LinearSolver s) { return os << linearName(s); }
+
 // Add a custom list of strings? conduit node?
 // Arbitrary string (e.g. json) to define parameters?
 
@@ -178,6 +181,8 @@ inline std::string nonlinearName(const NonlinearSolver& s)
       return "PetscTrustRegion";
   }
 }
+
+inline std::ostream& operator<<(std::ostream& os, NonlinearSolver s) { return os << nonlinearName(s); }
 
 /**
  * @brief Solver types supported by AMGX
@@ -243,7 +248,7 @@ enum class PetscPCType
 };
 
 /// Convert Petsc preconditioner enums to their string names
-inline std::string PetscPCName(const PetscPCType& s)
+inline std::string petscPCName(const PetscPCType& s)
 {
   switch (s) {
     case PetscPCType::JACOBI:
@@ -279,6 +284,8 @@ inline std::string PetscPCName(const PetscPCType& s)
   }
 }
 
+inline std::ostream& operator<<(std::ostream& os, PetscPCType s) { return os << petscPCName(s); }
+
 // _preconditioners_start
 /// The type of preconditioner to be used
 enum class Preconditioner
@@ -293,6 +300,30 @@ enum class Preconditioner
   None              /**< No preconditioner used */
 };
 // _preconditioners_end
+
+inline std::string preconditionerName(Preconditioner p)
+{
+  switch (p) {
+    case Preconditioner::HypreJacobi:
+      return "HypreJacobi";
+    case Preconditioner::HypreL1Jacobi:
+      return "HypreL1Jacobi";
+    case Preconditioner::HypreGaussSeidel:
+      return "HypreGaussSeidel";
+    case Preconditioner::HypreAMG:
+      return "HypreAMG";
+    case Preconditioner::HypreILU:
+      return "HypreILU";
+    case Preconditioner::AMGX:
+      return "AMGX";
+    case Preconditioner::Petsc:
+      return "Petsc";
+    case Preconditioner::None:
+      return "None";
+  }
+}
+
+inline std::ostream& operator<<(std::ostream& os, Preconditioner p) { return os << preconditionerName(p); }
 
 // _linear_options_start
 /// Parameters for an iterative linear solution scheme
@@ -353,3 +384,23 @@ struct NonlinearSolverOptions {
 // _nonlinear_options_end
 
 }  // namespace serac
+
+// fmt support for serac::NonlinearSolver
+template <>
+struct axom::fmt::formatter<serac::NonlinearSolver> : axom::fmt::ostream_formatter {
+};
+
+// fmt support for serac::LinearSolver
+template <>
+struct axom::fmt::formatter<serac::LinearSolver> : axom::fmt::ostream_formatter {
+};
+
+// fmt support for serac::Preconditioner
+template <>
+struct axom::fmt::formatter<serac::Preconditioner> : axom::fmt::ostream_formatter {
+};
+
+// fmt support for serac::PetscPCType
+template <>
+struct axom::fmt::formatter<serac::PetscPCType> : axom::fmt::ostream_formatter {
+};

@@ -132,8 +132,8 @@ INSTANTIATE_TEST_SUITE_P(
                                      PetscPCType::LU, PetscPCType::ILU, PetscPCType::CHOLESKY, PetscPCType::SVD,
                                      PetscPCType::ASM, PetscPCType::GASM, PetscPCType::GAMG)),  //, PetscPCType::HMG)),
     [](const testing::TestParamInfo<EquationSolverSuite::ParamType>& test_info) {
-      std::string name = nonlinearName(std::get<0>(test_info.param)) + "_" + linearName(std::get<1>(test_info.param)) +
-                         "_" + PetscPCName(std::get<3>(test_info.param));
+      std::string name = axom::fmt::format("{}_{}_{}_{}", std::get<0>(test_info.param), std::get<1>(test_info.param),
+                                           std::get<2>(test_info.param), std::get<3>(test_info.param));
       return name;
     });
 #else
@@ -149,8 +149,8 @@ INSTANTIATE_TEST_SUITE_P(
                         PetscPCType::ILU, PetscPCType::CHOLESKY, PetscPCType::SVD, PetscPCType::ASM, PetscPCType::GASM,
                         PetscPCType::GAMG)),  //, PetscPCType::HMG)));
     [](const testing::TestParamInfo<EquationSolverSuite::ParamType>& test_info) {
-      std::string name = nonlinearName(std::get<0>(test_info.param)) + "_" + linearName(std::get<1>(test_info.param)) +
-                         "_" + PetscPCName(std::get<3>(test_info.param));
+      std::string name = axom::fmt::format("{}_{}_{}_{}", std::get<0>(test_info.param), std::get<1>(test_info.param),
+                                           std::get<2>(test_info.param), std::get<3>(test_info.param));
       return name;
     });
 #endif
