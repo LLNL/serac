@@ -89,7 +89,10 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("py-ats", when="+devtools")
 
     # MFEM is deprecating the monitoring support with sundials v6.0 and later
-    depends_on("sundials+hypre~monitoring~examples~examples-install",
+    # NOTE: Sundials must be built static to prevent the following runtime error:
+    # "error while loading shared libraries: libsundials_nvecserial.so.6:
+    # cannot open shared object file: No such file or directory"
+    depends_on("sundials+hypre~monitoring~examples~examples-install+static",
                when="+sundials")
     depends_on("sundials+asan", when="+sundials+asan")
 
@@ -159,10 +162,13 @@ class Serac(CachedCMakePackage, CudaPackage):
     # CMake packages "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
 
     # Optional (require our variant in "when")
-    for dep in ["raja", "umpire", "sundials", "strumpack"]:
+    for dep in ["raja", "umpire", "strumpack"]:
         depends_on("{0} build_type=Debug".format(dep), when="+{0} build_type=Debug".format(dep))
         depends_on("{0}+shared".format(dep), when="+{0}+shared".format(dep))
         depends_on("{0}~shared".format(dep), when="+{0}~shared".format(dep))
+
+    # Don't add propagate shared variant to sundials
+    depends_on("sundials build_type=Debug".format(dep), when="+sundials build_type=Debug".format(dep))
 
     # Optional (require when="+profile")
     for dep in ["adiak", "caliper"]:
@@ -210,6 +216,9 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     conflicts("sundials@:6.0.0", when="+sundials",
               msg="Sundials needs to be greater than 6.0.0")
+
+    conflicts("sundials+shared", when="+sundials",
+              msg="Sundials causes runtime errors if shared!")
 
     # ASan is only supported by GCC and (some) LLVM-derived
     # compilers.
