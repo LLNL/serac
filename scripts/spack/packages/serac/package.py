@@ -207,11 +207,9 @@ class Serac(CachedCMakePackage, CudaPackage):
         depends_on("{0}+shared".format(dep), when="+shared")
         depends_on("{0}~shared".format(dep), when="~shared")
 
-    # MFEM and sundials have a static variant
+    # MFEM has a static variant
     depends_on("{0}+static".format("mfem"), when="~shared")
     depends_on("{0}~static".format("mfem"), when="+shared")
-    depends_on("{0}+static".format("sundials"), when="+sundials~shared")
-    depends_on("{0}~static".format("sundials"), when="+sundials+shared")
 
     #
     # Conflicts
