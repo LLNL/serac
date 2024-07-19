@@ -162,10 +162,15 @@ class Serac(CachedCMakePackage, CudaPackage):
     # CMake packages "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
 
     # Optional (require our variant in "when")
-    for dep in ["raja", "umpire", "strumpack"]:
+    for dep in ["raja", "strumpack"]:
         depends_on("{0} build_type=Debug".format(dep), when="+{0} build_type=Debug".format(dep))
         depends_on("{0}+shared".format(dep), when="+{0}+shared".format(dep))
         depends_on("{0}~shared".format(dep), when="+{0}~shared".format(dep))
+    
+    # Only propagate shared if not CUDA
+    depends_on("umpire build_type=Debug".format(dep), when="+umpire build_type=Debug".format(dep))
+    depends_on("umpire+shared".format(dep), when="+umpire+shared~cuda".format(dep))
+    depends_on("umpire~shared".format(dep), when="+umpire~shared".format(dep))
 
     # Don't add propagate shared variant to sundials
     depends_on("sundials build_type=Debug".format(dep), when="+sundials build_type=Debug".format(dep))
