@@ -92,7 +92,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     # NOTE: Sundials must be built static to prevent the following runtime error:
     # "error while loading shared libraries: libsundials_nvecserial.so.6:
     # cannot open shared object file: No such file or directory"
-    depends_on("sundials+hypre~monitoring~examples~examples-install+static",
+    depends_on("sundials+hypre~monitoring~examples~examples-install+static~shared",
                when="+sundials")
     depends_on("sundials+asan", when="+sundials+asan")
 
