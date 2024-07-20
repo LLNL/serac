@@ -356,26 +356,26 @@ FiniteElementState BasePhysics::loadCheckpointedState(const std::string& state_n
   return checkpoint_states_.at(state_name)[static_cast<size_t>(cycle)];
 }
 
-  std::unordered_map<std::string, FiniteElementState> BasePhysics::getCheckpointedStates(int cycle_to_load) const
-  {
-    std::unordered_map<std::string, FiniteElementState> previous_states_map;
-    std::vector<FiniteElementState*> previous_states_ptrs;
+std::unordered_map<std::string, FiniteElementState> BasePhysics::getCheckpointedStates(int cycle_to_load) const
+{
+  std::unordered_map<std::string, FiniteElementState> previous_states_map;
+  std::vector<FiniteElementState*>                    previous_states_ptrs;
 
-    if (checkpoint_to_disk_) {
-      for (const auto& state_name : stateNames()) {
-        previous_states_map.emplace(state_name, state(state_name));
-        previous_states_ptrs.emplace_back(const_cast<FiniteElementState*>(&state(state_name)));
-      }
-      StateManager::loadCheckpointedStates(cycle_to_load, previous_states_ptrs);
-      return previous_states_map;
-    } else {
-      for (const auto& state_name : stateNames()) {
-        previous_states_map.emplace(state_name, checkpoint_states_.at(state_name)[static_cast<size_t>(cycle_to_load)]);
-      }
+  if (checkpoint_to_disk_) {
+    for (const auto& state_name : stateNames()) {
+      previous_states_map.emplace(state_name, state(state_name));
+      previous_states_ptrs.emplace_back(const_cast<FiniteElementState*>(&state(state_name)));
     }
-
+    StateManager::loadCheckpointedStates(cycle_to_load, previous_states_ptrs);
     return previous_states_map;
+  } else {
+    for (const auto& state_name : stateNames()) {
+      previous_states_map.emplace(state_name, checkpoint_states_.at(state_name)[static_cast<size_t>(cycle_to_load)]);
+    }
   }
+
+  return previous_states_map;
+}
 
 double BasePhysics::getCheckpointedTimestep(int cycle) const
 {

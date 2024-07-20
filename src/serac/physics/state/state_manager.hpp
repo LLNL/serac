@@ -235,8 +235,7 @@ public:
    * @param cycle_to_load
    * @param states_to_load
    */
-  static void loadCheckpointedStates(int                              cycle_to_load,
-                                     std::vector<FiniteElementState*> states_to_load);
+  static void loadCheckpointedStates(int cycle_to_load, std::vector<FiniteElementState*> states_to_load);
 
   /**
    * @brief Get the shape displacement sensitivity finite element dual
