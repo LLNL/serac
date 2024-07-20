@@ -97,6 +97,11 @@ public:
   /// integrators
   static constexpr auto NUM_STATE_VARS = 2;
 
+  /// @brief a container holding quadrature point data of the specified type
+  /// @tparam T the type of data to store at each quadrature point
+  template <typename T>
+  using qdata_type = std::shared_ptr<QuadratureData<T>>;
+
   /**
    * @brief Construct a new heat transfer object
    *
@@ -383,14 +388,14 @@ public:
     /**
      * @brief Evaluate integrand
      */
-    template <typename X, typename T, typename dT_dt, typename... Params>
-    auto operator()(double /*time*/, X x, T temperature, dT_dt dtemp_dt, Params... params) const
+    template <typename X, typename State, typename T, typename dT_dt, typename... Params>
+    auto operator()(double /*time*/, X x, State& state, T temperature, dT_dt dtemp_dt, Params... params) const
     {
       // Get the value and the gradient from the input tuple
       auto [u, du_dX] = temperature;
       auto du_dt      = get<VALUE>(dtemp_dt);
 
-      auto [heat_capacity, heat_flux] = material_(x, u, du_dX, params...);
+      auto [heat_capacity, heat_flux] = material_(state, x, u, du_dX, params...);
 
       return serac::tuple{heat_capacity * du_dt, -1.0 * heat_flux};
     }
@@ -422,11 +427,14 @@ public:
    *
    * @note This method must be called prior to completeSetup()
    */
-  template <int... active_parameters, typename MaterialType>
-  void setMaterial(DependsOn<active_parameters...>, const MaterialType& material)
+  template <int... active_parameters, typename MaterialType, typename StateType = Empty>
+  void setMaterial(DependsOn<active_parameters...>, const MaterialType& material,
+    qdata_type<StateType> qdata = EmptyQData)
   {
+    static_assert(std::is_same_v<StateType, Empty> || std::is_same_v<StateType, typename MaterialType::State>,
+                  "invalid quadrature data provided in setMaterial()");
     residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, NUM_STATE_VARS + active_parameters...>{},
-                                 ThermalMaterialIntegrand<MaterialType>(material), mesh_);
+                                 ThermalMaterialIntegrand<MaterialType>(material), mesh_, qdata);
   }
 
   /// @overload
