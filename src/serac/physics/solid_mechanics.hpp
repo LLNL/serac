@@ -492,6 +492,15 @@ public:
     bcs_.addEssential(disp_bdr, component_disp_bdr_coef_, displacement_.space(), component);
   }
 
+  void setDisplacementBCs(const std::set<int>& disp_bdr, std::function<double(const mfem::Vector& x, double t)> disp,
+                          int component)
+  {
+    // Project the coefficient onto the grid function
+    component_disp_bdr_coef_ = std::make_shared<mfem::FunctionCoefficient>(disp);
+
+    bcs_.addEssential(disp_bdr, component_disp_bdr_coef_, displacement_.space(), component);
+  }
+
   /**
    * @brief Set the displacement essential boundary conditions on a set of true degrees of freedom
    *

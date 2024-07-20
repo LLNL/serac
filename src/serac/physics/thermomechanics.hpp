@@ -456,6 +456,18 @@ public:
     solid_.setDisplacementBCs(displacement_attributes, prescribed_value);
   }
 
+  void setDisplacementBCs(const std::set<int>& disp_bdr, std::function<double(const mfem::Vector& x)> disp,
+                          int component)
+  {
+    solid_.setDisplacementBCs(disp_bdr, disp, component);
+  }
+
+  void setDisplacementBCs(const std::set<int>& disp_bdr, std::function<double(const mfem::Vector& x, double t)> disp,
+                          int component)
+  {
+    solid_.setDisplacementBCs(disp_bdr, disp, component);
+  }
+
   /**
    * @brief Set the thermal flux boundary condition
    *
