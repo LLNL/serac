@@ -1788,7 +1788,6 @@ protected:
 
     lin_solver.Mult(dr_, du_);
     displacement_ += du_;
-
   }
 };
 
