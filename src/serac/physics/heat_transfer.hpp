@@ -648,6 +648,14 @@ public:
     }
   }
 
+  template <int... active_parameters, typename callable, typename StateType = Nothing>
+  void addCustomDomainIntegral(DependsOn<active_parameters...>, callable qfunction,
+                               qdata_type<StateType> qdata = NoQData)
+  {
+    residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{}, qfunction,
+                                 mesh_, qdata);
+  }
+
   /**
    * @brief register a custom boundary integral calculation as part of the residual
    *
