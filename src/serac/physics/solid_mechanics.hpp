@@ -1755,8 +1755,8 @@ protected:
       du_[j] -= displacement_(j);
     }
 
-    dr_ = 0.0;
-    mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, dr_);
+    dr_ = r;
+    dr_ *= -1.0;
 
     // Update the initial guess for changes in the parameters if this is not the first solve
     for (std::size_t parameter_index = 0; parameter_index < parameters_.size(); ++parameter_index) {
@@ -1776,6 +1776,7 @@ protected:
       *parameters_[parameter_index].previous_state = *parameters_[parameter_index].state;
     }
 
+    mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, dr_);
     for (int i = 0; i < constrained_dofs.Size(); i++) {
       int j  = constrained_dofs[i];
       dr_[j] = du_[j];
@@ -1787,6 +1788,7 @@ protected:
 
     lin_solver.Mult(dr_, du_);
     displacement_ += du_;
+
   }
 };
 
