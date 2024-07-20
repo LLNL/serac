@@ -1261,8 +1261,6 @@ public:
       }
     }
 
-    std::cout << "time, dt in = " << time_ << " " << dt << std::endl;
-
     if (is_quasistatic_) {
       quasiStaticSolve(dt);
     } else {
@@ -1270,14 +1268,10 @@ public:
       ode2_.Step(displacement_, velocity_, time_tmp, dt);
     }
 
-
-    std::cout << "solved at cycle " << cycle_ << " at time " << time_ << std::endl;
-
     if (checkpoint_to_disk_) {
       outputStateToDisk();
     } else {
       for (const auto& state_name : stateNames()) {
-        std::cout << "checkpointing " << state_name << std::endl;
         checkpoint_states_[state_name].push_back(state(state_name));
       }
     }
@@ -1296,7 +1290,6 @@ public:
 
     cycle_ += 1;
     if (cycle_ > max_cycle_) {
-      printf("forward cycling\n");
       timesteps_.push_back(dt);
       max_cycle_ = cycle_;
       max_time_  = time_;
@@ -1359,21 +1352,16 @@ public:
                        "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
                        "number of forward timesteps");
 
-    // std::cout << "cylce = " << cycle_ << std::endl;
-
     double dt_np1 = cycle_ < static_cast<int>(timesteps().size()) ? getCheckpointedTimestep(cycle_) : 0.0;
+    auto previous_state_solution = getCheckpointedStates(cycle_);
+
     time_ -= dt_np1;
     cycle_--;
 
-    // std::cout << "cylce = " << cycle_ << std::endl;
-
     // Load the end of step disp
-    auto previous_states_n = getCheckpointedStates(cycle_);
-    displacement_ = previous_states_n.at("displacement");
+    displacement_ = previous_state_solution.at("displacement");
 
     const double dt_n   = getCheckpointedTimestep(cycle_);
-    std::cout << "reverse cycle " << cycle_ << "  at time " << time_ << " dt " << dt_n << " d norm " << displacement_.Norml2() << std::endl;
-
 
     if (is_quasistatic_) {
       auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_),
@@ -1399,8 +1387,8 @@ public:
 
       // Load the end of step velo, accel from the previous cycle
 
-      velocity_     = previous_states_n.at("velocity");
-      acceleration_ = previous_states_n.at("acceleration");
+      velocity_     = previous_state_solution.at("velocity");
+      acceleration_ = previous_state_solution.at("acceleration");
 
       // K := dR/du
       auto K = serac::get<DERIVATIVE>((*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_),
