@@ -475,7 +475,6 @@ public:
   mfem::ParMesh& mesh() { return mesh_; }
 
 protected:
-
   /**
    * @brief Create a paraview data collection for the physics package if requested
    */

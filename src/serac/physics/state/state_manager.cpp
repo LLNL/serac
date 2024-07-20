@@ -91,12 +91,10 @@ double StateManager::newDataCollection(const std::string& name, const std::optio
   return datacoll.GetTime();
 }
 
-void StateManager::loadCheckpointedStates(int                              cycle_to_load,
-                                          std::vector<FiniteElementState*> states_to_load)
+void StateManager::loadCheckpointedStates(int cycle_to_load, std::vector<FiniteElementState*> states_to_load)
 {
-
-  mfem::ParMesh* meshPtr = &(*states_to_load.begin())->mesh();
-  std::string mesh_name = collectionID(meshPtr);
+  mfem::ParMesh* meshPtr   = &(*states_to_load.begin())->mesh();
+  std::string    mesh_name = collectionID(meshPtr);
 
   std::string coll_name = mesh_name + "_datacoll";
 
