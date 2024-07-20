@@ -113,6 +113,31 @@ void StateManager::loadCheckpointedStates(int                                   
   }
 }
 
+void StateManager::loadCheckpointedStates(int                              cycle_to_load,
+                                          std::vector<FiniteElementState*> states_to_load)
+{
+
+  mfem::ParMesh* meshPtr = &(*states_to_load.begin())->mesh();
+  std::string mesh_name = collectionID(meshPtr);
+
+  std::string coll_name = mesh_name + "_datacoll";
+
+  axom::sidre::MFEMSidreDataCollection previous_datacoll(coll_name);
+
+  previous_datacoll.SetComm(meshPtr->GetComm());
+  previous_datacoll.SetPrefixPath(output_dir_);
+  previous_datacoll.Load(cycle_to_load);
+
+  for (auto state : states_to_load) {
+    meshPtr = &state->mesh();
+    SLIC_ERROR_ROOT_IF(collectionID(meshPtr) != mesh_name,
+                       "Loading FiniteElementStates from two different meshes at one time is not allowed.");
+    mfem::ParGridFunction* datacoll_owned_grid_function = previous_datacoll.GetParField(state->name());
+
+    state->setFromGridFunction(*datacoll_owned_grid_function);
+  }
+}
+
 void StateManager::initialize(axom::sidre::DataStore& ds, const std::string& output_directory)
 {
   // If the global object has already been initialized, clear it out

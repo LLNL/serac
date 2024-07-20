@@ -923,32 +923,6 @@ public:
   }
 
   /**
-   * @brief Accessor for getting named finite element state primal solution from the physics modules at a given
-   * checkpointed cycle index
-   *
-   * @param cycle_to_load The previous timestep where the state solution is requested
-   * @return The named primal Finite Element State
-   */
-  std::unordered_map<std::string, FiniteElementState> getCheckpointedStates(int cycle_to_load) const override
-  {
-    std::unordered_map<std::string, FiniteElementState> previous_states;
-
-    if (checkpoint_to_disk_) {
-      previous_states.emplace("temperature", temperature_);
-      previous_states.emplace("temperature_rate", temperature_rate_);
-      StateManager::loadCheckpointedStates(cycle_to_load,
-                                           {previous_states.at("temperature"), previous_states.at("temperature_rate")});
-      return previous_states;
-    } else {
-      previous_states.emplace("temperature", checkpoint_states_.at("temperature")[static_cast<size_t>(cycle_to_load)]);
-      previous_states.emplace("temperature_rate",
-                              checkpoint_states_.at("temperature_rate")[static_cast<size_t>(cycle_to_load)]);
-    }
-
-    return previous_states;
-  }
-
-  /**
    * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
    * problem with respect to the parameter field for the last computed adjoint timestep
    *
