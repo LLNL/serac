@@ -245,7 +245,8 @@ public:
     if (amg_prec) {
       // ZRA - Iterative refinement tends to be more expensive than it is worth
       // We should add a flag allowing users to enable it
-      amg_prec->SetElasticityOptions(&displacement_.space(), false);
+      bool iterative_refinement = false;
+      amg_prec->SetElasticityOptions(&displacement_.space(), iterative_refinement);
     }
 
     int true_size = velocity_.space().TrueVSize();
