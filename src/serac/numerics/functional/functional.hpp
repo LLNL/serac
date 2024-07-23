@@ -14,7 +14,7 @@
 
 #include "mfem.hpp"
 
-#include "serac/infrastructure/mfem_configs.hpp"
+#include "serac/serac_config.hpp"
 #include "serac/infrastructure/logger.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/quadrature.hpp"

@@ -14,7 +14,7 @@
 
 #include "mfem.hpp"
 
-#include "serac/infrastructure/mfem_configs.hpp"
+#include "serac/serac_config.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/physics/common.hpp"
 #include "serac/physics/solid_mechanics_input.hpp"
@@ -24,7 +24,6 @@
 #include "serac/numerics/functional/shape_aware_functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/materials/solid_material.hpp"
-#include "serac/infrastructure/mfem_configs.hpp"
 
 namespace serac {
 

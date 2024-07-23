@@ -44,3 +44,12 @@
 #cmakedefine SERAC_USE_SUNDIALS
 #cmakedefine SERAC_USE_TRIBOL
 #cmakedefine SERAC_USE_UMPIRE
+
+#ifdef SERAC_USE_MFEM
+#include "mfem.hpp"
+
+namespace serac {
+/// The mfem ordering / memory layout used for finite element vectors throughout serac
+constexpr auto ordering = mfem::Ordering::byVDIM;
+};  // namespace serac
+#endif
