@@ -31,6 +31,10 @@ FiniteElementVector::FiniteElementVector(const mfem::ParFiniteElementSpace& spac
       space_(std::make_unique<mfem::ParFiniteElementSpace>(space, &mesh_.get(), coll_.get())),
       name_(name)
 {
+  SLIC_ERROR_ROOT_IF(space_->GetVDim() > 1 && space_->GetOrdering() != serac::ordering,
+                     "Serac only operates on finite element spaces ordered by "
+                         << (serac::ordering == mfem::Ordering::byVDIM ? "VDIM" : "NODES"));
+
   // Construct a hypre par vector based on the new finite element space
   HypreParVector new_vector(space_.get());
 
