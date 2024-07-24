@@ -303,6 +303,9 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(MFEM_ENABLE_EXAMPLES OFF CACHE BOOL "")
         set(MFEM_ENABLE_MINIAPPS OFF CACHE BOOL "")
 
+        # Build MFEM shared if Serac is being built shared
+        set(MFEM_SHARED_BUILD ${BUILD_SHARED_LIBS} CACHE BOOL "")
+
         if(${PROJECT_NAME} STREQUAL "smith")
             add_subdirectory(${PROJECT_SOURCE_DIR}/serac/mfem  ${CMAKE_BINARY_DIR}/mfem)
         else()
