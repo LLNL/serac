@@ -47,9 +47,9 @@ def parse_args():
                       dest="skip_install",
                       default=False,
                       help="Skip testing install target which does not work in some configurations (codevelop)")
-    parser.add_argument("--skip-test",
+    parser.add_argument("--skip-tests",
                       action="store_true",
-                      dest="skip_test",
+                      dest="skip_tests",
                       default=False,
                       help="Skip unit tests which will not work in some configurations (CUDA on Azure)")
     parser.add_argument("-v", "--verbose",

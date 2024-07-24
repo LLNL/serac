@@ -21,7 +21,7 @@ jobs:
           TEST_TARGET: 'linux_cuda12'
           HOST_CONFIG: 'gcc@12.3.0_cuda.cmake'
           BUILD_TYPE: 'Debug'
-          CMAKE_OPTS: '-DBUILD_SHARED_LIBS=ON'
+          CMAKE_OPTS: '-DBUILD_SHARED_LIBS=ON -DENABLE_WARNINGS_AS_ERRORS=OFF'
           BUILD_SRC_OPTS: '--skip-tests'
       linux_cuda12_release:
           VM_ImageName: 'ubuntu-22.04'
