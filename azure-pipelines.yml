@@ -14,6 +14,7 @@ jobs:
 - job: Build_and_Test
   strategy:
     matrix:
+      # Skipping running unit tests on CUDA, since the Azure VMs we use do not contain GPUs
       linux_cuda12_debug:
           VM_ImageName: 'ubuntu-22.04'
           Compiler_ImageName: $(CUDA_12_ImageName)
@@ -21,6 +22,7 @@ jobs:
           HOST_CONFIG: 'gcc@12.3.0_cuda.cmake'
           BUILD_TYPE: 'Debug'
           CMAKE_OPTS: '-DBUILD_SHARED_LIBS=ON'
+          BUILD_SRC_OPTS: '--skip-tests'
       linux_cuda12_release:
           VM_ImageName: 'ubuntu-22.04'
           Compiler_ImageName: $(CUDA_12_ImageName)
@@ -28,6 +30,7 @@ jobs:
           HOST_CONFIG: 'gcc@12.3.0_cuda.cmake'
           BUILD_TYPE: 'Release'
           CMAKE_OPTS: '-DBUILD_SHARED_LIBS=ON'
+          BUILD_SRC_OPTS: '--skip-tests'
       linux_gcc13_debug:
           VM_ImageName: 'ubuntu-22.04'
           Compiler_ImageName: $(GCC_13_ImageName)
@@ -75,7 +78,6 @@ jobs:
     submodules: recursive
   - script:  |
       echo " -e $TEST_TARGET -e HOST_CONFIG $(Compiler_ImageName) ./scripts/llnl/build_src.py $BUILD_SRC_OPTS -v --host-config $HOST_CONFIG --extra-cmake-options \"${CMAKE_OPTS} -DCMAKE_BUILD_TYPE=$BUILD_TYPE\""
-      df -h
       docker run --rm -v `pwd`:/home/serac/serac -e TEST_TARGET -e HOST_CONFIG $(Compiler_ImageName) ./serac/scripts/llnl/build_src.py $BUILD_SRC_OPTS -v --host-config $HOST_CONFIG --extra-cmake-options "${CMAKE_OPTS} -DCMAKE_BUILD_TYPE=$BUILD_TYPE" --jobs 4
 
     displayName: '$(TEST_TARGET) Build & Test'
