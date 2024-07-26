@@ -24,6 +24,7 @@
 #include "serac/numerics/functional/shape_aware_functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/materials/solid_material.hpp"
+#include "serac/numerics/functional/inequality_constraint.hpp"
 
 namespace serac {
 
@@ -1114,6 +1115,95 @@ public:
   void setPressure(PressureType pressure_function, const std::optional<Domain>& optional_domain = std::nullopt)
   {
     setPressure(DependsOn<>{}, pressure_function, optional_domain);
+  }
+
+  template <int... active_parameters, typename ConstraintType>
+  void setPenaltyConstraint(DependsOn<active_parameters...>, ConstraintType constraint, double penalty,
+                            const std::optional<Domain>& optional_domain = std::nullopt)
+  {
+    Domain domain = (optional_domain) ? *optional_domain : EntireBoundary(mesh_);
+
+    residual_->AddBoundaryIntegral(
+        Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
+        [constraint, penalty, geom_nonlin = geom_nonlin_](double t, auto X, auto displacement, auto /* acceleration */,
+                                                          auto...) {
+          // Calculate the position and normal in the shape perturbed deformed configuration
+          auto x = X + 0.0 * displacement;
+          if (geom_nonlin == GeometricNonlinearities::On) {
+            x = x + displacement;
+          }
+          auto n = cross(get<DERIVATIVE>(x));
+          auto c = constraint(get<VALUE>(x), t);
+          return -(c <= 0) * penalty * c * (n / norm(cross(get<DERIVATIVE>(X))));
+        },
+        domain);
+  }
+
+  /// @overload
+  template <typename ConstraintType>
+  void setPenaltyConstraint(ConstraintType constraint, double penalty,
+                            const std::optional<Domain>& optional_domain = std::nullopt)
+  {
+    setPenaltyConstraint(DependsOn<>{}, constraint, penalty, optional_domain);
+  }
+
+  template <typename MaterialType, typename ConstraintType>
+  struct NitscheIntegrator {
+    /// @brief Constructor for the functor
+    NitscheIntegrator(MaterialType material, GeometricNonlinearities gn, ConstraintType constraint, double penalty)
+        : material_(material), geom_nonlin_(gn), constraint_(constraint), penalty_(penalty)
+    {
+    }
+
+    /// @brief Material model
+    MaterialType material_;
+
+    /// @brief Enum value for geometric nonlinearities
+    GeometricNonlinearities geom_nonlin_;
+
+    /// @brief Constraint for contact
+    ConstraintType constraint_;
+
+    /// @brief Nitsche penalty parameter
+    double penalty_;
+
+    template <typename Position, typename Displacement, typename Acceleration, typename... Params>
+    auto SERAC_HOST_DEVICE operator()(double t, Position X, Displacement displacement, Acceleration,
+                                      Params... params) const
+    {
+      auto x          = X + displacement;
+      auto n          = normalize(cross(get<DERIVATIVE>(x)));
+      auto gap        = constraint_(get<VALUE>(x), t);
+      auto du_dX      = get<DERIVATIVE>(displacement);
+      auto du_dX_3by3 = dot(du_dX, transpose(du_dX));
+
+      typename MaterialType::State state;
+
+      auto stress       = material_(state, du_dX_3by3, params...);
+      auto stress_dot_n = dot(stress, n);
+
+      auto c_nitsche = -dot(stress_dot_n, n) + penalty_ * gap;
+
+      return -(c_nitsche < 0) * c_nitsche * (n / norm(cross(get<DERIVATIVE>(X))));
+    }
+  };
+
+  template <int... active_parameters, typename MaterialType, typename ConstraintType>
+  void setNitscheConstraint(DependsOn<active_parameters...>, MaterialType material, ConstraintType constraint,
+                            double penalty, const std::optional<Domain>& optional_domain = std::nullopt)
+  {
+    Domain domain = (optional_domain) ? *optional_domain : EntireBoundary(mesh_);
+    NitscheIntegrator<MaterialType, ConstraintType> nitsche_functor(material, geom_nonlin_, constraint, penalty);
+    residual_->AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
+                                   std::move(nitsche_functor), domain);
+  }
+
+  /// @overload
+  template <typename MaterialType, typename ConstraintType>
+  void setNitscheConstraint(MaterialType material, ConstraintType constraint, double penalty,
+                            const std::optional<Domain>& optional_domain = std::nullopt)
+  {
+    setNitscheConstraint(DependsOn<>{}, material, constraint, penalty, optional_domain);
   }
 
   /// @brief Build the quasi-static operator corresponding to the total Lagrangian formulation
