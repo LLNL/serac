@@ -1,0 +1,12 @@
+# Source: mfem/examples/petsc/rc_ex1p_device
+# Options for the Krylov solver
+-ksp_view
+-ksp_converged_reason
+
+# Dump log to check that no data is communicated host<->device when using PETSc
+-log_view
+
+# SERAC_EDIT_START
+# Disable "gpu aware mpi" to avoid PETSc runtime errors
+-use_gpu_aware_mpi 0
+# SERAC_EDIT_END
