@@ -244,8 +244,13 @@ public:
     if (amg_prec) {
       // ZRA - Iterative refinement tends to be more expensive than it is worth
       // We should add a flag allowing users to enable it
-      bool iterative_refinement = false;
-      amg_prec->SetElasticityOptions(&displacement_.space(), iterative_refinement);
+      if constexpr (serac::ordering == mfem::Ordering::byVDIM) {
+        bool iterative_refinement = false;
+        amg_prec->SetElasticityOptions(&displacement_.space(), iterative_refinement);
+      } else {
+        // SetElasticityOptions only works with byVDIM ordering, instead fallback to SetSystemsOptions
+        amg_prec->SetSystemsOptions(displacement_.space().GetVDim(), serac::ordering == mfem::Ordering::byNODES);
+      }
     }
 
     int true_size = velocity_.space().TrueVSize();
