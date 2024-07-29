@@ -110,8 +110,8 @@ TEST(BoundaryCond, FilterGenerics)
   BoundaryConditionManager bcs(par_mesh);
   auto                     coef = std::make_shared<mfem::ConstantCoefficient>(1);
   for (int i = 0; i < N; i++) {
-    bcs.addGeneric({}, coef, TestTag::Tag1, *space.get(), 1);
-    bcs.addGeneric({}, coef, TestTag::Tag2, *space.get(), 1);
+    bcs.addGeneric({}, coef, TestTag::Tag1, *space, 1);
+    bcs.addGeneric({}, coef, TestTag::Tag2, *space, 1);
   }
 
   int bcs_with_tag1 = 0;
@@ -154,7 +154,7 @@ TEST(BoundaryCondHelper, ElementAttributeDofListScalar)
   mfem::Array<int> ess_tdof_list;
 
   auto [l2_fes, l2_fec] = serac::generateParFiniteElementSpace<L2<0>>(&pmesh);
-  serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(*l2_fes.get(), elem_attr_is_ess, ess_tdof_list);
+  serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(*l2_fes, elem_attr_is_ess, ess_tdof_list);
 
   int local_num_tdof = ess_tdof_list.Size();
   int global_num_tdof;
@@ -171,7 +171,7 @@ TEST(BoundaryCondHelper, ElementAttributeDofListScalar)
   }
 
   auto [h1_fes, h1_fec] = serac::generateParFiniteElementSpace<H1<1>>(&pmesh);
-  serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(*h1_fes.get(), elem_attr_is_ess, ess_tdof_list, -1);
+  serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(*h1_fes, elem_attr_is_ess, ess_tdof_list, -1);
 
   local_num_tdof = ess_tdof_list.Size();
   MPI_Allreduce(&local_num_tdof, &global_num_tdof, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);

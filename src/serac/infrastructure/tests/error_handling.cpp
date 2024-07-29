@@ -40,7 +40,7 @@ TEST(ErrorHandling, BcOneComponentVectorCoef)
 
   auto [space, coll] = serac::generateParFiniteElementSpace<H1<1>>(mesh.get());
 
-  EXPECT_THROW(BoundaryCondition(coef, 0, *space.get(), std::set<int>{1}), SlicErrorException);
+  EXPECT_THROW(BoundaryCondition(coef, 0, *space, std::set<int>{1}), SlicErrorException);
 }
 
 TEST(ErrorHandling, BcOneComponentVectorCoefDofs)
@@ -54,7 +54,7 @@ TEST(ErrorHandling, BcOneComponentVectorCoefDofs)
 
   auto [space, coll] = serac::generateParFiniteElementSpace<H1<1>>(mesh.get());
 
-  EXPECT_THROW(BoundaryCondition(coef, 0, *space.get(), dofs), SlicErrorException);
+  EXPECT_THROW(BoundaryCondition(coef, 0, *space, dofs), SlicErrorException);
 }
 
 TEST(ErrorHandling, BcRetrieveScalarCoef)
@@ -64,7 +64,7 @@ TEST(ErrorHandling, BcRetrieveScalarCoef)
   auto [space, coll] = serac::generateParFiniteElementSpace<H1<1>>(mesh.get());
 
   auto              coef = std::make_shared<mfem::ConstantCoefficient>(1.0);
-  BoundaryCondition bc(coef, -1, *space.get(), std::set<int>{});
+  BoundaryCondition bc(coef, -1, *space, std::set<int>{});
   EXPECT_NO_THROW(bc.scalarCoefficient());
   EXPECT_THROW(bc.vectorCoefficient(), SlicErrorException);
 
@@ -81,7 +81,7 @@ TEST(ErrorHandling, BcRetrieveVecCoef)
 
   mfem::Vector      vec;
   auto              coef = std::make_shared<mfem::VectorConstantCoefficient>(vec);
-  BoundaryCondition bc(coef, {}, *space.get(), std::set<int>{});
+  BoundaryCondition bc(coef, {}, *space, std::set<int>{});
   EXPECT_NO_THROW(bc.vectorCoefficient());
   EXPECT_THROW(bc.scalarCoefficient(), SlicErrorException);
 
