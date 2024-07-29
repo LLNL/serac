@@ -36,7 +36,7 @@ public:
   using vector_t = Constraint<dim>::vector_t;
 
   LevelSetPlane(vector_t center, vector_t normal, vector_t velocity = zero{})
-      : center_(center), normal_(normal), velocity_(velocity)
+      : center_(center), normal_(normalize(normal)), velocity_(velocity)
   {
   }
 
@@ -52,7 +52,7 @@ public:
   vector_t hessianVec(const vector_t&, const vector_t&, double) const override { return zero{}; }
 
   template <typename Position>
-  double operator()(Position x, double t) const
+  auto operator()(Position x, double t) const
   {
     auto c = center_ + t * velocity_;
     return dot(normal_, x - c);

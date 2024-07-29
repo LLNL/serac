@@ -1150,8 +1150,13 @@ public:
   template <typename MaterialType, typename ConstraintType>
   struct NitscheIntegrator {
     /// @brief Constructor for the functor
-    NitscheIntegrator(MaterialType material, GeometricNonlinearities gn, ConstraintType constraint, double penalty)
-        : material_(material), geom_nonlin_(gn), constraint_(constraint), penalty_(penalty)
+    NitscheIntegrator(MaterialType material, GeometricNonlinearities gn, ConstraintType constraint, double penalty,
+                      double friction_coef = 0.0)
+        : material_(material),
+          geom_nonlin_(gn),
+          constraint_(constraint),
+          penalty_(penalty),
+          friction_coef_(friction_coef)
     {
     }
 
@@ -1167,35 +1172,77 @@ public:
     /// @brief Nitsche penalty parameter
     double penalty_;
 
+    double friction_coef_;
+
     template <typename Position, typename Displacement, typename Acceleration, typename... Params>
     auto SERAC_HOST_DEVICE operator()(double t, Position X, Displacement displacement, Acceleration,
                                       Params... params) const
     {
-      auto x          = X + displacement;
-      auto n          = normalize(cross(get<DERIVATIVE>(x)));
-      auto gap        = constraint_(get<VALUE>(x), t);
-      auto du_dX      = get<DERIVATIVE>(displacement);
-      auto du_dX_3by3 = dot(du_dX, transpose(du_dX));
+      auto x      = X + displacement;
+      auto n      = cross(get<DERIVATIVE>(x));
+      auto area   = norm(n);
+      n           = n / area;
+      auto gap    = constraint_(get<VALUE>(x), t);
+      auto du_dxi = get<DERIVATIVE>(displacement);
+
+      // Note, normal component of du_dX is cross(get<DERIVATIVE>(du_dxi)).
+      // Thus, we augment du_dX and pass the dim x dim tensor to the material model.
+      // We can then extract the normal component of stress as dot(stress, {0, 0, 1})
+      // or dot(stress, {0, 1}) for dim == 2.
+      auto du_dX = make_tensor<dim, dim>([du_dxi](auto i, auto j) {
+        if (j < dim) {
+          return du_dxi(i, j);
+        } else {
+          return cross(du_dxi)(i);
+        }
+      });
 
       typename MaterialType::State state;
 
-      auto stress       = material_(state, du_dX_3by3, params...);
-      auto stress_dot_n = dot(stress, n);
+      auto stress       = material_(state, du_dX, params...);
+      auto fake_n       = make_tensor<dim>([](auto i) { return i == dim - 1; });
+      auto stress_dot_n = -dot(stress, fake_n);
+      auto c_nitsche    = dot(stress_dot_n, n) + penalty_ * gap;
 
-      auto c_nitsche = -dot(stress_dot_n, n) + penalty_ * gap;
+      auto normal_component = c_nitsche * n;
+      auto w_new            = 1;  // area / norm(cross(get<DERIVATIVE>(X)));
 
-      return -(c_nitsche < 0) * c_nitsche * (n / norm(cross(get<DERIVATIVE>(X))));
+      if (c_nitsche > -DBL_EPSILON) {
+        return 0.0 * normal_component * w_new;
+      } else if (friction_coef_ < DBL_EPSILON) {
+        return -normal_component * w_new;
+      }
+
+      // Using Tresca friction for now due to simplicity, we need velocity for Coulomb
+      auto nitsche_force         = stress_dot_n - penalty_ * get<VALUE>(displacement);
+      auto tangent_nitsche_force = nitsche_force - dot(nitsche_force, n) * n;
+
+      auto radius = -friction_coef_ * c_nitsche;
+      auto scale  = norm(tangent_nitsche_force) > radius ? radius / norm(tangent_nitsche_force) : radius / radius;
+
+      return (-normal_component - scale * tangent_nitsche_force) * w_new;
     }
   };
 
+  /// Add Nitsche-enforced, constraint-based contact on a boundary
+  template <int... active_parameters, typename MaterialType, typename ConstraintType>
+  void setNitscheConstraint(DependsOn<active_parameters...>, MaterialType material, ConstraintType constraint,
+                            double penalty, double friction_coef,
+                            const std::optional<Domain>& optional_domain = std::nullopt)
+  {
+    Domain domain = (optional_domain) ? *optional_domain : EntireBoundary(mesh_);
+    NitscheIntegrator<MaterialType, ConstraintType> nitsche_functor(material, geom_nonlin_, constraint, penalty,
+                                                                    friction_coef);
+    residual_->AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
+                                   std::move(nitsche_functor), domain);
+  }
+
+  /// @overload
   template <int... active_parameters, typename MaterialType, typename ConstraintType>
   void setNitscheConstraint(DependsOn<active_parameters...>, MaterialType material, ConstraintType constraint,
                             double penalty, const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    Domain domain = (optional_domain) ? *optional_domain : EntireBoundary(mesh_);
-    NitscheIntegrator<MaterialType, ConstraintType> nitsche_functor(material, geom_nonlin_, constraint, penalty);
-    residual_->AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{},
-                                   std::move(nitsche_functor), domain);
+    setNitscheConstraint(DependsOn<active_parameters...>{}, material, constraint, penalty, 0.0, optional_domain);
   }
 
   /// @overload
@@ -1204,6 +1251,14 @@ public:
                             const std::optional<Domain>& optional_domain = std::nullopt)
   {
     setNitscheConstraint(DependsOn<>{}, material, constraint, penalty, optional_domain);
+  }
+
+  /// @overload
+  template <typename MaterialType, typename ConstraintType>
+  void setNitscheConstraint(MaterialType material, ConstraintType constraint, double penalty, double friction_coef,
+                            const std::optional<Domain>& optional_domain = std::nullopt)
+  {
+    setNitscheConstraint(DependsOn<>{}, material, constraint, penalty, friction_coef, optional_domain);
   }
 
   /// @brief Build the quasi-static operator corresponding to the total Lagrangian formulation
