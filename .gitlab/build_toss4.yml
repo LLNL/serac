@@ -2,12 +2,10 @@
 # This is the shared configuration of jobs for toss4
 .on_toss4:
   variables:
-    # TODO Re-add eng bank to scheduler parameters once all users have the bank on ruby
-    # -A ${ALLOC_BANK}
-    SCHEDULER_PARAMETERS: "--res=ci --exclusive=user --deadline=now+1hour -N ${ALLOC_NODES} -t ${ALLOC_TIME}"
+    SCHEDULER_PARAMETERS: "--res=ci --exclusive=user --deadline=now+1hour -N ${ALLOC_NODES} -t ${ALLOC_TIME} -A ${ALLOC_BANK}"
   tags:
     - batch
-    - ruby
+    - dane
   rules:
     - if: '$CI_COMMIT_BRANCH =~ /_qnone/ || $ON_TOSS4 == "OFF"' #run except if ...
       when: never
