@@ -57,6 +57,10 @@ public:
   {
     SERAC_MARK_FUNCTION;
     grad = &oper->GetGradient(x);
+    if (nonlinear_options.force_monolithic) {
+      auto* grad_blocked = dynamic_cast<mfem::BlockOperator*>(grad);
+      if (grad_blocked) grad = buildMonolithicMatrix(*grad_blocked).release();
+    }
   }
 
   /// set the preconditioner for the linear solver
@@ -428,6 +432,10 @@ public:
   {
     SERAC_MARK_FUNCTION;
     grad = &oper->GetGradient(x);
+    if (nonlinear_options.force_monolithic) {
+      auto* grad_blocked = dynamic_cast<mfem::BlockOperator*>(grad);
+      if (grad_blocked) grad = buildMonolithicMatrix(*grad_blocked).release();
+    }
   }
 
   /// evaluate the nonlinear residual
@@ -685,14 +693,6 @@ void SuperLUSolver::Mult(const mfem::Vector& input, mfem::Vector& output) const
   superlu_solver_.Mult(input, output);
 }
 
-/**
- * @brief Function for building a monolithic parallel Hypre matrix from a block system of smaller Hypre matrices
- *
- * @param block_operator The block system of HypreParMatrices
- * @return The assembled monolithic HypreParMatrix
- *
- * @pre @a block_operator must have assembled HypreParMatrices for its sub-blocks
- */
 std::unique_ptr<mfem::HypreParMatrix> buildMonolithicMatrix(const mfem::BlockOperator& block_operator)
 {
   int row_blocks = block_operator.NumRowBlocks();
