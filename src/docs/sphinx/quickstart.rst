@@ -290,7 +290,7 @@ If you plan to install the developer tools, you should also run
    $ brew install cppcheck doxygen llvm@14
    $ ln -s /opt/homebrew/opt/llvm@14/bin/clang-format /opt/homebrew/bin/clang-format
 
-If you have installed Homebrew using the default installation prefix, most packages will be accessible through the prefix ``/opt/homebrew``.
+If you have installed Homebrew using the default installation prefix, most packages will be accessible through the prefix ``/opt/homebrew`` (or ``/usr/local`` if you're using an Intel Mac)
 Some packages are not linked into this prefix to prevent conflicts with MacOS-provided versions.
 These will only be accessible via the prefix ``/opt/homebrew/opt/[package-name]``.
 Homebrew will warn about such packages after installing them.
