@@ -15,6 +15,11 @@ if(TRIBOL_FOUND)
                         OUTPUT_DIR ${EXAMPLE_OUTPUT_DIRECTORY}
                         DEPENDS_ON  serac_physics serac_mesh
                         )
+    blt_add_executable( NAME        contact_ironing2
+                        SOURCES     ironing2.cpp
+                        OUTPUT_DIR ${EXAMPLE_OUTPUT_DIRECTORY}
+                        DEPENDS_ON  serac_physics serac_mesh
+                        )
     blt_add_executable( NAME        contact_sphere
                         SOURCES     sphere.cpp
                         OUTPUT_DIR ${EXAMPLE_OUTPUT_DIRECTORY}
