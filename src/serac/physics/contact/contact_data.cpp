@@ -291,7 +291,7 @@ void ContactData::setPressures(const mfem::Vector& merged_pressures) const
     for (auto dof : interactions_[i].inactiveDofs()) {
       p_interaction[dof] = 0.0;
     }
-    auto active_dofs = p_interaction.space().GetTrueVSize() - interactions_[i].inactiveDofs();
+    auto active_dofs = p_interaction.space().GetTrueVSize() - interactions_[i].inactiveDofs().Size();
     SLIC_INFO_IF(active_dofs > 0, "Num active dofs: " << active_dofs);
     interactions_[i].setPressure(p_interaction);
   }
