@@ -60,10 +60,10 @@ int main(int argc, char* argv[])
   linear_options.linear_solver        = serac::LinearSolver::GMRES;
   linear_options.preconditioner       = serac::Preconditioner::Petsc;
   linear_options.petsc_preconditioner = serac::PetscPCType::HMG;
-  // linear_options.preconditioner = serac::Preconditioner::HypreAMG;
-  linear_options.relative_tol   = 1e-8;
-  linear_options.absolute_tol   = 1e-16;
-  linear_options.max_iterations = 10000;
+  linear_options.preconditioner       = serac::Preconditioner::HypreAMG;
+  linear_options.relative_tol         = 1e-8;
+  linear_options.absolute_tol         = 1e-16;
+  linear_options.max_iterations       = 10000;
   // linear_options.preconditioner_print_level = 1;
 #endif
 
@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
                                           .type        = serac::ContactType::Frictionless,
                                           .penalty     = penalty};
     auto                  contact_interaction_id = 0;
-    solid_contact_solver->addContactInteraction(contact_interaction_id, xpos, xneg, contact_options);
+    solid_contact_solver->addContactInteraction(contact_interaction_id, xneg, xpos, contact_options);
     solid_solver = std::move(solid_contact_solver);
   } else {
     solid_solver = std::make_unique<serac::SolidMechanics<p, dim>>(nonlinear_options, linear_options,
