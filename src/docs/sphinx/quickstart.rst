@@ -316,7 +316,7 @@ The versions for all installed packages can be listed via:
 
 Note that the version format output by the above command is not the same as that expected by Spack, so be sure to add an ``@`` symbol between the package name and version string.
 
-If you are not using an M2 or M3 Mac, you will need to change the ``target`` for the compiler to ``x86_64`` or ``m1`` for Intel and M1-based Macs, respectively.
+If you are not using an M2 or M3 Mac, you will need to change the ``target`` for the compiler to ``x86_64`` or ``aarch64`` for Intel and M1-based Macs, respectively.
 Similarly, you need to set the ``operating_system`` to the proper value if you are not using ``sonoma`` (MacOS 14.X).
 
 If you want to install the devtools, you should also add the following under ``packages`` in the ``spack.yaml`` files.
