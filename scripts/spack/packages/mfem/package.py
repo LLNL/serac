@@ -13,10 +13,6 @@ class Mfem(BuiltinMfem):
     # moved forward past the release. Increment the last number when updating the commit sha.
     version("4.7.0.1", commit="057a5a43b067bf1507c0cb6d8165fdd153702b96")
 
-    # This can be removed once the following MFEM PR merges
-    # https://github.com/mfem/mfem/pull/4363
-    patch("fix-dep-ordering.patch")
-
     variant('asan', default=False, description='Add Address Sanitizer flags')
 
     # AddressSanitizer (ASan) is only supported by GCC and (some) LLVM-derived
