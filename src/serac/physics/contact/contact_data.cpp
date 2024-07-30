@@ -286,7 +286,7 @@ void ContactData::setPressures(const mfem::Vector& merged_pressures) const
       p_interaction.Set(1.0, p_interaction_ref);
     } else  // enforcement == ContactEnforcement::Penalty
     {
-      p_interaction.Set(interactions_[i].getContactOptions().penalty, interactions_[i].gaps());
+      p_interaction.Add(interactions_[i].getContactOptions().penalty, interactions_[i].gaps());
     }
     for (auto dof : interactions_[i].inactiveDofs()) {
       p_interaction[dof] = 0.0;
