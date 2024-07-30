@@ -63,16 +63,6 @@ serac_convert_to_native_escaped_file_path(${PROJECT_SOURCE_DIR} SERAC_REPO_DIR)
 serac_convert_to_native_escaped_file_path(${CMAKE_BINARY_DIR}   SERAC_BIN_DIR)
 
 #------------------------------------------------------------------------------
-# Set ordering configuration
-#------------------------------------------------------------------------------
-set(SERAC_USE_VDIM_ORDERING OFF CACHE BOOL "Use mfem::Ordering::byVDIM for DOF vectors (experimental, faster for algebraic multigrid)")
-if (SERAC_USE_VDIM_ORDERING)
-  message(STATUS "Using byVDIM degree-of-freedom vector ordering.")
-else()
-  message(STATUS "Using byNODES degree-of-freedom vector ordering.")
-endif()
-
-#------------------------------------------------------------------------------
 # Create Config Header
 #------------------------------------------------------------------------------
 serac_configure_file(
