@@ -167,8 +167,9 @@ class Serac(CachedCMakePackage, CudaPackage):
         depends_on("{0}+shared".format(dep), when="+{0}+shared".format(dep))
         depends_on("{0}~shared".format(dep), when="+{0}~shared".format(dep))
     
-    # Only propagate shared if not CUDA
+    # Umpire needs it's own section due do +shared+cuda conflict
     depends_on("umpire build_type=Debug".format(dep), when="+umpire build_type=Debug".format(dep))
+    # Only propagate shared if not CUDA
     depends_on("umpire+shared".format(dep), when="+umpire+shared~cuda".format(dep))
     depends_on("umpire~shared".format(dep), when="+umpire~shared".format(dep))
 
