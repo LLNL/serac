@@ -57,6 +57,10 @@ public:
   {
     SERAC_MARK_FUNCTION;
     grad = &oper->GetGradient(x);
+    if (nonlinear_options.force_monolithic) {
+      auto* grad_blocked = dynamic_cast<mfem::BlockOperator*>(grad);
+      if (grad_blocked) grad = buildMonolithicMatrix(*grad_blocked).release();
+    }
   }
 
   /// set the preconditioner for the linear solver
@@ -196,7 +200,7 @@ struct TrustRegionSettings {
   /// cg tol
   double cgTol = 1e-8;
   /// max cg iters should be around # of system dofs
-  size_t maxCgIterations = 10000;  //
+  size_t maxCgIterations = 10000;
   /// max cumulative iterations
   size_t maxCumulativeIteration = 1;
   /// minimum trust region size
@@ -333,9 +337,7 @@ public:
     if (cc >= tt) {
       add(s, std::sqrt(tt / cc), cp, s);
     } else if (cc > nn) {
-      if (print_options.warnings) {
-        mfem::out << "cp outside newton, preconditioner likely inaccurate\n";
-      }
+      mfem::out << "cp outside newton, preconditioner likely inaccurate\n";
       add(s, 1.0, cp, s);
     } else if (nn > tt) {  // on the dogleg (we have nn >= cc, and tt >= cc)
       add(s, 1.0, cp, s);
@@ -390,12 +392,16 @@ public:
       double zzNp1 = Dot(zPred, zPred);  // can optimize this eventually
 
       if (curvature <= 0) {
-        // mfem::out << "negative curvature found.\n";
+        if (print_options.iterations) {
+          mfem::out << "negative curvature found.\n";
+        }
         project_to_boundary_with_coefs(z, d, trSize, zz, zd, dd);
         results.interiorStatus = TrustRegionResults::Status::NegativeCurvature;
         return;
       } else if (zzNp1 > (trSize * trSize)) {
-        // mfem::out << "step outside trust region.\n";
+        if (print_options.iterations) {
+          mfem::out << "step outside trust region.\n";
+        }
         project_to_boundary_with_coefs(z, d, trSize, zz, zd, dd);
         results.interiorStatus = TrustRegionResults::Status::OnBoundary;
         return;
@@ -428,6 +434,10 @@ public:
   {
     SERAC_MARK_FUNCTION;
     grad = &oper->GetGradient(x);
+    if (nonlinear_options.force_monolithic) {
+      auto* grad_blocked = dynamic_cast<mfem::BlockOperator*>(grad);
+      if (grad_blocked) grad = buildMonolithicMatrix(*grad_blocked).release();
+    }
   }
 
   /// evaluate the nonlinear residual
@@ -503,10 +513,9 @@ public:
         break;
       }
 
-      assemble_jacobian(X);
-
       if (it == 0 || (trResults.cgIterationsCount >= settings.maxCgIterations ||
                       cumulativeCgIters >= settings.maxCumulativeIteration)) {
+        assemble_jacobian(X);
         trPrecond.SetOperator(*grad);
         cumulativeCgIters = 0;
         if (print_options.iterations) {
@@ -685,14 +694,6 @@ void SuperLUSolver::Mult(const mfem::Vector& input, mfem::Vector& output) const
   superlu_solver_.Mult(input, output);
 }
 
-/**
- * @brief Function for building a monolithic parallel Hypre matrix from a block system of smaller Hypre matrices
- *
- * @param block_operator The block system of HypreParMatrices
- * @return The assembled monolithic HypreParMatrix
- *
- * @pre @a block_operator must have assembled HypreParMatrices for its sub-blocks
- */
 std::unique_ptr<mfem::HypreParMatrix> buildMonolithicMatrix(const mfem::BlockOperator& block_operator)
 {
   int row_blocks = block_operator.NumRowBlocks();
