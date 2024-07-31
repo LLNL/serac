@@ -48,7 +48,7 @@ using paramFES = serac::L2<0>;
 using uFES = serac::H1<ORDER, DIM>;
 using qoiType = serac::Functional<double(paramFES, paramFES, uFES)>;
 
-double forwardPass(serac::BasePhysics *solid, qoiType *qoi, mfem::ParMesh *meshPtr, int nTimeSteps, double timeStep, std::string saveName)
+double forwardPass(serac::BasePhysics *solid, qoiType *qoi, int nTimeSteps, double timeStep)
 {
     solid->resetStates();
 
@@ -147,8 +147,8 @@ TEST(quasistatic, finiteDifference)
     seracSolid->setDisplacementBCs({4}, [](const mfem::Vector&){ return 0.0; }, 1);
     seracSolid->setDisplacementBCs({1}, [](const mfem::Vector&){ return 0.0; }, 2);
 
-    //serac::Domain loadRegion = serac::Domain::ofBoundaryElements(*meshPtr, serac::by_attr<DIM>(6));
-    //seracSolid->setTraction([](auto, auto n, auto) {return 1.0*n;}, loadRegion);
+    serac::Domain loadRegion = serac::Domain::ofBoundaryElements(*meshPtr, serac::by_attr<DIM>(6));
+    seracSolid->setTraction([](auto, auto n, auto t) {return t*n;}, loadRegion);
     seracSolid->setDisplacementBCs({6}, [](const mfem::Vector&, double time, mfem::Vector &u) { return u[2] = 1.0*time; });
 
     double E0 = 1.0;
@@ -177,9 +177,9 @@ TEST(quasistatic, finiteDifference)
             //return serac::get<0>(u)[2];
         }, *meshPtr);
 
-    int nTimeSteps = 3;
+    int nTimeSteps = 4;
     double timeStep = 0.24;
-    forwardPass(seracSolid.get(), qoi.get(), meshPtr, nTimeSteps, timeStep, "f0");
+    forwardPass(seracSolid.get(), qoi.get(), nTimeSteps, timeStep);
 
     // ADJOINT GRADIENT
     double Ederiv, vderiv;
@@ -190,26 +190,25 @@ TEST(quasistatic, finiteDifference)
     
     Estate = E0+h;
     seracSolid->setParameter(0, Estate);
-    double fpE = forwardPass(seracSolid.get(), qoi.get(), meshPtr, nTimeSteps, timeStep, "fpE");
+    double fpE = forwardPass(seracSolid.get(), qoi.get(), nTimeSteps, timeStep);
 
     Estate = E0-h;
     seracSolid->setParameter(0, Estate);
-    double fmE = forwardPass(seracSolid.get(), qoi.get(), meshPtr, nTimeSteps, timeStep, "fmE");
+    double fmE = forwardPass(seracSolid.get(), qoi.get(), nTimeSteps, timeStep);
 
     Estate = E0;
     seracSolid->setParameter(0, Estate);
 
     vstate = v0+h;
     seracSolid->setParameter(1, vstate);
-    double fpv = forwardPass(seracSolid.get(), qoi.get(), meshPtr, nTimeSteps, timeStep, "fpv");
+    double fpv = forwardPass(seracSolid.get(), qoi.get(), nTimeSteps, timeStep);
 
     vstate = v0-h;
     seracSolid->setParameter(1, vstate);
-    double fmv = forwardPass(seracSolid.get(), qoi.get(), meshPtr, nTimeSteps, timeStep, "fmv");
+    double fmv = forwardPass(seracSolid.get(), qoi.get(), nTimeSteps, timeStep);
 
-    std::cout << std::endl << std::endl;
-    std::cout << "analytical gradient = " << Ederiv << " " << vderiv << std::endl;
-    std::cout << "numerical gradient  = " << (fpE-fmE)/(2.*h) << " " << (fpv-fmv)/(2.*h) << std::endl;
+    ASSERT_NEAR(Ederiv, (fpE-fmE)/(2.*h), 1e-9);
+    ASSERT_NEAR(vderiv, (fpv-fmv)/(2.*h), 1e-9);
 }
 
 }  // namespace serac
