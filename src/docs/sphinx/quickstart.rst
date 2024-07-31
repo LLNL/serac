@@ -211,6 +211,8 @@ Some build options frequently used by Serac include:
 * ``ENABLE_WARNINGS_AS_ERRORS``: Turns compiler warnings into errors, defaults to ``ON``
 * ``ENABLE_ASAN``: Enables the Address Sanitizer for memory safety inspections, defaults to ``OFF``
 * ``SERAC_ENABLE_CODEVELOP``: Enables local development build of MFEM/Axom, see :ref:`codevelop-label`, defaults to ``OFF``
+* ``SERAC_USE_VDIM_ORDERING``: Sets the vector ordering to be ``byVDIM``, which is significantly faster for algebraic multigrid,
+   but may conflict with other packages if Serac is being used as a dependency, defaults to ``OFF``.
 
 Once the build has been configured, Serac can be built with the following commands:
 

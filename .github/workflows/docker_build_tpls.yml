@@ -11,7 +11,7 @@ jobs:
     name: Builds a docker image and extracts generated hostconfigs
     strategy:
       matrix:
-        compiler: [clang-14, gcc-13]
+        dockerfile_suffix: [clang-14, gcc-13, cuda-12]
     env:
       REPO: seracllnl/tpls
       HOSTCONFIG_LOC: /home/serac/export_hostconfig
@@ -25,16 +25,24 @@ jobs:
     - name: Get dockerfile name
       shell: bash
       run: |
-        echo "filename=$(echo ${DOCKERFILE_PREFIX}${{ matrix.compiler }})" >> $GITHUB_OUTPUT
+        echo "filename=$(echo ${DOCKERFILE_PREFIX}${{ matrix.dockerfile_suffix }})" >> $GITHUB_OUTPUT
       id: dockerfile_name
     - name: Get dockerhub repo name
       shell: bash
       run: |
-        repo_plus_tag=$(echo ${REPO}:${{ matrix.compiler }}_`date "+%m-%d-%y_%Hh-%Mm"`) && export repo_plus_tag
+        repo_plus_tag=$(echo ${REPO}:${{ matrix.dockerfile_suffix }}_`date "+%m-%d-%y_%Hh-%Mm"`) && export repo_plus_tag
         echo $repo_plus_tag 
         echo "repo_plus_tag=$repo_plus_tag" >> $GITHUB_OUTPUT
-        echo "repo_plus_latest=$(echo ${REPO}:${{ matrix.compiler }}_latest)" >> $GITHUB_OUTPUT
+        echo "repo_plus_latest=$(echo ${REPO}:${{ matrix.dockerfile_suffix }}_latest)" >> $GITHUB_OUTPUT
       id: repo_name
+
+    - name: Free up disk space
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+        sudo docker image prune --all --force
 
     - name: Checkout
       uses: actions/checkout@v4
@@ -71,5 +79,5 @@ jobs:
     - name: Upload hostconfig
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.compiler }}_hostconfigs
+        name: ${{ matrix.dockerfile_suffix }}_hostconfigs
         path: ./extracted_hc/export_hostconfig/*
