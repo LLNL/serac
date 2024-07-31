@@ -67,10 +67,9 @@ ContactInteraction::ContactInteraction(int interaction_id, const mfem::ParMesh& 
 FiniteElementDual ContactInteraction::forces() const
 {
   FiniteElementDual f(*current_coords_.ParFESpace());
-  mfem::Vector      f_tribol(current_coords_.ParFESpace()->GetVSize());
-  f_tribol = 0.0;
-  tribol::getMfemResponse(getInteractionId(), f_tribol);
-  current_coords_.ParFESpace()->GetRestrictionMatrix()->Mult(f_tribol, f);
+  auto&             f_loc = f.linearForm();
+  tribol::getMfemResponse(getInteractionId(), f_loc);
+  f.setFromLinearForm(f_loc);
   return f;
 }
 
@@ -78,17 +77,16 @@ FiniteElementState ContactInteraction::pressure() const
 {
   auto&              p_tribol = tribol::getMfemPressure(getInteractionId());
   FiniteElementState p(*p_tribol.ParFESpace());
-  p_tribol.ParFESpace()->GetRestrictionMatrix()->Mult(p_tribol, p);
+  p.setFromGridFunction(p_tribol);
   return p;
 }
 
 FiniteElementDual ContactInteraction::gaps() const
 {
-  auto&             pressure_fes = *tribol::getMfemPressure(getInteractionId()).ParFESpace();
-  FiniteElementDual g(pressure_fes);
-  mfem::Vector      g_tribol;
-  tribol::getMfemGap(getInteractionId(), g_tribol);
-  pressure_fes.GetRestrictionMatrix()->Mult(g_tribol, g);
+  FiniteElementDual g(pressureSpace());
+  auto&             g_loc = g.linearForm();
+  tribol::getMfemGap(getInteractionId(), g_loc);
+  g.setFromLinearForm(g_loc);
   return g;
 }
 

@@ -26,7 +26,7 @@ using namespace serac::profiling;
 template <int dim>
 struct TestThermalModelOne {
   template <typename P, typename Temp>
-  SERAC_HOST_DEVICE auto operator()(double, [[maybe_unused]] P position, [[maybe_unused]] Temp temperature)
+  SERAC_HOST_DEVICE auto operator()(double, [[maybe_unused]] P position, [[maybe_unused]] Temp temperature) const
   {
     double                d00 = 1.0;
     constexpr static auto d01 = 1.0 * make_tensor<dim>([](int i) { return i; });
@@ -43,7 +43,7 @@ struct TestThermalModelOne {
 
 struct TestThermalModelTwo {
   template <typename PositionType, typename TempType>
-  SERAC_HOST_DEVICE auto operator()(double, PositionType position, TempType temperature)
+  SERAC_HOST_DEVICE auto operator()(double, PositionType position, TempType temperature) const
   {
     auto [X, dX_dxi] = position;
     auto [u, du_dxi] = temperature;
@@ -54,23 +54,20 @@ struct TestThermalModelTwo {
 template <int ptest, int ptrial, int dim>
 void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 {
-  // Create standard MFEM bilinear and linear forms on H1
-  auto                        test_fec = mfem::H1_FECollection(ptest, dim);
-  mfem::ParFiniteElementSpace test_fespace(mesh.get(), &test_fec);
-
-  auto                        trial_fec = mfem::H1_FECollection(ptrial, dim);
-  mfem::ParFiniteElementSpace trial_fespace(mesh.get(), &trial_fec);
-
-  mfem::Vector U(trial_fespace.TrueVSize());
-
-  mfem::ParGridFunction     U_gf(&trial_fespace);
-  mfem::FunctionCoefficient x_squared([](mfem::Vector x) { return x[0] * x[0]; });
-  U_gf.ProjectCoefficient(x_squared);
-  U_gf.GetTrueDofs(U);
-
   // Define the types for the test and trial spaces using the function arguments
   using test_space  = H1<ptest>;
   using trial_space = H1<ptrial>;
+
+  // Create standard MFEM bilinear and linear forms on H1
+  auto [test_fespace, test_fec]   = serac::generateParFiniteElementSpace<test_space>(mesh.get());
+  auto [trial_fespace, trial_fec] = serac::generateParFiniteElementSpace<trial_space>(mesh.get());
+
+  mfem::Vector U(trial_fespace->TrueVSize());
+
+  mfem::ParGridFunction     U_gf(trial_fespace.get());
+  mfem::FunctionCoefficient x_squared([](mfem::Vector x) { return x[0] * x[0]; });
+  U_gf.ProjectCoefficient(x_squared);
+  U_gf.GetTrueDofs(U);
 
   // Construct the new functional object using the known test and trial spaces
 

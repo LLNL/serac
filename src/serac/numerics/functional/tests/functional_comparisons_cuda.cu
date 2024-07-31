@@ -97,11 +97,14 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
 
   serac::profiling::initialize();
 
-  // Create standard MFEM bilinear and linear forms on H1
-  auto                        fec = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace(&mesh, &fec);
+  // Define the types for the test and trial spaces using the function arguments
+  using test_space  = decltype(test);
+  using trial_space = decltype(trial);
 
-  mfem::ParBilinearForm A(&fespace);
+  // Create standard MFEM bilinear and linear forms on H1
+  auto [fespace, fec] = serac::generateParFiniteElementSpace<test_space>(&mesh);
+
+  mfem::ParBilinearForm A(fespace.get());
 
   // Add the mass term using the standard MFEM method
   mfem::ConstantCoefficient a_coef(a);
@@ -113,7 +116,7 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
 
   // Assemble the bilinear form into a matrix
   {
-    SERAC_PROFILE_SCOPE(concat("mfem_localAssemble", postfix));
+    SERAC_MARK_SCOPE(concat("mfem_localAssemble", postfix));
     A.Assemble(0);
   }
 
@@ -122,7 +125,7 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
       SERAC_PROFILE_EXPR(concat("mfem_parallelAssemble", postfix), A.ParallelAssemble()));
 
   // Create a linear form for the load term using the standard MFEM method
-  mfem::ParLinearForm       f(&fespace);
+  mfem::ParLinearForm       f(fespace.get());
   mfem::FunctionCoefficient load_func([&](const mfem::Vector& coords) { return 100 * coords(0) * coords(1); });
 
   // Create and assemble the linear load term into a vector
@@ -133,10 +136,10 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
   F->UseDevice(true);
 
   // Set a random state to evaluate the residual
-  mfem::ParGridFunction u_global(&fespace);
+  mfem::ParGridFunction u_global(fespace.get());
   u_global.Randomize();
 
-  mfem::Vector U(fespace.TrueVSize());
+  mfem::Vector U(fespace->TrueVSize());
   U.UseDevice(true);
   u_global.GetTrueDofs(U);
 
@@ -145,12 +148,8 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
 
   // Set up the same problem using functional
 
-  // Define the types for the test and trial spaces using the function arguments
-  using test_space  = decltype(test);
-  using trial_space = decltype(trial);
-
   // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space), ExecutionSpace::GPU> residual(&fespace, &fespace);
+  Functional<test_space(trial_space), ExecutionSpace::GPU> residual(fespace.get(), fespace.get());
 
   // Add the total domain residual term to the functional
   // note: NVCC's limited support for __device__ lambda functions
@@ -217,10 +216,12 @@ void functional_test(H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
 
   serac::profiling::initialize();
 
-  auto                        fec = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace(&mesh, &fec, dim);
+  using test_space  = decltype(test);
+  using trial_space = decltype(trial);
 
-  mfem::ParBilinearForm A(&fespace);
+  auto [fespace, fec] = serac::generateParFiniteElementSpace<test_space>(&mesh);
+
+  mfem::ParBilinearForm A(fespace.get());
 
   mfem::ConstantCoefficient a_coef(a);
   A.AddDomainIntegrator(new mfem::VectorMassIntegrator(a_coef));
@@ -229,7 +230,7 @@ void functional_test(H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
   mfem::ConstantCoefficient mu_coef(b);
   A.AddDomainIntegrator(new mfem::ElasticityIntegrator(lambda_coef, mu_coef));
   {
-    SERAC_PROFILE_SCOPE(concat("mfem_localAssemble", postfix));
+    SERAC_MARK_SCOPE(concat("mfem_localAssemble", postfix));
     A.Assemble(0);
   }
   A.Finalize();
@@ -237,7 +238,7 @@ void functional_test(H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
   std::unique_ptr<mfem::HypreParMatrix> J(
       SERAC_PROFILE_EXPR(concat("mfem_parallelAssemble", postfix), A.ParallelAssemble()));
 
-  mfem::ParLinearForm             f(&fespace);
+  mfem::ParLinearForm             f(fespace.get());
   mfem::VectorFunctionCoefficient load_func(dim, [&](const mfem::Vector& /*coords*/, mfem::Vector& force) {
     force    = 0.0;
     force(0) = -1.;
@@ -245,7 +246,7 @@ void functional_test(H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
 
   f.AddDomainIntegrator(new mfem::VectorDomainLFIntegrator(load_func));
   {
-    SERAC_PROFILE_SCOPE(concat("mfem_fAssemble", postfix));
+    SERAC_MARK_SCOPE(concat("mfem_fAssemble", postfix));
     f.Assemble();
   }
 
@@ -255,19 +256,16 @@ void functional_test(H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
 
   F->HostRead();
 
-  mfem::ParGridFunction u_global(&fespace);
+  mfem::ParGridFunction u_global(fespace.get());
   u_global.Randomize();
 
-  mfem::Vector U(fespace.TrueVSize());
+  mfem::Vector U(fespace->TrueVSize());
   U.UseDevice(true);
   u_global.GetTrueDofs(U);
 
   [[maybe_unused]] static constexpr auto I = Identity<dim>();
 
-  using test_space  = decltype(test);
-  using trial_space = decltype(trial);
-
-  Functional<test_space(trial_space), ExecutionSpace::GPU> residual(&fespace, &fespace);
+  Functional<test_space(trial_space), ExecutionSpace::GPU> residual(fespace.get(), fespace.get());
   residual.AddDomainIntegral(Dimension<dim>{}, elastic_qfunction<dim>{}, mesh);
 
   mfem::Vector r1 = SERAC_PROFILE_EXPR(concat("mfem_Apply", postfix), (*J) * U - (*F));
@@ -310,10 +308,12 @@ void functional_test(Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
 
   serac::profiling::initialize();
 
-  auto                        fec = mfem::ND_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace(&mesh, &fec);
+  using test_space  = decltype(test);
+  using trial_space = decltype(trial);
 
-  mfem::ParBilinearForm B(&fespace);
+  auto [fespace, fec] = serac::generateParFiniteElementSpace<test_space>(&mesh);
+
+  mfem::ParBilinearForm B(fespace.get());
 
   mfem::ConstantCoefficient a_coef(a);
   B.AddDomainIntegrator(new mfem::VectorFEMassIntegrator(a_coef));
@@ -321,14 +321,14 @@ void functional_test(Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
   mfem::ConstantCoefficient b_coef(b);
   B.AddDomainIntegrator(new mfem::CurlCurlIntegrator(b_coef));
   {
-    SERAC_PROFILE_SCOPE(concat("mfem_localAssemble", postfix));
+    SERAC_MARK_SCOPE(concat("mfem_localAssemble", postfix));
     B.Assemble(0);
   }
   B.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J(
       SERAC_PROFILE_EXPR(concat("mfem_parallelAssemble", postfix), B.ParallelAssemble()));
 
-  mfem::ParLinearForm             f(&fespace);
+  mfem::ParLinearForm             f(fespace.get());
   mfem::VectorFunctionCoefficient load_func(dim, [&](const mfem::Vector& coords, mfem::Vector& output) {
     double x  = coords(0);
     double y  = coords(1);
@@ -339,31 +339,31 @@ void functional_test(Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
 
   f.AddDomainIntegrator(new mfem::VectorFEDomainLFIntegrator(load_func));
   {
-    SERAC_PROFILE_SCOPE(concat("mfem_fAssemble", postfix));
+    SERAC_MARK_SCOPE(concat("mfem_fAssemble", postfix));
     f.Assemble();
   }
   std::unique_ptr<mfem::HypreParVector> F(
       SERAC_PROFILE_EXPR(concat("mfem_fParallelAssemble", postfix), f.ParallelAssemble()));
   F->UseDevice(true);
 
-  mfem::ParGridFunction u_global(&fespace);
+  mfem::ParGridFunction u_global(fespace.get());
   u_global.Randomize();
 
-  mfem::Vector U(fespace.TrueVSize());
+  mfem::Vector U(fespace->TrueVSize());
   U.UseDevice(true);
   u_global.GetTrueDofs(U);
 
   using test_space  = decltype(test);
   using trial_space = decltype(trial);
 
-  Functional<test_space(trial_space), ExecutionSpace::GPU> residual(&fespace, &fespace);
+  Functional<test_space(trial_space), ExecutionSpace::GPU> residual(fespace.get(), fespace.get());
 
   residual.AddDomainIntegral(Dimension<dim>{}, hcurl_qfunction<dim>{}, mesh);
 
   // Compute the residual using standard MFEM methods
   mfem::Vector r1(U.Size());
   {
-    SERAC_PROFILE_SCOPE(concat("mfem_Apply", postfix));
+    SERAC_MARK_SCOPE(concat("mfem_Apply", postfix));
     J->Mult(U, r1);
     r1 -= *F;
   }

@@ -15,11 +15,13 @@ set(numerics_headers
     odes.hpp
     solver_config.hpp
     stdfunction_operator.hpp
+    petsc_solvers.hpp
     )
 
 set(numerics_sources
     equation_solver.cpp
     odes.cpp
+    petsc_solvers.cpp
     )
 
 set(numerics_depends serac_infrastructure serac_functional)

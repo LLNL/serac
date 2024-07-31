@@ -105,14 +105,13 @@ TEST(BoundaryCond, FilterGenerics)
   auto          mesh = mfem::Mesh::MakeCartesian2D(N, N, mfem::Element::TRIANGLE);
   mfem::ParMesh par_mesh(MPI_COMM_WORLD, mesh);
 
-  mfem::H1_FECollection       coll(1, par_mesh.Dimension());
-  mfem::ParFiniteElementSpace space(&par_mesh, &coll);
+  auto [space, coll] = serac::generateParFiniteElementSpace<H1<1>>(&par_mesh);
 
   BoundaryConditionManager bcs(par_mesh);
   auto                     coef = std::make_shared<mfem::ConstantCoefficient>(1);
   for (int i = 0; i < N; i++) {
-    bcs.addGeneric({}, coef, TestTag::Tag1, space, 1);
-    bcs.addGeneric({}, coef, TestTag::Tag2, space, 1);
+    bcs.addGeneric({}, coef, TestTag::Tag1, *space, 1);
+    bcs.addGeneric({}, coef, TestTag::Tag2, *space, 1);
   }
 
   int bcs_with_tag1 = 0;
@@ -147,7 +146,6 @@ TEST(BoundaryCondHelper, ElementAttributeDofListScalar)
   mesh.SetAttributes();
 
   mfem::ParMesh pmesh(MPI_COMM_WORLD, mesh);
-  int           sdim = pmesh.SpaceDimension();
 
   mfem::Array<int> elem_attr_is_ess(pmesh.attributes.Max());
   elem_attr_is_ess                = 0;
@@ -155,9 +153,8 @@ TEST(BoundaryCondHelper, ElementAttributeDofListScalar)
 
   mfem::Array<int> ess_tdof_list;
 
-  mfem::L2_FECollection       l2_fec(0, sdim);
-  mfem::ParFiniteElementSpace l2_fes(&pmesh, &l2_fec, 1);
-  serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(l2_fes, elem_attr_is_ess, ess_tdof_list);
+  auto [l2_fes, l2_fec] = serac::generateParFiniteElementSpace<L2<0>>(&pmesh);
+  serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(*l2_fes, elem_attr_is_ess, ess_tdof_list);
 
   int local_num_tdof = ess_tdof_list.Size();
   int global_num_tdof;
@@ -173,9 +170,8 @@ TEST(BoundaryCondHelper, ElementAttributeDofListScalar)
     EXPECT_EQ(ess_tdof_list[1], 31);
   }
 
-  mfem::H1_FECollection       h1_fec(1, sdim);
-  mfem::ParFiniteElementSpace h1_fes(&pmesh, &h1_fec, 1);
-  serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(h1_fes, elem_attr_is_ess, ess_tdof_list, -1);
+  auto [h1_fes, h1_fec] = serac::generateParFiniteElementSpace<H1<1>>(&pmesh);
+  serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(*h1_fes, elem_attr_is_ess, ess_tdof_list, -1);
 
   local_num_tdof = ess_tdof_list.Size();
   MPI_Allreduce(&local_num_tdof, &global_num_tdof, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
@@ -203,11 +199,12 @@ TEST(BoundaryCondHelper, ElementAttributeDofListScalar)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(BoundaryCondHelper, ElementAttributeDofListVector)
+TEST(BoundaryCondHelper, ElementAttributeDofList)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  int attribute = 2;
+  int           attribute = 2;
+  constexpr int dim       = 3;
 
   auto mesh = mfem::Mesh::MakeCartesian3D(4, 4, 4, mfem::Element::HEXAHEDRON);
   mesh.SetAttribute(2, attribute);
@@ -223,32 +220,85 @@ TEST(BoundaryCondHelper, ElementAttributeDofListVector)
 
   mfem::Array<int> ess_tdof_list;
 
-  mfem::H1_FECollection       h1_fec(1, sdim);
-  mfem::ParFiniteElementSpace h1_fes(&pmesh, &h1_fec, 1);
-  serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(h1_fes, elem_attr_is_ess, ess_tdof_list, 1);
+  // scalar space
+  using scalar_space       = L2<1>;
+  auto [l2_scalar, l2_fec] = serac::generateParFiniteElementSpace<scalar_space>(&pmesh);
 
+  serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(*l2_scalar, elem_attr_is_ess, ess_tdof_list);
   int local_num_tdof = ess_tdof_list.Size();
   int global_num_tdof;
   MPI_Allreduce(&local_num_tdof, &global_num_tdof, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  EXPECT_EQ(global_num_tdof, 16);  // grab only component (scalar)
 
-  EXPECT_EQ(global_num_tdof, 12);
+  // set up a gridfunction keyed off element attribute
+  double       attr1value = 3.2;
+  double       attr2value = 1.7;
+  mfem::Vector values(2);
+  values[0] = attr1value;
+  values[1] = attr2value;
+  mfem::PWConstCoefficient attr_coef(values);
+  mfem::ParGridFunction    l2_scalar_gf(l2_scalar.get());
+  l2_scalar_gf.ProjectCoefficient(attr_coef);
 
-  int numRanks;
-  MPI_Comm_size(MPI_COMM_WORLD, &numRanks);
+  mfem::Vector& true_values = l2_scalar_gf.GetTrueVector();
+  for (int i = 0; i < true_values.Size(); i++) {
+    if (ess_tdof_list.Find(i) > -1) {  // check if index is contrained in array
+      EXPECT_EQ(true_values(i), attr2value);
+    } else {
+      EXPECT_EQ(true_values(i), attr1value);
+    }
+  }
 
-  if (numRanks == 1) {
-    EXPECT_EQ(ess_tdof_list[0], 1);
-    EXPECT_EQ(ess_tdof_list[1], 2);
-    EXPECT_EQ(ess_tdof_list[2], 6);
-    EXPECT_EQ(ess_tdof_list[3], 7);
-    EXPECT_EQ(ess_tdof_list[4], 26);
-    EXPECT_EQ(ess_tdof_list[5], 27);
-    EXPECT_EQ(ess_tdof_list[6], 31);
-    EXPECT_EQ(ess_tdof_list[7], 32);
-    EXPECT_EQ(ess_tdof_list[8], 51);
-    EXPECT_EQ(ess_tdof_list[9], 52);
-    EXPECT_EQ(ess_tdof_list[10], 56);
-    EXPECT_EQ(ess_tdof_list[11], 57);
+  // vector space
+  using vector_space           = L2<1, dim>;
+  auto [l2_vector, l2_fec_vec] = serac::generateParFiniteElementSpace<vector_space>(&pmesh);
+  mfem::ParGridFunction           l2_vector_gf(l2_vector.get());
+  mfem::PWVectorCoefficient       attr_vec_coef(sdim);
+  mfem::Vector                    attr1vec({0.0, 1.0, 2.0});
+  mfem::Vector                    attr2vec({3.0, 4.0, 5.0});
+  mfem::VectorConstantCoefficient attr1vCoef(attr1vec);
+  mfem::VectorConstantCoefficient attr2vCoef(attr2vec);
+  attr_vec_coef.UpdateCoefficient(1, attr1vCoef);
+  attr_vec_coef.UpdateCoefficient(2, attr2vCoef);
+  l2_vector_gf.ProjectCoefficient(attr_vec_coef);
+  mfem::Vector& true_vec_values = l2_vector_gf.GetTrueVector();
+
+  serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(*l2_vector, elem_attr_is_ess, ess_tdof_list, -1);
+  local_num_tdof = ess_tdof_list.Size();
+  MPI_Allreduce(&local_num_tdof, &global_num_tdof, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  EXPECT_EQ(global_num_tdof, 16 * 3);  // grab all
+
+  serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(*l2_vector, elem_attr_is_ess, ess_tdof_list, 0);
+  local_num_tdof = ess_tdof_list.Size();
+  MPI_Allreduce(&local_num_tdof, &global_num_tdof, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  EXPECT_EQ(global_num_tdof, 16);  // grab single component
+
+  for (int i = 0; i < true_vec_values.Size(); i++) {
+    if (ess_tdof_list.Find(i) > -1) {  // check if index is contrained in array
+      EXPECT_EQ(true_vec_values(i), 3.0);
+    }
+  }
+
+  serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(*l2_vector, elem_attr_is_ess, ess_tdof_list, 1);
+  local_num_tdof = ess_tdof_list.Size();
+  MPI_Allreduce(&local_num_tdof, &global_num_tdof, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  EXPECT_EQ(global_num_tdof, 16);  // grab single component
+
+  for (int i = 0; i < true_vec_values.Size(); i++) {
+    if (ess_tdof_list.Find(i) > -1) {  // check if index is contrained in array
+      EXPECT_EQ(true_vec_values(i), 4.0);
+    }
+  }
+
+  serac::mfem_ext::GetEssentialTrueDofsFromElementAttribute(*l2_vector, elem_attr_is_ess, ess_tdof_list, 2);
+  local_num_tdof = ess_tdof_list.Size();
+  MPI_Allreduce(&local_num_tdof, &global_num_tdof, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  EXPECT_EQ(global_num_tdof, 16);  // grab single component
+
+  for (int i = 0; i < true_vec_values.Size(); i++) {
+    if (ess_tdof_list.Find(i) > -1) {  // check if index is contrained in array
+      EXPECT_EQ(true_vec_values(i), 5.0);
+    }
   }
 
   MPI_Barrier(MPI_COMM_WORLD);

@@ -193,7 +193,7 @@ struct Integral {
  */
 template <mfem::Geometry::Type geom, int Q, typename test, typename... trials, typename lambda_type,
           typename qpt_data_type>
-void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, lambda_type&& qf,
+void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, const lambda_type& qf,
                       std::shared_ptr<QuadratureData<qpt_data_type> > qdata)
 {
   integral.geometric_factors_[geom] = GeometricFactors(integral.domain_, Q, geom);
@@ -266,7 +266,7 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
  * @return Integral the initialized `Integral` object
  */
 template <typename s, int Q, int dim, typename lambda_type, typename qpt_data_type>
-Integral MakeDomainIntegral(const Domain& domain, lambda_type&& qf,
+Integral MakeDomainIntegral(const Domain& domain, const lambda_type& qf,
                             std::shared_ptr<QuadratureData<qpt_data_type> > qdata,
                             std::vector<uint32_t>                           argument_indices)
 {
@@ -303,7 +303,7 @@ Integral MakeDomainIntegral(const Domain& domain, lambda_type&& qf,
  * @param qf the quadrature function
  */
 template <mfem::Geometry::Type geom, int Q, typename test, typename... trials, typename lambda_type>
-void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integral, lambda_type&& qf)
+void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integral, const lambda_type& qf)
 {
   integral.geometric_factors_[geom] = GeometricFactors(integral.domain_, Q, geom, FaceType::BOUNDARY);
   GeometricFactors& gf              = integral.geometric_factors_[geom];
@@ -359,7 +359,7 @@ void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integr
  * @note this function is not meant to be called by users
  */
 template <typename s, int Q, int dim, typename lambda_type>
-Integral MakeBoundaryIntegral(const Domain& domain, lambda_type&& qf, std::vector<uint32_t> argument_indices)
+Integral MakeBoundaryIntegral(const Domain& domain, const lambda_type& qf, std::vector<uint32_t> argument_indices)
 {
   FunctionSignature<s> signature;
 

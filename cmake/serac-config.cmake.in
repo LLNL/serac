@@ -13,7 +13,7 @@ if(NOT SERAC_FOUND)
   #----------------------------------------------------------------------------
   # Set version and paths
   #----------------------------------------------------------------------------
-  
+
   set(SERAC_VERSION       "@SERAC_VERSION_FULL@")
   set(SERAC_VERSION_MAJOR "@SERAC_VERSION_MAJOR@")
   set(SERAC_VERSION_MINOR "@SERAC_VERSION_MINOR@")
@@ -67,7 +67,7 @@ if(NOT SERAC_FOUND)
   endif()
 
   # Set to real variable unless user overrode it
-  foreach(dep ADIAK AXOM CAMP CALIPER CONDUIT HDF5 MFEM PETSC RAJA STRUMPACK SUNDIALS TRIBOL UMPIRE)
+  foreach(dep ADIAK AXOM CAMP CALIPER CONDUIT HDF5 MFEM PETSC RAJA SLEPC STRUMPACK SUNDIALS TRIBOL UMPIRE)
     if (NOT ${dep}_DIR)
       set(${dep}_DIR "${SERAC_${dep}_DIR}")
     endif()
@@ -153,21 +153,6 @@ if(NOT SERAC_FOUND)
   # Tribol
   if(SERAC_USE_TRIBOL)
     find_dependency(tribol REQUIRED PATHS "${TRIBOL_DIR}/lib/cmake")
-  endif()
-
-  # PETSc
-  if(SERAC_USE_PETSC)
-    include("${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake")
-  endif()
-
-  # SLEPc
-  if(SERAC_USE_SLEPC)
-    include("${CMAKE_CURRENT_LIST_DIR}/FindSLEPc.cmake")
-  endif()
-
-  # SUNDIALS
-  if(SERAC_USE_SUNDIALS)
-    find_dependency(SUNDIALS REQUIRED NO_DEFAULT_PATH PATHS "${SUNDIALS_DIR}")
   endif()
 
   #----------------------------------------------------------------------------

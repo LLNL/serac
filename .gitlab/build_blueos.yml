@@ -1,17 +1,17 @@
 ####
-# This is the share configuration of jobs for lassen
-.on_lassen:
+# This is the share configuration of jobs for blueos
+.on_blueos:
   variables:
-    ALLOC_COMMAND: lalloc ${ALLOC_NODES} -W ${ALLOC_TIME} -q pci -G ${ALLOC_BANK}
+    SCHEDULER_PARAMETERS: -nnodes ${ALLOC_NODES} -W ${ALLOC_TIME} -q pci -G ${ALLOC_BANK}
   tags:
-    - shell
+    - batch
     - lassen
   rules:
-    - if: '$CI_COMMIT_BRANCH =~ /_lnone/ || $ON_LASSEN == "OFF"' #run except if ...
+    - if: '$CI_COMMIT_BRANCH =~ /_lnone/ || $ON_BLUEOS == "OFF"' #run except if ...
       when: never
     - when: on_success
   before_script:
-    # python3.8 is needed on lassen to avoid trampling on the x86 clingo wheel
+    # python3.8 is needed on blueos to avoid trampling on the x86 clingo wheel
     - module load python/3.8
     # CMake >= 3.17 is needed for FindCUDAToolkit with caliper
     # We could also extract the CMake executable location from the hostconfig in common_build_functions
@@ -29,30 +29,32 @@
 
 ####
 # Template
-.src_build_on_lassen:
-  extends: [.src_build_script, .on_lassen, .src_workflow]
+.src_build_on_blueos:
+  extends: [.src_build_script, .on_blueos, .src_workflow]
   needs: []
 
-.full_build_on_lassen:
-  extends: [.full_build_script, .on_lassen, .full_workflow]
+.full_build_on_blueos:
+  extends: [.full_build_script, .on_blueos, .full_workflow]
   needs: []
 
 ####
 # Build jobs
-lassen-clang_10_0_1-src:
+blueos-clang_10_0_1-src:
   variables:
     COMPILER: "clang@10.0.1"
     HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}.cmake"
+    EXTRA_CMAKE_OPTIONS: "-DENABLE_BENCHMARKS=ON -DENABLE_DOCS=OFF"
     ALLOC_NODES: "1"
-    ALLOC_TIME: "20"
-  extends: [.src_build_on_lassen, .with_cuda]
+    ALLOC_TIME: "30"
+  extends: [.src_build_on_blueos, .with_cuda]
 
 # Note: to reduce duplication SPEC is not defined here, if we move to more than one
-# spec on lassen add it back like quartz
-lassen-clang_10_0_1-full:
+# spec on blueos add it back like toss4
+blueos-clang_10_0_1-full:
   variables:
     COMPILER: "clang@10.0.1"
     HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}.cmake"
+    EXTRA_CMAKE_OPTIONS: "-DENABLE_BENCHMARKS=ON -DENABLE_DOCS=OFF"
     ALLOC_NODES: "1"
     ALLOC_TIME: "55"
-  extends: [.full_build_on_lassen, .with_cuda]
+  extends: [.full_build_on_blueos, .with_cuda]

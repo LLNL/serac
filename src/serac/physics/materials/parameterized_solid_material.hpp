@@ -21,15 +21,14 @@ namespace serac::solid_mechanics {
 /**
  * @brief Linear isotropic elasticity material model
  *
- * @tparam dim Spatial dimension of the mesh
  */
-template <int dim>
 struct ParameterizedLinearIsotropicSolid {
   using State = Empty;  ///< this material has no internal variables
 
   /**
    * @brief stress calculation for a linear isotropic material model
    *
+   * @tparam dim Spatial dimension of the mesh
    * @tparam DispGradType Displacement gradient type
    * @tparam BulkType Bulk modulus type
    * @tparam ShearType Shear modulus type
@@ -38,9 +37,9 @@ struct ParameterizedLinearIsotropicSolid {
    * @param DeltaG The shear modulus offset
    * @return The calculated material response (Cauchy stress) for the material
    */
-  template <typename DispGradType, typename BulkType, typename ShearType>
-  SERAC_HOST_DEVICE auto operator()(const State& /*state*/, const DispGradType& du_dX, const BulkType& DeltaK,
-                                    const ShearType& DeltaG) const
+  template <int dim, typename DispGradType, typename BulkType, typename ShearType>
+  SERAC_HOST_DEVICE auto operator()(State& /*state*/, const serac::tensor<DispGradType, dim, dim>& du_dX,
+                                    const BulkType& DeltaK, const ShearType& DeltaG) const
   {
     constexpr auto I       = Identity<dim>();
     auto           K       = K0 + get<0>(DeltaK);
@@ -65,15 +64,14 @@ struct ParameterizedLinearIsotropicSolid {
 /**
  * @brief Neo-Hookean material model
  *
- * @tparam dim The spatial dimension of the mesh
  */
-template <int dim>
 struct ParameterizedNeoHookeanSolid {
   using State = Empty;  ///< this material has no internal variables
 
   /**
    * @brief stress calculation for a NeoHookean material model
    *
+   * @tparam dim The spatial dimension of the mesh
    * @tparam DispGradType Displacement gradient type
    * @tparam BulkType Bulk modulus type
    * @tparam ShearType Shear modulus type
@@ -82,9 +80,9 @@ struct ParameterizedNeoHookeanSolid {
    * @param DeltaG The shear modulus offset
    * @return The calculated material response (Cauchy stress) for the material
    */
-  template <typename DispGradType, typename BulkType, typename ShearType>
-  SERAC_HOST_DEVICE auto operator()(const State& /*state*/, const DispGradType& du_dX, const BulkType& DeltaK,
-                                    const ShearType& DeltaG) const
+  template <int dim, typename DispGradType, typename BulkType, typename ShearType>
+  SERAC_HOST_DEVICE auto operator()(State& /*state*/, const serac::tensor<DispGradType, dim, dim>& du_dX,
+                                    const BulkType& DeltaK, const ShearType& DeltaG) const
   {
     using std::log1p;
     constexpr auto I         = Identity<dim>();
