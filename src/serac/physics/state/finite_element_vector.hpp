@@ -17,6 +17,7 @@
 
 #include "mfem.hpp"
 
+#include "serac/serac_config.hpp"
 #include "serac/infrastructure/variant.hpp"
 #include "serac/numerics/functional/functional.hpp"
 
@@ -65,30 +66,7 @@ public:
   template <typename FunctionSpace>
   FiniteElementVector(mfem::ParMesh& mesh, FunctionSpace, const std::string& name = "") : mesh_(mesh), name_(name)
   {
-    const int dim = mesh.Dimension();
-
-    const auto ordering = mfem::Ordering::byNODES;
-
-    switch (FunctionSpace::family) {
-      case Family::H1:
-        coll_ = std::make_unique<mfem::H1_FECollection>(FunctionSpace::order, dim);
-        break;
-      case Family::HCURL:
-        coll_ = std::make_unique<mfem::ND_FECollection>(FunctionSpace::order, dim);
-        break;
-      case Family::HDIV:
-        coll_ = std::make_unique<mfem::RT_FECollection>(FunctionSpace::order, dim);
-        break;
-      case Family::L2:
-        // We use GaussLobatto basis functions as this is what is used for the serac::Functional FE kernels
-        coll_ = std::make_unique<mfem::L2_FECollection>(FunctionSpace::order, dim, mfem::BasisType::GaussLobatto);
-        break;
-      default:
-        SLIC_ERROR_ROOT("Unknown finite element space requested.");
-        break;
-    }
-
-    space_ = std::make_unique<mfem::ParFiniteElementSpace>(&mesh, coll_.get(), FunctionSpace::components, ordering);
+    std::tie(space_, coll_) = serac::generateParFiniteElementSpace<FunctionSpace>(&mesh);
 
     // Construct a hypre par vector based on the new finite element space
     HypreParVector new_vector(space_.get());

@@ -14,6 +14,7 @@
 
 #include "mfem.hpp"
 
+#include "serac/serac_config.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/physics/common.hpp"
 #include "serac/physics/solid_mechanics_input.hpp"
@@ -179,8 +180,8 @@ public:
         reactions_adjoint_load_(reactions_.space(), "reactions_shape_sensitivity"),
         nonlin_solver_(std::move(solver)),
         ode2_(displacement_.space().TrueVSize(),
-              {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = v_, .d2u_dt2 = acceleration_},
-              *nonlin_solver_, bcs_),
+              {.time = time_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = v_, .d2u_dt2 = acceleration_}, *nonlin_solver_,
+              bcs_),
         geom_nonlin_(geom_nonlin)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
@@ -241,12 +242,15 @@ public:
     // to be the displacement
     auto* amg_prec = dynamic_cast<mfem::HypreBoomerAMG*>(&nonlin_solver_->preconditioner());
     if (amg_prec) {
-      // amg_prec->SetElasticityOptions(&displacement_.space());
-
-      // TODO: The above call was seg faulting in the HYPRE_BoomerAMGSetInterpRefine(amg_precond, interp_refine)
-      // method as of Hypre version v2.26.0. Instead, we just set the system size for Hypre. This is a temporary work
-      // around as it will decrease the effectiveness of the preconditioner.
-      amg_prec->SetSystemsOptions(dim, true);
+      // ZRA - Iterative refinement tends to be more expensive than it is worth
+      // We should add a flag allowing users to enable it
+      if constexpr (serac::ordering == mfem::Ordering::byVDIM) {
+        bool iterative_refinement = false;
+        amg_prec->SetElasticityOptions(&displacement_.space(), iterative_refinement);
+      } else {
+        // SetElasticityOptions only works with byVDIM ordering, instead fallback to SetSystemsOptions
+        amg_prec->SetSystemsOptions(displacement_.space().GetVDim(), serac::ordering == mfem::Ordering::byNODES);
+      }
     }
 
     int true_size = velocity_.space().TrueVSize();
@@ -1127,8 +1131,8 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          const mfem::Vector res = (*residual_)(ode_time_point_, shape_displacement_, u, acceleration_,
-                                                *parameters_[parameter_indices].state...);
+          const mfem::Vector res =
+              (*residual_)(time_, shape_displacement_, u, acceleration_, *parameters_[parameter_indices].state...);
 
           // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
           // tracking strategy
@@ -1139,7 +1143,7 @@ public:
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          auto [r, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(u), acceleration_,
+          auto [r, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(u), acceleration_,
                                         *parameters_[parameter_indices].state...);
           J_             = assemble(drdu);
           J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
@@ -1182,8 +1186,8 @@ public:
 
           [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
             add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
-            const mfem::Vector res = (*residual_)(ode_time_point_, shape_displacement_, predicted_displacement_,
-                                                  d2u_dt2, *parameters_[parameter_indices].state...);
+            const mfem::Vector res = (*residual_)(time_, shape_displacement_, predicted_displacement_, d2u_dt2,
+                                                  *parameters_[parameter_indices].state...);
 
             // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
             // tracking strategy
@@ -1196,13 +1200,13 @@ public:
             add(1.0, u_, c0_, d2u_dt2, predicted_displacement_);
 
             // K := dR/du
-            auto K = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_,
+            auto                                  K = serac::get<DERIVATIVE>((*residual_)(time_, shape_displacement_,
                                                          differentiate_wrt(predicted_displacement_), d2u_dt2,
                                                          *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/da
-            auto M = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_, predicted_displacement_,
+            auto M = serac::get<DERIVATIVE>((*residual_)(time_, shape_displacement_, predicted_displacement_,
                                                          differentiate_wrt(d2u_dt2),
                                                          *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
@@ -1251,16 +1255,16 @@ public:
     if (is_quasistatic_) {
       quasiStaticSolve(dt);
     } else {
-      ode2_.Step(displacement_, velocity_, time_, dt);
+      double time_tmp = time_;
+      ode2_.Step(displacement_, velocity_, time_tmp, dt);
     }
 
     cycle_ += 1;
-
+    
     if (checkpoint_to_disk_) {
       outputStateToDisk();
     } else {
-      auto state_names = stateNames();
-      for (const auto& state_name : state_names) {
+      for (const auto& state_name : stateNames()) {
         checkpoint_states_[state_name].push_back(state(state_name));
       }
     }
@@ -1271,7 +1275,7 @@ public:
       // the material state buffers to be updated
       residual_->updateQdata(true);
 
-      reactions_ = (*residual_)(ode_time_point_, shape_displacement_, displacement_, acceleration_,
+      reactions_ = (*residual_)(time_, shape_displacement_, displacement_, acceleration_,
                                 *parameters_[parameter_indices].state...);
 
       residual_->updateQdata(false);
@@ -1336,9 +1340,24 @@ public:
     mfem::HypreParVector adjoint_essential(displacement_adjoint_load_);
     adjoint_essential = 0.0;
 
+    SLIC_ERROR_ROOT_IF(cycle_ <= min_cycle_,
+                       "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
+                       "number of forward timesteps");
+
+    cycle_--; // cycle is now at n \in [0,N-1]
+
+    double dt_np1_to_np2 = getCheckpointedTimestep(cycle_+1);
+    time_ -= dt_np1_to_np2;
+
+    auto end_step_solution = getCheckpointedStates(cycle_+1);
+    // Load the end of step disp
+    displacement_ = end_step_solution.at("displacement");
+
+    const double dt_n_to_np1 = getCheckpointedTimestep(cycle_);
+
     if (is_quasistatic_) {
-      auto [_, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(displacement_),
-                                    acceleration_, *parameters_[parameter_indices].state...);
+      auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
+                                    *parameters_[parameter_indices].state...);
       auto jacobian  = assemble(drdu);
       auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -1353,69 +1372,31 @@ public:
       nonlin_solver_->setOperator(*residual_with_bcs_);
 
       return;
-    }
-
-    SLIC_ERROR_ROOT_IF(ode2_.GetTimestepper() != TimestepMethod::Newmark,
-                       "Only Newmark implemented for transient adjoint solid mechanics.");
-
-    SLIC_ERROR_ROOT_IF(cycle_ <= min_cycle_,
-                       "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
-                       "number of forward timesteps");
-
-    // Load the end of step disp, velo, accel from the previous cycle
-    {
-      auto previous_states_n = getCheckpointedStates(cycle_);
-
-      displacement_ = previous_states_n.at("displacement");
-      velocity_     = previous_states_n.at("velocity");
-      acceleration_ = previous_states_n.at("acceleration");
-    }
-
-    double dt_np1 = getCheckpointedTimestep(cycle_);
-    double dt_n   = getCheckpointedTimestep(cycle_ - 1);
-
-    // K := dR/du
-    auto K = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(displacement_),
-                                                 acceleration_, *parameters_[parameter_indices].state...));
-    std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
-
-    // M := dR/da
-    auto M = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_, displacement_,
-                                                 differentiate_wrt(acceleration_),
-                                                 *parameters_[parameter_indices].state...));
-    std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
-
-    solid_mechanics::detail::adjoint_integrate(
-        dt_n, dt_np1, m_mat.get(), k_mat.get(), displacement_adjoint_load_, velocity_adjoint_load_,
-        acceleration_adjoint_load_, adjoint_displacement_, implicit_sensitivity_displacement_start_of_step_,
-        implicit_sensitivity_velocity_start_of_step_, adjoint_essential, bcs_, lin_solver);
-
-    time_ -= dt_n;
-    cycle_--;
-  }
-
-  /// @overload
-  std::unordered_map<std::string, FiniteElementState> getCheckpointedStates(int cycle_to_load) const override
-  {
-    std::unordered_map<std::string, FiniteElementState> previous_states;
-
-    if (checkpoint_to_disk_) {
-      previous_states.emplace("displacement", displacement_);
-      previous_states.emplace("velocity", velocity_);
-      previous_states.emplace("acceleration", acceleration_);
-      StateManager::loadCheckpointedStates(
-          cycle_to_load,
-          {previous_states.at("displacement"), previous_states.at("velocity"), previous_states.at("acceleration")});
-      return previous_states;
     } else {
-      previous_states.emplace("displacement",
-                              checkpoint_states_.at("displacement")[static_cast<size_t>(cycle_to_load)]);
-      previous_states.emplace("velocity", checkpoint_states_.at("velocity")[static_cast<size_t>(cycle_to_load)]);
-      previous_states.emplace("acceleration",
-                              checkpoint_states_.at("acceleration")[static_cast<size_t>(cycle_to_load)]);
-    }
+      SLIC_ERROR_ROOT_IF(ode2_.GetTimestepper() != TimestepMethod::Newmark,
+                         "Only Newmark implemented for transient adjoint solid mechanics.");
 
-    return previous_states;
+      // Load the end of step velo, accel from the previous cycle
+
+      velocity_     = end_step_solution.at("velocity");
+      acceleration_ = end_step_solution.at("acceleration");
+
+      // K := dR/du
+      auto K = serac::get<DERIVATIVE>((*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_),
+                                                   acceleration_, *parameters_[parameter_indices].state...));
+      std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
+
+      // M := dR/da
+      auto M = serac::get<DERIVATIVE>((*residual_)(time_, shape_displacement_, displacement_,
+                                                   differentiate_wrt(acceleration_),
+                                                   *parameters_[parameter_indices].state...));
+      std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
+
+      solid_mechanics::detail::adjoint_integrate(
+          dt_n_to_np1, dt_np1_to_np2, m_mat.get(), k_mat.get(), displacement_adjoint_load_, velocity_adjoint_load_,
+          acceleration_adjoint_load_, adjoint_displacement_, implicit_sensitivity_displacement_start_of_step_,
+          implicit_sensitivity_velocity_start_of_step_, adjoint_essential, bcs_, lin_solver);
+    }
   }
 
   /// @overload
@@ -1424,7 +1405,7 @@ public:
     SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
                     axom::fmt::format("Invalid parameter index '{}' requested for sensitivity."));
 
-    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](ode_time_point_));
+    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](time_));
     auto drdparam_mat = assemble(drdparam);
 
     drdparam_mat->MultTranspose(adjoint_displacement_, *parameters_[parameter_field].sensitivity);
@@ -1435,9 +1416,8 @@ public:
   /// @overload
   FiniteElementDual& computeTimestepShapeSensitivity() override
   {
-    auto drdshape =
-        serac::get<DERIVATIVE>((*residual_)(ode_time_point_, differentiate_wrt(shape_displacement_), displacement_,
-                                            acceleration_, *parameters_[parameter_indices].state...));
+    auto drdshape = serac::get<DERIVATIVE>((*residual_)(time_, differentiate_wrt(shape_displacement_), displacement_,
+                                                        acceleration_, *parameters_[parameter_indices].state...));
 
     auto drdshape_mat = assemble(drdshape);
 
@@ -1483,7 +1463,7 @@ public:
   {
     SLIC_ERROR_ROOT_IF(dual_name != "reactions", "Solid mechanics has reactions as its only dual");
 
-    auto [_, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
+    auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
                                   *parameters_[parameter_indices].state...);
     std::unique_ptr<mfem::HypreParMatrix> jacobian = assemble(drdu);
     reactions_adjoint_load_                        = 0.0;
@@ -1498,7 +1478,7 @@ public:
     SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
                     axom::fmt::format("Invalid parameter index '{}' requested for reaction sensitivity."));
 
-    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](ode_time_point_));
+    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](time_));
     auto drdparam_mat = assemble(drdparam);
 
     drdparam_mat->MultTranspose(reaction_direction, *parameters_[parameter_field].sensitivity);
@@ -1510,9 +1490,8 @@ public:
   const serac::FiniteElementDual& computeDualShapeSensitivity(
       const serac::FiniteElementState& reaction_direction) override
   {
-    auto drdshape =
-        serac::get<DERIVATIVE>((*residual_)(ode_time_point_, differentiate_wrt(shape_displacement_), displacement_,
-                                            acceleration_, *parameters_[parameter_indices].state...));
+    auto drdshape = serac::get<DERIVATIVE>((*residual_)(time_, differentiate_wrt(shape_displacement_), displacement_,
+                                                        acceleration_, *parameters_[parameter_indices].state...));
     auto drdshape_mat = assemble(drdshape);
     drdshape_mat->MultTranspose(reaction_direction, *shape_displacement_sensitivity_);
     return *shape_displacement_sensitivity_;
@@ -1648,8 +1627,6 @@ protected:
     warmStartDisplacement(dt);
 
     time_ += dt;
-    // Set the ODE time point for the time-varying loads in quasi-static problems
-    ode_time_point_ = time_;
 
     // this method is essentially equivalent to the 1-liner
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
@@ -1679,13 +1656,15 @@ protected:
     for (int i = 0; i < num_nodes; i++) {
       // Determine if this "local" node (L-vector node) is in the local true vector. I.e. ensure this node is not a
       // shared node owned by another processor
-      if (nodal_positions.ParFESpace()->GetLocalTDofNumber(i) >= 0) {
+      int idof = mfem::Ordering::Map<serac::ordering>(nodal_positions.FESpace()->GetNDofs(),
+                                                      nodal_positions.FESpace()->GetVDim(), i, 0);
+      if (nodal_positions.ParFESpace()->GetLocalTDofNumber(idof) >= 0) {
         mfem::Vector     node_coords(dim);
         mfem::Array<int> node_dofs;
         for (int d = 0; d < dim; d++) {
           // Get the local dof number for the prescribed component
-          int local_vector_dof = mfem::Ordering::Map<mfem::Ordering::byNODES>(
-              nodal_positions.FESpace()->GetNDofs(), nodal_positions.FESpace()->GetVDim(), i, d);
+          int local_vector_dof = mfem::Ordering::Map<serac::ordering>(nodal_positions.FESpace()->GetNDofs(),
+                                                                      nodal_positions.FESpace()->GetVDim(), i, d);
 
           // Save the spatial position for this coordinate dof
           node_coords(d) = nodal_positions(local_vector_dof);

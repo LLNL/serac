@@ -123,7 +123,7 @@ public:
    *
    * @return The vector of timestep sizes taken by the foward solver
    */
-  virtual std::vector<double> timesteps() const;
+  virtual const std::vector<double>& timesteps() const;
 
   /**
    * @brief Base method to reset physics states to zero.  This does not reset design parameters or shape.
@@ -503,7 +503,7 @@ protected:
    * @param cycle The cycle to retrieve state from
    * @return A map containing the primal field names and their associated FiniteElementStates at the requested cycle
    */
-  virtual std::unordered_map<std::string, FiniteElementState> getCheckpointedStates(int cycle) const;
+  std::unordered_map<std::string, FiniteElementState> getCheckpointedStates(int cycle) const;
 
   /// @brief Name of the physics module
   std::string name_ = {};
