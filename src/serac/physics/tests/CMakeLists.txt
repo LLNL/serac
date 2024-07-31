@@ -15,6 +15,7 @@ set(serial_solver_tests
     solid_statics_patch.cpp
     solid_dynamics_patch.cpp
     dynamic_solid_adjoint.cpp
+    quasistatic_solid_adjoint.cpp
     finite_element_vector_set_over_domain.cpp
     )
 
