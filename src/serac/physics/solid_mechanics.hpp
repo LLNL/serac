@@ -1268,6 +1268,8 @@ public:
       ode2_.Step(displacement_, velocity_, time_tmp, dt);
     }
 
+    cycle_ += 1;
+    
     if (checkpoint_to_disk_) {
       outputStateToDisk();
     } else {
@@ -1288,7 +1290,6 @@ public:
       residual_->updateQdata(false);
     }
 
-    cycle_ += 1;
     if (cycle_ > max_cycle_) {
       timesteps_.push_back(dt);
       max_cycle_ = cycle_;
@@ -1352,16 +1353,16 @@ public:
                        "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
                        "number of forward timesteps");
 
-    double dt_np1 = cycle_ < static_cast<int>(timesteps().size()) ? getCheckpointedTimestep(cycle_) : 0.0;
-    auto   previous_state_solution = getCheckpointedStates(cycle_);
+    cycle_--; // cycle is now at n \in [0,N-1]
 
-    time_ -= dt_np1;
-    cycle_--;
+    double dt_np1_to_np2 = getCheckpointedTimestep(cycle_+1);
+    time_ -= dt_np1_to_np2;
 
+    auto end_step_solution = getCheckpointedStates(cycle_+1);
     // Load the end of step disp
-    displacement_ = previous_state_solution.at("displacement");
+    displacement_ = end_step_solution.at("displacement");
 
-    const double dt_n = getCheckpointedTimestep(cycle_);
+    const double dt_n_to_np1 = getCheckpointedTimestep(cycle_);
 
     if (is_quasistatic_) {
       auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
@@ -1386,8 +1387,8 @@ public:
 
       // Load the end of step velo, accel from the previous cycle
 
-      velocity_     = previous_state_solution.at("velocity");
-      acceleration_ = previous_state_solution.at("acceleration");
+      velocity_     = end_step_solution.at("velocity");
+      acceleration_ = end_step_solution.at("acceleration");
 
       // K := dR/du
       auto K = serac::get<DERIVATIVE>((*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_),
@@ -1401,7 +1402,7 @@ public:
       std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
       solid_mechanics::detail::adjoint_integrate(
-          dt_n, dt_np1, m_mat.get(), k_mat.get(), displacement_adjoint_load_, velocity_adjoint_load_,
+          dt_n_to_np1, dt_np1_to_np2, m_mat.get(), k_mat.get(), displacement_adjoint_load_, velocity_adjoint_load_,
           acceleration_adjoint_load_, adjoint_displacement_, implicit_sensitivity_displacement_start_of_step_,
           implicit_sensitivity_velocity_start_of_step_, adjoint_essential, bcs_, lin_solver);
     }
