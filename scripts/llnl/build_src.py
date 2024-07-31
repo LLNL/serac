@@ -47,6 +47,11 @@ def parse_args():
                       dest="skip_install",
                       default=False,
                       help="Skip testing install target which does not work in some configurations (codevelop)")
+    parser.add_argument("--skip-tests",
+                      action="store_true",
+                      dest="skip_tests",
+                      default=False,
+                      help="Skip unit tests which will not work in some configurations (CUDA on Azure)")
     parser.add_argument("-v", "--verbose",
                       action="store_true",
                       dest="verbose",
@@ -150,7 +155,7 @@ def main():
             test_root = get_build_and_test_root(repo_dir, timestamp)
             os.mkdir(test_root)
             res = build_and_test_host_config(test_root, hostconfig_path, args["verbose"], args["extra_cmake_options"],
-                                             args["skip_install"], args["jobs"])
+                                             args["skip_install"], args["skip_tests"], args["jobs"])
 
     finally:
         os.chdir(original_wd)

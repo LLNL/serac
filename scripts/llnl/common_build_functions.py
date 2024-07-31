@@ -251,7 +251,7 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
 
     return 0
 
-def build_and_test_host_config(test_root, host_config, report_to_stdout=False, extra_cmake_options="", skip_install=False, job_count=""):
+def build_and_test_host_config(test_root, host_config, report_to_stdout=False, extra_cmake_options="", skip_install=False, skip_tests=False, job_count=""):
     host_config_root = get_host_config_root(host_config)
     # setup build and install dirs
     build_dir   = pjoin(test_root,"build-%s"   % host_config_root)
@@ -291,20 +291,23 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
         return res
 
     # test the code
-    tst_output_file = pjoin(build_dir,"output.log.make.test.txt")
-    print("[starting unit tests]")
-    print("[log file: %s]" % tst_output_file)
+    if not skip_tests:
+        tst_output_file = pjoin(build_dir,"output.log.make.test.txt")
+        print("[starting unit tests]")
+        print("[log file: %s]" % tst_output_file)
 
-    # Use a maximum of 8 job slots for unit tests due to extra parallelism from OpenMP/MPI
-    test_job_count = 8
-    if job_count:
-        test_job_count = min(int(job_count), 8)
+        # Use a maximum of 8 job slots for unit tests due to extra parallelism from OpenMP/MPI
+        test_job_count = 8
+        if job_count:
+            test_job_count = min(int(job_count), 8)
 
-    tst_cmd = "cd %s && make CTEST_OUTPUT_ON_FAILURE=1 test ARGS=\"--no-compress-output -T Test -VV -j %s\"" % (build_dir, test_job_count)
-    res = shell_exec(tst_cmd,
-                     output_file = tst_output_file,
-                     print_output = report_to_stdout,
-                     echo=True)
+        tst_cmd = "cd %s && make CTEST_OUTPUT_ON_FAILURE=1 test ARGS=\"--no-compress-output -T Test -VV -j %s\"" % (build_dir, test_job_count)
+        res = shell_exec(tst_cmd,
+                        output_file = tst_output_file,
+                        print_output = report_to_stdout,
+                        echo=True)
+    else:
+        print("[skipping unit tests]")
 
     # Convert CTest output to JUnit, do not overwrite previous res
     print("[Checking to see if xsltproc exists...]")
@@ -359,7 +362,7 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
 
 
 def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, report_to_stdout = False,
-                                extra_cmake_options = "", skip_install=False, job_count=""):
+                                extra_cmake_options = "", skip_install=False, skip_tests=False, job_count=""):
     host_configs = get_host_configs_for_current_machine(prefix, use_generated_host_configs)
     if len(host_configs) == 0:
         log_failure(prefix,"[ERROR: No host configs found at %s]" % prefix)
@@ -378,7 +381,7 @@ def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, r
         build_dir = get_build_dir(test_root, host_config)
 
         start_time = time.time()
-        if build_and_test_host_config(test_root, host_config, report_to_stdout, extra_cmake_options, skip_install, job_count) == 0:
+        if build_and_test_host_config(test_root, host_config, report_to_stdout, extra_cmake_options, skip_install, skip_tests, job_count) == 0:
             ok.append(host_config)
             log_success(build_dir, "[Success: Built host-config: {0}]".format(host_config), timestamp)
         else:
@@ -504,7 +507,7 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
     src_build_failed = False
     if not tpl_build_failed:
         # build the src against the new tpls
-        res = build_and_test_host_configs(prefix, timestamp, True, report_to_stdout, "", False, job_count)
+        res = build_and_test_host_configs(prefix, timestamp, True, report_to_stdout, "", False, False, job_count)
         if res != 0:
             print("[ERROR: Build and test of src vs tpls test failed.]\n")
             src_build_failed = True
