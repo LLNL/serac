@@ -39,6 +39,39 @@ enum class ElementType
   L2      ///< Discontinuous scalar-valued basis functions
 };
 
+
+template <typename FunctionSpace>
+std::unique_ptr<mfem::ParFiniteElementSpace> getSpace(mfem::ParMesh& mesh, FunctionSpace)
+{
+  const int dim = mesh.Dimension();
+
+  const auto ordering = mfem::Ordering::byNODES;
+
+  std::unique_ptr<FiniteElementCollection> coll;
+
+  switch (FunctionSpace::family) {
+    case Family::H1:
+      coll = std::make_unique<mfem::H1_FECollection>(FunctionSpace::order, dim);
+      break;
+    case Family::HCURL:
+      coll = std::make_unique<mfem::ND_FECollection>(FunctionSpace::order, dim);
+      break;
+    case Family::HDIV:
+      coll = std::make_unique<mfem::RT_FECollection>(FunctionSpace::order, dim);
+      break;
+    case Family::L2:
+      // We use GaussLobatto basis functions as this is what is used for the serac::Functional FE kernels
+      coll = std::make_unique<mfem::L2_FECollection>(FunctionSpace::order, dim, mfem::BasisType::GaussLobatto);
+      break;
+    default:
+      SLIC_ERROR_ROOT("Unknown finite element space requested.");
+      break;
+  }
+
+  return std::make_unique<mfem::ParFiniteElementSpace>(&mesh, coll_.get(), FunctionSpace::components, ordering);
+}
+
+
 /**
  * @brief Class for encapsulating the data associated with a vector derived
  * from a MFEM finite element space. Specifically, it contains the information
@@ -64,10 +97,10 @@ public:
    * @param name The name of the new finite element state field
    */
   template <typename FunctionSpace>
-  FiniteElementVector(mfem::ParMesh& mesh, FunctionSpace, const std::string& name = "") : mesh_(mesh), name_(name)
+  FiniteElementVector(mfem::ParMesh& mesh, FunctionSpace function_space, const std::string& name = "") : mesh_(mesh), name_(name)
   {
     std::tie(space_, coll_) = serac::generateParFiniteElementSpace<FunctionSpace>(&mesh);
-
+    
     // Construct a hypre par vector based on the new finite element space
     HypreParVector new_vector(space_.get());
 
