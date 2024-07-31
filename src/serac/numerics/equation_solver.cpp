@@ -796,6 +796,16 @@ std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(const NonlinearSolverOp
     nonlinear_solver = std::make_unique<NewtonSolver>(comm, nonlinear_opts);
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::TrustRegion) {
     nonlinear_solver = std::make_unique<TrustRegion>(comm, nonlinear_opts, linear_opts, prec);
+#ifdef SERAC_USE_PETSC
+  } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::PetscNewton) {
+    nonlinear_solver = std::make_unique<mfem_ext::PetscNewtonSolver>(comm, nonlinear_opts);
+  } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::PetscNewtonBacktracking) {
+    nonlinear_solver = std::make_unique<mfem_ext::PetscNewtonSolver>(comm, nonlinear_opts);
+  } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::PetscNewtonCriticalPoint) {
+    nonlinear_solver = std::make_unique<mfem_ext::PetscNewtonSolver>(comm, nonlinear_opts);
+  } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::PetscTrustRegion) {
+    nonlinear_solver = std::make_unique<mfem_ext::PetscNewtonSolver>(comm, nonlinear_opts);
+#endif
   }
   // KINSOL
   else {
@@ -843,7 +853,7 @@ std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(const NonlinearSolverOp
 std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLinearSolverAndPreconditioner(
     LinearSolverOptions linear_opts, MPI_Comm comm)
 {
-  auto preconditioner = buildPreconditioner(linear_opts.preconditioner, linear_opts.preconditioner_print_level, comm);
+  auto preconditioner = buildPreconditioner(linear_opts, comm);
 
   if (linear_opts.linear_solver == LinearSolver::SuperLU) {
     auto lin_solver = std::make_unique<SuperLUSolver>(linear_opts.print_level, comm);
@@ -868,6 +878,20 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
     case LinearSolver::GMRES:
       iter_lin_solver = std::make_unique<mfem::GMRESSolver>(comm);
       break;
+#ifdef SERAC_USE_PETSC
+    case LinearSolver::PetscCG:
+      iter_lin_solver = std::make_unique<serac::mfem_ext::PetscKSPSolver>(comm, KSPCG, std::string());
+      break;
+    case LinearSolver::PetscGMRES:
+      iter_lin_solver = std::make_unique<serac::mfem_ext::PetscKSPSolver>(comm, KSPGMRES, std::string());
+      break;
+#else
+    case LinearSolver::PetscCG:
+    case LinearSolver::PetscGMRES:
+      SLIC_ERROR_ROOT("PETSc linear solver requested for non-PETSc build.");
+      exitGracefully(true);
+      break;
+#endif
     default:
       SLIC_ERROR_ROOT("Linear solver type not recognized.");
       exitGracefully(true);
@@ -940,10 +964,11 @@ std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MP
 }
 #endif
 
-std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level,
-                                                  [[maybe_unused]] MPI_Comm comm)
+std::unique_ptr<mfem::Solver> buildPreconditioner(LinearSolverOptions linear_opts, [[maybe_unused]] MPI_Comm comm)
 {
   std::unique_ptr<mfem::Solver> preconditioner_solver;
+  auto                          preconditioner = linear_opts.preconditioner;
+  auto                          print_level    = linear_opts.print_level;
 
   // Handle the preconditioner - currently just BoomerAMG and HypreSmoother are supported
   if (preconditioner == Preconditioner::HypreAMG) {
@@ -969,9 +994,15 @@ std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner,
     preconditioner_solver = std::move(ilu_preconditioner);
   } else if (preconditioner == Preconditioner::AMGX) {
 #ifdef MFEM_USE_AMGX
-    preconditioner_solver = buildAMGX(AMGXOptions{}, comm);
+    preconditioner_solver = buildAMGX(linear_opts.amgx_options, comm);
 #else
     SLIC_ERROR_ROOT("AMGX requested in non-GPU build");
+#endif
+  } else if (preconditioner == Preconditioner::Petsc) {
+#ifdef SERAC_USE_PETSC
+    preconditioner_solver = mfem_ext::buildPetscPreconditioner(linear_opts.petsc_preconditioner, comm);
+#else
+    SLIC_ERROR_ROOT("PETSc preconditioner requested in non-PETSc build");
 #endif
   } else {
     SLIC_ERROR_ROOT_IF(preconditioner != Preconditioner::None, "Unknown preconditioner type requested");
@@ -1003,8 +1034,9 @@ void EquationSolver::defineInputFileSchema(axom::inlet::Container& container)
   iterative_container.addInt("max_iter", "Maximum iterations for the linear solve.").defaultValue(5000);
   iterative_container.addInt("print_level", "Linear print level.").defaultValue(0);
   iterative_container.addString("solver_type", "Solver type (gmres|minres|cg).").defaultValue("gmres");
-  iterative_container.addString("prec_type", "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|ILU).")
+  iterative_container.addString("prec_type", "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|ILU|Petsc).")
       .defaultValue("JacobiSmoother");
+  iterative_container.addString("petsc_prec_type", "Type of PETSc preconditioner to use.").defaultValue("jacobi");
 
   auto& direct_container = linear_container.addStruct("direct_options", "Direct solver parameters");
   direct_container.addInt("print_level", "Linear print level.").defaultValue(0);
@@ -1064,6 +1096,12 @@ serac::LinearSolverOptions FromInlet<serac::LinearSolverOptions>::operator()(con
 #endif
   } else if (prec_type == "GaussSeidel") {
     options.preconditioner = serac::Preconditioner::HypreGaussSeidel;
+#ifdef SERAC_USE_PETSC
+  } else if (prec_type == "Petsc") {
+    const std::string petsc_prec = config["petsc_prec_type"];
+    options.preconditioner       = serac::Preconditioner::Petsc;
+    options.petsc_preconditioner = serac::mfem_ext::stringToPetscPCType(petsc_prec);
+#endif
   } else {
     std::string msg = axom::fmt::format("Unknown preconditioner type given: '{0}'", prec_type);
     SLIC_ERROR_ROOT(msg);
