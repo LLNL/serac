@@ -14,6 +14,8 @@
 #include "serac/numerics/equation_solver.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
+#include "serac/infrastructure/initialize.hpp"
+#include "serac/infrastructure/terminator.hpp"
 
 using namespace serac;
 using namespace serac::mfem_ext;
@@ -106,43 +108,67 @@ TEST_P(EquationSolverSuite, All)
 
   eq_solver.solve(x_computed);
 
+  EXPECT_EQ(x_computed.Size(), x_exact.Size());
   for (int i = 0; i < x_computed.Size(); ++i) {
     EXPECT_LT(std::abs((x_computed(i) - x_exact(i))) / x_exact(i), 1.0e-6);
   }
 }
 
+/**
+ * @brief Nonlinear solvers to test. Always includes NonlinearSolver::Newton and NonlinearSolver::LBFGS
+ * If SERAC_USE_SUNDIALS is set, adds: NonlinearSolver::KINFullStep, NonlinearSolver::KINBacktrackingLineSearch, and
+ * NonlinearSolver::KINPicard.
+ * If MFEM_USE_PETSC and SERAC_USE_PETSC are set, adds NonlinearSolver::PetscNewton,
+ * NonlinearSolver::PetscNewtonBacktracking, and NonlinearSolver::PetscNewtonCriticalPoint
+ */
+auto nonlinear_solvers = testing::Values(
+    NonlinearSolver::Newton, NonlinearSolver::NewtonLineSearch, NonlinearSolver::TrustRegion, NonlinearSolver::LBFGS
 #ifdef SERAC_USE_SUNDIALS
-INSTANTIATE_TEST_SUITE_P(
-    AllEquationSolverTests, EquationSolverSuite,
-    testing::Combine(testing::Values(NonlinearSolver::Newton, NonlinearSolver::NewtonLineSearch,
-                                     NonlinearSolver::TrustRegion, NonlinearSolver::LBFGS, NonlinearSolver::KINFullStep,
-                                     NonlinearSolver::KINBacktrackingLineSearch, NonlinearSolver::KINPicard),
-                     testing::Values(LinearSolver::CG, LinearSolver::GMRES, LinearSolver::SuperLU),
-                     testing::Values(Preconditioner::HypreJacobi, Preconditioner::HypreL1Jacobi,
-                                     Preconditioner::HypreGaussSeidel, Preconditioner::HypreAMG,
-                                     Preconditioner::HypreILU)));
-#else
-INSTANTIATE_TEST_SUITE_P(AllEquationSolverTests, EquationSolverSuite,
-                         testing::Combine(testing::Values(NonlinearSolver::Newton, NonlinearSolver::LBFGS),
-                                          testing::Values(LinearSolver::CG, LinearSolver::GMRES, LinearSolver::SuperLU),
-                                          testing::Values(Preconditioner::HypreJacobi, Preconditioner::HypreL1Jacobi,
-                                                          Preconditioner::HypreGaussSeidel, Preconditioner::HypreAMG,
-                                                          Preconditioner::HypreILU)));
+    ,
+    NonlinearSolver::KINFullStep, NonlinearSolver::KINBacktrackingLineSearch, NonlinearSolver::KINPicard
 #endif
+#ifdef SERAC_USE_PETSC
+    ,
+    NonlinearSolver::PetscNewton, NonlinearSolver::PetscNewtonBacktracking, NonlinearSolver::PetscNewtonCriticalPoint
+#endif
+);
+
+/**
+ * @brief Linear solvers to test. Always includes LinearSolver::CG, LinearSolver::GMRES, and LinearSolver::SuperLU.
+ * If MFEM_USE_PETSC and SERAC_USE_PETSC are set, adds LinearSolver::PetscCG and LinearSolver::PetscGMRES.
+ */
+auto linear_solvers = testing::Values(LinearSolver::CG, LinearSolver::GMRES, LinearSolver::SuperLU
+#ifdef SERAC_USE_PETSC
+                                      ,
+                                      LinearSolver::PetscCG, LinearSolver::PetscGMRES
+#endif
+);
+
+auto preconditioners =
+    testing::Values(Preconditioner::HypreJacobi, Preconditioner::HypreL1Jacobi, Preconditioner::HypreGaussSeidel,
+                    Preconditioner::HypreAMG, Preconditioner::HypreILU
+#ifdef SERAC_USE_PETSC
+                    ,
+                    Preconditioner::Petsc
+#endif
+    );
+
+INSTANTIATE_TEST_SUITE_P(AllEquationSolverTests, EquationSolverSuite,
+                         testing::Combine(nonlinear_solvers, linear_solvers, preconditioners),
+                         [](const testing::TestParamInfo<EquationSolverSuite::ParamType>& test_info) {
+                           std::string name =
+                               axom::fmt::format("{}_{}_{}", std::get<0>(test_info.param), std::get<1>(test_info.param),
+                                                 std::get<2>(test_info.param));
+                           return name;
+                         });
 
 int main(int argc, char* argv[])
 {
-  int result = 0;
+  testing::InitGoogleTest(&argc, argv);
 
-  ::testing::InitGoogleTest(&argc, argv);
+  serac::initialize(argc, argv);
 
-  MPI_Init(&argc, &argv);
+  int result = RUN_ALL_TESTS();
 
-  axom::slic::SimpleLogger logger;
-
-  result = RUN_ALL_TESTS();
-
-  MPI_Finalize();
-
-  return result;
+  serac::exitGracefully(result);
 }
