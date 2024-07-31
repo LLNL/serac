@@ -60,12 +60,13 @@ bool operator!=(const mfem::SparseMatrix& A, const mfem::SparseMatrix& B) { retu
 template <int p, int dim>
 void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 {
-  double rho = 1.75;
+  double rho        = 1.75;
+  using test_space  = decltype(test);
+  using trial_space = decltype(trial);
 
-  auto                        fec = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace(&mesh, &fec);
+  auto [fespace, fec] = serac::generateParFiniteElementSpace<test_space>(&mesh);
 
-  mfem::ParLinearForm             f(&fespace);
+  mfem::ParLinearForm             f(fespace.get());
   mfem::FunctionCoefficient       scalar_function([&](const mfem::Vector& coords) { return coords(0) * coords(1); });
   mfem::VectorFunctionCoefficient vector_function(dim, [&](const mfem::Vector& coords, mfem::Vector& output) {
     output    = 0.0;
@@ -78,7 +79,7 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   f.Assemble();
   std::unique_ptr<mfem::HypreParVector> F(f.ParallelAssemble());
 
-  mfem::ParBilinearForm     B(&fespace);
+  mfem::ParBilinearForm     B(fespace.get());
   mfem::ConstantCoefficient density(rho);
   B.AddBoundaryIntegrator(new mfem::BoundaryMassIntegrator(density));
   B.Assemble(0);
@@ -86,13 +87,10 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   B.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J(B.ParallelAssemble());
 
-  mfem::Vector U(fespace.TrueVSize());
+  mfem::Vector U(fespace->TrueVSize());
   U.Randomize();
 
-  using test_space  = decltype(test);
-  using trial_space = decltype(trial);
-
-  Functional<test_space(trial_space)> residual(&fespace, {&fespace});
+  Functional<test_space(trial_space)> residual(fespace.get(), {fespace.get()});
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
@@ -137,12 +135,13 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 template <int p, int dim>
 void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
 {
-  double rho = 1.75;
+  double rho        = 1.75;
+  using test_space  = decltype(test);
+  using trial_space = decltype(trial);
 
-  auto                        fec = mfem::L2_FECollection(p, dim, mfem::BasisType::GaussLobatto);
-  mfem::ParFiniteElementSpace fespace(&mesh, &fec);
+  auto [fespace, fec] = serac::generateParFiniteElementSpace<test_space>(&mesh);
 
-  mfem::ParLinearForm       f(&fespace);
+  mfem::ParLinearForm       f(fespace.get());
   mfem::FunctionCoefficient scalar_function([&](const mfem::Vector& coords) { return coords(0) * coords(1); });
   f.AddBdrFaceIntegrator(new mfem::BoundaryLFIntegrator(scalar_function, 2, 0));
 
@@ -155,25 +154,22 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
   f.Assemble();
   std::unique_ptr<mfem::HypreParVector> F(f.ParallelAssemble());
 
-  mfem::ParBilinearForm     B(&fespace);
+  mfem::ParBilinearForm     B(fespace.get());
   mfem::ConstantCoefficient density(rho);
   B.AddBdrFaceIntegrator(new mfem::BoundaryMassIntegrator(density));
   B.Assemble(0);
   B.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J(B.ParallelAssemble());
 
-  mfem::ParGridFunction u_global(&fespace);
+  mfem::ParGridFunction u_global(fespace.get());
   u_global.Randomize();
   mfem::FunctionCoefficient xfunc([](mfem::Vector x) { return x[0]; });
   u_global.ProjectCoefficient(xfunc);
 
-  mfem::Vector U(fespace.TrueVSize());
+  mfem::Vector U(fespace->TrueVSize());
   u_global.GetTrueDofs(U);
 
-  using test_space  = decltype(test);
-  using trial_space = decltype(trial);
-
-  Functional<test_space(trial_space)> residual(&fespace, {&fespace});
+  Functional<test_space(trial_space)> residual(fespace.get(), {fespace.get()});
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},

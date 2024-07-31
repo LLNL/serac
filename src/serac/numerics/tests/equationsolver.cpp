@@ -41,21 +41,20 @@ TEST_P(EquationSolverSuite, All)
   constexpr int p   = 1;
   constexpr int dim = 2;
 
-  // Create standard MFEM bilinear and linear forms on H1
-  auto                        fec = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fes(&pmesh, &fec);
-
-  mfem::HypreParVector x_exact(&fes);
-  mfem::HypreParVector x_computed(&fes);
-
-  std::unique_ptr<mfem::HypreParMatrix> J;
-
   // Define the types for the test and trial spaces using the function arguments
   using test_space  = H1<p>;
   using trial_space = H1<p>;
 
+  // Create standard MFEM bilinear and linear forms on H1
+  auto [fes, fec] = serac::generateParFiniteElementSpace<test_space>(&pmesh);
+
+  mfem::HypreParVector x_exact(fes.get());
+  mfem::HypreParVector x_computed(fes.get());
+
+  std::unique_ptr<mfem::HypreParMatrix> J;
+
   // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space)> residual(&fes, {&fes});
+  Functional<test_space(trial_space)> residual(fes.get(), {fes.get()});
 
   x_exact.Randomize(0);
 
@@ -70,7 +69,7 @@ TEST_P(EquationSolverSuite, All)
       pmesh);
 
   StdFunctionOperator residual_opr(
-      fes.TrueVSize(),
+      fes->TrueVSize(),
       [&x_exact, &residual](const mfem::Vector& x, mfem::Vector& r) {
         // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
         // tracking strategy

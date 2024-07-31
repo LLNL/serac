@@ -9,14 +9,31 @@
 
 namespace serac {
 
+/**
+ * @brief Check if two finite element spaces are the same
+ *
+ * @param left
+ * @param right
+ * @return Bool which is true if the spaces are the same, otherwise false
+ */
+bool sameFiniteElementSpace(const mfem::FiniteElementSpace& left, const mfem::FiniteElementSpace& right)
+{
+  bool sameMesh            = (left.GetMesh() == right.GetMesh());
+  bool equivalentFEColl    = strcmp(left.FEColl()->Name(), right.FEColl()->Name()) == 0;
+  bool sameVectorDimension = (left.GetVDim() == right.GetVDim());
+  bool sameOrdering        = (left.GetOrdering() == right.GetOrdering());
+  return sameMesh && equivalentFEColl && sameVectorDimension && sameOrdering;
+}
+
 FiniteElementVector::FiniteElementVector(const mfem::ParFiniteElementSpace& space, const std::string& name)
     : mesh_(*space.GetParMesh()),
       coll_(std::unique_ptr<mfem::FiniteElementCollection>(mfem::FiniteElementCollection::New(space.FEColl()->Name()))),
       space_(std::make_unique<mfem::ParFiniteElementSpace>(space, &mesh_.get(), coll_.get())),
       name_(name)
 {
-  SLIC_ERROR_ROOT_IF(space.GetOrdering() == mfem::Ordering::byVDIM,
-                     "Serac only operates on finite element spaces ordered by nodes");
+  SLIC_ERROR_ROOT_IF(space_->GetVDim() > 1 && space_->GetOrdering() != serac::ordering,
+                     "Serac only operates on finite element spaces ordered by "
+                         << (serac::ordering == mfem::Ordering::byVDIM ? "VDIM" : "NODES"));
 
   // Construct a hypre par vector based on the new finite element space
   HypreParVector new_vector(space_.get());
@@ -58,6 +75,8 @@ FiniteElementVector& FiniteElementVector::operator=(const mfem::Vector& rhs)
 
 FiniteElementVector& FiniteElementVector::operator=(const FiniteElementVector& rhs)
 {
+  SLIC_ERROR_IF(!sameFiniteElementSpace(*space_, *rhs.space_), "Finite element vectors have different spaces");
+
   SLIC_ERROR_IF(Size() != rhs.Size(),
                 axom::fmt::format("Finite element vector of size '{}' assigned to a HypreParVector of size '{}'",
                                   Size(), rhs.Size()));
@@ -111,22 +130,6 @@ double min(const FiniteElementVector& fe_vector)
   double local_min = fe_vector.Min();
   MPI_Allreduce(&local_min, &global_min, 1, MPI_DOUBLE, MPI_MIN, fe_vector.comm());
   return global_min;
-}
-
-/**
- * @brief Check if two finite element spaces are the same
- *
- * @param left
- * @param right
- * @return Bool which is true if the spaces are the same, otherwise false
- */
-bool sameFiniteElementSpace(const mfem::FiniteElementSpace& left, const mfem::FiniteElementSpace& right)
-{
-  bool sameMesh            = (left.GetMesh() == right.GetMesh());
-  bool equivalentFEColl    = strcmp(left.FEColl()->Name(), right.FEColl()->Name()) == 0;
-  bool sameVectorDimension = (left.GetVDim() == right.GetVDim());
-  bool sameOrdering        = (left.GetOrdering() == right.GetOrdering());
-  return sameMesh && equivalentFEColl && sameVectorDimension && sameOrdering;
 }
 
 double innerProduct(const FiniteElementVector& v1, const FiniteElementVector& v2)
