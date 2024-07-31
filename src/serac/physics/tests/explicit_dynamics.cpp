@@ -60,7 +60,9 @@ TEST(A,B) {
   mat.K = E / (3. * (1. - 2. * v));
   mat.G = E / (2. * (1. + v));
 
-  SolidSystem<p,dim> system("solid", meshTag);
+  //Field displacement = Field::create(H1<p,dim>{}, StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "displacement"), mesh_tag);
+
+  //SolidSystem<p,dim> system("solid", meshTag);
 
 }
 

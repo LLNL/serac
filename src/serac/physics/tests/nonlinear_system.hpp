@@ -10,9 +10,7 @@
  * @brief Specifies parametrized residuals and various linearized evaluations for arbitrary nonlinear systems of equations
  */
 
-#include "serac/physics/common.hpp"
-#include "serac/physics/state/finite_element_state.hpp"
-#include "serac/physics/state/finite_element_dual.hpp"
+#include "field.hpp"
 
 namespace serac {
 
@@ -71,16 +69,13 @@ class SolidSystem<order, dim, Parameters<parameter_space...>, std::integer_seque
 
   static constexpr auto NUM_STATE_VARS = 2; // we want to change this to 3 to include velocity
 
-  SolidSystem(const std::string& physics_name, const std::string& mesh_tag) 
+  SolidSystem(const std::string& physics_name, const std::string& mesh_tag, const mfem::ParFiniteElementSpace& space) 
   : mesh_tag_(mesh_tag)
   , mesh_(StateManager::mesh(mesh_tag_))
   , shape_displacement_{.field=&StateManager::shapeDisplacement(mesh_tag), .dual=nullptr}
   {
-    //auto newT = StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "acceleration"), mesh_tag_))
-    mfem::ParFiniteElementSpace shape_space = shape_displacement_.space();
-    mfem::ParFiniteElementSpace test_space = getSpace(mesh_, test{});
     residual_ = std::make_unique<ShapeAwareFunctional<shape_trial, test(trial, trial, parameter_space...)>>(
-        shape_space, test_space, test_space);
+        shape_displacement_.space(), space, space);
   }
 
   // computes residual outputs
@@ -119,6 +114,49 @@ class SolidSystem<order, dim, Parameters<parameter_space...>, std::integer_seque
   }
 
   private:
+  /**
+   * @brief Functor representing a material stress.  A functor is used here instead of an
+   * extended, generic lambda for compatibility with NVCC.
+   */
+  template <typename Material>
+  struct MaterialStressFunctor {
+    /// Constructor for the functor
+    MaterialStressFunctor(Material material, GeometricNonlinearities gn) : material_(material), geom_nonlin_(gn) {}
+
+    /// Material model
+    Material material_;
+
+    /**
+     * @brief Material stress response call
+     *
+     * @tparam X Spatial position type
+     * @tparam State state
+     * @tparam Displacement displacement
+     * @tparam Acceleration acceleration
+     * @tparam Params variadic parameters for call
+     * @param[in] state state
+     * @param[in] displacement displacement
+     * @param[in] acceleration acceleration
+     * @param[in] params parameter pack
+     * @return The calculated material response (tuple of volumetric heat capacity and thermal flux) for a linear
+     * isotropic material
+     */
+    template <typename X, typename State, typename Displacement, typename Acceleration, typename... Params>
+    auto SERAC_HOST_DEVICE operator()(double, X, State& state, Displacement displacement, Acceleration acceleration,
+                                      Params... params) const
+    {
+      auto du_dX   = get<DERIVATIVE>(displacement);
+      auto d2u_dt2 = get<VALUE>(acceleration);
+
+      auto stress = material_(state, du_dX, params...);
+
+      auto dx_dX = du_dX + I;
+
+      auto flux = dot(stress, transpose(inv(dx_dX))) * det(dx_dX);
+
+      return serac::tuple{material_.density * d2u_dt2, flux};
+    }
+  };
 
   using trial = H1<order, dim>;
   using test = H1<order, dim>;
@@ -128,8 +166,6 @@ class SolidSystem<order, dim, Parameters<parameter_space...>, std::integer_seque
   mfem::ParMesh& mesh_;
 
   Field shape_displacement_;
-
-  std::vector<std::unique_ptr<mfem::FECollection>> collections; // seems like I need to hold on to these for no good reason
 
   std::unique_ptr<ShapeAwareFunctional<shape_trial, test(trial, trial, parameter_space...)>> residual_;
 };
