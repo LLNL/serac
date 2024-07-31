@@ -9,9 +9,7 @@
 #include <string>
 
 #include "serac/physics/materials/solid_material.hpp"
-
 #include "serac/numerics/functional/shape_aware_functional.hpp"
-
 #include "serac/physics/state/state_manager.hpp"
 
 #include <gtest/gtest.h>
@@ -60,10 +58,9 @@ TEST(A,B) {
   mat.K = E / (3. * (1. - 2. * v));
   mat.G = E / (2. * (1. + v));
 
-  //Field displacement = Field::create(H1<p,dim>{}, StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "displacement"), mesh_tag);
+  Field displacement = Field::create(H1<p,dim>{}, detail::addPrefix("solid", "displacement"), mesh_tag);
 
-  //SolidSystem<p,dim> system("solid", meshTag);
-
+  SolidSystem<p,dim> system("solid", meshTag, displacement.space());
 }
 
 }

@@ -65,7 +65,7 @@ public:
    * @param name The name of the new finite element state field
    */
   template <typename FunctionSpace>
-  FiniteElementVector(mfem::ParMesh& mesh, FunctionSpace function_space, const std::string& name = "") : mesh_(mesh), name_(name)
+  FiniteElementVector(mfem::ParMesh& mesh, FunctionSpace, const std::string& name = "") : mesh_(mesh), name_(name)
   {
     std::tie(space_, coll_) = serac::generateParFiniteElementSpace<FunctionSpace>(&mesh);
     

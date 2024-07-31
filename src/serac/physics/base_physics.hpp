@@ -27,24 +27,6 @@
 
 namespace serac {
 
-namespace detail {
-/**
- * @brief Prepends a prefix to a target string if @p name is non-empty with an
- * underscore delimiter
- * @param[in] prefix The string to prepend
- * @param[in] target The string to prepend to
- */
-std::string addPrefix(const std::string& prefix, const std::string& target);
-
-/**
- * @brief Removes a prefix and the underscore delimiter from a target string
- * @param[in] prefix The prefix string to remove
- * @param[in] target The larger string to remove the prefix from
- */
-std::string removePrefix(const std::string& prefix, const std::string& target);
-
-}  // namespace detail
-
 /**
  * @brief This is the abstract base class for a generic forward solver
  */

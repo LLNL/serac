@@ -10,29 +10,36 @@
  * @brief Containers for fields and their duals
  */
 
+#pragma once
+
 #include "serac/physics/state/finite_element_state.hpp"
 #include "serac/physics/state/finite_element_dual.hpp"
 
 namespace serac {
 
 struct Field {
+
   FiniteElementState& get() {
     return *field;
   }
 
-  FiniteElementState& getDual() {
+  FiniteElementDual& getDual() {
     SLIC_ASSERT_MSG(dual, "Cannot get dual from a field constructed in forward mode only");
     return *dual;
   }
 
   const mfem::ParFiniteElementSpace& space() const { return field->space(); }
 
-  Field create()
+  template <typename function_space>
+  static Field create(function_space space, const std::string& name, const std::string& mesh_tag) {
+    Field f;
+    f.field = std::make_shared<FiniteElementState>(StateManager::newState(space, name, mesh_tag));
+    f.dual = std::make_shared<FiniteElementDual>(StateManager::newDual(space, name, mesh_tag));
+    return f;
+  }
 
-  private:
-
-  FiniteElementState* field;
-  FiniteElementDual* dual;
+  std::shared_ptr<FiniteElementState> field;
+  std::shared_ptr<FiniteElementDual> dual;
 };
 
 

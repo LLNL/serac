@@ -386,30 +386,4 @@ double BasePhysics::getCheckpointedTimestep(int cycle) const
   return cycle < static_cast<int>(timesteps_.size()) ? timesteps_[static_cast<size_t>(cycle)] : 0.0;
 }
 
-namespace detail {
-std::string addPrefix(const std::string& prefix, const std::string& target)
-{
-  if (prefix.empty()) {
-    return target;
-  }
-  return prefix + "_" + target;
-}
-
-std::string removePrefix(const std::string& prefix, const std::string& target)
-{
-  std::string modified_target{target};
-  // Ensure the prefix isn't an empty string
-  if (!prefix.empty()) {
-    // Ensure the prefix is at the beginning of the string
-    auto index = modified_target.find(prefix + "_");
-    if (index == 0) {
-      // Remove the prefix
-      modified_target.erase(0, prefix.size() + 1);
-    }
-  }
-  return modified_target;
-}
-
-}  // namespace detail
-
 }  // namespace serac

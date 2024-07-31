@@ -10,31 +10,14 @@
  * @brief Specifies parametrized residuals and various linearized evaluations for arbitrary nonlinear systems of equations
  */
 
+#pragma once
+
 #include "field.hpp"
+#include "serac/physics/common.hpp"
 
 namespace serac {
 
-struct Field {
-  public:
-  FiniteElementState& get() {
-    return *field;
-  }
-  auto space() const { return field->space(); }
-
-  FiniteElementState* field;
-  FiniteElementDual* dual;
-};
-
-struct FieldDual {
-  FiniteElementDual& get() {
-    return *dual;
-  }
-  std::shared_ptr<FiniteElementDual> dual;
-  std::shared_ptr<FiniteElementState> dualOfDual;
-};
-
-
-class NonlinearSystem 
+class NonlinearSystem // NonlinearResidual
 {
   // computes residual outputs
   virtual void residual(const std::vector<Field> fields, const std::vector<Field>& parameters, std::vector<FieldDual>& residuals) = 0;
@@ -69,13 +52,31 @@ class SolidSystem<order, dim, Parameters<parameter_space...>, std::integer_seque
 
   static constexpr auto NUM_STATE_VARS = 2; // we want to change this to 3 to include velocity
 
-  SolidSystem(const std::string& physics_name, const std::string& mesh_tag, const mfem::ParFiniteElementSpace& space) 
+  SolidSystem(const std::string& physics_name, const std::string& mesh_tag, const mfem::ParFiniteElementSpace& test_space,
+     std::vector<std::string> parameter_names = {})
   : mesh_tag_(mesh_tag)
-  , mesh_(StateManager::mesh(mesh_tag_))
-  , shape_displacement_{.field=&StateManager::shapeDisplacement(mesh_tag), .dual=nullptr}
+  , shape_displacement_(Field::create(H1<1,dim>{}, detail::addPrefix(physics_name, "shape_displacement"), mesh_tag))
   {
+
+    std::array<const mfem::ParFiniteElementSpace*, NUM_STATE_VARS + sizeof...(parameter_space)> trial_spaces;
+    trial_spaces[0] = &test_space;
+    trial_spaces[1] = &test_space;
+
+    SLIC_ERROR_ROOT_IF(
+        sizeof...(parameter_space) != parameter_names.size(),
+        axom::fmt::format("{} parameter spaces given in the template argument but {} parameter names were supplied.",
+                          sizeof...(parameter_space), parameter_names.size()));
+
+    if constexpr (sizeof...(parameter_space) > 0) {
+      tuple<parameter_space...> types{};
+      for_constexpr<sizeof...(parameter_space)>([&](auto i) {
+        parameters_.emplace_back( Field::create(types, detail::addPrefix(physics_name, parameter_names[i])) );
+        trial_spaces[i + NUM_STATE_VARS] = &(parameters_[i].space());
+      });
+    }
+
     residual_ = std::make_unique<ShapeAwareFunctional<shape_trial, test(trial, trial, parameter_space...)>>(
-        shape_displacement_.space(), space, space);
+        &shape_displacement_.space(), &test_space, trial_spaces);
   }
 
   // computes residual outputs
@@ -121,7 +122,7 @@ class SolidSystem<order, dim, Parameters<parameter_space...>, std::integer_seque
   template <typename Material>
   struct MaterialStressFunctor {
     /// Constructor for the functor
-    MaterialStressFunctor(Material material, GeometricNonlinearities gn) : material_(material), geom_nonlin_(gn) {}
+    MaterialStressFunctor(Material material) : material_(material) {}
 
     /// Material model
     Material material_;
@@ -145,6 +146,8 @@ class SolidSystem<order, dim, Parameters<parameter_space...>, std::integer_seque
     auto SERAC_HOST_DEVICE operator()(double, X, State& state, Displacement displacement, Acceleration acceleration,
                                       Params... params) const
     {
+      static constexpr auto I     = Identity<dim>();
+
       auto du_dX   = get<DERIVATIVE>(displacement);
       auto d2u_dt2 = get<VALUE>(acceleration);
 
@@ -163,9 +166,12 @@ class SolidSystem<order, dim, Parameters<parameter_space...>, std::integer_seque
   using shape_trial = H1<SHAPE_ORDER, dim>;
 
   std::string mesh_tag_;
-  mfem::ParMesh& mesh_;
 
   Field shape_displacement_;
+
+  /// @brief A vector of the parameters associated with this physics module
+  std::vector<Field> parameters_;
+
 
   std::unique_ptr<ShapeAwareFunctional<shape_trial, test(trial, trial, parameter_space...)>> residual_;
 };

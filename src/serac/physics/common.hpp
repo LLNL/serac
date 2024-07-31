@@ -32,4 +32,42 @@ enum class GeometricNonlinearities
   Off /**< Do not include geometric nonlinearities */
 };
 
+namespace detail {
+
+/**
+ * @brief Prepends a prefix to a target string if @p name is non-empty with an
+ * underscore delimiter
+ * @param[in] prefix The string to prepend
+ * @param[in] target The string to prepend to
+ */
+inline std::string addPrefix(const std::string& prefix, const std::string& target)
+{
+  if (prefix.empty()) {
+    return target;
+  }
+  return prefix + "_" + target;
+}
+
+/**
+ * @brief Removes a prefix and the underscore delimiter from a target string
+ * @param[in] prefix The prefix string to remove
+ * @param[in] target The larger string to remove the prefix from
+ */
+inline std::string removePrefix(const std::string& prefix, const std::string& target)
+{
+  std::string modified_target{target};
+  // Ensure the prefix isn't an empty string
+  if (!prefix.empty()) {
+    // Ensure the prefix is at the beginning of the string
+    auto index = modified_target.find(prefix + "_");
+    if (index == 0) {
+      // Remove the prefix
+      modified_target.erase(0, prefix.size() + 1);
+    }
+  }
+  return modified_target;
+}
+
+}  // namespace detail
+
 }  // namespace serac
