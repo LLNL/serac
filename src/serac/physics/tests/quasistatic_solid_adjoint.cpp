@@ -52,14 +52,6 @@ double forwardPass(serac::BasePhysics *solid, qoiType *qoi, mfem::ParMesh *meshP
 {
     solid->resetStates();
 
-    // set up plotting
-    mfem::ParGridFunction uGF(const_cast<mfem::ParFiniteElementSpace*>(&solid->state("displacement").space()));
-    solid->state("displacement").fillGridFunction(uGF);
-    mfem::VisItDataCollection visit_dc(saveName, meshPtr);
-    visit_dc.RegisterField("u", &uGF);
-    visit_dc.SetCycle(0);
-    visit_dc.Save();
-
     double time = 0.0;
     double qoiValue = 0.0;
     const serac::FiniteElementState &E = solid->parameter("E");
@@ -70,13 +62,8 @@ double forwardPass(serac::BasePhysics *solid, qoiType *qoi, mfem::ParMesh *meshP
         solid->advanceTimestep(timeStep);
         time += timeStep;
 
-        // plot
-        u.fillGridFunction(uGF);
-        visit_dc.SetCycle(i+1);
-        visit_dc.Save();
-
         // accumulate
-        qoiValue += timeStep * (*qoi)(time, v, E, u); // right hand rule
+        qoiValue += timeStep * (*qoi)(time, E, v, u); // right hand rule
     }
     return qoiValue;
 }
@@ -92,17 +79,17 @@ void adjointPass(serac::BasePhysics *solid, qoiType *qoi, int nTimeSteps, double
         
         const serac::FiniteElementState &u = solid->loadCheckpointedState("displacement", i);
 
-        auto dQoI_dE = ::serac::get<1>((*qoi)(::serac::DifferentiateWRT<1> {}, time, v, E, u));
+        auto dQoI_dE = ::serac::get<1>((*qoi)(::serac::DifferentiateWRT<0> {}, time, E, v, u));
         std::unique_ptr<::mfem::HypreParVector> assembled_Egrad = dQoI_dE.assemble();
         *assembled_Egrad *= timeStep;
         Egrad += *assembled_Egrad;
 
-        auto dQoI_dv = ::serac::get<1>((*qoi)(::serac::DifferentiateWRT<0> {}, time, v, E, u));
+        auto dQoI_dv = ::serac::get<1>((*qoi)(::serac::DifferentiateWRT<1> {}, time, E, v, u));
         std::unique_ptr<::mfem::HypreParVector> assembled_vgrad = dQoI_dv.assemble();
         *assembled_vgrad *= timeStep;
         vgrad += *assembled_vgrad;
 
-        auto dQoI_du = ::serac::get<1>((*qoi)(::serac::DifferentiateWRT<2> {}, time, v, E, u));
+        auto dQoI_du = ::serac::get<1>((*qoi)(::serac::DifferentiateWRT<2> {}, time, E, v, u));
         std::unique_ptr<::mfem::HypreParVector> assembled_ugrad = dQoI_du.assemble();
 
         serac::FiniteElementDual adjointLoad(u.space());
@@ -112,11 +99,10 @@ void adjointPass(serac::BasePhysics *solid, qoiType *qoi, int nTimeSteps, double
 
         solid->reverseAdjointTimestep();
 
-        serac::FiniteElementDual const &Edual = solid->computeTimestepSensitivity(1);
+        serac::FiniteElementDual const &Edual = solid->computeTimestepSensitivity(0);
         Egrad += Edual;
-        serac::FiniteElementDual const &vdual = solid->computeTimestepSensitivity(0);
+        serac::FiniteElementDual const &vdual = solid->computeTimestepSensitivity(1);
         vgrad += vdual;
-
 
         time -= timeStep;
     }
@@ -151,11 +137,11 @@ TEST(quasistatic, finiteDifference)
         .max_iterations = 1000};
     auto seracSolid = ::std::make_unique<solidType>(
         nonlinear_options, linearOptions, ::serac::solid_mechanics::default_quasistatic_options,
-        ::serac::GeometricNonlinearities::Off, physics_prefix, mesh_tag, std::vector<std::string> {"v", "E"});
+        ::serac::GeometricNonlinearities::Off, physics_prefix, mesh_tag, std::vector<std::string> {"E", "v"});
 
     using materialType = ParameterizedLinearIsotropicSolid;
     materialType material;
-    seracSolid->setMaterial(::serac::DependsOn<1, 0> {}, material);
+    seracSolid->setMaterial(::serac::DependsOn<0, 1> {}, material);
 
     seracSolid->setDisplacementBCs({3}, [](const mfem::Vector&){ return 0.0; }, 0);
     seracSolid->setDisplacementBCs({4}, [](const mfem::Vector&){ return 0.0; }, 1);
@@ -167,12 +153,12 @@ TEST(quasistatic, finiteDifference)
 
     double E0 = 1.0;
     double v0 = 0.3;
-    ::serac::FiniteElementState Estate(seracSolid->parameter(seracSolid->parameterNames()[1]));
-    ::serac::FiniteElementState vstate(seracSolid->parameter(seracSolid->parameterNames()[0]));
+    ::serac::FiniteElementState Estate(seracSolid->parameter(seracSolid->parameterNames()[0]));
+    ::serac::FiniteElementState vstate(seracSolid->parameter(seracSolid->parameterNames()[1]));
     Estate = E0;
     vstate = v0;
-    seracSolid->setParameter(1, Estate);
-    seracSolid->setParameter(0, vstate);
+    seracSolid->setParameter(0, Estate);
+    seracSolid->setParameter(1, vstate);
 
     seracSolid->completeSetup();
 
@@ -182,16 +168,16 @@ TEST(quasistatic, finiteDifference)
     
     std::array<const ::mfem::ParFiniteElementSpace *, 3> qoiFES = {param_space.get(), param_space.get(), u_space};
     auto qoi = std::make_unique<qoiType>(qoiFES);
-    qoi->AddDomainIntegral(serac::Dimension<DIM>{}, serac::DependsOn<1, 0, 2>{},
-        [&](auto, auto, auto v, auto E, auto u) {
+    qoi->AddDomainIntegral(serac::Dimension<DIM>{}, serac::DependsOn<0, 1, 2>{},
+        [&](auto, auto, auto E, auto nu, auto u) {
             auto du_dx = ::serac::get<1>(u);
             auto state = ::serac::Empty {};
-            auto stress = material(state, du_dx, E, v);
+            auto stress = material(state, du_dx, E, nu);
             return stress[2][2];
             //return serac::get<0>(u)[2];
         }, *meshPtr);
 
-    int nTimeSteps = 2;
+    int nTimeSteps = 3;
     double timeStep = 0.24;
     forwardPass(seracSolid.get(), qoi.get(), meshPtr, nTimeSteps, timeStep, "f0");
 
@@ -203,22 +189,22 @@ TEST(quasistatic, finiteDifference)
     double h = 1e-7;
     
     Estate = E0+h;
-    seracSolid->setParameter(1, Estate);
+    seracSolid->setParameter(0, Estate);
     double fpE = forwardPass(seracSolid.get(), qoi.get(), meshPtr, nTimeSteps, timeStep, "fpE");
 
     Estate = E0-h;
-    seracSolid->setParameter(1, Estate);
+    seracSolid->setParameter(0, Estate);
     double fmE = forwardPass(seracSolid.get(), qoi.get(), meshPtr, nTimeSteps, timeStep, "fmE");
 
     Estate = E0;
-    seracSolid->setParameter(1, Estate);
+    seracSolid->setParameter(0, Estate);
 
     vstate = v0+h;
-    seracSolid->setParameter(0, vstate);
+    seracSolid->setParameter(1, vstate);
     double fpv = forwardPass(seracSolid.get(), qoi.get(), meshPtr, nTimeSteps, timeStep, "fpv");
 
     vstate = v0-h;
-    seracSolid->setParameter(0, vstate);
+    seracSolid->setParameter(1, vstate);
     double fmv = forwardPass(seracSolid.get(), qoi.get(), meshPtr, nTimeSteps, timeStep, "fmv");
 
     std::cout << std::endl << std::endl;
