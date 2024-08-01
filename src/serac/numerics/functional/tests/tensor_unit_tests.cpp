@@ -4,9 +4,11 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#include "axom/slic/core/SimpleLogger.hpp"
 #include <gtest/gtest.h>
 
 #include "serac/numerics/functional/tensor.hpp"
+#include "serac/numerics/functional/tuple_tensor_dual_functions.hpp"
 
 using namespace serac;
 
@@ -429,4 +431,217 @@ TEST(Tensor, DerivativeOfLinearSolveWrtAMatchesFiniteDifference)
   auto x = linear_solve(A, b);
 
   EXPECT_LT(squared_norm(dx_FD - get_gradient(x)), tolerance);
+}
+
+TEST(Tensor, argsort)
+{
+  tensor v{{1.0, 3.0, 0.0}};
+  auto   sorted = argsort(v);
+  ASSERT_EQ(sorted[0], 2);
+  ASSERT_EQ(sorted[1], 0);
+  ASSERT_EQ(sorted[2], 1);
+
+  v      = {3.0, 1.0, 0.0};
+  sorted = argsort(v);
+  ASSERT_EQ(sorted[0], 2);
+  ASSERT_EQ(sorted[1], 1);
+  ASSERT_EQ(sorted[2], 0);
+}
+
+TEST(Tensor, EigendecompOfTriplyDegenerate)
+{
+  const double lambda     = 2.5;
+  const auto   A          = lambda * DenseIdentity<3>();
+  auto [eigvals, eigvecs] = eig_symm(A);
+  for (int i = 0; i < 3; i++) {
+    EXPECT_NEAR(eigvals[i], lambda, 1e-12);
+  }
+}
+
+TEST(Tensor, EigendecompWithUniqueEigenvalues)
+{
+  const tensor lambda{{-1.1, 2.6, 2.2}};
+  // clang-format off
+  // Q is a rotation matrix.
+  // Generated externally, written out to 15 decimals
+  const tensor<double, 3, 3> Q{{{-0.928152308749236, -0.091036503308254, -0.360895617636}  ,
+                                { 0.238177386319198,  0.599832274220295, -0.763853896664712},
+                                { 0.28601542687348 , -0.794929932679048, -0.535052873762272}}};
+  // clang-format on
+  const auto A = dot(Q, dot(diag(lambda), transpose(Q)));
+  // std::cout << "A =\n" << A << std::endl;
+  auto [eigvals, eigvecs] = eig_symm(A);
+
+  // eigenvalues should be returned in ascending order
+  EXPECT_NEAR(eigvals[0], lambda[0], 1e-12);
+  EXPECT_NEAR(eigvals[1], lambda[2], 1e-12);
+  EXPECT_NEAR(eigvals[2], lambda[1], 1e-12);
+
+  // check eigenvectors by re-assembling the matrix
+  tensor<double, 3, 3> should_be_A = dot(eigvecs, dot(diag(eigvals), transpose(eigvecs)));
+  EXPECT_LT(norm(should_be_A - A), 1e-12);
+}
+
+TEST(Tensor, EigendecompWith2NearlyDegenerateEigenvalues)
+{
+  const tensor lambda{{2.5, 2.5 + 1e-8, 1.1}};
+  // clang-format off
+  const tensor<double, 3, 3> Q{{{-0.928152308749236, -0.091036503308254, -0.360895617636}  ,
+                                { 0.238177386319198,  0.599832274220295, -0.763853896664712},
+                                { 0.28601542687348 , -0.794929932679048, -0.535052873762272}}};
+  // clang-format on
+  const auto A = dot(Q, dot(diag(lambda), transpose(Q)));
+  // std::cout << "A =\n" << A << std::endl;
+  auto [eigvals, eigvecs] = eig_symm(A);
+
+  // check eigenvalues
+  EXPECT_NEAR(eigvals[0], lambda[2], 1e-12);
+  EXPECT_NEAR(eigvals[1], lambda[0], 1e-12);
+  EXPECT_NEAR(eigvals[2], lambda[1], 1e-12);
+
+  // check eigenvectors by re-assembling the matrix
+  tensor<double, 3, 3> should_be_A = dot(eigvecs, dot(diag(eigvals), transpose(eigvecs)));
+  EXPECT_LT(norm(A - should_be_A), 1e-12);
+}
+
+TEST(Tensor, LogOfSpherical)
+{
+  auto A    = M_E * DenseIdentity<3>();
+  auto logA = log_symm(A);
+  ASSERT_LT(norm(logA - DenseIdentity<3>()), 1e-12);
+}
+
+TEST(Tensor, LogOfGeneralSymmetric)
+{
+  // Tests using a property of logarithm of symmetric matrices:
+  // if A and B are spd matrices that commute, then log(AB) = log(A) + log(B)
+
+  const tensor               lambda_A{{1.1, 2.6, 2.2}};
+  const tensor               lambda_B{{0.8, 1.3, 1.3}};
+  const tensor<double, 3, 3> Q{{{-0.928152308749236, -0.091036503308254, -0.360895617636},
+                                {0.238177386319198, 0.599832274220295, -0.763853896664712},
+                                {0.28601542687348, -0.794929932679048, -0.535052873762272}}};
+
+  // use same eigenvalue matrix for A and B to ensure they commute
+  const auto A = dot(Q, dot(diag(lambda_A), transpose(Q)));
+  const auto B = dot(Q, dot(diag(lambda_B), transpose(Q)));
+
+  auto e = log_symm(dot(A, B)) - (log_symm(A) + log_symm(B));
+  EXPECT_LT(norm(e), 1e-12);
+}
+
+TEST(Tensor, LogDerivative)
+{
+  const tensor               lambda{{1.1, 2.6, 2.2}};
+  const tensor<double, 3, 3> Q{{{-0.928152308749236, -0.091036503308254, -0.360895617636},
+                                {0.238177386319198, 0.599832274220295, -0.763853896664712},
+                                {0.28601542687348, -0.794929932679048, -0.535052873762272}}};
+  auto                       A = dot(Q, dot(diag(lambda), transpose(Q)));
+
+  auto logA     = log_symm(make_dual(A));
+  auto dlogA_dA = get_gradient(logA);
+
+  // perturbation should be symmetric, or else violates requirement of log_symm
+  const tensor<double, 3, 3> dA{{{0.2, -0.4, -1.6}, {-0.4, 0.1, -1.7}, {-1.6, -1.7, 2.0}}};
+
+  tensor<dual<double>, 3, 3> Adual = make_tensor<3, 3>([&](int i, int j) { return dual<double>{A[i][j], dA[i][j]}; });
+
+  const double epsilon = 1.0e-5;
+
+  tensor<double, 3, 3> dlogA[3] = {double_dot(dlogA_dA, dA),
+                                   (log_symm(A + epsilon * dA) - log_symm(A - epsilon * dA)) / (2 * epsilon),
+                                   get_gradient(log_symm(Adual))};
+
+  EXPECT_LT(norm(dlogA[0] - dlogA[1]), 1.0e-9);
+  EXPECT_LT(norm(dlogA[0] - dlogA[2]), 1.0e-14);
+}
+
+TEST(Tensor, ExponentialTraceIdentity)
+{
+  const tensor               lambda{{1.1, 2.6, 2.2}};
+  const tensor<double, 3, 3> Q{{{-0.928152308749236, -0.091036503308254, -0.360895617636},
+                                {0.238177386319198, 0.599832274220295, -0.763853896664712},
+                                {0.28601542687348, -0.794929932679048, -0.535052873762272}}};
+  auto                       A = dot(Q, dot(diag(lambda), transpose(Q)));
+
+  auto expA = exp_symm(A);
+  EXPECT_NEAR(det(expA), std::exp(tr(A)), 1e-12);
+}
+
+TEST(Tensor, ExpDerivative)
+{
+  const tensor               lambda{{1.1, 2.6, 2.2}};
+  const tensor<double, 3, 3> Q{{{-0.928152308749236, -0.091036503308254, -0.360895617636},
+                                {0.238177386319198, 0.599832274220295, -0.763853896664712},
+                                {0.28601542687348, -0.794929932679048, -0.535052873762272}}};
+  auto                       A = dot(Q, dot(diag(lambda), transpose(Q)));
+
+  auto expA     = exp_symm(make_dual(A));
+  auto dexpA_dA = get_gradient(expA);
+
+  // perturbation should be symmetric, or else violates requirement of log_symm
+  const tensor<double, 3, 3> dA{{{0.2, -0.4, -1.6}, {-0.4, 0.1, -1.7}, {-1.6, -1.7, 2.0}}};
+
+  tensor<dual<double>, 3, 3> Adual = make_tensor<3, 3>([&](int i, int j) { return dual<double>{A[i][j], dA[i][j]}; });
+
+  const double epsilon = 1.0e-6;
+
+  tensor<double, 3, 3> dexpA[3] = {double_dot(dexpA_dA, dA),
+                                   (exp_symm(A + epsilon * dA) - exp_symm(A - epsilon * dA)) / (2 * epsilon),
+                                   get_gradient(exp_symm(Adual))};
+
+  EXPECT_LT(norm(dexpA[0] - dexpA[1]), 1.0e-8);
+  EXPECT_LT(norm(dexpA[0] - dexpA[2]), 1.0e-13);
+}
+
+TEST(Tensor, Sqrt)
+{
+  const tensor               lambda{{1.1, 2.6, 2.2}};
+  const tensor<double, 3, 3> Q{{{-0.928152308749236, -0.091036503308254, -0.360895617636},
+                                {0.238177386319198, 0.599832274220295, -0.763853896664712},
+                                {0.28601542687348, -0.794929932679048, -0.535052873762272}}};
+  auto                       A = dot(Q, dot(diag(lambda), transpose(Q)));
+
+  auto sqrtA = sqrt_symm(A);
+
+  EXPECT_LT(norm(dot(sqrtA, sqrtA) - A), 1e-13);
+}
+
+TEST(Tensor, SqrtDerivative)
+{
+  const tensor               lambda{{1.1, 2.6, 2.2}};
+  const tensor<double, 3, 3> Q{{{-0.928152308749236, -0.091036503308254, -0.360895617636},
+                                {0.238177386319198, 0.599832274220295, -0.763853896664712},
+                                {0.28601542687348, -0.794929932679048, -0.535052873762272}}};
+  auto                       A = dot(Q, dot(diag(lambda), transpose(Q)));
+
+  auto sqrtA     = sqrt_symm(make_dual(A));
+  auto dsqrtA_dA = get_gradient(sqrtA);
+
+  // perturbation should be symmetric, or else violates requirement of log_symm
+  const tensor<double, 3, 3> dA{{{0.2, -0.4, -1.6}, {-0.4, 0.1, -1.7}, {-1.6, -1.7, 2.0}}};
+
+  tensor<dual<double>, 3, 3> Adual = make_tensor<3, 3>([&](int i, int j) { return dual<double>{A[i][j], dA[i][j]}; });
+
+  const double epsilon = 1.0e-5;
+
+  tensor<double, 3, 3> dsqrtA[3] = {double_dot(dsqrtA_dA, dA),
+                                    (sqrt_symm(A + epsilon * dA) - sqrt_symm(A - epsilon * dA)) / (2 * epsilon),
+                                    get_gradient(sqrt_symm(Adual))};
+
+  EXPECT_LT(norm(dsqrtA[0] - dsqrtA[1]), 1.0e-9);
+  EXPECT_LT(norm(dsqrtA[0] - dsqrtA[2]), 1.0e-13);
+}
+
+int main(int argc, char* argv[])
+{
+  ::testing::InitGoogleTest(&argc, argv);
+  MPI_Init(&argc, &argv);
+
+  axom::slic::SimpleLogger logger;
+
+  int result = RUN_ALL_TESTS();
+  MPI_Finalize();
+
+  return result;
 }

@@ -6,11 +6,635 @@
 
 #include "serac/numerics/equation_solver.hpp"
 
+#include <iomanip>
+#include <sstream>
+#include <ios>
+#include <iostream>
+
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
 #include "serac/serac_config.hpp"
+#include "serac/infrastructure/profiling.hpp"
 
 namespace serac {
+
+/// Newton solver with a 2-way line-search.  Reverts to regular Newton if max_line_search_iterations is set to 0.
+class NewtonSolver : public mfem::NewtonSolver {
+protected:
+  /// initial solution vector to do line-search off of
+  mutable mfem::Vector x0;
+  /// nonlinear solver options
+  NonlinearSolverOptions nonlinear_options;
+
+public:
+  /// constructor
+  NewtonSolver(const NonlinearSolverOptions& nonlinear_opts) : nonlinear_options(nonlinear_opts) {}
+
+#ifdef MFEM_USE_MPI
+  /// parallel constructor
+  NewtonSolver(MPI_Comm comm_, const NonlinearSolverOptions& nonlinear_opts)
+      : mfem::NewtonSolver(comm_), nonlinear_options(nonlinear_opts)
+  {
+  }
+#endif
+
+  /// Evaluate the residual, put in rOut and return its norm.
+  double evaluateNorm(const mfem::Vector& x, mfem::Vector& rOut) const
+  {
+    SERAC_MARK_FUNCTION;
+    double normEval = std::numeric_limits<double>::max();
+    try {
+      oper->Mult(x, rOut);
+      normEval = Norm(rOut);
+    } catch (const std::exception&) {
+      normEval = std::numeric_limits<double>::max();
+    }
+    return normEval;
+  }
+
+  /// assemble the jacobian
+  void assembleJacobian(const mfem::Vector& x) const
+  {
+    SERAC_MARK_FUNCTION;
+    grad = &oper->GetGradient(x);
+  }
+
+  /// set the preconditioner for the linear solver
+  void setPreconditioner() const
+  {
+    SERAC_MARK_FUNCTION;
+    prec->SetOperator(*grad);
+  }
+
+  /// solve the linear system
+  void solveLinearSystem(const mfem::Vector& r_, mfem::Vector& c_) const
+  {
+    SERAC_MARK_FUNCTION;
+    prec->Mult(r_, c_);  // c = [DF(x_i)]^{-1} [F(x_i)-b]
+  }
+
+  /// @overload
+  void Mult(const mfem::Vector&, mfem::Vector& x) const
+  {
+    MFEM_ASSERT(oper != NULL, "the Operator is not set (use SetOperator).");
+    MFEM_ASSERT(prec != NULL, "the Solver is not set (use SetSolver).");
+
+    using real_t = mfem::real_t;
+
+    real_t norm, norm_goal;
+    norm = initial_norm = evaluateNorm(x, r);
+
+    if (print_options.first_and_last && !print_options.iterations) {
+      mfem::out << "Newton iteration " << std::setw(3) << 0 << " : ||r|| = " << std::setw(13) << norm << "...\n";
+    }
+
+    norm_goal            = std::max(rel_tol * initial_norm, abs_tol);
+    prec->iterative_mode = false;
+
+    int it = 0;
+    for (; true; it++) {
+      MFEM_ASSERT(mfem::IsFinite(norm), "norm = " << norm);
+      if (print_options.iterations) {
+        mfem::out << "Newton iteration " << std::setw(3) << it << " : ||r|| = " << std::setw(13) << norm;
+        if (it > 0) {
+          mfem::out << ", ||r||/||r_0|| = " << std::setw(13) << norm / initial_norm;
+        }
+        mfem::out << '\n';
+      }
+
+      if (norm <= norm_goal && it >= nonlinear_options.min_iterations) {
+        converged = true;
+        break;
+      } else if (it >= max_iter) {
+        converged = false;
+        break;
+      }
+
+      real_t norm_nm1 = norm;
+
+      assembleJacobian(x);
+      setPreconditioner();
+      solveLinearSystem(r, c);
+
+      // there must be a better way to do this?
+      x0.SetSize(x.Size());
+      x0 = 0.0;
+      x0.Add(1.0, x);
+
+      real_t stepScale = 1.0;
+      add(x0, -stepScale, c, x);
+      norm = evaluateNorm(x, r);
+
+      const int               max_ls_iters = nonlinear_options.max_line_search_iterations;
+      static constexpr real_t reduction    = 0.5;
+
+      const double sufficientDecreaseParam = 0.0;  // 1e-15;
+      const double cMagnitudeInR           = sufficientDecreaseParam != 0.0 ? std::abs(Dot(c, r)) / norm_nm1 : 0.0;
+
+      auto is_improved = [=](real_t currentNorm, real_t c_scale) {
+        return currentNorm < norm_nm1 - sufficientDecreaseParam * c_scale * cMagnitudeInR;
+      };
+
+      // back-track linesearch
+      int ls_iter     = 0;
+      int ls_iter_sum = 0;
+      for (; !is_improved(norm, stepScale) && ls_iter < max_ls_iters; ++ls_iter, ++ls_iter_sum) {
+        stepScale *= reduction;
+        add(x0, -stepScale, c, x);
+        norm = evaluateNorm(x, r);
+      }
+
+      // try the opposite direction and linesearch back from there
+      if (max_ls_iters > 0 && ls_iter == max_ls_iters && !is_improved(norm, stepScale)) {
+        stepScale = 1.0;
+        add(x0, stepScale, c, x);
+        norm = evaluateNorm(x, r);
+
+        ls_iter = 0;
+        for (; !is_improved(norm, stepScale) && ls_iter < max_ls_iters; ++ls_iter, ++ls_iter_sum) {
+          stepScale *= reduction;
+          add(x0, stepScale, c, x);
+          norm = evaluateNorm(x, r);
+        }
+
+        // ok, the opposite direction was also terrible, lets go back, cut in half 1 last time and accept it hoping for
+        // the best
+        if (ls_iter == max_ls_iters && !is_improved(norm, stepScale)) {
+          ++ls_iter_sum;
+          stepScale *= reduction;
+          add(x0, -stepScale, c, x);
+          norm = evaluateNorm(x, r);
+        }
+      }
+
+      if (ls_iter_sum) {
+        if (print_options.iterations) {
+          mfem::out << "Number of line search steps taken = " << ls_iter_sum << std::endl;
+        }
+        if (print_options.warnings && (ls_iter_sum == 2 * max_ls_iters + 1)) {
+          mfem::out << "The maximum number of line search cut back have occurred, the resulting residual may not have "
+                       "decreased. "
+                    << std::endl;
+        }
+      }
+    }
+
+    final_iter = it;
+    final_norm = norm;
+
+    if (print_options.summary || (!converged && print_options.warnings) || print_options.first_and_last) {
+      mfem::out << "Newton: Number of iterations: " << final_iter << '\n' << "   ||r|| = " << final_norm << '\n';
+    }
+    if (!converged && (print_options.summary || print_options.warnings)) {
+      mfem::out << "Newton: No convergence!\n";
+    }
+  }
+};
+
+/// Internal structure for storing trust region settings
+struct TrustRegionSettings {
+  /// cg tol
+  double cgTol = 1e-8;
+  /// max cg iters should be around # of system dofs
+  size_t maxCgIterations = 10000;  //
+  /// max cumulative iterations
+  size_t maxCumulativeIteration = 1;
+  /// minimum trust region size
+  double min_tr_size = 1e-13;
+  /// trust region decrease factor
+  double t1 = 0.25;
+  /// trust region increase factor
+  double t2 = 1.75;
+  /// worse case energy drop ratio.  trust region accepted if energy drop is better than this.
+  double eta1 = 1e-9;
+  /// non-ideal energy drop ratio.  trust region decreases if energy drop is worse than this.
+  double eta2 = 0.1;
+  /// ideal energy drop ratio.  trust region increases if energy drop is better than this.
+  double eta3 = 0.6;
+};
+
+/// Internal structure for storing trust region stateful data
+struct TrustRegionResults {
+  /// Constructor takes the size of the solution vector
+  TrustRegionResults(int size)
+  {
+    z.SetSize(size);
+    d.SetSize(size);
+    Pr.SetSize(size);
+    Hd.SetSize(size);
+    cauchyPoint.SetSize(size);
+  }
+
+  /// resets trust region results for a new outer iteration
+  void reset()
+  {
+    z           = 0.0;
+    cauchyPoint = 0.0;
+  }
+
+  /// enumerates the possible final status of the trust region steps
+  enum class Status
+  {
+    Interior,
+    NegativeCurvature,
+    OnBoundary,
+  };
+
+  /// step direction
+  mfem::Vector z;
+  /// incrementalCG direction
+  mfem::Vector d;
+  /// preconditioned residual
+  mfem::Vector Pr;
+  /// action of hessian on direction d
+  mfem::Vector Hd;
+  /// cauchy point
+  mfem::Vector cauchyPoint;
+  /// specifies if step is interior, exterior, negative curvature, etc.
+  Status interiorStatus = Status::Interior;
+  /// iteration counter
+  size_t cgIterationsCount = 0;
+};
+
+/// trust region printing utility function
+void print_trust_region_info(double realObjective, double modelObjective, size_t cgIters, double trSize,
+                             bool willAccept)
+{
+  mfem::out << "real energy = " << std::setw(13) << realObjective << ", model energy = " << std::setw(13)
+            << modelObjective << ", cg iter = " << std::setw(7) << cgIters << ", next tr size = " << std::setw(8)
+            << trSize << ", accepting = " << willAccept << std::endl;
+}
+
+/**
+ * @brief Equation solver class based on a standard preconditioned trust-region algorithm
+ *
+ * This is a fairly standard implementation of 'The Conjugate Gradient Method and Trust Regions in Large Scale
+ * Optimization' by T. Steihaug It is also called the Steihaug-Toint CG trust region algorithm (see also Trust Region
+ * Methods by Conn, Gould, and Toint). One important difference is we do not compute an explicit energy.  Instead we
+ * rely on an incremental work approximation: 0.5 (f^n + f^{n+1}) dot (u^{n+1} - u^n).  While less theoretically sound,
+ * it appears to be very effective in practice.
+ */
+class TrustRegion : public mfem::NewtonSolver {
+protected:
+  /// predicted solution
+  mutable mfem::Vector xPred;
+  /// predicted residual
+  mutable mfem::Vector rPred;
+  /// extra vector of scratch space for doing temporary calculations
+  mutable mfem::Vector scratch;
+
+  /// nonlinear solution options
+  NonlinearSolverOptions nonlinear_options;
+  /// linear solution options
+  LinearSolverOptions linear_options;
+  /// handle to the preconditioner used by the trust region, it ignores the linear solver as a SPD preconditioner is
+  /// currently required
+  Solver& trPrecond;
+
+public:
+#ifdef MFEM_USE_MPI
+  /// constructor
+  TrustRegion(MPI_Comm comm_, const NonlinearSolverOptions& nonlinear_opts, const LinearSolverOptions& linear_opts,
+              Solver& tPrec)
+      : mfem::NewtonSolver(comm_), nonlinear_options(nonlinear_opts), linear_options(linear_opts), trPrecond(tPrec)
+  {
+  }
+#endif
+
+  /// finds tau s.t. (z + tau*d)^2 = trSize^2
+  void project_to_boundary_with_coefs(mfem::Vector& z, const mfem::Vector& d, double trSize, double zz, double zd,
+                                      double dd) const
+  {
+    double tau = (std::sqrt((trSize * trSize - zz) * dd + zd * zd) - zd) / dd;
+    z.Add(tau, d);
+  }
+
+  /// finds tau s.t. (z + tau*(y-z))^2 = trSize^2
+  void project_to_boundary_between_with_coefs(mfem::Vector& z, const mfem::Vector& y, double trSize, double zz,
+                                              double zy, double yy) const
+  {
+    double dd  = yy - 2 * zy + zz;
+    double zd  = zy - zz;
+    double tau = (std::sqrt((trSize * trSize - zz) * dd + zd * zd) - zd) / dd;
+    z.Add(-tau, z);
+    z.Add(tau, y);
+  }
+
+  /// take a dogleg step in direction s, solution norm must be within trSize
+  void dogleg_step(const mfem::Vector& cp, const mfem::Vector& newtonP, double trSize, mfem::Vector& s) const
+  {
+    SERAC_MARK_FUNCTION;
+    // MRT, could optimize some of these eventually, compute on the outside and save
+    double cc = Dot(cp, cp);
+    double nn = Dot(newtonP, newtonP);
+    double tt = trSize * trSize;
+
+    s = 0.0;
+    if (cc >= tt) {
+      add(s, std::sqrt(tt / cc), cp, s);
+    } else if (cc > nn) {
+      if (print_options.warnings) {
+        mfem::out << "cp outside newton, preconditioner likely inaccurate\n";
+      }
+      add(s, 1.0, cp, s);
+    } else if (nn > tt) {  // on the dogleg (we have nn >= cc, and tt >= cc)
+      add(s, 1.0, cp, s);
+      double cn = Dot(cp, newtonP);
+      project_to_boundary_between_with_coefs(s, newtonP, trSize, cc, cn, nn);
+    } else {
+      s = newtonP;
+    }
+  }
+
+  /// Minimize quadratic sub-problem given residual vector, the action of the stiffness and a preconditioner
+  template <typename HessVecFunc, typename PrecondFunc>
+  void solve_trust_region_minimization(const mfem::Vector& r0, mfem::Vector& rCurrent, HessVecFunc hess_vec_func,
+                                       PrecondFunc precond, const TrustRegionSettings& settings, double& trSize,
+                                       TrustRegionResults& results) const
+  {
+    SERAC_MARK_FUNCTION;
+    // minimize r@z + 0.5*z@J@z
+    results.interiorStatus    = TrustRegionResults::Status::Interior;
+    results.cgIterationsCount = 0;
+
+    auto& z      = results.z;
+    auto& cgIter = results.cgIterationsCount;
+    auto& d      = results.d;
+    auto& Pr     = results.Pr;
+    auto& Hd     = results.Hd;
+
+    const double cgTolSquared = settings.cgTol * settings.cgTol;
+
+    if (Dot(r0, r0) < cgTolSquared) {
+      return;
+    }
+
+    rCurrent = r0;
+    precond(rCurrent, Pr);
+    d = 0.0;
+    add(d, -1.0, Pr, d);  // d = -Pr
+
+    z          = 0.0;
+    double zz  = 0.;
+    double rPr = Dot(rCurrent, Pr);
+    double zd  = 0.0;
+    double dd  = Dot(d, d);
+
+    for (cgIter = 1; cgIter <= settings.maxCgIterations; ++cgIter) {
+      hess_vec_func(d, Hd);
+      const double curvature = Dot(d, Hd);
+      const double alphaCg   = rPr / curvature;
+
+      auto& zPred = Hd;  // re-use Hd, this is where bugs come from
+      add(z, alphaCg, d, zPred);
+      double zzNp1 = Dot(zPred, zPred);  // can optimize this eventually
+
+      if (curvature <= 0) {
+        // mfem::out << "negative curvature found.\n";
+        project_to_boundary_with_coefs(z, d, trSize, zz, zd, dd);
+        results.interiorStatus = TrustRegionResults::Status::NegativeCurvature;
+        return;
+      } else if (zzNp1 > (trSize * trSize)) {
+        // mfem::out << "step outside trust region.\n";
+        project_to_boundary_with_coefs(z, d, trSize, zz, zd, dd);
+        results.interiorStatus = TrustRegionResults::Status::OnBoundary;
+        return;
+      }
+
+      z = zPred;
+
+      hess_vec_func(d, Hd);
+      add(rCurrent, alphaCg, Hd, rCurrent);
+
+      precond(rCurrent, Pr);
+      double rPrNp1 = Dot(rCurrent, Pr);
+
+      if (Dot(rCurrent, rCurrent) <= cgTolSquared) {
+        return;
+      }
+
+      double beta = rPrNp1 / rPr;
+      rPr         = rPrNp1;
+      add(-1.0, Pr, beta, d, d);
+
+      zz = zzNp1;
+      zd = Dot(z, d);
+      dd = Dot(d, d);
+    }
+  }
+
+  /// assemble the jacobian
+  void assemble_jacobian(const mfem::Vector& x) const
+  {
+    SERAC_MARK_FUNCTION;
+    grad = &oper->GetGradient(x);
+  }
+
+  /// evaluate the nonlinear residual
+  mfem::real_t computeResidual(const mfem::Vector& x_, mfem::Vector& r_) const
+  {
+    SERAC_MARK_FUNCTION;
+    oper->Mult(x_, r_);
+    return Norm(r_);
+  }
+
+  /// apply the action of the assembled Jacobian matrix to a vector
+  void hess_vec(const mfem::Vector& x_, mfem::Vector& v_) const
+  {
+    SERAC_MARK_FUNCTION;
+    grad->Mult(x_, v_);
+  }
+
+  /// apply trust region specific preconditioner
+  void precond(const mfem::Vector& x_, mfem::Vector& v_) const
+  {
+    SERAC_MARK_FUNCTION;
+    trPrecond.Mult(x_, v_);
+  };
+
+  /// @overload
+  void Mult(const mfem::Vector&, mfem::Vector& X) const
+  {
+    MFEM_ASSERT(oper != NULL, "the Operator is not set (use SetOperator).");
+    MFEM_ASSERT(prec != NULL, "the Solver is not set (use SetSolver).");
+
+    using real_t = mfem::real_t;
+
+    real_t norm, norm_goal;
+    norm = initial_norm = computeResidual(X, r);
+    norm_goal           = std::max(rel_tol * initial_norm, abs_tol);
+    if (print_options.first_and_last && !print_options.iterations) {
+      mfem::out << "Newton iteration " << std::setw(3) << 0 << " : ||r|| = " << std::setw(13) << norm << "...\n";
+    }
+    prec->iterative_mode     = false;
+    trPrecond.iterative_mode = false;
+
+    // local arrays
+    xPred.SetSize(X.Size());
+    xPred = 0.0;
+    rPred.SetSize(X.Size());
+    rPred = 0.0;
+    scratch.SetSize(X.Size());
+    scratch = 0.0;
+
+    TrustRegionResults  trResults(X.Size());
+    TrustRegionSettings settings;
+    settings.maxCgIterations = static_cast<size_t>(linear_options.max_iterations);
+    settings.cgTol           = 0.2 * norm_goal;
+    double trSize            = 10.0;
+    size_t cumulativeCgIters = 0;
+
+    int it = 0;
+    for (; true; it++) {
+      MFEM_ASSERT(mfem::IsFinite(norm), "norm = " << norm);
+      if (print_options.iterations) {
+        mfem::out << "Newton iteration " << std::setw(3) << it << " : ||r|| = " << std::setw(13) << norm;
+        if (it > 0) {
+          mfem::out << ", ||r||/||r_0|| = " << std::setw(13) << norm / initial_norm;
+        }
+        mfem::out << '\n';
+      }
+
+      if (norm <= norm_goal && it >= nonlinear_options.min_iterations) {
+        converged = true;
+        break;
+      } else if (it >= max_iter) {
+        converged = false;
+        break;
+      }
+
+      assemble_jacobian(X);
+
+      if (it == 0 || (trResults.cgIterationsCount >= settings.maxCgIterations ||
+                      cumulativeCgIters >= settings.maxCumulativeIteration)) {
+        trPrecond.SetOperator(*grad);
+        cumulativeCgIters = 0;
+        if (print_options.iterations) {
+          // currently it will always be updated
+          // mfem::out << "Updating trust region preconditioner." << std::endl;
+        }
+      }
+
+      auto hess_vec_func = [&](const mfem::Vector& x_, mfem::Vector& v_) { hess_vec(x_, v_); };
+      auto precond_func  = [&](const mfem::Vector& x_, mfem::Vector& v_) { precond(x_, v_); };
+
+      double cauchyPointNormSquared = trSize * trSize;
+      trResults.reset();
+
+      hess_vec_func(r, trResults.Hd);
+      const double gKg = Dot(r, trResults.Hd);
+      if (gKg > 0) {
+        const double alphaCp = -Dot(r, r) / gKg;
+        add(trResults.cauchyPoint, alphaCp, r, trResults.cauchyPoint);
+        cauchyPointNormSquared = Dot(trResults.cauchyPoint, trResults.cauchyPoint);
+      } else {
+        const double alphaTr = -trSize / std::sqrt(Dot(r, r));
+        add(trResults.cauchyPoint, alphaTr, r, trResults.cauchyPoint);
+        if (print_options.iterations) {
+          mfem::out << "Negative curvature un-preconditioned cauchy point direction found."
+                    << "\n";
+        }
+      }
+
+      if (cauchyPointNormSquared >= trSize * trSize) {
+        if (print_options.iterations) {
+          mfem::out << "Un-preconditioned gradient cauchy point outside trust region, step size = "
+                    << std::sqrt(cauchyPointNormSquared) << "\n";
+        }
+        trResults.cauchyPoint *= (trSize / std::sqrt(cauchyPointNormSquared));
+        trResults.z                 = trResults.cauchyPoint;
+        trResults.cgIterationsCount = 1;
+        trResults.interiorStatus    = TrustRegionResults::Status::OnBoundary;
+      } else {
+        settings.cgTol = std::max(0.2 * norm_goal, 1e-3 * norm);
+        solve_trust_region_minimization(r, scratch, hess_vec_func, precond_func, settings, trSize, trResults);
+      }
+      cumulativeCgIters += trResults.cgIterationsCount;
+
+      bool happyAboutTrSize = false;
+      int  lineSearchIter   = 0;
+      while (!happyAboutTrSize && lineSearchIter <= nonlinear_options.max_line_search_iterations) {
+        ++lineSearchIter;
+        auto& d  = trResults.d;   // reuse, dangerous!
+        auto& Hd = trResults.Hd;  // reuse, dangerous!
+
+        dogleg_step(trResults.cauchyPoint, trResults.z, trSize, d);
+
+        hess_vec_func(d, Hd);
+        double dHd            = Dot(d, Hd);
+        double modelObjective = Dot(r, d) + 0.5 * dHd;
+
+        add(X, d, xPred);
+
+        double realObjective = std::numeric_limits<double>::max();
+        double normPred      = std::numeric_limits<double>::max();
+        try {
+          normPred      = computeResidual(xPred, rPred);
+          realObjective = 0.5 * (Dot(r, d) + Dot(rPred, d));
+        } catch (const std::exception&) {
+          realObjective = std::numeric_limits<double>::max();
+          normPred      = std::numeric_limits<double>::max();
+        }
+
+        if (normPred <= norm_goal) {
+          X                = xPred;
+          r                = rPred;
+          norm             = normPred;
+          happyAboutTrSize = true;
+          if (print_options.iterations) {
+            print_trust_region_info(realObjective, modelObjective, trResults.cgIterationsCount, trSize, true);
+          }
+          break;
+        }
+
+        double modelImprove = -modelObjective;
+        double realImprove  = -realObjective;
+
+        double rho = realImprove / modelImprove;
+        if (modelObjective > 0) {
+          if (print_options.iterations || print_options.warnings) {
+            mfem::out << "Found a positive model objective increase.  Debug if you see this.\n";
+          }
+          rho = realImprove / -modelImprove;
+        }
+
+        if (!(rho >= settings.eta2)) {  // write it this way to handle NaNs
+          trSize *= settings.t1;
+        } else if ((rho > settings.eta3) && (trResults.interiorStatus == TrustRegionResults::Status::OnBoundary)) {
+          trSize *= settings.t2;
+        }
+
+        // eventually extend to handle this case to handle occasional roundoff issues
+        // modelRes = g + Jd
+        // modelResNorm = np.linalg.norm(modelRes)
+        // realResNorm = np.linalg.norm(gy)
+        bool willAccept = rho >= settings.eta1;  // or (rho >= -0 and realResNorm <= gNorm)
+
+        if (print_options.iterations) {
+          print_trust_region_info(realObjective, modelObjective, trResults.cgIterationsCount, trSize, willAccept);
+        }
+
+        if (willAccept) {
+          X                = xPred;
+          r                = rPred;
+          norm             = normPred;
+          happyAboutTrSize = true;
+          break;
+        }
+      }
+    }
+
+    final_iter = it;
+    final_norm = norm;
+
+    if (print_options.summary || (!converged && print_options.warnings) || print_options.first_and_last) {
+      mfem::out << "Newton: Number of iterations: " << final_iter << '\n' << "   ||r|| = " << final_norm << '\n';
+    }
+    if (!converged && (print_options.summary || print_options.warnings)) {
+      mfem::out << "Newton: No convergence!\n";
+    }
+  }
+};
 
 EquationSolver::EquationSolver(NonlinearSolverOptions nonlinear_opts, LinearSolverOptions lin_opts, MPI_Comm comm)
 {
@@ -18,7 +642,7 @@ EquationSolver::EquationSolver(NonlinearSolverOptions nonlinear_opts, LinearSolv
 
   lin_solver_     = std::move(lin_solver);
   preconditioner_ = std::move(preconditioner);
-  nonlin_solver_  = buildNonlinearSolver(nonlinear_opts, comm);
+  nonlin_solver_  = buildNonlinearSolver(nonlinear_opts, lin_opts, *preconditioner_, comm);
 }
 
 EquationSolver::EquationSolver(std::unique_ptr<mfem::NewtonSolver> nonlinear_solver,
@@ -153,18 +777,32 @@ void StrumpackSolver::SetOperator(const mfem::Operator& op)
 
 #endif
 
-std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions nonlinear_opts, MPI_Comm comm)
+std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(const NonlinearSolverOptions& nonlinear_opts,
+                                                         const LinearSolverOptions& linear_opts, mfem::Solver& prec,
+                                                         MPI_Comm comm)
 {
   std::unique_ptr<mfem::NewtonSolver> nonlinear_solver;
 
   if (nonlinear_opts.nonlin_solver == NonlinearSolver::Newton) {
-    nonlinear_solver = std::make_unique<mfem::NewtonSolver>(comm);
+    SLIC_ERROR_ROOT_IF(nonlinear_opts.min_iterations != 0 || nonlinear_opts.max_line_search_iterations != 0,
+                       "Newton's method does not support nonzero min_iterations or max_line_search_iterations");
+    nonlinear_solver = std::make_unique<NewtonSolver>(comm, nonlinear_opts);
+    // nonlinear_solver = std::make_unique<mfem::NewtonSolver>(comm);
   } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::LBFGS) {
+    SLIC_ERROR_ROOT_IF(nonlinear_opts.min_iterations != 0 || nonlinear_opts.max_line_search_iterations != 0,
+                       "LBFGS does not support nonzero min_iterations or max_line_search_iterations");
     nonlinear_solver = std::make_unique<mfem::LBFGSSolver>(comm);
+  } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::NewtonLineSearch) {
+    nonlinear_solver = std::make_unique<NewtonSolver>(comm, nonlinear_opts);
+  } else if (nonlinear_opts.nonlin_solver == NonlinearSolver::TrustRegion) {
+    nonlinear_solver = std::make_unique<TrustRegion>(comm, nonlinear_opts, linear_opts, prec);
   }
   // KINSOL
   else {
 #ifdef SERAC_USE_SUNDIALS
+
+    SLIC_ERROR_ROOT_IF(nonlinear_opts.min_iterations != 0 || nonlinear_opts.max_line_search_iterations != 0,
+                       "kinsol solvers do not support min_iterations or max_line_search_iterations");
 
     int kinsol_strat = KIN_NONE;
 
@@ -205,16 +843,18 @@ std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions 
 std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLinearSolverAndPreconditioner(
     LinearSolverOptions linear_opts, MPI_Comm comm)
 {
+  auto preconditioner = buildPreconditioner(linear_opts.preconditioner, linear_opts.preconditioner_print_level, comm);
+
   if (linear_opts.linear_solver == LinearSolver::SuperLU) {
     auto lin_solver = std::make_unique<SuperLUSolver>(linear_opts.print_level, comm);
-    return {std::move(lin_solver), nullptr};
+    return {std::move(lin_solver), std::move(preconditioner)};
   }
 
 #ifdef MFEM_USE_STRUMPACK
 
   if (linear_opts.linear_solver == LinearSolver::Strumpack) {
     auto lin_solver = std::make_unique<StrumpackSolver>(linear_opts.print_level, comm);
-    return {std::move(lin_solver), nullptr};
+    return {std::move(lin_solver), std::move(preconditioner)};
   }
 
 #endif
@@ -237,8 +877,6 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
   iter_lin_solver->SetAbsTol(linear_opts.absolute_tol);
   iter_lin_solver->SetMaxIter(linear_opts.max_iterations);
   iter_lin_solver->SetPrintLevel(linear_opts.print_level);
-
-  auto preconditioner = buildPreconditioner(linear_opts.preconditioner, linear_opts.preconditioner_print_level, comm);
 
   if (preconditioner) {
     iter_lin_solver->SetPreconditioner(*preconditioner);
@@ -463,8 +1101,8 @@ serac::EquationSolver FromInlet<serac::EquationSolver>::operator()(const axom::i
 
   auto [linear_solver, preconditioner] = serac::buildLinearSolverAndPreconditioner(lin, MPI_COMM_WORLD);
 
-  serac::EquationSolver eq_solver(serac::buildNonlinearSolver(nonlin, MPI_COMM_WORLD), std::move(linear_solver),
-                                  std::move(preconditioner));
+  serac::EquationSolver eq_solver(serac::buildNonlinearSolver(nonlin, lin, *preconditioner, MPI_COMM_WORLD),
+                                  std::move(linear_solver), std::move(preconditioner));
 
   return eq_solver;
 }

@@ -6,8 +6,8 @@
 #
 
 variables:
-  Clang_14_ImageName: 'seracllnl/tpls:clang-14_05-08-24_18h-37m'
-  GCC_13_ImageName: 'seracllnl/tpls:gcc-13_05-08-24_18h-37m'
+  Clang_14_ImageName: 'seracllnl/tpls:clang-14_06-27-24_19h-46m'
+  GCC_13_ImageName: 'seracllnl/tpls:gcc-13_06-27-24_19h-46m'
 
 jobs:
 - job: Build_and_Test
@@ -25,6 +25,8 @@ jobs:
           TEST_TARGET: 'linux_gcc13'
           HOST_CONFIG: 'gcc@13.1.0.cmake'
           BUILD_TYPE: 'Release'
+          # gcc@13 + Release hangs in solid_mechanics when > -O2
+          CMAKE_OPTS: '-DCMAKE_CXX_FLAGS_RELEASE=-O2'
       linux_clang14_debug:
           VM_ImageName: 'ubuntu-22.04'
           Compiler_ImageName: $(Clang_14_ImageName)
@@ -55,7 +57,7 @@ jobs:
     submodules: recursive
   - script:  |
       echo " -e $TEST_TARGET -e HOST_CONFIG $(Compiler_ImageName) ./scripts/llnl/build_src.py $BUILD_SRC_OPTS -v --host-config $HOST_CONFIG --extra-cmake-options \"${CMAKE_OPTS} -DCMAKE_BUILD_TYPE=$BUILD_TYPE\""
-      docker run --rm -v `pwd`:/home/serac/serac -e TEST_TARGET -e HOST_CONFIG $(Compiler_ImageName) ./serac/scripts/llnl/build_src.py $BUILD_SRC_OPTS -v --host-config $HOST_CONFIG --extra-cmake-options "${CMAKE_OPTS} -DCMAKE_BUILD_TYPE=$BUILD_TYPE"
+      docker run --rm -v `pwd`:/home/serac/serac -e TEST_TARGET -e HOST_CONFIG $(Compiler_ImageName) ./serac/scripts/llnl/build_src.py $BUILD_SRC_OPTS -v --host-config $HOST_CONFIG --extra-cmake-options "${CMAKE_OPTS} -DCMAKE_BUILD_TYPE=$BUILD_TYPE" --jobs 4
 
     displayName: '$(TEST_TARGET) Build & Test'
   - task: PublishTestResults@2

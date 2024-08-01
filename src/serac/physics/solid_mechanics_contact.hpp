@@ -208,6 +208,7 @@ public:
     SolidMechanicsBase::completeSetup();
   }
 
+protected:
   /// @brief Solve the Quasi-static Newton system
   void quasiStaticSolve(double dt) override
   {
@@ -217,14 +218,15 @@ public:
       return;
     }
 
-    time_ += dt;
-
-    // Set the ODE time point for the time-varying loads in quasi-static problems
-    ode_time_point_ = time_;
-
     // this method is essentially equivalent to the 1-liner
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
-    warmStartDisplacement();
+    // warm start for contact needs to include the previous stiffness terms associated with contact
+    // otherwise the system will interpenetrate instantly on warm-starting.
+    warmStartDisplacement(dt);
+
+    time_ += dt;
+    // Set the ODE time point for the time-varying loads in quasi-static problems
+    ode_time_point_ = time_;
 
     // In general, the solution vector is a stacked (block) vector:
     //  | displacement     |
@@ -240,7 +242,6 @@ public:
     contact_.setPressures(mfem::Vector(augmented_solution, displacement_.Size(), contact_.numPressureDofs()));
   }
 
-protected:
   using BasePhysics::bcs_;
   using BasePhysics::cycle_;
   using BasePhysics::is_quasistatic_;

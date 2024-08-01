@@ -24,36 +24,58 @@ import time
 
 from os.path import join as pjoin
 
-def sexe(cmd,
-         ret_output=False,
-         output_file = None,
-         echo = False,
-         error_prefix = "ERROR:"):
-    """ Helper for executing shell commands. """
+def shell_exec(cmd,
+               echo = False,
+               return_output = False,
+               print_output = False,
+               output_file = None,
+               error_prefix = "ERROR:"):
+    """
+    Helper for executing shell commands.
+
+    args:
+        echo (bool): Whether to print command to screen
+        return_output (bool): Whether to return output in addition to return code
+        print_output (bool): Whether to print output to screen
+        output_file (path): Path to write output to
+        error_prefix (string): Prefix message when non-zero return code
+
+    return:
+        return code and optionally command output
+    """
     if echo:
         print("[exe: %s]" % cmd)
-    if ret_output:
-        p = subprocess.Popen(cmd,
-                             shell=True,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT)
-        res =p.communicate()[0]
-        if isinstance(res, bytes):
-            res = res.decode()
-        return p.returncode,res
-    elif output_file != None:
-        ofile = open(output_file,"w")
-        p = subprocess.Popen(cmd,
-                             shell=True,
-                             stdout= ofile,
-                             stderr=subprocess.STDOUT)
-        res =p.communicate()[0]
-        return p.returncode
+
+    p = subprocess.Popen(cmd,
+                         shell=True,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT)
+
+    if return_output:
+        full_output = ""
+
+    if output_file != None:
+        output_file_stream = open(output_file, "w")
+
+    for line in p.stdout:
+        if isinstance(line, bytes):
+            line = line.decode()
+        if return_output:
+            full_output = full_output + line
+        if print_output:
+            sys.stdout.write(line)
+        if output_file != None:
+            output_file_stream.write(line)
+
+    p.wait()
+
+    if p.returncode != 0:
+        print("[{0} [return code: {1}] from command: {2}]".format(error_prefix, p.returncode, cmd))
+
+    if return_output:
+        return p.returncode, full_output
     else:
-        rcode = subprocess.call(cmd,shell=True)
-        if rcode != 0:
-            print("[{0} [return code: {1}] from command: {2}]".format(error_prefix, rcode,cmd))
-        return rcode
+        return p.returncode
 
 
 def get_timestamp(t=None,sep="_"):
@@ -71,11 +93,11 @@ def build_info():
     res["built_from_branch"] = "unknown"
     res["built_from_sha1"]   = "unknown"
     res["platform"] = get_platform()
-    rc, out = sexe('git branch -a | grep \"*\"',ret_output=True,error_prefix="WARNING:")
+    rc, out = shell_exec('git branch -a | grep \"*\"',return_output=True,error_prefix="WARNING:")
     out = out.strip()
     if rc == 0 and out != "":
         res["built_from_branch"]  = out.split()[1]
-    rc,out = sexe('git rev-parse --verify HEAD',ret_output=True,error_prefix="WARNING:")
+    rc,out = shell_exec('git rev-parse --verify HEAD',return_output=True,error_prefix="WARNING:")
     out = out.strip()
     if rc == 0 and out != "":
         res["built_from_sha1"] = out
@@ -131,7 +153,7 @@ def assertUberenvExists():
         sys.exit(1)
 
 
-def uberenv_create_mirror(prefix, spec, project_file, mirror_path):
+def uberenv_create_mirror(prefix, spec, project_file, mirror_path, report_to_stdout = False):
     """
     Calls uberenv to create a spack mirror.
     """
@@ -145,7 +167,7 @@ def uberenv_create_mirror(prefix, spec, project_file, mirror_path):
     print("[~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]")
     print("[ It is expected for 'spack --create-mirror' to throw warnings.                ]")
     print("[~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]")
-    res = sexe(cmd, echo=True, error_prefix="WARNING:")
+    res = shell_exec(cmd, echo=True, print_output=report_to_stdout, error_prefix="WARNING:")
     print("[~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]")
     print("[ End of expected warnings from 'spack --create-mirror'                        ]")
     print("[~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]")
@@ -153,7 +175,7 @@ def uberenv_create_mirror(prefix, spec, project_file, mirror_path):
     return res
 
 
-def uberenv_build(prefix, spec, project_file, mirror_path):
+def uberenv_build(prefix, spec, project_file, mirror_path, report_to_stdout = False):
     """
     Calls uberenv to install tpls for a given spec to given prefix.
     """
@@ -167,9 +189,10 @@ def uberenv_build(prefix, spec, project_file, mirror_path):
     spack_tpl_build_log = pjoin(prefix,"output.log.spack.tpl.build.%s.txt" % spec.replace(" ", "_"))
     print("[starting tpl install of spec %s]" % spec)
     print("[log file: %s]" % spack_tpl_build_log)
-    res = sexe(cmd,
-               echo=True,
-               output_file = spack_tpl_build_log)
+    res = shell_exec(cmd,
+                     echo=True,
+                     print_output=report_to_stdout,
+                     output_file = spack_tpl_build_log)
 
     # Move files generated by spack in source directory to TPL install directory
     print("[Moving spack generated files to TPL build directory]")
@@ -191,13 +214,10 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
     # Install
     log_file =  pjoin(build_dir,"output.log.make.install.txt")
     print("[log file: %s]" % log_file)
-    res = sexe("cd %s && make VERBOSE=1 install " % build_dir,
-                output_file = log_file,
-                echo=True)
-
-    if report_to_stdout:
-        with open(log_file, 'r') as ex_out:
-            print(ex_out.read())
+    res = shell_exec("cd %s && make VERBOSE=1 install " % build_dir,
+                     output_file = log_file,
+                     print_output = report_to_stdout,
+                     echo=True)
 
     if res != 0:
         print("[ERROR: error code={0}: Install for host-config: {1} failed]\n".format(res, host_config))
@@ -207,13 +227,10 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
     log_file =  pjoin(build_dir,"output.log.configure.examples.txt")
     print("[log file: %s]" % log_file)
     example_dir = pjoin(install_dir, "examples", get_project_name(), "using-with-cmake")
-    res = sexe("cd {0} && mkdir build && cd build && cmake -C {0}/host-config.cmake {0}".format(example_dir),
-                output_file = log_file,
-                echo=True)
-
-    if report_to_stdout:
-        with open(log_file, 'r') as ex_out:
-            print(ex_out.read())
+    res = shell_exec("cd {0} && mkdir build && cd build && cmake -C {0}/host-config.cmake {0}".format(example_dir),
+                     output_file = log_file,
+                     print_output = report_to_stdout,
+                     echo=True)
 
     if res != 0:
         print("[ERROR: error code={0}: Configure examples for host-config: {1} failed]\n".format(res, host_config))
@@ -223,13 +240,10 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
     log_file =  pjoin(build_dir,"output.log.make.examples.txt")
     print("[log file: %s]" % log_file)
     install_build_dir = pjoin(example_dir, "build")
-    res = sexe("cd {0} && make && ls -al && make test ".format(install_build_dir),
-                output_file = log_file,
-                echo=True)
-
-    if report_to_stdout:
-        with open(log_file, 'r') as ex_out:
-            print(ex_out.read())
+    res = shell_exec("cd {0} && make && ls -al && make test ".format(install_build_dir),
+                     output_file = log_file,
+                     print_output = report_to_stdout,
+                     echo=True)
 
     if res != 0:
         print("[ERROR: error code={0}: Make and test examples for host-config: {1} failed]\n".format(res, host_config))
@@ -237,7 +251,7 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
 
     return 0
 
-def build_and_test_host_config(test_root, host_config, report_to_stdout=False, extra_cmake_options="", skip_install=False):
+def build_and_test_host_config(test_root, host_config, report_to_stdout=False, extra_cmake_options="", skip_install=False, job_count=""):
     host_config_root = get_host_config_root(host_config)
     # setup build and install dirs
     build_dir   = pjoin(test_root,"build-%s"   % host_config_root)
@@ -250,14 +264,10 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
     cfg_output_file = pjoin(test_root,"output.log.%s.configure.txt" % host_config_root)
     print("[starting configure of %s]" % host_config)
     print("[log file: %s]" % cfg_output_file)
-    # Disable docs until we build our own doxygen/sphinx to stop the random failures on LC
-    res = sexe("%s config-build.py -DENABLE_DOCS=OFF -bp %s -hc %s -ip %s %s" % (sys.executable, build_dir, host_config, install_dir, extra_cmake_options),
-               output_file = cfg_output_file,
-               echo=True)
-
-    if report_to_stdout:
-        with open(cfg_output_file, 'r') as build_out:
-            print(build_out.read())
+    res = shell_exec("%s config-build.py -bp %s -hc %s -ip %s %s" % (sys.executable, build_dir, host_config, install_dir, extra_cmake_options),
+                     output_file = cfg_output_file,
+                     print_output = report_to_stdout,
+                     echo=True)
 
     if res != 0:
         print("[ERROR: Configure for host-config: %s failed]\n" % host_config)
@@ -271,13 +281,10 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
     bld_output_file =  pjoin(build_dir,"output.log.make.txt")
     print("[starting build]")
     print("[log file: %s]" % bld_output_file)
-    res = sexe("cd %s && make -j 4 VERBOSE=1 " % build_dir,
-                output_file = bld_output_file,
-                echo=True)
-
-    if report_to_stdout:
-        with open(bld_output_file, 'r') as build_out:
-            print(build_out.read())
+    res = shell_exec("cd %s && make -j %s VERBOSE=1 " % (build_dir, job_count),
+                     output_file = bld_output_file,
+                     print_output = report_to_stdout,
+                     echo=True)
 
     if res != 0:
         print("[ERROR: Build for host-config: %s failed]\n" % host_config)
@@ -288,19 +295,20 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
     print("[starting unit tests]")
     print("[log file: %s]" % tst_output_file)
 
-    tst_cmd = "cd %s && make CTEST_OUTPUT_ON_FAILURE=1 test ARGS=\"--no-compress-output -T Test -VV -j8\"" % build_dir
+    # Use a maximum of 8 job slots for unit tests due to extra parallelism from OpenMP/MPI
+    test_job_count = 8
+    if job_count:
+        test_job_count = min(int(job_count), 8)
 
-    res = sexe(tst_cmd,
-               output_file = tst_output_file,
-               echo=True)
-
-    if report_to_stdout:
-        with open(tst_output_file, 'r') as test_out:
-            print(test_out.read())
+    tst_cmd = "cd %s && make CTEST_OUTPUT_ON_FAILURE=1 test ARGS=\"--no-compress-output -T Test -VV -j %s\"" % (build_dir, test_job_count)
+    res = shell_exec(tst_cmd,
+                     output_file = tst_output_file,
+                     print_output = report_to_stdout,
+                     echo=True)
 
     # Convert CTest output to JUnit, do not overwrite previous res
     print("[Checking to see if xsltproc exists...]")
-    test_xsltproc_res = sexe("xsltproc --version", echo=True)
+    test_xsltproc_res = shell_exec("xsltproc --version", echo=True)
     if test_xsltproc_res != 0:
         print("[WARNING: xsltproc does not exist skipping JUnit conversion]")
     else:
@@ -310,7 +318,7 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
 
         print("[Converting CTest XML to JUnit XML]")
         convert_cmd  = "xsltproc -o {0} {1} {2}".format(junit_file, xsl_file, ctest_file)
-        convert_res = sexe(convert_cmd, echo=True)
+        convert_res = shell_exec(convert_cmd, echo=True)
         if convert_res != 0:
             print("[WARNING: Converting to JUnit failed.]")
 
@@ -318,23 +326,19 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
         print("[ERROR: Tests for host-config: %s failed]\n" % host_config)
         return res
 
-    # Disable docs until we build our own doxygen/sphinx to stop the random failures on LC
     # build the docs
-    # docs_output_file = pjoin(build_dir,"output.log.make.docs.txt")
-    # print("[starting docs generation]")
-    # print("[log file: %s]" % docs_output_file)
+    docs_output_file = pjoin(build_dir,"output.log.make.docs.txt")
+    print("[starting docs generation]")
+    print("[log file: %s]" % docs_output_file)
 
-    # res = sexe("cd %s && make docs " % build_dir,
-    #            output_file = docs_output_file,
-    #            echo=True)
+    res = shell_exec("cd %s && make docs " % build_dir,
+                     output_file = docs_output_file,
+                     print_output = report_to_stdout,
+                     echo=True)
 
-    # if report_to_stdout:
-    #     with open(docs_output_file, 'r') as docs_out:
-    #         print(docs_out.read())
-
-    # if res != 0:
-    #     print("[ERROR: Docs generation for host-config: %s failed]\n\n" % host_config)
-    #     return res
+    if res != 0:
+        print("[ERROR: Docs generation for host-config: %s failed]\n\n" % host_config)
+        return res
 
     # Install and test examples
     if skip_install:
@@ -355,7 +359,7 @@ def build_and_test_host_config(test_root, host_config, report_to_stdout=False, e
 
 
 def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, report_to_stdout = False,
-                                extra_cmake_options = "", skip_install=False):
+                                extra_cmake_options = "", skip_install=False, job_count=""):
     host_configs = get_host_configs_for_current_machine(prefix, use_generated_host_configs)
     if len(host_configs) == 0:
         log_failure(prefix,"[ERROR: No host configs found at %s]" % prefix)
@@ -374,7 +378,7 @@ def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, r
         build_dir = get_build_dir(test_root, host_config)
 
         start_time = time.time()
-        if build_and_test_host_config(test_root, host_config, report_to_stdout, extra_cmake_options, skip_install) == 0:
+        if build_and_test_host_config(test_root, host_config, report_to_stdout, extra_cmake_options, skip_install, job_count) == 0:
             ok.append(host_config)
             log_success(build_dir, "[Success: Built host-config: {0}]".format(host_config), timestamp)
         else:
@@ -425,14 +429,14 @@ def set_group_and_perms(directory):
     else:
         print("[changing group and access perms of: %s]" % directory)
         print("[changing group to smithdev]")
-        sexe("chgrp -f -R smithdev %s" % (directory),echo=True,error_prefix="WARNING:")
+        shell_exec("chgrp -f -R smithdev %s" % (directory),echo=True,error_prefix="WARNING:")
         print("[changing perms for smithdev members to 'rwX' and all to 'rX']")
-        sexe("chmod -f -R g+rwX,a+rX %s" % (directory),echo=True,error_prefix="WARNING:")
+        shell_exec("chmod -f -R g+rwX,a+rX %s" % (directory),echo=True,error_prefix="WARNING:")
         print("[done setting perms for: %s]" % directory)
     return 0
 
 
-def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = False, short_path = False, mirror_location = ''):
+def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = False, short_path = False, mirror_location = '', job_count=""):
     if spec:
         specs = [spec]
     else:
@@ -463,7 +467,7 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
         os.mkdir(prefix)
 
     # create a mirror
-    uberenv_create_mirror(prefix, spec, "", mirror_dir)
+    uberenv_create_mirror(prefix, spec, "", mirror_dir, report_to_stdout)
     # write info about this build
     write_build_info(pjoin(prefix, "info.json"))
 
@@ -479,7 +483,7 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
     for spec in specs:
         start_time = time.time()
         fullspec = "{0}".format(spec)
-        res = uberenv_build(prefix, fullspec, "", mirror_dir)
+        res = uberenv_build(prefix, fullspec, "", mirror_dir, report_to_stdout)
         end_time = time.time()
         print("[build time: {0}]".format(convertSecondsToReadableTime(end_time - start_time)))
         if res != 0:
@@ -500,7 +504,7 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
     src_build_failed = False
     if not tpl_build_failed:
         # build the src against the new tpls
-        res = build_and_test_host_configs(prefix, timestamp, True, report_to_stdout)
+        res = build_and_test_host_configs(prefix, timestamp, True, report_to_stdout, "", False, job_count)
         if res != 0:
             print("[ERROR: Build and test of src vs tpls test failed.]\n")
             src_build_failed = True
@@ -517,13 +521,11 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
     return res
 
 
-def build_devtools(builds_dir, timestamp, short_path):
+def build_devtools(builds_dir, timestamp, short_path, report_to_stdout = False):
     sys_type = get_system_type()
     project_file = "scripts/spack/devtools.json"
 
-    if "toss_3" in sys_type:
-        compiler_spec = "%gcc@8.1.0"
-    elif "toss_4" in sys_type:
+    if "toss_4" in sys_type:
         compiler_spec = "%gcc@10.3.1"
     elif "blueos" in sys_type:
         compiler_spec = "%gcc@8.3.1"
@@ -542,14 +544,14 @@ def build_devtools(builds_dir, timestamp, short_path):
     # Use shared mirror
     mirror_dir = get_shared_mirror_dir()
     print("[Using mirror location: {0}]".format(mirror_dir))
-    uberenv_create_mirror(prefix, compiler_spec, project_file, mirror_dir)
+    uberenv_create_mirror(prefix, compiler_spec, project_file, mirror_dir, report_to_stdout)
 
     # write info about this build
     write_build_info(pjoin(prefix,"info.json"))
 
     # use uberenv to install devtools
     start_time = time.time()
-    res = uberenv_build(prefix, compiler_spec, project_file, mirror_dir)
+    res = uberenv_build(prefix, compiler_spec, project_file, mirror_dir, report_to_stdout)
     end_time = time.time()
 
     print("[Build time: {0}]".format(convertSecondsToReadableTime(end_time - start_time)))

@@ -21,9 +21,7 @@ void SolidMaterialInputOptions::defineInputFileSchema(axom::inlet::Container& co
   // Solid mechanics (j2, j2nonlinear)
   container.addDouble("E", "Young's modulus");
   container.addDouble("nu", "Poisson's ratio");
-  container.addDouble("Hi", "Isotropic hardening constant");
   container.addDouble("Hk", "Kinematic hardening constant");
-  container.addDouble("sigma_y", "Yield stress");
   auto& hardening_container = container.addStruct("hardening", "Hardening law");
   HardeningInputOptions::defineInputFileSchema(hardening_container);
 
@@ -36,20 +34,14 @@ void SolidMaterialInputOptions::defineInputFileSchema(axom::inlet::Container& co
     bool                   K_present         = c.contains("K") && (c["K"].type() == double_type);
     bool                   E_present         = c.contains("E") && (c["E"].type() == double_type);
     bool                   nu_present        = c.contains("nu") && (c["nu"].type() == double_type);
-    bool                   Hi_present        = c.contains("Hi") && (c["Hi"].type() == double_type);
-    bool                   sigma_y_present   = c.contains("sigma_y") && (c["sigma_y"].type() == double_type);
+    bool                   Hk_present        = c.contains("Hk") && (c["Hk"].type() == double_type);
     bool                   hardening_present = c.contains("hardening") && (c["hardening"].type() == obj_type);
 
     std::string model = c["model"];
     if (model == "NeoHookean" || model == "LinearIsotropic") {
-      return density_present && mu_present && K_present && !E_present && !nu_present && !Hi_present &&
-             !sigma_y_present && !hardening_present;
-    } else if (model == "J2") {
-      return density_present && !mu_present && !K_present && E_present && nu_present && Hi_present && sigma_y_present &&
-             !hardening_present;
-    } else if (model == "J2Nonlinear") {
-      return density_present && !mu_present && !K_present && E_present && nu_present && !Hi_present &&
-             !sigma_y_present && hardening_present;
+      return density_present && mu_present && K_present && !E_present && !nu_present && !hardening_present;
+    } else if (model == "J2SmallStrain") {
+      return density_present && !mu_present && !K_present && E_present && nu_present && Hk_present && hardening_present;
     }
 
     return false;
@@ -67,27 +59,29 @@ serac::var_solid_material_t FromInlet<serac::var_solid_material_t>::operator()(c
     result = serac::solid_mechanics::NeoHookean{.density = base["density"], .K = base["K"], .G = base["mu"]};
   } else if (model == "LinearIsotropic") {
     result = serac::solid_mechanics::LinearIsotropic{.density = base["density"], .K = base["K"], .G = base["mu"]};
-  } else if (model == "J2") {
-    result = serac::solid_mechanics::J2{.E       = base["E"],
-                                        .nu      = base["nu"],
-                                        .Hi      = base["Hi"],
-                                        .Hk      = base["Hk"],
-                                        .sigma_y = base["sigma_y"],
-                                        .density = base["density"]};
-  } else if (model == "J2Nonlinear") {
+  } else if (model == "J2SmallStrain") {
     serac::var_hardening_t hardening = base["hardening"].get<serac::var_hardening_t>();
 
-    if (std::holds_alternative<serac::solid_mechanics::PowerLawHardening>(hardening)) {
-      result = serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::PowerLawHardening>{
+    if (std::holds_alternative<serac::solid_mechanics::LinearHardening>(hardening)) {
+      result = serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::LinearHardening>{
+          .E         = base["E"],
+          .nu        = base["nu"],
+          .hardening = std::get<serac::solid_mechanics::LinearHardening>(hardening),
+          .Hk        = base["Hk"],
+          .density   = base["density"]};
+    } else if (std::holds_alternative<serac::solid_mechanics::PowerLawHardening>(hardening)) {
+      result = serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::PowerLawHardening>{
           .E         = base["E"],
           .nu        = base["nu"],
           .hardening = std::get<serac::solid_mechanics::PowerLawHardening>(hardening),
+          .Hk        = base["Hk"],
           .density   = base["density"]};
     } else if (std::holds_alternative<serac::solid_mechanics::VoceHardening>(hardening)) {
-      result = serac::solid_mechanics::J2Nonlinear<serac::solid_mechanics::VoceHardening>{
+      result = serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::VoceHardening>{
           .E         = base["E"],
           .nu        = base["nu"],
           .hardening = std::get<serac::solid_mechanics::VoceHardening>(hardening),
+          .Hk        = base["Hk"],
           .density   = base["density"]};
     }
   }

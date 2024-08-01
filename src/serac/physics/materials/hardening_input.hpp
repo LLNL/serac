@@ -19,7 +19,8 @@
 namespace serac {
 
 /// @brief Holds all possible isotropic hardening laws that can be utilized in our input file
-using var_hardening_t = std::variant<solid_mechanics::PowerLawHardening, solid_mechanics::VoceHardening>;
+using var_hardening_t =
+    std::variant<solid_mechanics::LinearHardening, solid_mechanics::PowerLawHardening, solid_mechanics::VoceHardening>;
 
 /// @brief Contains function that defines the schema for hardening laws
 struct HardeningInputOptions {
