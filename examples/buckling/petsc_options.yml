@@ -2,8 +2,8 @@ ksp:
   converged_reason:
   # type: fgmres
   type: fgmres
-  norm_type: preconditioned
-  rtol: 1e-5
+  # norm_type: preconditioned
+  # rtol: 1e-5
 
 snes:
   converged_reason:

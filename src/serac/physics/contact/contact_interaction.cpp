@@ -84,7 +84,7 @@ void ContactInteraction::updateForces()
   *forces_    = 0.0;
   auto& f_loc = forces_->linearForm();
   tribol::getMfemResponse(getInteractionId(), f_loc);
-  // Equivalent to:ß
+  // Equivalent to:
   // current_coords_.ParFESpace()->GetProlongationMatrix()->MultTranspose(f_loc, f);
   forces_->setFromLinearForm(f_loc);
 }

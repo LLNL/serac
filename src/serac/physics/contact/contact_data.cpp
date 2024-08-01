@@ -297,7 +297,7 @@ void ContactData::setPressures(const mfem::Vector& merged_pressures)
     auto active_dofs = p_interaction.Size() - interactions_[i].inactiveDofs().Size();
     SLIC_INFO_IF(active_dofs > 0, "Num active dofs: " << active_dofs);
     SLIC_INFO("[Interaction " << interactions_[i].getInteractionId() << "] Pressures: min = " << p_interaction.Min()
-                              << "; max = " << p_interaction.Max() << active_dofs);
+                              << "; max = " << p_interaction.Max());
     interactions_[i].setPressure(p_interaction);
   }
   serac::logger::flush();

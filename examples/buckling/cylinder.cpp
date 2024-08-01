@@ -57,14 +57,14 @@ int main(int argc, char* argv[])
   nonlinear_options.max_line_search_iterations = 20;
   nonlinear_options.print_level                = 1;
 #ifdef SERAC_USE_PETSC
-  linear_options.linear_solver        = serac::LinearSolver::GMRES;
+  linear_options.linear_solver        = serac::LinearSolver::PetscGMRES;
   linear_options.preconditioner       = serac::Preconditioner::Petsc;
   linear_options.petsc_preconditioner = serac::PetscPCType::HMG;
   // linear_options.preconditioner       = serac::Preconditioner::HypreAMG;
   linear_options.relative_tol   = 1e-8;
   linear_options.absolute_tol   = 1e-30;
-  linear_options.max_iterations = 10000;
-  // linear_options.preconditioner_print_level = 1;
+  linear_options.max_iterations = 2000;
+  // linear_options.print_level = 1;
 #endif
 
   // Contact specific options

@@ -264,6 +264,7 @@ protected:
   {
     SolidMechanicsBase::warmStartDisplacement(dt);
     auto dt_copy = dt;
+    contact_.setDisplacements(displacement_);
     contact_.update(cycle_, time_, dt_copy);
   }
 
