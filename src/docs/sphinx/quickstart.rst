@@ -293,6 +293,8 @@ If you plan to install the developer tools, you should also run
    $ ln -s /opt/homebrew/opt/llvm@14/bin/clang-format /opt/homebrew/bin/clang-format
 
 If you have installed Homebrew using the default installation prefix, most packages will be accessible through the prefix ``/opt/homebrew``.
+Note for Intel-based Macs, the installation prefix is ``/usr/local``. If you set a custom prefix or aren't sure what the prefix is, run ``brew --prefix``.
+For the rest of this section, we will assume the prefix is ``/opt/homebrew``.
 Some packages are not linked into this prefix to prevent conflicts with MacOS-provided versions.
 These will only be accessible via the prefix ``/opt/homebrew/opt/[package-name]``.
 Homebrew will warn about such packages after installing them.
@@ -316,7 +318,7 @@ The versions for all installed packages can be listed via:
 
 Note that the version format output by the above command is not the same as that expected by Spack, so be sure to add an ``@`` symbol between the package name and version string.
 
-If you are not using an M2 or M3 Mac, you will need to change the ``target`` for the compiler to ``x86_64`` or ``m1`` for Intel and M1-based Macs, respectively.
+If you are not using an M2 or M3 Mac, you will need to change the ``target`` for the compiler to ``x86_64`` or ``aarch64`` for Intel and M1-based Macs, respectively.
 Similarly, you need to set the ``operating_system`` to the proper value if you are not using ``sonoma`` (MacOS 14.X).
 
 If you want to install the devtools, you should also add the following under ``packages`` in the ``spack.yaml`` files.
