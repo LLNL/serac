@@ -143,6 +143,9 @@ in the `Spack docs <https://spack.readthedocs.io/en/latest/configuration.html>`_
 .. note::
    If you do not have a ``spack.yaml`` already, you can leave off that command line option from ``uberenv`` and
    Spack will generate a new one for you. Uberenv will copy it where you ran your uberenv command for future use.
+.. note::
+   A newer vesion of cmake (>=3.20) and llvm (>=14) may be required.
+
 
 Some helpful uberenv options include :
 
