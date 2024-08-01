@@ -43,16 +43,22 @@ void ContactData::addContactInteraction(int interaction_id, const std::set<int>&
 
 void ContactData::update(int cycle, double time, double& dt)
 {
-  cycle_ = cycle;
-  time_  = time;
-  dt_    = dt;
+  cycle_       = cycle;
+  time_        = time;
+  dt_          = dt;
+  auto dt_copy = dt;
   // This updates the redecomposed surface mesh based on the current displacement, then transfers field quantities to
   // the updated mesh.
   tribol::updateMfemParallelDecomposition();
   // This function computes forces, gaps, and Jacobian contributions based on the current field quantities. Note the
   // fields (with the exception of pressure) are stored on the redecomposed surface mesh until transferred by calling
   // forces(), mergedGaps(), etc.
-  tribol::update(cycle, time, dt);
+  tribol::update(cycle, time, dt_copy);
+
+  // Update the stored state  in each
+  for (auto& interaction : interactions_) {
+    interaction.update();
+  }
 }
 
 FiniteElementDual ContactData::forces() const
@@ -253,8 +259,7 @@ void ContactData::residualFunction(const mfem::Vector& u, mfem::Vector& r)
   g_blk.Set(1.0, mergedGaps(true));
 }
 
-std::unique_ptr<mfem::BlockOperator> ContactData::jacobianFunction(const mfem::Vector&   u,
-                                                                   mfem::HypreParMatrix* orig_J) const
+std::unique_ptr<mfem::BlockOperator> ContactData::jacobianFunction(const mfem::Vector& u, mfem::HypreParMatrix* orig_J)
 {
   // u_const should not change in this method; const cast is to create vector views which are used to compute the
   // (non-contact) Jacobian
@@ -272,7 +277,7 @@ std::unique_ptr<mfem::BlockOperator> ContactData::jacobianFunction(const mfem::V
   return J_contact;
 }
 
-void ContactData::setPressures(const mfem::Vector& merged_pressures) const
+void ContactData::setPressures(const mfem::Vector& merged_pressures)
 {
   updateDofOffsets();
   for (size_t i{0}; i < interactions_.size(); ++i) {
@@ -286,13 +291,13 @@ void ContactData::setPressures(const mfem::Vector& merged_pressures) const
       p_interaction.Set(1.0, p_interaction_ref);
     } else  // enforcement == ContactEnforcement::Penalty
     {
-      p_interaction.Add(interactions_[i].getContactOptions().penalty, interactions_[i].gaps());
+      p_interaction.Set(interactions_[i].getContactOptions().penalty, interactions_[i].gaps());
     }
-    for (auto dof : interactions_[i].inactiveDofs()) {
-      p_interaction[dof] = 0.0;
-    }
-    auto active_dofs = p_interaction.space().GetTrueVSize() - interactions_[i].inactiveDofs().Size();
+    p_interaction.SetSubVector(interactions_[i].inactiveDofs(), 0.0);
+    auto active_dofs = p_interaction.Size() - interactions_[i].inactiveDofs().Size();
     SLIC_INFO_IF(active_dofs > 0, "Num active dofs: " << active_dofs);
+    SLIC_INFO("[Interaction " << interactions_[i].getInteractionId() << "] Pressures: min = " << p_interaction.Min()
+                              << "; max = " << p_interaction.Max() << active_dofs);
     interactions_[i].setPressure(p_interaction);
   }
   serac::logger::flush();
@@ -300,8 +305,8 @@ void ContactData::setPressures(const mfem::Vector& merged_pressures) const
 
 void ContactData::setDisplacements(const mfem::Vector& u)
 {
-  reference_nodes_->ParFESpace()->GetProlongationMatrix()->Mult(u, current_coords_);
-  current_coords_ += *reference_nodes_;
+  current_coords_.Set(1.0, *reference_nodes_);
+  current_coords_.AddDistribute(1.0, u);
 }
 
 void ContactData::updateDofOffsets() const

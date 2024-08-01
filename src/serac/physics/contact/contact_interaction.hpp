@@ -51,6 +51,8 @@ public:
                      const std::set<int>& bdry_attr_surf2, const mfem::ParGridFunction& current_coords,
                      ContactOptions contact_opts);
 
+  void update();
+
   /**
    * @brief Get the integer identifier of the contact interaction
    *
@@ -70,7 +72,7 @@ public:
    *
    * @return Nodal contact forces on the true DOFs
    */
-  FiniteElementDual forces() const;
+  const FiniteElementDual& forces() const;
 
   /**
    * @brief Get the pressure true degrees of freedom on the contact surface for the contact interaction
@@ -81,7 +83,7 @@ public:
    *
    * @return Pressure true degrees of freedom as a FiniteElementState
    */
-  FiniteElementState pressure() const;
+  const FiniteElementState& pressure() const;
 
   /**
    * @brief Get the nodal gaps on the true degrees of freedom of the contact surface for the contact interaction
@@ -92,7 +94,7 @@ public:
    *
    * @return Nodal gaps on the true DOFs on the contact surface as a FiniteElementDual
    */
-  FiniteElementDual gaps() const;
+  const FiniteElementDual& gaps() const;
 
   /**
    * @brief Get the (2x2) block Jacobian for the contact interaction
@@ -119,7 +121,7 @@ public:
    *
    * @param pressure FiniteElementState holding pressure DOF values
    */
-  void setPressure(const FiniteElementState& pressure) const;
+  void setPressure(const FiniteElementState& pressure);
 
   /**
    * @brief Returns the number of pressure DOFs on this rank
@@ -143,6 +145,14 @@ private:
    */
   tribol::ContactMethod getMethod() const;
 
+  void updateInactiveDofs();
+
+  void updateGaps();
+
+  void updatePressure();
+
+  void updateForces();
+
   /**
    * @brief Unique identifier for the contact interaction
    */
@@ -154,14 +164,15 @@ private:
   ContactOptions contact_opts_;
 
   /**
-   * @brief Reference to the current coords GridFunction
-   */
-  const mfem::ParGridFunction& current_coords_;
-
-  /**
    * @brief List of true DOFs currently not in the active set
    */
-  mutable mfem::Array<int> inactive_tdofs_;
+  mfem::Array<int> inactive_tdofs_;
+
+  std::unique_ptr<FiniteElementDual> gaps_;
+
+  std::unique_ptr<FiniteElementState> pressure_;
+
+  std::unique_ptr<FiniteElementDual> forces_;
 };
 
 }  // namespace serac

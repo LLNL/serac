@@ -111,7 +111,7 @@ public:
    */
   void setFromLinearForm(const mfem::ParLinearForm& linear_form)
   {
-    const_cast<mfem::ParLinearForm&>(linear_form).ParallelAssemble(*this);
+    space_->Dof_TrueDof_Matrix()->MultTranspose(linear_form, *this);
   }
 
   /**

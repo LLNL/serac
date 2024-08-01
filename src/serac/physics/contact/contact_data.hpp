@@ -134,7 +134,7 @@ public:
    * @param orig_J The non-contact terms of the Jacobian, not including essential boundary conditions
    * @return Jacobian with contact terms, not including essential boundary conditions
    */
-  std::unique_ptr<mfem::BlockOperator> jacobianFunction(const mfem::Vector& u, mfem::HypreParMatrix* orig_J) const;
+  std::unique_ptr<mfem::BlockOperator> jacobianFunction(const mfem::Vector& u, mfem::HypreParMatrix* orig_J);
 
   /**
    * @brief Set the pressure field
@@ -147,7 +147,7 @@ public:
    *
    * @param merged_pressures Current pressure true dof values in a merged mfem::Vector
    */
-  void setPressures(const mfem::Vector& merged_pressures) const;
+  void setPressures(const mfem::Vector& merged_pressures);
 
   /**
    * @brief Update the current coordinates based on the new displacement field

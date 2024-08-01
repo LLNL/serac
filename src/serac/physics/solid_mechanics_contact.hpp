@@ -221,9 +221,16 @@ protected:
   {
     // we can use the base class method if we don't have Lagrange multipliers
     if (!contact_.haveLagrangeMultipliers()) {
-      SolidMechanicsBase::quasiStaticSolve(dt);
+      warmStartDisplacement(dt);
+      time_ += dt;
+      // Set the ODE time point for the time-varying loads in quasi-static problems
+      ode_time_point_ = time_;
+
+      nonlin_solver_->solve(displacement_);
+      contact_.setDisplacements(displacement_);
       contact_.update(cycle_, ode_time_point_, dt);
-      forces_.SetVector(contact_.forces(), 0);
+      forces_.Set(1.0, contact_.forces());
+      forces_.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
       return;
     }
 
@@ -250,14 +257,14 @@ protected:
     displacement_.Set(1.0, mfem::Vector(augmented_solution, 0, displacement_.Size()));
     contact_.setPressures(mfem::Vector(augmented_solution, displacement_.Size(), contact_.numPressureDofs()));
     contact_.update(cycle_, ode_time_point_, dt);
-    forces_.SetVector(contact_.forces(), 0);
+    forces_.Set(1.0, contact_.forces());
   }
 
-  void warmStartDisplacement()
+  void warmStartDisplacement(double dt)
   {
-    SolidMechanicsBase::warmStartDisplacement();
-    auto dt = 1.0;
-    contact_.update(cycle_, time_, dt);
+    SolidMechanicsBase::warmStartDisplacement(dt);
+    auto dt_copy = dt;
+    contact_.update(cycle_, time_, dt_copy);
   }
 
   using BasePhysics::bcs_;
@@ -282,7 +289,6 @@ protected:
   using SolidMechanicsBase::ode_time_point_;
   using SolidMechanicsBase::residual_;
   using SolidMechanicsBase::residual_with_bcs_;
-  using SolidMechanicsBase::warmStartDisplacement;
 
   /// Pointer to the Jacobian operator (J_ if no Lagrange multiplier contact, J_constraint_ otherwise)
   mfem::Operator* J_operator_;

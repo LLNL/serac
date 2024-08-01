@@ -134,7 +134,10 @@ public:
    * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
    *
    */
-  void fillGridFunction(mfem::ParGridFunction& grid_function) const { grid_function.SetFromTrueDofs(*this); }
+  void fillGridFunction(mfem::ParGridFunction& grid_function) const
+  {
+    space_->Dof_TrueDof_Matrix()->Mult(*this, grid_function);
+  }
 
   /**
    * @brief Initialize the true vector in the FiniteElementState based on an input grid function
@@ -146,7 +149,10 @@ public:
    *
    * @param grid_function The grid function used to initialize the underlying true vector.
    */
-  void setFromGridFunction(const mfem::ParGridFunction& grid_function) { grid_function.GetTrueDofs(*this); }
+  void setFromGridFunction(const mfem::ParGridFunction& grid_function)
+  {
+    space_->GetRestrictionMatrix()->Mult(grid_function, *this);
+  }
 
   /**
    * @brief Project a vector coefficient onto a set of dofs

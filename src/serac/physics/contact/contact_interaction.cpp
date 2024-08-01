@@ -31,7 +31,7 @@ static void mark_dofs(const mfem::Array<int>& dofs, mfem::Array<int>& mark_array
 ContactInteraction::ContactInteraction(int interaction_id, const mfem::ParMesh& mesh,
                                        const std::set<int>& bdry_attr_surf1, const std::set<int>& bdry_attr_surf2,
                                        const mfem::ParGridFunction& current_coords, ContactOptions contact_opts)
-    : interaction_id_{interaction_id}, contact_opts_{contact_opts}, current_coords_{current_coords}
+    : interaction_id_{interaction_id}, contact_opts_{contact_opts}
 {
   int mesh1_id = 2 * interaction_id;      // unique id for the first Tribol mesh
   int mesh2_id = 2 * interaction_id + 1;  // unique id for the second Tribol mesh
@@ -39,6 +39,12 @@ ContactInteraction::ContactInteraction(int interaction_id, const mfem::ParMesh& 
                                      bdry_attr_surf2, tribol::SURFACE_TO_SURFACE, tribol::NO_CASE, getMethod(),
                                      tribol::FRICTIONLESS, tribol::LAGRANGE_MULTIPLIER);
   tribol::setLagrangeMultiplierOptions(interaction_id, tribol::ImplicitEvalMode::MORTAR_RESIDUAL_JACOBIAN);
+
+  pressure_ = std::make_unique<FiniteElementState>(pressureSpace());
+  gaps_     = std::make_unique<FiniteElementDual>(pressureSpace());
+  forces_   = std::make_unique<FiniteElementDual>(*current_coords.ParFESpace());
+  inactive_tdofs_.Reserve(pressure_->Size());
+  SLIC_INFO("pressureSpace().GetTrueVSize() = " << pressureSpace().GetTrueVSize());
 
   // get true DOFs only associated with surface 1 (i.e. surface 1 \ surface 2)
   if (getContactOptions().type == ContactType::TiedNormal) {
@@ -64,31 +70,49 @@ ContactInteraction::ContactInteraction(int interaction_id, const mfem::ParMesh& 
   }
 }
 
-FiniteElementDual ContactInteraction::forces() const
+void ContactInteraction::update()
 {
-  FiniteElementDual f(*current_coords_.ParFESpace());
-  auto&             f_loc = f.linearForm();
+  updateGaps();
+  updateForces();
+  updatePressure();
+  updateInactiveDofs();
+  serac::logger::flush();
+}
+
+void ContactInteraction::updateForces()
+{
+  *forces_    = 0.0;
+  auto& f_loc = forces_->linearForm();
   tribol::getMfemResponse(getInteractionId(), f_loc);
-  f.setFromLinearForm(f_loc);
-  return f;
+  // Equivalent to:ß
+  // current_coords_.ParFESpace()->GetProlongationMatrix()->MultTranspose(f_loc, f);
+  forces_->setFromLinearForm(f_loc);
 }
 
-FiniteElementState ContactInteraction::pressure() const
+const FiniteElementDual& ContactInteraction::forces() const { return *forces_; }
+
+void ContactInteraction::updatePressure()
 {
-  auto&              p_tribol = tribol::getMfemPressure(getInteractionId());
-  FiniteElementState p(*p_tribol.ParFESpace());
-  p.setFromGridFunction(p_tribol);
-  return p;
+  // Equivalent to:
+  // pressureSpace().GetRestrictionMatrix()->Mult();
+  pressure_->setFromGridFunction(tribol::getMfemPressure(getInteractionId()));
 }
 
-FiniteElementDual ContactInteraction::gaps() const
+const FiniteElementState& ContactInteraction::pressure() const { return *pressure_; }
+
+void ContactInteraction::updateGaps()
 {
-  FiniteElementDual g(pressureSpace());
-  auto&             g_loc = g.linearForm();
+  mfem::Vector g_loc;
   tribol::getMfemGap(getInteractionId(), g_loc);
-  g.setFromLinearForm(g_loc);
-  return g;
+  // Equivalent to:
+  // pressureSpace().GetProlongationMatrix()->MultTranspose(g_loc, g);
+  pressureSpace().GetProlongationMatrix()->MultTranspose(g_loc, *gaps_);
+  // gaps_->setFromLinearForm(g_loc);
+  SLIC_INFO("Minimum gap: (tdofs): " << gaps_->Min() << "; (ldofs): " << g_loc.Min());
+  SLIC_INFO("Maximum gap: (tdofs): " << gaps_->Max() << "; (ldofs): " << g_loc.Max());
 }
+
+const FiniteElementDual& ContactInteraction::gaps() const { return *gaps_; }
 
 std::unique_ptr<mfem::BlockOperator> ContactInteraction::jacobian() const
 {
@@ -107,28 +131,27 @@ mfem::ParFiniteElementSpace& ContactInteraction::pressureSpace() const
   return *tribol::getMfemPressure(getInteractionId()).ParFESpace();
 }
 
-void ContactInteraction::setPressure(const FiniteElementState& pressure) const
+void ContactInteraction::setPressure(const FiniteElementState& pressure)
 {
-  tribol::getMfemPressure(getInteractionId()) = pressure.gridFunction();
+  *pressure_ = pressure;
+  pressure_->fillGridFunction(tribol::getMfemPressure(getInteractionId()));
 }
 
-const mfem::Array<int>& ContactInteraction::inactiveDofs() const
+void ContactInteraction::updateInactiveDofs()
 {
   if (getContactOptions().type == ContactType::Frictionless) {
-    auto             p = pressure();
-    auto             g = gaps();
-    std::vector<int> inactive_tdofs_vector;
-    inactive_tdofs_vector.reserve(static_cast<size_t>(p.Size()));
+    inactive_tdofs_.SetSize(0);
+    auto& p = pressure();
+    auto& g = gaps();
     for (int d{0}; d < p.Size(); ++d) {
       if (p[d] >= 0.0 && g[d] >= -1.0e-14) {
-        inactive_tdofs_vector.push_back(d);
+        inactive_tdofs_.Append(d);
       }
     }
-    inactive_tdofs_ = mfem::Array<int>(static_cast<int>(inactive_tdofs_vector.size()));
-    std::copy(inactive_tdofs_vector.begin(), inactive_tdofs_vector.end(), inactive_tdofs_.begin());
   }
-  return inactive_tdofs_;
 }
+
+const mfem::Array<int>& ContactInteraction::inactiveDofs() const { return inactive_tdofs_; }
 
 tribol::ContactMethod ContactInteraction::getMethod() const
 {
