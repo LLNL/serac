@@ -1269,7 +1269,7 @@ public:
     }
 
     cycle_ += 1;
-    
+
     if (checkpoint_to_disk_) {
       outputStateToDisk();
     } else {
@@ -1353,12 +1353,12 @@ public:
                        "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
                        "number of forward timesteps");
 
-    cycle_--; // cycle is now at n \in [0,N-1]
+    cycle_--;  // cycle is now at n \in [0,N-1]
 
-    double dt_np1_to_np2 = getCheckpointedTimestep(cycle_+1);
+    double dt_np1_to_np2 = getCheckpointedTimestep(cycle_ + 1);
     time_ -= dt_np1_to_np2;
 
-    auto end_step_solution = getCheckpointedStates(cycle_+1);
+    auto end_step_solution = getCheckpointedStates(cycle_ + 1);
     // Load the end of step disp
     displacement_ = end_step_solution.at("displacement");
 

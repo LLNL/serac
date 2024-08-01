@@ -724,8 +724,8 @@ public:
 
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
             add(1.0, u_, dt_, du_dt, u_predicted_);
-            const mfem::Vector res = (*residual_)(time_, shape_displacement_, u_predicted_, du_dt,
-                                                  *parameters_[parameter_indices].state...);
+            const mfem::Vector res =
+                (*residual_)(time_, shape_displacement_, u_predicted_, du_dt, *parameters_[parameter_indices].state...);
 
             // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
             // tracking strategy
@@ -738,15 +738,14 @@ public:
             add(1.0, u_, dt_, du_dt, u_predicted_);
 
             // K := dR/du
-            auto K = serac::get<DERIVATIVE>((*residual_)(time_, shape_displacement_,
-                                                         differentiate_wrt(u_predicted_), du_dt,
-                                                         *parameters_[parameter_indices].state...));
+            auto K = serac::get<DERIVATIVE>((*residual_)(time_, shape_displacement_, differentiate_wrt(u_predicted_),
+                                                         du_dt, *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/du_dot
-            auto M = serac::get<DERIVATIVE>((*residual_)(time_, shape_displacement_, u_predicted_,
-                                                         differentiate_wrt(du_dt),
-                                                         *parameters_[parameter_indices].state...));
+            auto M =
+                serac::get<DERIVATIVE>((*residual_)(time_, shape_displacement_, u_predicted_, differentiate_wrt(du_dt),
+                                                    *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             // J := M + dt K
@@ -843,14 +842,14 @@ public:
                        "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
                        "number of forward timesteps");
 
-    cycle_--; // cycle is now at n \in [0,N-1]
+    cycle_--;  // cycle is now at n \in [0,N-1]
 
-    double dt_np1_to_np2 = cycle_ < getCheckpointedTimestep(cycle_+1);
-    time_ -= dt_np1_to_np2; // this is the time at the end of forward step n
+    double dt_np1_to_np2 = cycle_ < getCheckpointedTimestep(cycle_ + 1);
+    time_ -= dt_np1_to_np2;  // this is the time at the end of forward step n
 
-    auto end_step_solution = getCheckpointedStates(cycle_+1);
+    auto end_step_solution = getCheckpointedStates(cycle_ + 1);
 
-    temperature_      = end_step_solution.at("temperature");
+    temperature_ = end_step_solution.at("temperature");
 
     double dt = getCheckpointedTimestep(cycle_);
 
@@ -858,8 +857,8 @@ public:
       // We store the previous timestep's temperature as the current temperature for use in the lambdas computing the
       // sensitivities.
 
-      auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(temperature_),
-                                    temperature_rate_, *parameters_[parameter_indices].state...);
+      auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(temperature_), temperature_rate_,
+                                    *parameters_[parameter_indices].state...);
       auto jacobian  = assemble(drdu);
       auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -872,21 +871,20 @@ public:
 
       return;
     } else {
-
       SLIC_ERROR_ROOT_IF(ode_.GetTimestepper() != TimestepMethod::BackwardEuler,
-                        "Only backward Euler implemented for transient adjoint heat conduction.");
+                         "Only backward Euler implemented for transient adjoint heat conduction.");
 
       temperature_rate_ = end_step_solution.at("temperature_rate");
 
       // K := dR/du
       auto K = serac::get<DERIVATIVE>((*residual_)(time_, shape_displacement_, differentiate_wrt(temperature_),
-                                                  temperature_rate_, *parameters_[parameter_indices].state...));
+                                                   temperature_rate_, *parameters_[parameter_indices].state...));
       std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
       // M := dR/du_dot
       auto M = serac::get<DERIVATIVE>((*residual_)(time_, shape_displacement_, temperature_,
-                                                  differentiate_wrt(temperature_rate_),
-                                                  *parameters_[parameter_indices].state...));
+                                                   differentiate_wrt(temperature_rate_),
+                                                   *parameters_[parameter_indices].state...));
       std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
       J_.reset(mfem::Add(1.0, *m_mat, dt, *k_mat));
@@ -948,9 +946,8 @@ public:
    */
   FiniteElementDual& computeTimestepShapeSensitivity() override
   {
-    auto drdshape =
-        serac::get<DERIVATIVE>((*residual_)(time_, differentiate_wrt(shape_displacement_), temperature_,
-                                            temperature_rate_, *parameters_[parameter_indices].state...));
+    auto drdshape = serac::get<DERIVATIVE>((*residual_)(time_, differentiate_wrt(shape_displacement_), temperature_,
+                                                        temperature_rate_, *parameters_[parameter_indices].state...));
 
     auto drdshape_mat = assemble(drdshape);
 
