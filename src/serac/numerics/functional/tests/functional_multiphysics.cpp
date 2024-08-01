@@ -27,32 +27,30 @@ TEST(FunctionalMultiphysics, NonlinearThermalTest3D)
   int serial_refinement   = 1;
   int parallel_refinement = 0;
 
-  constexpr auto p   = 3;
-  constexpr auto dim = 3;
+  constexpr auto p = 3;
 
   std::string meshfile = SERAC_REPO_DIR "/data/meshes/patch3D_tets_and_hexes.mesh";
   auto        mesh3D   = mesh::refineAndDistribute(buildMeshFromFile(meshfile), serial_refinement, parallel_refinement);
 
-  // Create standard MFEM bilinear and linear forms on H1
-  auto                        fec = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace(mesh3D.get(), &fec);
-
-  mfem::Vector U(fespace.TrueVSize());
-  mfem::Vector dU_dt(fespace.TrueVSize());
-  int          seed = 0;
-  U.Randomize(seed);
-  dU_dt.Randomize(seed + 1);
-
   // Define the types for the test and trial spaces using the function arguments
   using test_space  = H1<p>;
   using trial_space = H1<p>;
+
+  // Create standard MFEM bilinear and linear forms on H1
+  auto [fespace, fec] = serac::generateParFiniteElementSpace<test_space>(mesh3D.get());
+
+  mfem::Vector U(fespace->TrueVSize());
+  mfem::Vector dU_dt(fespace->TrueVSize());
+  int          seed = 0;
+  U.Randomize(seed);
+  dU_dt.Randomize(seed + 1);
 
   double cp    = 1.0;
   double rho   = 1.0;
   double kappa = 1.0;
 
   // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space, trial_space)> residual(&fespace, {&fespace, &fespace});
+  Functional<test_space(trial_space, trial_space)> residual(fespace.get(), {fespace.get(), fespace.get()});
 
   residual.AddVolumeIntegral(
       DependsOn<0, 1>{},

@@ -2098,8 +2098,8 @@ void deallocate(DataType* data, const std::string& destination)
 
 }  // namespace serac
 
-// todo: port to current tensor class:
 #if 0
+<<<<<<< HEAD
 // eigendecomposition for symmetric A
 //
 // based on "A robust algorithm for finding the eigenvalues and
@@ -2218,6 +2218,8 @@ inline void eig(const r2tensor < 3, 3 > & A,
   }
 
 }
+=======
+>>>>>>> develop
 
 inline float angle_between(const vec < 2 > & a, const vec < 2 > & b) {
   return acos(clip(dot(normalize(a), normalize(b)), -1.0f, 1.0f));

@@ -13,6 +13,8 @@
 #pragma once
 
 #include "mfem.hpp"
+
+#include "serac/serac_config.hpp"
 #include "serac/infrastructure/logger.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/quadrature.hpp"
@@ -114,7 +116,6 @@ generateParFiniteElementSpace(mfem::ParMesh* mesh)
 {
   const int                                      dim = mesh->Dimension();
   std::unique_ptr<mfem::FiniteElementCollection> fec;
-  const auto                                     ordering = mfem::Ordering::byNODES;
 
   switch (function_space::family) {
     case Family::H1:
@@ -136,7 +137,8 @@ generateParFiniteElementSpace(mfem::ParMesh* mesh)
       break;
   }
 
-  auto fes = std::make_unique<mfem::ParFiniteElementSpace>(mesh, fec.get(), function_space::components, ordering);
+  auto fes =
+      std::make_unique<mfem::ParFiniteElementSpace>(mesh, fec.get(), function_space::components, serac::ordering);
 
   return std::pair(std::move(fes), std::move(fec));
 }
@@ -282,7 +284,7 @@ public:
    * @param[inout] qdata The data for each quadrature point
    */
   template <int dim, int... args, typename Integrand, typename qpt_data_type = Nothing>
-  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, Integrand&& integrand, mfem::Mesh& domain,
+  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, const Integrand& integrand, mfem::Mesh& domain,
                          std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
   {
     if (domain.GetNE() == 0) return;
@@ -305,7 +307,7 @@ public:
 
   /// @overload
   template <int dim, int... args, typename lambda, typename qpt_data_type = Nothing>
-  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, Domain& domain,
+  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, const lambda& integrand, Domain& domain,
                          std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
   {
     if (domain.mesh_.GetNE() == 0) return;
@@ -330,7 +332,7 @@ public:
    * and @a spatial_dim template parameter
    */
   template <int dim, int... args, typename Integrand>
-  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, Integrand&& integrand, mfem::Mesh& domain)
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, const Integrand& integrand, mfem::Mesh& domain)
   {
     auto num_bdr_elements = domain.GetNBE();
     if (num_bdr_elements == 0) return;
@@ -350,7 +352,7 @@ public:
 
   /// @overload
   template <int dim, int... args, typename lambda>
-  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, const Domain& domain)
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, const lambda& integrand, const Domain& domain)
   {
     auto num_bdr_elements = domain.mesh_.GetNBE();
     if (num_bdr_elements == 0) return;
@@ -374,7 +376,7 @@ public:
    * @param[inout] data The data for each quadrature point
    */
   template <int... args, typename lambda, typename qpt_data_type = Nothing>
-  void AddAreaIntegral(DependsOn<args...> which_args, lambda&& integrand, mfem::Mesh& domain,
+  void AddAreaIntegral(DependsOn<args...> which_args, const lambda& integrand, mfem::Mesh& domain,
                        std::shared_ptr<QuadratureData<qpt_data_type>> data = NoQData)
   {
     AddDomainIntegral(Dimension<2>{}, which_args, integrand, domain, data);
@@ -390,7 +392,7 @@ public:
    * @param[inout] data The data for each quadrature point
    */
   template <int... args, typename lambda, typename qpt_data_type = Nothing>
-  void AddVolumeIntegral(DependsOn<args...> which_args, lambda&& integrand, mfem::Mesh& domain,
+  void AddVolumeIntegral(DependsOn<args...> which_args, const lambda& integrand, mfem::Mesh& domain,
                          std::shared_ptr<QuadratureData<qpt_data_type>> data = NoQData)
   {
     AddDomainIntegral(Dimension<3>{}, which_args, integrand, domain, data);
@@ -398,7 +400,7 @@ public:
 
   /// @brief alias for Functional::AddBoundaryIntegral(Dimension<2>{}, integrand, domain);
   template <int... args, typename lambda>
-  void AddSurfaceIntegral(DependsOn<args...> which_args, lambda&& integrand, mfem::Mesh& domain)
+  void AddSurfaceIntegral(DependsOn<args...> which_args, const lambda& integrand, mfem::Mesh& domain)
   {
     AddBoundaryIntegral(Dimension<2>{}, which_args, integrand, domain);
   }

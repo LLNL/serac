@@ -78,16 +78,19 @@ struct SourceFluxFunctor {
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 {
+  // Define the types for the test and trial spaces using the function arguments
+  using test_space  = decltype(test);
+  using trial_space = decltype(trial);
+
   // Create standard MFEM bilinear and linear forms on H1
-  auto                        fec = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace(&mesh, &fec);
+  auto [fespace, fec] = serac::generateParFiniteElementSpace<test_space>(&mesh);
 
   // by default, mfem uses a different integration rule than serac
   // so we manually specify the one that we use
-  const mfem::FiniteElement&   el = *fespace.GetFE(0);
+  const mfem::FiniteElement&   el = *fespace->GetFE(0);
   const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
 
-  mfem::ParBilinearForm A(&fespace);
+  mfem::ParBilinearForm A(fespace.get());
 
   // Add the mass term using the standard MFEM method
   mfem::ConstantCoefficient a_coef(a);
@@ -108,7 +111,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   std::unique_ptr<mfem::HypreParMatrix> J_mfem(A.ParallelAssemble());
 
   // Create a linear form for the load term using the standard MFEM method
-  mfem::ParLinearForm       f(&fespace);
+  mfem::ParLinearForm       f(fespace.get());
   mfem::FunctionCoefficient load_func([&](const mfem::Vector& coords) { return 100 * coords(0) * coords(1); });
 
   // Create and assemble the linear load term into a vector
@@ -119,10 +122,10 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   std::unique_ptr<mfem::HypreParVector> F(f.ParallelAssemble());
 
   // Set a random state to evaluate the residual
-  mfem::ParGridFunction u_global(&fespace);
+  mfem::ParGridFunction u_global(fespace.get());
   u_global.Randomize();
 
-  mfem::Vector U(fespace.TrueVSize());
+  mfem::Vector U(fespace->TrueVSize());
   u_global.GetTrueDofs(U);
 
   // Set up the same problem using functional
@@ -133,9 +136,9 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 
 // Construct the new functional object using the known test and trial spaces
 #ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(&fespace, {&fespace});
+  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(fespace.get(), {fespace.get()});
 #else
-  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(&fespace, {&fespace});
+  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(fespace.get(), {fespace.get()});
 #endif
 
   // Add the total domain residual term to the functional
@@ -205,15 +208,19 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
 {
-  auto                        fec = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace(&mesh, &fec, dim);
+  // Define the types for the test and trial spaces using the function arguments
+  using test_space  = decltype(test);
+  using trial_space = decltype(trial);
+
+  // Create standard MFEM bilinear and linear forms on H1
+  auto [fespace, fec] = serac::generateParFiniteElementSpace<test_space>(&mesh);
 
   // by default, mfem uses a different integration rule than serac
   // so we manually specify the one that we use
-  const mfem::FiniteElement&   el = *fespace.GetFE(0);
+  const mfem::FiniteElement&   el = *fespace->GetFE(0);
   const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
 
-  mfem::ParBilinearForm A(&fespace);
+  mfem::ParBilinearForm A(fespace.get());
 
   mfem::ConstantCoefficient a_coef(a);
   auto*                     mass = new mfem::VectorMassIntegrator(a_coef);
@@ -230,7 +237,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 
   std::unique_ptr<mfem::HypreParMatrix> J_mfem(A.ParallelAssemble());
 
-  mfem::ParLinearForm             f(&fespace);
+  mfem::ParLinearForm             f(fespace.get());
   mfem::VectorFunctionCoefficient load_func(dim, [&](const mfem::Vector& /*coords*/, mfem::Vector& force) {
     force    = 0.0;
     force(0) = -1.0;
@@ -242,19 +249,20 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   f.Assemble();
   std::unique_ptr<mfem::HypreParVector> F(f.ParallelAssemble());
 
-  mfem::ParGridFunction u_global(&fespace);
+  mfem::ParGridFunction u_global(fespace.get());
   u_global.Randomize();
 
-  mfem::Vector U(fespace.TrueVSize());
+  mfem::Vector U(fespace->TrueVSize());
   u_global.GetTrueDofs(U);
 
   using test_space  = decltype(test);
   using trial_space = decltype(trial);
+  [[maybe_unused]] static constexpr auto I = DenseIdentity<dim>();
 
 #ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(&fespace, {&fespace});
+  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(fespace.get(), {fespace.get()});
 #else
-  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(&fespace, {&fespace});
+  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(fespace.get(), {fespace.get()});
 #endif
 
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, StressFunctor<dim>{}, mesh);
@@ -317,15 +325,19 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
 {
-  auto                        fec = mfem::ND_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace(&mesh, &fec);
+  // Define the types for the test and trial spaces using the function arguments
+  using test_space  = decltype(test);
+  using trial_space = decltype(trial);
+
+  // Create standard MFEM bilinear and linear forms on H1
+  auto [fespace, fec] = serac::generateParFiniteElementSpace<test_space>(&mesh);
 
   // by default, mfem uses a different integration rule than serac
   // so we manually specify the one that we use
-  const mfem::FiniteElement&   el = *fespace.GetFE(0);
+  const mfem::FiniteElement&   el = *fespace->GetFE(0);
   const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
 
-  mfem::ParBilinearForm B(&fespace);
+  mfem::ParBilinearForm B(fespace.get());
 
   mfem::ConstantCoefficient a_coef(a);
   auto*                     mass = new mfem::VectorFEMassIntegrator(a_coef);
@@ -339,8 +351,8 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   B.Assemble(0);
   B.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J_mfem(B.ParallelAssemble());
-  printCUDAMemUsage();
-  mfem::ParLinearForm             f(&fespace);
+
+  mfem::ParLinearForm             f(fespace.get());
   mfem::VectorFunctionCoefficient load_func(dim, [&](const mfem::Vector& coords, mfem::Vector& output) {
     double x  = coords(0);
     double y  = coords(1);
@@ -356,20 +368,21 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   f.Assemble();
   std::unique_ptr<mfem::HypreParVector> F(f.ParallelAssemble());
 
-  mfem::ParGridFunction u_global(&fespace);
+  mfem::ParGridFunction u_global(fespace.get());
   u_global.Randomize();
 
-  mfem::Vector U(fespace.TrueVSize());
+  mfem::Vector U(fespace->TrueVSize());
   u_global.GetTrueDofs(U);
 
   using test_space  = decltype(test);
   using trial_space = decltype(trial);
 
 #ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(&fespace, {&fespace});
+  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(fespace.get(), {fespace.get()});
 #else
-  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(&fespace, {&fespace});
+  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(fespace.get(), {fespace.get()});
 #endif
+
 
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, hcurl_qfunction<dim>{}, mesh);
 

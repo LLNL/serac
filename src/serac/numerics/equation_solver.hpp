@@ -20,6 +20,7 @@
 
 #include "serac/infrastructure/input.hpp"
 #include "serac/numerics/solver_config.hpp"
+#include "serac/numerics/petsc_solvers.hpp"
 
 namespace serac {
 
@@ -107,12 +108,12 @@ public:
    * @return A pointer to the underlying preconditioner
    * @note This may be null if a preconditioner is not given
    */
-  mfem::Solver* preconditioner() { return preconditioner_.get(); }
+  mfem::Solver& preconditioner() { return *preconditioner_; }
 
   /**
    * @overload
    */
-  const mfem::Solver* preconditioner() const { return preconditioner_.get(); }
+  const mfem::Solver& preconditioner() const { return *preconditioner_; }
 
   /**
    * Input file parameters specific to this class
@@ -253,11 +254,14 @@ private:
  * @brief Build a nonlinear solver using the nonlinear option struct
  *
  * @param nonlinear_opts The options to configure the nonlinear solution scheme
+ * @param linear_opts The options to configure the linear solution scheme
+ * @param preconditioner A preconditioner to help with either linear or nonlinear solves
  * @param comm The MPI communicator for the supplied nonlinear operators and HypreParVectors
  * @return The constructed nonlinear solver
  */
-std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions nonlinear_opts = {},
-                                                         MPI_Comm               comm           = MPI_COMM_WORLD);
+std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(const NonlinearSolverOptions& nonlinear_opts,
+                                                         const LinearSolverOptions&    linear_opts,
+                                                         mfem::Solver& preconditioner, MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
  * @brief Build the linear solver and its associated preconditioner given a linear options struct
@@ -271,13 +275,11 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
 
 /**
  * @brief Build a preconditioner from the available options
- *
- * @param preconditioner The preconditioner type to be built
- * @param print_level The print level for the constructed preconditioner
+ * @param linear_opts The options to configure the linear solver and preconditioner
  * @param comm The communicator for the underlying operator and HypreParVectors
  * @return A constructed preconditioner based on the input option
  */
-std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level = 0,
+std::unique_ptr<mfem::Solver> buildPreconditioner(LinearSolverOptions       linear_opts,
                                                   [[maybe_unused]] MPI_Comm comm = MPI_COMM_WORLD);
 
 #ifdef MFEM_USE_AMGX
@@ -290,6 +292,7 @@ std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner,
  */
 std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MPI_Comm comm);
 #endif
+
 }  // namespace serac
 
 /**

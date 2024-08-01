@@ -20,6 +20,8 @@
 #include "serac/physics/materials/solid_material.hpp"
 #include "serac/physics/materials/parameterized_solid_material.hpp"
 #include "serac/serac_config.hpp"
+#include "serac/infrastructure/initialize.hpp"
+#include "serac/infrastructure/terminator.hpp"
 
 namespace serac {
 
@@ -58,16 +60,19 @@ void functional_solid_test_static_J2()
                                       GeometricNonlinearities::Off, "solid_mechanics", mesh_tag);
   // _solver_params_end
 
-  solid_mechanics::J2 mat{
-      10000,  // Young's modulus
-      0.25,   // Poisson's ratio
-      50.0,   // isotropic hardening constant
-      5.0,    // kinematic hardening constant
-      50.0,   // yield stress
-      1.0     // mass density
+  using Hardening = solid_mechanics::LinearHardening;
+  using Material  = solid_mechanics::J2SmallStrain<Hardening>;
+
+  Hardening hardening{.sigma_y = 50.0, .Hi = 50.0};
+  Material  mat{
+       .E         = 10000,  // Young's modulus
+       .nu        = 0.25,   // Poisson's ratio
+       .hardening = hardening,
+       .Hk        = 5.0,  // kinematic hardening constant
+       .density   = 1.0   // mass density
   };
 
-  solid_mechanics::J2::State initial_state{};
+  Material::State initial_state{};
 
   auto state = solid_solver.createQuadratureDataBuffer(initial_state);
 
@@ -188,67 +193,35 @@ void functional_solid_spatial_essential_bc()
   // This exact solution is only correct when two MPI ranks are used
   // It is based on a poisson ratio of 0.125 with a prescribed z strain of 10%
   if (size == 2) {
+    auto vdim  = solid_solver.displacement().space().GetVDim();
+    auto ndofs = solid_solver.displacement().space().GetTrueVSize() / vdim;
+    auto dof   = [ndofs, vdim](auto node, auto component) {
+      return mfem::Ordering::Map<serac::ordering>(ndofs, vdim, node, component);
+    };
+
     // This is a vector of pairs containing the exact solution index and value for the known analytical dofs.
     // These exact indices and values are chosen to avoid dependence on solver tolerances.
-    std::vector<std::pair<int, double>> rank_0_exact_solution;
-
-    rank_0_exact_solution.emplace_back(std::pair{0, 0.0});
-    rank_0_exact_solution.emplace_back(std::pair{1, 0.0125});
-    rank_0_exact_solution.emplace_back(std::pair{4, 0.00625});
-    rank_0_exact_solution.emplace_back(std::pair{8, 0.0});
-    rank_0_exact_solution.emplace_back(std::pair{9, 0.0125});
-    rank_0_exact_solution.emplace_back(std::pair{12, 0.00625});
-    rank_0_exact_solution.emplace_back(std::pair{18, 0.0});
-    rank_0_exact_solution.emplace_back(std::pair{20, 0.0125});
-    rank_0_exact_solution.emplace_back(std::pair{25, 0.00625});
-    rank_0_exact_solution.emplace_back(std::pair{26, 0.0});
-    rank_0_exact_solution.emplace_back(std::pair{29, 0.0125});
-    rank_0_exact_solution.emplace_back(std::pair{33, 0.00625});
-    rank_0_exact_solution.emplace_back(std::pair{36, -0.1});
-    rank_0_exact_solution.emplace_back(std::pair{37, -0.1});
-    rank_0_exact_solution.emplace_back(std::pair{38, -0.1});
-    rank_0_exact_solution.emplace_back(std::pair{39, -0.1});
-    rank_0_exact_solution.emplace_back(std::pair{40, -0.1});
-    rank_0_exact_solution.emplace_back(std::pair{41, -0.1});
-    rank_0_exact_solution.emplace_back(std::pair{42, -0.1});
-    rank_0_exact_solution.emplace_back(std::pair{43, -0.1});
-    rank_0_exact_solution.emplace_back(std::pair{44, -0.05});
-    rank_0_exact_solution.emplace_back(std::pair{45, -0.05});
-    rank_0_exact_solution.emplace_back(std::pair{46, -0.05});
-    rank_0_exact_solution.emplace_back(std::pair{47, -0.05});
-    rank_0_exact_solution.emplace_back(std::pair{48, -0.05});
-    rank_0_exact_solution.emplace_back(std::pair{49, -0.05});
-    rank_0_exact_solution.emplace_back(std::pair{50, -0.05});
-    rank_0_exact_solution.emplace_back(std::pair{51, -0.05});
-    rank_0_exact_solution.emplace_back(std::pair{52, -0.1});
-    rank_0_exact_solution.emplace_back(std::pair{53, -0.05});
-
-    std::vector<std::pair<int, double>> rank_1_exact_solution;
-
-    rank_1_exact_solution.emplace_back(std::pair{0, 0.0});
-    rank_1_exact_solution.emplace_back(std::pair{1, 0.0125});
-    rank_1_exact_solution.emplace_back(std::pair{4, 0.00625});
-    rank_1_exact_solution.emplace_back(std::pair{9, 0.0});
-    rank_1_exact_solution.emplace_back(std::pair{11, 0.0125});
-    rank_1_exact_solution.emplace_back(std::pair{16, 0.00625});
-    rank_1_exact_solution.emplace_back(std::pair{18, 0.0});
-    rank_1_exact_solution.emplace_back(std::pair{19, 0.0});
-    rank_1_exact_solution.emplace_back(std::pair{20, 0.0});
-    rank_1_exact_solution.emplace_back(std::pair{21, 0.0});
-    rank_1_exact_solution.emplace_back(std::pair{22, 0.0});
-    rank_1_exact_solution.emplace_back(std::pair{23, 0.0});
-    rank_1_exact_solution.emplace_back(std::pair{24, 0.0});
-    rank_1_exact_solution.emplace_back(std::pair{25, 0.0});
-    rank_1_exact_solution.emplace_back(std::pair{26, 0.0});
-
     if (rank == 0) {
-      for (auto exact_entry : rank_0_exact_solution) {
+      std::vector<std::pair<int, double>> solution = {
+          {dof(0, 0), 0.0},      {dof(1, 0), 0.0125},   {dof(4, 0), 0.00625}, {dof(8, 0), 0.0},     {dof(9, 0), 0.0125},
+          {dof(12, 0), 0.00625}, {dof(0, 1), 0.0},      {dof(2, 1), 0.0125},  {dof(7, 1), 0.00625}, {dof(8, 1), 0.0},
+          {dof(11, 1), 0.0125},  {dof(15, 1), 0.00625}, {dof(0, 2), -0.1},    {dof(1, 2), -0.1},    {dof(2, 2), -0.1},
+          {dof(3, 2), -0.1},     {dof(4, 2), -0.1},     {dof(5, 2), -0.1},    {dof(6, 2), -0.1},    {dof(7, 2), -0.1},
+          {dof(8, 2), -0.05},    {dof(9, 2), -0.05},    {dof(10, 2), -0.05},  {dof(11, 2), -0.05},  {dof(12, 2), -0.05},
+          {dof(13, 2), -0.05},   {dof(14, 2), -0.05},   {dof(15, 2), -0.05},  {dof(16, 2), -0.1},   {dof(17, 2), -0.05},
+      };
+      for (auto exact_entry : solution) {
         EXPECT_NEAR(exact_entry.second, solid_solver.displacement()(exact_entry.first), 1.0e-8);
       }
     }
 
     if (rank == 1) {
-      for (auto exact_entry : rank_1_exact_solution) {
+      std::vector<std::pair<int, double>> solution = {
+          {dof(0, 0), 0.0},     {dof(1, 0), 0.0125}, {dof(4, 0), 0.00625}, {dof(0, 1), 0.0}, {dof(2, 1), 0.0125},
+          {dof(7, 1), 0.00625}, {dof(0, 2), 0.0},    {dof(1, 2), 0.0},     {dof(2, 2), 0.0}, {dof(3, 2), 0.0},
+          {dof(4, 2), 0.0},     {dof(5, 2), 0.0},    {dof(6, 2), 0.0},     {dof(7, 2), 0.0}, {dof(8, 2), 0.0},
+      };
+      for (auto exact_entry : solution) {
         EXPECT_NEAR(exact_entry.second, solid_solver.displacement()(exact_entry.first), 1.0e-8);
       }
     }
@@ -328,7 +301,7 @@ void functional_parameterized_solid_test(double expected_disp_norm)
   solid_solver.setParameter(0, user_defined_bulk_modulus);
   solid_solver.setParameter(1, user_defined_shear_modulus);
 
-  solid_mechanics::ParameterizedLinearIsotropicSolid<dim> mat{1.0, 0.0, 0.0};
+  solid_mechanics::ParameterizedLinearIsotropicSolid mat{1.0, 0.0, 0.0};
   solid_solver.setMaterial(DependsOn<0, 1>{}, mat);
 
   // Define the function for the initial displacement and boundary condition
@@ -399,13 +372,11 @@ TEST(SolidMechanics, SpatialBoundaryCondition) { functional_solid_spatial_essent
 
 int main(int argc, char* argv[])
 {
-  ::testing::InitGoogleTest(&argc, argv);
-  MPI_Init(&argc, &argv);
+  testing::InitGoogleTest(&argc, argv);
 
-  axom::slic::SimpleLogger logger;
+  serac::initialize(argc, argv);
 
   int result = RUN_ALL_TESTS();
-  MPI_Finalize();
 
-  return result;
+  serac::exitGracefully(result);
 }

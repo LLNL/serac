@@ -27,7 +27,7 @@ using namespace serac::profiling;
 template <int dim>
 struct MixedModelOne {
   template <typename unused_type, typename displacement_type>
-  SERAC_HOST_DEVICE auto operator()(double, unused_type, displacement_type displacement)
+  SERAC_HOST_DEVICE auto operator()(double, unused_type, displacement_type displacement) const
   {
     constexpr static auto d11 =
         1.0 * make_tensor<dim + 1, dim, dim + 2, dim>([](int i, int j, int k, int l) { return i - j + 2 * k - 3 * l; });
@@ -41,7 +41,7 @@ struct MixedModelOne {
 template <int dim>
 struct MixedModelTwo {
   template <typename position_type, typename displacement_type>
-  SERAC_HOST_DEVICE auto operator()(double, position_type position, displacement_type displacement)
+  SERAC_HOST_DEVICE auto operator()(double, position_type position, displacement_type displacement) const
   {
     constexpr static auto s11 = 1.0 * make_tensor<dim + 1, dim + 2>([](int i, int j) { return i * i - j; });
     auto [X, dX_dxi]          = position;
@@ -53,7 +53,7 @@ struct MixedModelTwo {
 template <int dim>
 struct ElasticityTestModelOne {
   template <typename position_type, typename displacement_type>
-  SERAC_HOST_DEVICE auto operator()(double, position_type, displacement_type displacement)
+  SERAC_HOST_DEVICE auto operator()(double, position_type, displacement_type displacement) const
   {
     constexpr static auto d00 = make_tensor<dim, dim>([](int i, int j) { return i + 2 * j + 1; });
     constexpr static auto d01 = make_tensor<dim, dim, dim>([](int i, int j, int k) { return i + 2 * j - k + 1; });
@@ -70,7 +70,7 @@ struct ElasticityTestModelOne {
 template <int dim>
 struct ElasticityTestModelTwo {
   template <typename position_type, typename displacement_type>
-  SERAC_HOST_DEVICE auto operator()(double, position_type position, displacement_type displacement)
+  SERAC_HOST_DEVICE auto operator()(double, position_type position, displacement_type displacement) const
   {
     auto [X, dX_dxi] = position;
     auto [u, du_dxi] = displacement;
@@ -102,9 +102,9 @@ void weird_mixed_test(std::unique_ptr<mfem::ParMesh>& mesh)
   // terms that have the appropriate shapes to ensure that all the differentiation
   // code works as intended
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, MixedModelOne<dim>{}, *mesh);
-#ifndef SERAC_USE_CUDA_KERNEL_EVALUATION
+
   residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, MixedModelTwo<dim>{}, *mesh);
-#endif
+
   double t = 0.0;
   check_gradient(residual, t, U);
 }
@@ -128,15 +128,12 @@ void elasticity_test(std::unique_ptr<mfem::ParMesh>& mesh)
   Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(test_fes.get(), {trial_fes.get()});
 #endif
 
-  U.Randomize();
-
   // note: this is not really an elasticity problem, it's testing source and flux
   // terms that have the appropriate shapes to ensure that all the differentiation
   // code works as intended
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, ElasticityTestModelOne<dim>{}, *mesh);
-#ifndef SERAC_USE_CUDA_KERNEL_EVALUATION
   residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, ElasticityTestModelTwo<dim>{}, *mesh);
-#endif
+
   double t = 0.0;
   check_gradient(residual, t, U);
 }

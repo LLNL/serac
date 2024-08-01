@@ -266,11 +266,11 @@ spack:
       - spec: cppcheck@2.9
         prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/cppcheck-2.9
     doxygen:
-      version: [1.9.6]
+      version: [1.9.8]
       buildable: false
       externals:
-      - spec: doxygen@1.9.6
-        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/doxygen-1.9.6
+      - spec: doxygen@1.9.8
+        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/doxygen-1.9.8
     llvm:
       version: [14.0.6]
       buildable: false
@@ -282,13 +282,13 @@ spack:
       buildable: false
       externals:
       - spec: py-ats@7.0.105
-        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/python-3.10.12
+        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/python-3.11.7
     py-sphinx:
-      version: [7.0.0]
+      version: [7.2.6]
       buildable: false
       externals:
-      - spec: py-sphinx@7.0.0
-        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/python-3.10.12
+      - spec: py-sphinx@7.2.6
+        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/python-3.11.7
     python:
       buildable: false
       externals:

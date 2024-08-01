@@ -39,13 +39,13 @@ serac_add_tests( SOURCES       axom_smoketest.cpp
                  DEPENDS_ON    axom::inlet)
 
 if(PETSC_FOUND)
-    serac_add_tests(SOURCES       petsc_smoketest.cpp
-                    DEPENDS_ON    PkgConfig::PETSC gtest axom::slic
+    serac_add_tests(SOURCES       mfem_petsc_smoketest.cpp
+                    DEPENDS_ON    gtest serac_infrastructure
                     NUM_MPI_TASKS 4)
 
     if(SLEPC_FOUND)
-        serac_add_tests(SOURCES       slepc_smoketest.cpp
-                        DEPENDS_ON    PkgConfig::SLEPC gtest axom::slic
+        serac_add_tests(SOURCES       mfem_slepc_smoketest.cpp
+                        DEPENDS_ON    gtest serac_infrastructure
                         NUM_MPI_TASKS 4)
     endif()
 endif()

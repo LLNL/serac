@@ -8,6 +8,14 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     # Prevent this file from being called twice in the same scope
     set(SERAC_THIRD_PARTY_LIBRARIES_FOUND TRUE)
 
+    # At this time we do not want to profile any libraries. Temporarily unset
+    # Caliper and Adiak directories so our upstream libraries don't enable that
+    # behavior. Restoring them at bottom of file.
+    set(_adiak_dir ${ADIAK_DIR})
+    set(_caliper_dir ${CALIPER_DIR})
+    unset(ADIAK_DIR CACHE)
+    unset(CALIPER_DIR CACHE)
+
     #------------------------------------------------------------------------------
     # CUDA
     #------------------------------------------------------------------------------
@@ -111,59 +119,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
                  "${_dirs}")
 
     #------------------------------------------------------------------------------
-    # Adiak
-    #------------------------------------------------------------------------------
-    if(SERAC_ENABLE_PROFILING AND NOT ADIAK_DIR)
-        message(FATAL_ERROR "SERAC_ENABLE_PROFILING cannot be ON without ADIAK_DIR defined.")
-    endif()
-
-    if(ADIAK_DIR AND SERAC_ENABLE_PROFILING)
-        serac_assert_is_directory(DIR_VARIABLE ADIAK_DIR)
-
-        find_dependency(adiak REQUIRED PATHS "${ADIAK_DIR}")
-        serac_assert_find_succeeded(PROJECT_NAME Adiak
-                                    TARGET       adiak::adiak
-                                    DIR_VARIABLE ADIAK_DIR)
-        message(STATUS "Adiak support is ON")
-        set(ADIAK_FOUND TRUE)
-    else()
-        message(STATUS "Adiak support is OFF")
-        set(ADIAK_FOUND FALSE)
-    endif()
-
-    #------------------------------------------------------------------------------
-    # Caliper
-    #------------------------------------------------------------------------------
-    if(SERAC_ENABLE_PROFILING AND NOT CALIPER_DIR)
-        message(FATAL_ERROR "SERAC_ENABLE_PROFILING cannot be ON without CALIPER_DIR defined.")
-    endif()
-
-    if(CALIPER_DIR AND SERAC_ENABLE_PROFILING)
-        serac_assert_is_directory(DIR_VARIABLE CALIPER_DIR)
-
-        # Should this logic be in the Caliper CMake package?
-        # If CMake version doesn't support CUDAToolkit the libraries
-        # are just "baked in"
-        if(ENABLE_CUDA)
-            if(CMAKE_VERSION VERSION_LESS 3.17)
-                message(FATAL_ERROR "Serac+Caliper+CUDA requires CMake > 3.17.")
-            else()
-                find_package(CUDAToolkit REQUIRED)
-            endif()
-        endif()
-
-        find_dependency(caliper REQUIRED PATHS "${CALIPER_DIR}")
-        serac_assert_find_succeeded(PROJECT_NAME Caliper
-                                    TARGET       caliper
-                                    DIR_VARIABLE CALIPER_DIR)
-        message(STATUS "Caliper support is ON")
-        set(CALIPER_FOUND TRUE)
-    else()
-        message(STATUS "Caliper support is OFF")
-        set(CALIPER_FOUND FALSE)
-    endif()
-
-    #------------------------------------------------------------------------------
     # Sundials
     #------------------------------------------------------------------------------
     if (SUNDIALS_DIR)
@@ -182,6 +137,51 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     message(STATUS "Sundials support is ${SERAC_USE_SUNDIALS}")
 
     #------------------------------------------------------------------------------
+    # PETSc
+    #------------------------------------------------------------------------------
+    if (PETSC_DIR)
+        serac_assert_is_directory(DIR_VARIABLE PETSC_DIR)
+        # NOTE: PETSc is built and used through MFEM
+        set(SERAC_USE_PETSC ON CACHE BOOL "")
+
+        # Note: MFEM *does not* set PETSC_FOUND itself, likely because we skip petsc build tests
+        set(PETSC_FOUND TRUE)
+    else()
+        set(SERAC_USE_PETSC OFF CACHE BOOL "")
+        set(PETSC_FOUND FALSE)
+    endif()
+    message(STATUS "PETSc support is ${SERAC_USE_PETSC}")
+
+    #------------------------------------------------------------------------------
+    # SLEPc
+    #------------------------------------------------------------------------------
+    if (SLEPC_DIR AND SERAC_USE_PETSC)
+        serac_assert_is_directory(DIR_VARIABLE SLEPC_DIR)
+        # NOTE: SLEPc is built and used through MFEM
+        set(SERAC_USE_SLEPC ON CACHE BOOL "")
+
+        # Note: MFEM sets SLEPC_FOUND itself
+        if (NOT SERAC_ENABLE_CODEVELOP)
+            set(SLEPC_FOUND TRUE)
+        endif()
+    else()
+        set(SERAC_USE_SLEPC OFF CACHE BOOL "")
+        set(SLEPC_FOUND FALSE)
+    endif()
+    message(STATUS "SLEPc support is ${SERAC_USE_SLEPC}")
+
+    #------------------------------------------------------------------------------
+    # ARPACK
+    #------------------------------------------------------------------------------
+    if (ARPACK_DIR AND SERAC_USE_SLEPC)
+        serac_assert_is_directory(DIR_VARIABLE ARPACK_DIR)
+        include(${CMAKE_CURRENT_LIST_DIR}/FindARPACK.cmake)
+    else()
+        set(ARPACK_FOUND FALSE)
+    endif()
+    message(STATUS "ARPACK support is ${ARPACK_FOUND}")
+
+    #------------------------------------------------------------------------------
     # MFEM
     #------------------------------------------------------------------------------
     if(NOT SERAC_ENABLE_CODEVELOP)
@@ -196,8 +196,9 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
 
         #### Store Data that MFEM clears
         set(tpls_to_save ADIAK AMGX AXOM CALIPER CAMP CONDUIT HDF5
-                         HYPRE LUA METIS MFEM NETCDF PARMETIS PETSC RAJA 
-                         SUPERLU_DIST STRUMPACK SUNDIALS TRIBOL UMPIRE)
+                         HYPRE LUA METIS MFEM NETCDF PARMETIS PETSC RAJA
+                         SLEPC SUPERLU_DIST STRUMPACK SUNDIALS TRIBOL
+                         UMPIRE)
         foreach(_tpl ${tpls_to_save})
             set(${_tpl}_DIR_SAVE "${${_tpl}_DIR}")
         endforeach()
@@ -226,8 +227,21 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             set(ParMETIS_DIR ${PARMETIS_DIR} CACHE PATH "")
         endif()
         set(MFEM_USE_OPENMP ${ENABLE_OPENMP} CACHE BOOL "")
-        set(MFEM_USE_PETSC OFF CACHE BOOL "")
-        set(MFEM_USE_SLEPC OFF CACHE BOOL "")
+
+        if(PETSC_DIR)
+            set(MFEM_USE_PETSC ON CACHE BOOL "")
+            set(PETSC_ARCH "" CACHE STRING "")
+            set(PETSC_EXECUTABLE_RUNS "ON" CACHE BOOL "")
+            if(SLEPC_DIR)
+                set(MFEM_USE_SLEPC ON CACHE BOOL "")
+                set(SLEPC_ARCH "" CACHE STRING "")
+                set(SLEPC_VERSION_OK "TRUE" CACHE BOOL "")
+            endif()
+        else()
+            set(MFEM_USE_PETSC OFF CACHE BOOL "")
+            set(MFEM_USE_SLEPC OFF CACHE BOOL "")
+        endif()
+
         set(MFEM_USE_RAJA OFF CACHE BOOL "")
         set(MFEM_USE_SUNDIALS ${SERAC_USE_SUNDIALS} CACHE BOOL "")
         if(SUPERLUDIST_DIR)
@@ -289,6 +303,9 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(MFEM_ENABLE_EXAMPLES OFF CACHE BOOL "")
         set(MFEM_ENABLE_MINIAPPS OFF CACHE BOOL "")
 
+        # Build MFEM shared if Serac is being built shared
+        set(MFEM_SHARED_BUILD ${BUILD_SHARED_LIBS} CACHE BOOL "")
+
         if(${PROJECT_NAME} STREQUAL "smith")
             add_subdirectory(${PROJECT_SOURCE_DIR}/serac/mfem  ${CMAKE_BINARY_DIR}/mfem)
         else()
@@ -309,38 +326,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endforeach()
 
         set(MFEM_BUILT_WITH_CMAKE TRUE)
-    endif()
-
-    #------------------------------------------------------------------------------
-    # PETSc
-    #------------------------------------------------------------------------------
-    if(PETSC_DIR)
-        serac_assert_is_directory(DIR_VARIABLE PETSC_DIR)
-        include(${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake)
-        serac_assert_find_succeeded(PROJECT_NAME PETSc
-                                    TARGET       PkgConfig::PETSC
-                                    DIR_VARIABLE PETSC_DIR)
-        message(STATUS "PETSc support is ON")
-        set(PETSC_FOUND TRUE)
-    else()
-        message(STATUS "PETSc support is OFF")
-        set(PETSC_FOUND FALSE)
-    endif()
-
-    #------------------------------------------------------------------------------
-    # SLEPC
-    #------------------------------------------------------------------------------
-    if(SLEPC_DIR)
-        serac_assert_is_directory(DIR_VARIABLE SLEPC_DIR)
-        include(${CMAKE_CURRENT_LIST_DIR}/FindSLEPc.cmake)
-        serac_assert_find_succeeded(PROJECT_NAME SLEPC
-                                    TARGET PkgConfig::SLEPC
-                                    DIR_VARIABLE SLEPC_DIR)
-        message(STATUS "SLEPc support is ON")
-        set(SLEPC_FOUND TRUE)
-    else()
-        message(STATUS "SLEPc support is OFF")
-        set(SLEPC_FOUND FALSE)
     endif()
 
     #------------------------------------------------------------------------------
@@ -408,12 +393,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
 
     else()
-        # Turn off profiling in Axom to keep logs specific to Serac
-        set(_adiak_dir_temp ${ADIAK_DIR})
-        set(_caliper_dir_temp ${CALIPER_DIR})
-        unset(ADIAK_DIR CACHE)
-        unset(CALIPER_DIR CACHE)
-
         set(ENABLE_FORTRAN OFF CACHE BOOL "" FORCE)
         # Otherwise we use the submodule
         message(STATUS "Using Axom submodule")
@@ -449,10 +428,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         blt_convert_to_system_includes(TARGET core)
 
         set(ENABLE_FORTRAN ON CACHE BOOL "" FORCE)
-
-        # Restore TPLs after turning off profiling in Axom to keep logs specific to Serac
-        set(ADIAK_DIR ${_adiak_dir_temp} CACHE PATH "")
-        set(CALIPER_DIR ${_caliper_dir_temp} CACHE PATH "")
     endif()
 
     #------------------------------------------------------------------------------
@@ -543,14 +518,14 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     # MPI library/directory but in some cases Spack cannot determine
     # the correct MPI lib directory. This guards against that.
     # https://github.com/spack/spack/issues/24685
+    set(_mfem_targets
+        mfem
+        axom::mfem
+        tribol::mfem)
     if(STRUMPACK_DIR)
         list(GET MPI_C_LIBRARIES 0 _first_mpi_lib)
         get_filename_component(_mpi_lib_dir ${_first_mpi_lib} DIRECTORY)
-    
-        set(_mfem_targets
-            mfem
-            axom::mfem
-            tribol::mfem)
+
         foreach(_target ${_mfem_targets})
             if(TARGET ${_target})
                 message(STATUS "Adding MPI link directory to target [${_target}]")
@@ -558,4 +533,76 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             endif()
         endforeach()
     endif()
+
+    # Add missing ARPACK flags needed by SLEPc by injecting them into the MFEM targets.
+    # https://github.com/mfem/mfem/issues/4364
+    if (ARPACK_FOUND)
+        foreach(_target ${_mfem_targets})
+            if(TARGET ${_target})
+                message(STATUS "Adding arpack libraries and include dirs to target [${_target}]")
+                target_include_directories(${_target} INTERFACE ${ARPACK_INCLUDE_DIRS})
+                target_link_libraries(${_target} INTERFACE ${ARPACK_LIBRARIES})
+            endif()
+        endforeach()
+    endif()
+    unset(_mfem_targets)
+
+    # Restore cleared Adiak/Caliper directories, reason at top of file.
+    set(ADIAK_DIR ${_adiak_dir} CACHE PATH "" FORCE)
+    set(CALIPER_DIR ${_caliper_dir} CACHE PATH "" FORCE)
+    #------------------------------------------------------------------------------
+    # Adiak
+    #------------------------------------------------------------------------------
+    if(SERAC_ENABLE_PROFILING AND NOT ADIAK_DIR)
+        message(FATAL_ERROR "SERAC_ENABLE_PROFILING cannot be ON without ADIAK_DIR defined. Either specify a host \
+                             config with ADIAK_DIR, or rebuild Serac TPLs with +profiling variant.")
+    endif()
+
+    if(ADIAK_DIR AND SERAC_ENABLE_PROFILING)
+        serac_assert_is_directory(DIR_VARIABLE ADIAK_DIR)
+
+        find_dependency(adiak REQUIRED PATHS "${ADIAK_DIR}")
+        serac_assert_find_succeeded(PROJECT_NAME Adiak
+                                    TARGET       adiak::adiak
+                                    DIR_VARIABLE ADIAK_DIR)
+        message(STATUS "Adiak support is ON")
+        set(ADIAK_FOUND TRUE)
+    else()
+        message(STATUS "Adiak support is OFF")
+        set(ADIAK_FOUND FALSE)
+    endif()
+
+    #------------------------------------------------------------------------------
+    # Caliper
+    #------------------------------------------------------------------------------
+    if(SERAC_ENABLE_PROFILING AND NOT CALIPER_DIR)
+        message(FATAL_ERROR "SERAC_ENABLE_PROFILING cannot be ON without CALIPER_DIR defined. Either specify a host \
+                             config with CALIPER_DIR, or rebuild Serac TPLs with +profiling variant.")
+    endif()
+
+    if(CALIPER_DIR AND SERAC_ENABLE_PROFILING)
+        serac_assert_is_directory(DIR_VARIABLE CALIPER_DIR)
+
+        # Should this logic be in the Caliper CMake package?
+        # If CMake version doesn't support CUDAToolkit the libraries
+        # are just "baked in"
+        if(ENABLE_CUDA)
+            if(CMAKE_VERSION VERSION_LESS 3.17)
+                message(FATAL_ERROR "Serac+Caliper+CUDA requires CMake > 3.17.")
+            else()
+                find_package(CUDAToolkit REQUIRED)
+            endif()
+        endif()
+
+        find_dependency(caliper REQUIRED PATHS "${CALIPER_DIR}")
+        serac_assert_find_succeeded(PROJECT_NAME Caliper
+                                    TARGET       caliper
+                                    DIR_VARIABLE CALIPER_DIR)
+        message(STATUS "Caliper support is ON")
+        set(CALIPER_FOUND TRUE)
+    else()
+        message(STATUS "Caliper support is OFF")
+        set(CALIPER_FOUND FALSE)
+    endif()
+
 endif()

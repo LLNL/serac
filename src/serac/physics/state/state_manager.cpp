@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/state/state_manager.hpp"
+#include "serac/serac_config.hpp"
 
 #include "axom/core.hpp"
 
@@ -69,8 +70,8 @@ double StateManager::newDataCollection(const std::string& name, const std::optio
     // 1. Sets the order of the mesh to  p = 1
     // 2. Uses the existing continuity of the mesh finite element space (periodic meshes are discontinuous)
     // 3. Uses the spatial dimension as the mesh dimension (i.e. it is not a lower dimension manifold)
-    // 4. Uses nodal instead of VDIM ordering (i.e. xxxyyyzzz instead of xyzxyzxyz)
-    mesh(name).SetCurvature(1, is_discontinuous, -1, mfem::Ordering::byNODES);
+    // 4. Uses the ordering set by serac::ordering
+    mesh(name).SetCurvature(1, is_discontinuous, -1, serac::ordering);
 
     // Sidre will destruct the nodal grid function instead of the mesh
     mesh(name).SetNodesOwner(false);
@@ -245,8 +246,8 @@ mfem::ParMesh& StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const
   // 1. Sets the order of the mesh to  p = 1
   // 2. Uses the existing continuity of the mesh finite element space (periodic meshes are discontinuous)
   // 3. Uses the spatial dimension as the mesh dimension (i.e. it is not a lower dimension manifold)
-  // 4. Uses nodal instead of VDIM ordering (i.e. xxxyyyzzz instead of xyzxyzxyz)
-  pmesh->SetCurvature(1, is_discontinuous, -1, mfem::Ordering::byNODES);
+  // 4. Uses the ordering set by serac::ordering
+  pmesh->SetCurvature(1, is_discontinuous, -1, serac::ordering);
 
   // Sidre will destruct the nodal grid function instead of the mesh
   pmesh->SetNodesOwner(false);

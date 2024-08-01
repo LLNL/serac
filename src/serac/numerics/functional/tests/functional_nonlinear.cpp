@@ -54,12 +54,15 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   std::string postfix = concat("_H1<", p, ">");
   serac::profiling::initialize();
 
+  // Define the types for the test and trial spaces using the function arguments
+  using test_space  = decltype(test);
+  using trial_space = decltype(trial);
+
   // Create standard MFEM bilinear and linear forms on H1
-  auto                        fec = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace(&mesh, &fec);
+  auto [fespace, fec] = serac::generateParFiniteElementSpace<test_space>(&mesh);
 
   // Set a random state to evaluate the residual
-  mfem::Vector U(fespace.TrueVSize());
+  mfem::Vector U(fespace->TrueVSize());
   U.Randomize();
 
   // Define the types for the test and trial spaces using the function arguments
@@ -67,7 +70,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   using trial_space = decltype(trial);
 
   // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space)> residual(&fespace, {&fespace});
+  Functional<test_space(trial_space)> residual(fespace.get(), {fespace.get()});
 
   // Add the total domain residual term to the functional
   residual.AddDomainIntegral(
@@ -102,20 +105,19 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   std::string postfix = concat("_H1<", p, ",", dim, ">");
   serac::profiling::initialize();
 
-  // Create standard MFEM bilinear and linear forms on H1
-  auto                        fec = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace(&mesh, &fec, dim);
-
-  // Set a random state to evaluate the residual
-  mfem::Vector U(fespace.TrueVSize());
-  U.Randomize();
-
   // Define the types for the test and trial spaces using the function arguments
   using test_space  = decltype(test);
   using trial_space = decltype(trial);
 
+  // Create standard MFEM bilinear and linear forms on H1
+  auto [fespace, fec] = serac::generateParFiniteElementSpace<test_space>(&mesh);
+
+  // Set a random state to evaluate the residual
+  mfem::Vector U(fespace->TrueVSize());
+  U.Randomize();
+
   // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space)> residual(&fespace, {&fespace});
+  Functional<test_space(trial_space)> residual(fespace.get(), {fespace.get()});
 
   // Add the total domain residual term to the functional
   residual.AddDomainIntegral(

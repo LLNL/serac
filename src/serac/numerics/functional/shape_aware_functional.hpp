@@ -198,7 +198,7 @@ SERAC_HOST_DEVICE auto compute_boundary_area_correction(const position_type& X, 
  */
 template <typename lambda, typename coord_type, typename shape_type, typename space_types, typename trial_types,
           typename correction_type, int... i>
-SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper(lambda&& qf, double t, const coord_type& position,
+SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper(const lambda& qf, double t, const coord_type& position,
                                                    const shape_type& shape, const space_types& space_tuple,
                                                    const trial_types& arg_tuple, const correction_type& correction,
                                                    std::integer_sequence<int, i...>)
@@ -244,7 +244,7 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper(lambda&& qf, double t, const 
  */
 template <typename lambda, typename coord_type, typename state_type, typename shape_type, typename space_types,
           typename trial_types, typename correction_type, int... i>
-SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper_with_state(lambda&& qf, double t, const coord_type& position,
+SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper_with_state(const lambda& qf, double t, const coord_type& position,
                                                               state_type& state, const shape_type& shape,
                                                               const space_types&     space_tuple,
                                                               const trial_types&     arg_tuple,
@@ -453,7 +453,7 @@ public:
    * and @a spatial_dim template parameter
    */
   template <int dim, int... args, typename lambda, typename domain_type, typename qpt_data_type = Nothing>
-  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, domain_type& domain,
+  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, const lambda& integrand, domain_type& domain,
                          std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
   {
     if constexpr (std::is_same_v<qpt_data_type, Nothing>) {
@@ -513,7 +513,7 @@ public:
    * and @a spatial_dim template parameter
    */
   template <int dim, int... args, typename lambda, typename domain_type>
-  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, lambda&& integrand, domain_type& domain)
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, const lambda& integrand, domain_type& domain)
   {
     functional_->AddBoundaryIntegral(Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
                                      std::move(ShapeAwareBoundaryIntegrandWrapper<lambda, dim, args...>(integrand)),

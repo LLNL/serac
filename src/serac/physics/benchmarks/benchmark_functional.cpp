@@ -33,12 +33,10 @@ void functional_test(int parallel_refinement)
       serac::mesh::refineAndDistribute(serac::buildMeshFromFile(filename), serial_refinement, parallel_refinement);
 
   // Create standard MFEM bilinear and linear forms on H1
-  auto                        fec = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace(mesh.get(), &fec, components);
+  using space         = serac::H1<p, components>;
+  auto [fespace, fec] = serac::generateParFiniteElementSpace<space>(mesh.get());
 
-  using space = serac::H1<p, components>;
-
-  serac::Functional<space(space)> residual(&fespace, {&fespace});
+  serac::Functional<space(space)> residual(fespace.get(), {fespace.get()});
 
   // Add the total domain residual term to the functional
   residual.AddDomainIntegral(
@@ -51,10 +49,10 @@ void functional_test(int parallel_refinement)
       *mesh);
 
   // Set a random state to evaluate the residual
-  mfem::ParGridFunction u_global(&fespace);
+  mfem::ParGridFunction u_global(fespace.get());
   u_global.Randomize();
 
-  mfem::Vector U(fespace.TrueVSize());
+  mfem::Vector U(fespace->TrueVSize());
   u_global.GetTrueDofs(U);
 
   // Compute the residual using functional

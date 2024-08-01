@@ -20,10 +20,10 @@
 namespace serac {
 
 /// @brief All possible solid mechanics materials that can be utilized in our input file
-using var_solid_material_t =
-    std::variant<solid_mechanics::NeoHookean, solid_mechanics::LinearIsotropic, solid_mechanics::J2,
-                 solid_mechanics::J2Nonlinear<solid_mechanics::PowerLawHardening>,
-                 solid_mechanics::J2Nonlinear<solid_mechanics::VoceHardening>>;
+using var_solid_material_t = std::variant<solid_mechanics::NeoHookean, solid_mechanics::LinearIsotropic,
+                                          solid_mechanics::J2SmallStrain<solid_mechanics::LinearHardening>,
+                                          solid_mechanics::J2SmallStrain<solid_mechanics::PowerLawHardening>,
+                                          solid_mechanics::J2SmallStrain<solid_mechanics::VoceHardening>>;
 
 /// @brief Contains function that defines the schema for solid mechanics materials
 struct SolidMaterialInputOptions {
