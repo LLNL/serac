@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -186,7 +186,7 @@ SERAC_HOST_DEVICE auto compute_boundary_area_correction(const position_type& X, 
  *
  * @param qf The q-function integrand with expects shape-adjusted arguments
  * @param t The time at which to evaluate the integrand
- * @param x The spatial coordinate at which to evaluate the integrand
+ * @param position The quadrature point spatial coordinates and isoparametric derivatives
  * @param shape The space displacement at which to evaluate the integrand
  * @param space_tuple The tuple of finite element spaces used by the input trial functions
  * @param arg_tuple The tuple of input arguments for the trial functions (value and gradient)
@@ -198,14 +198,22 @@ SERAC_HOST_DEVICE auto compute_boundary_area_correction(const position_type& X, 
  */
 template <typename lambda, typename coord_type, typename shape_type, typename space_types, typename trial_types,
           typename correction_type, int... i>
-SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper(lambda&& qf, double t, const coord_type& x, const shape_type& shape,
-                                                   const space_types& space_tuple, const trial_types& arg_tuple,
-                                                   const correction_type& correction, std::integer_sequence<int, i...>)
+SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper(lambda&& qf, double t, const coord_type& position,
+                                                   const shape_type& shape, const space_types& space_tuple,
+                                                   const trial_types& arg_tuple, const correction_type& correction,
+                                                   std::integer_sequence<int, i...>)
 {
   static_assert(tuple_size<trial_types>::value == tuple_size<space_types>::value,
                 "Argument and finite element space tuples are not the same size.");
-  return qf(t, x + get<VALUE>(shape),
-            correction.modify_trial_argument(serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
+
+  auto x = serac::tuple{get<VALUE>(position) + get<VALUE>(shape),
+
+                        // x := X + u,
+                        // so, dx/dxi = dX/dxi + du/dxi
+                        //            = dX/dxi + du/dX * dX/dxi
+                        get<DERIVATIVE>(position) + get<DERIVATIVE>(shape) * get<DERIVATIVE>(position)};
+
+  return qf(t, x, correction.modify_trial_argument(serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
 }
 
 /**
@@ -223,7 +231,7 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper(lambda&& qf, double t, const 
  *
  * @param qf The q-function integrand with expects shape-adjusted arguments
  * @param t The time at which to evaluate the integrand
- * @param x The spatial coordinate at which to evaluate the integrand
+ * @param position The quadrature point spatial coordinates and isoparametric derivatives
  * @param state The quadrature data at which to evaluate the integrand
  * @param shape The space displacement at which to evaluate the integrand
  * @param space_tuple The tuple of finite element spaces used by the input trial functions
@@ -236,7 +244,7 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper(lambda&& qf, double t, const 
  */
 template <typename lambda, typename coord_type, typename state_type, typename shape_type, typename space_types,
           typename trial_types, typename correction_type, int... i>
-SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper_with_state(lambda&& qf, double t, const coord_type& x,
+SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper_with_state(lambda&& qf, double t, const coord_type& position,
                                                               state_type& state, const shape_type& shape,
                                                               const space_types&     space_tuple,
                                                               const trial_types&     arg_tuple,
@@ -245,8 +253,15 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper_with_state(lambda&& qf, doubl
 {
   static_assert(tuple_size<trial_types>::value == tuple_size<space_types>::value,
                 "Argument and finite element space tuples are not the same size.");
-  return qf(t, x + get<VALUE>(shape), state,
-            correction.modify_trial_argument(serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
+
+  auto x = serac::tuple{get<VALUE>(position) + get<VALUE>(shape),
+
+                        // x := X + u,
+                        // so, dx/dxi = dX/dxi + du/dxi
+                        //            = dX/dxi + du/dX * dX/dxi
+                        get<DERIVATIVE>(position) + get<DERIVATIVE>(shape) * get<DERIVATIVE>(position)};
+
+  return qf(t, x, state, correction.modify_trial_argument(serac::get<i>(space_tuple), serac::get<i>(arg_tuple))...);
 }
 
 }  // namespace detail

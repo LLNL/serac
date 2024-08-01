@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and Serac
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and Serac
 # project contributors. See the LICENSE file for details.
 ##############################################################################
 
@@ -69,3 +69,5 @@ variables:
 include:
   - local: .gitlab/build_lassen.yml
   - local: .gitlab/build_quartz.yml
+  - project: 'lc-templates/id_tokens'
+    file: 'id_tokens.yml'

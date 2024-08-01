@@ -1,7 +1,7 @@
 #!/bin/sh
 "exec" "python3" "-u" "-B" "$0" "$@"
 
-# Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for details.
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
@@ -52,6 +52,10 @@ def parse_args():
                       dest="verbose",
                       default=False,
                       help="Output logs to screen as well as to files")
+    parser.add_option("-j", "--jobs",
+                      dest="jobs",
+                      default="",
+                      help="Allow N jobs at once for any `make` commands (empty string means max system amount)")
     ###############
     # parse args
     ###############
@@ -97,7 +101,7 @@ def main():
         if build_all:
             res = build_and_test_host_configs(repo_dir, timestamp, False,
                                               opts["verbose"], opts["extra_cmake_options"],
-                                              opts["skip_install"])
+                                              opts["skip_install"], opts["jobs"])
         # Otherwise try to build a specific host-config
         else:
             # Command-line arg has highest priority
@@ -146,7 +150,7 @@ def main():
             test_root = get_build_and_test_root(repo_dir, timestamp)
             os.mkdir(test_root)
             res = build_and_test_host_config(test_root, hostconfig_path, opts["verbose"], opts["extra_cmake_options"],
-                                             opts["skip_install"])
+                                             opts["skip_install"], opts["jobs"])
 
     finally:
         os.chdir(original_wd)

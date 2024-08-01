@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -950,10 +950,10 @@ public:
      * @return The calculated material response (tuple of volumetric heat capacity and thermal flux) for a linear
      * isotropic material
      */
-    template <typename T, typename X, typename Displacement, typename Acceleration, typename... Params>
-    auto SERAC_HOST_DEVICE operator()(T t, X x, Displacement, Acceleration, Params... params) const
+    template <typename T, typename Position, typename Displacement, typename Acceleration, typename... Params>
+    auto SERAC_HOST_DEVICE operator()(T t, Position position, Displacement, Acceleration, Params... params) const
     {
-      return serac::tuple{-1.0 * body_force_(x, t, params...), zero{}};
+      return serac::tuple{-1.0 * body_force_(get<VALUE>(position), t, params...), zero{}};
     }
   };
 

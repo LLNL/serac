@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -111,7 +111,7 @@ std::unique_ptr<mfem::BlockOperator> ContactData::mergedJacobian() const
   block_J->owns_blocks = true;
   // rather than returning different blocks for each contact interaction with Lagrange multipliers, merge them all into
   // a single block
-  mfem::Array2D<mfem::HypreParMatrix*> constraint_matrices(static_cast<int>(interactions_.size()), 1);
+  mfem::Array2D<const mfem::HypreParMatrix*> constraint_matrices(static_cast<int>(interactions_.size()), 1);
 
   for (size_t i{0}; i < interactions_.size(); ++i) {
     // this is the BlockOperator for one of the contact interactions

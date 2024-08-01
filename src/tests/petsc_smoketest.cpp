@@ -28,6 +28,10 @@
 
 static char help[] = "Solves 2D Poisson equation using multigrid.\n\n";
 
+// SERAC_EDIT_START
+#include <algorithm>
+// SERAC_EDIT_END
+
 #include <petscdm.h>
 #include <petscdmda.h>
 #include <petscksp.h>
@@ -247,7 +251,7 @@ TEST*/
 
 // https://github.com/petsc/petsc/blob/main/src/ksp/ksp/tutorials/output/ex50_tut_1.out
 // clang-format off
-constexpr char correct_serial_output[] =
+constexpr char ex50_output[] =
   "Mat Object: 1 MPI process\n"
   "  type: seqaij\n"
   "row 0: (0, 0.)  (1, 0.)  (4, 0.) \n"
@@ -293,6 +297,14 @@ TEST(PetscSmoketest, PetscEx50)
   ex50_main(6, const_cast<char**>(fake_argv));
   std::string output = ::testing::internal::GetCapturedStdout();
 
+  // Remove spaces due to it changing between PETSc versions
+  output.erase(std::remove_if(output.begin(), output.end(), [](unsigned char x) { return std::isspace(x); }),
+               output.end());
+  std::string correct_output(ex50_output);
+  correct_output.erase(
+      std::remove_if(correct_output.begin(), correct_output.end(), [](unsigned char x) { return std::isspace(x); }),
+      correct_output.end());
+
   int num_procs = 0;
   int rank      = 0;
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
@@ -300,12 +312,11 @@ TEST(PetscSmoketest, PetscEx50)
   if (rank == 0) {
     if (num_procs > 1) {
       // If it's multiple processes, just make sure the program didn't crash
-      EXPECT_NE(output.find("type: mpiaij"), std::string::npos);
-      EXPECT_NE(output.find("Mat Object: " + std::to_string(num_procs) + " MPI processes"), std::string::npos);
-      EXPECT_NE(output.find("row 15: (11, -1.)  (14, -1.)  (15, 2.)"), std::string::npos);
-
+      EXPECT_NE(output.find("type:mpiaij"), std::string::npos);
+      EXPECT_NE(output.find("MatObject:" + std::to_string(num_procs) + "MPIprocesses"), std::string::npos);
+      EXPECT_NE(output.find("row15:(11,-1.)(14,-1.)(15,2.)"), std::string::npos);
     } else {
-      EXPECT_EQ(output, correct_serial_output);
+      EXPECT_EQ(output, correct_output);
     }
   }
 }

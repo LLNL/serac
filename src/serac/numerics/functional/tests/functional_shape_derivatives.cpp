@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -243,9 +243,9 @@ SERAC_HOST_DEVICE auto f(X x)
 template <int dim, int p>
 struct TestFunctorOne {
   template <typename Postition>
-  SERAC_HOST_DEVICE auto operator()(double, Postition X) const
+  SERAC_HOST_DEVICE auto operator()(double, Postition position) const
   {
-    return serac::tuple{div_f<dim, p>(X), zero{}};
+    return serac::tuple{div_f<dim, p>(get<VALUE>(position)), zero{}};
   }
 };
 

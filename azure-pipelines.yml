@@ -1,13 +1,13 @@
 #
-# Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 #
 
 variables:
-  Clang_14_ImageName: 'seracllnl/tpls:clang-14_03-15-24_21h-56m'
-  GCC_13_ImageName: 'seracllnl/tpls:gcc-13_03-15-24_21h-56m'
+  Clang_14_ImageName: 'seracllnl/tpls:clang-14_05-08-24_18h-37m'
+  GCC_13_ImageName: 'seracllnl/tpls:gcc-13_05-08-24_18h-37m'
 
 jobs:
 - job: Build_and_Test
@@ -57,7 +57,7 @@ jobs:
     submodules: recursive
   - script:  |
       echo " -e $TEST_TARGET -e HOST_CONFIG $(Compiler_ImageName) ./scripts/llnl/build_src.py $BUILD_SRC_OPTS -v --host-config $HOST_CONFIG --extra-cmake-options \"${CMAKE_OPTS} -DCMAKE_BUILD_TYPE=$BUILD_TYPE\""
-      docker run --rm -v `pwd`:/home/serac/serac -e TEST_TARGET -e HOST_CONFIG $(Compiler_ImageName) ./serac/scripts/llnl/build_src.py $BUILD_SRC_OPTS -v --host-config $HOST_CONFIG --extra-cmake-options "${CMAKE_OPTS} -DCMAKE_BUILD_TYPE=$BUILD_TYPE"
+      docker run --rm -v `pwd`:/home/serac/serac -e TEST_TARGET -e HOST_CONFIG $(Compiler_ImageName) ./serac/scripts/llnl/build_src.py $BUILD_SRC_OPTS -v --host-config $HOST_CONFIG --extra-cmake-options "${CMAKE_OPTS} -DCMAKE_BUILD_TYPE=$BUILD_TYPE" --jobs 4
 
     displayName: '$(TEST_TARGET) Build & Test'
   - task: PublishTestResults@2

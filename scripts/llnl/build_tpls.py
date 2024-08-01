@@ -1,7 +1,7 @@
 #!/bin/sh
 "exec" "python3" "-u" "-B" "$0" "$@"
 
-# Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for details.
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
@@ -49,6 +49,10 @@ def parse_args():
                       dest="mirror",
                       default="",
                       help="Mirror location to use (defaults to shared location)")
+    parser.add_option("-j", "--jobs",
+                      dest="jobs",
+                      default="",
+                      help="Allow N jobs at once for any `make` commands (empty string means max system amount)")
 
     ###############
     # parse args
@@ -79,7 +83,7 @@ def main():
         os.chdir(repo_dir)
 
         timestamp = get_timestamp()
-        res = full_build_and_test_of_tpls(builds_dir, timestamp, opts["spec"], opts["verbose"], opts["short_path"], opts["mirror"])
+        res = full_build_and_test_of_tpls(builds_dir, timestamp, opts["spec"], opts["verbose"], opts["short_path"], opts["mirror"], opts["jobs"])
     finally:
         os.chdir(original_wd)
 

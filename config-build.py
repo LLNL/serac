@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -99,6 +99,11 @@ def parse_arguments():
     parser.add_argument("--print-machine-name",
                         action='store_true',
                         help="print the machine name for this system and exit")
+
+    parser.add_argument("-n", 
+                        "--ninja",
+                        action='store_true',
+                        help="use ninja generator to build serac instead of make")
 
 
     
@@ -233,6 +238,9 @@ def create_cmake_command_line(args, unknown_args, buildpath, installpath, hostco
 
     if args.eclipse:
         cmakeline += ' -G "Eclipse CDT4 - Unix Makefiles"'
+
+    if args.ninja:
+        cmakeline += ' -G Ninja'
 
     if unknown_args:
         cmakeline += " " + " ".join( unknown_args )

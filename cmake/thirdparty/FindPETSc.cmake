@@ -38,8 +38,6 @@ if (_libs_private)
   string(REPLACE " -" ";-" _libs_private ${_libs_private})
 
   # Group those with -L (dir) and -l (lib) separately
-  # NOTE: In this Libs.private, there are full paths to lapack and blas shared object files without a -l, but it' grouped
-  # in with another link library, so no special case is required to handle it.
   foreach (_lib ${_libs_private})
     if(${_lib} MATCHES "^-L")
       string(REPLACE "-L" "" _lib ${_lib})
@@ -51,6 +49,11 @@ if (_libs_private)
       message("Warning: library ${_lib} ignored. Not determined to be a link directory or link library.")
     endif()
   endforeach()
+
+  # NOTE: In this Libs.private, there are full paths to lapack and blas shared object files without a -l, but it' grouped
+  # in with another link library, so no special case is required to handle them in the foreach above. Instead, I simply
+  # replace the spaces around these paths with semicolon to make this list nicer.
+  string(REPLACE " " ";" _link_libraries "${_link_libraries}")
 
   target_link_directories(PkgConfig::PETSC INTERFACE ${_link_directories})
   target_link_libraries(PkgConfig::PETSC INTERFACE ${_link_libraries})

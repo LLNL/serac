@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -16,15 +16,19 @@ blt_add_executable(NAME        tensor_unit_tests
 set(functional_tests_serial
     functional_shape_derivatives.cpp
     simplex_basis_function_unit_tests.cpp
+    bug_boundary_qoi.cpp
     domain_tests.cpp
     geometric_factors_tests.cpp
     hcurl_unit_tests.cpp
+    functional_tet_quality.cpp
     test_tensor_ad.cpp
     tuple_arithmetic_unit_tests.cpp
     test_newton.cpp)
 
 serac_add_tests( SOURCES ${functional_tests_serial}
                  DEPENDS_ON gtest serac_functional ${functional_depends})
+
+set_source_files_properties(functional_tet_quality PROPERTIES LANGUAGE CXX)
 
 # Then add the examples/tests
 set(functional_tests_mpi
@@ -44,10 +48,11 @@ serac_add_tests( SOURCES ${functional_tests_mpi}
                  DEPENDS_ON gtest serac_functional serac_state ${functional_depends}
                  NUM_MPI_TASKS 4 )
 
-foreach(filename ${functional_tests_mpi})
+foreach(filename ${functional_tests_mpi} ${functional_tests_serial})
     set_source_files_properties(${filename} PROPERTIES LANGUAGE CXX)
 endforeach()
 
+target_link_libraries(bug_boundary_qoi PUBLIC serac_physics)
 
 if(ENABLE_CUDA)
 
@@ -65,8 +70,7 @@ if(ENABLE_CUDA)
     )
 
     serac_add_tests( SOURCES ${functional_tests_cuda}
-                     USE_CUDA On
-                     DEPENDS_ON gtest serac_functional serac_state ${functional_depends} cuda)
-
+                     USE_CUDA ON
+                     DEPENDS_ON gtest serac_functional serac_state ${functional_depends} blt::cuda)
 
 endif()

@@ -1,11 +1,11 @@
-# Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2024, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
 set(functional_depends serac_mesh)
-blt_list_append( TO functional_depends ELEMENTS cuda    IF ENABLE_CUDA )
+blt_list_append(TO functional_depends ELEMENTS blt::cuda IF ENABLE_CUDA)
 
 # Add the library first
 set(functional_headers
