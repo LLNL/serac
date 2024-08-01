@@ -156,7 +156,7 @@ public:
         residual_with_bcs_(temperature_.space().TrueVSize()),
         nonlin_solver_(std::move(solver)),
         ode_(temperature_.space().TrueVSize(),
-             {.time = ode_time_point_, .u = u_, .dt = dt_, .du_dt = temperature_rate_, .previous_dt = previous_dt_},
+             {.time = time_, .u = u_, .dt = dt_, .du_dt = temperature_rate_, .previous_dt = previous_dt_},
              *nonlin_solver_, bcs_)
   {
     SLIC_ERROR_ROOT_IF(
@@ -335,9 +335,6 @@ public:
     if (is_quasistatic_) {
       time_ += dt;
 
-      // Set the ODE time point for the time-varying loads in quasi-static problems
-      ode_time_point_ = time_;
-
       // Project the essential boundary coefficients
       for (auto& bc : bcs_.essentials()) {
         bc.setDofs(temperature_, time_);
@@ -346,7 +343,8 @@ public:
     } else {
       // Step the time integrator
       // Note that the ODE solver handles the essential boundary condition application itself
-      ode_.Step(temperature_, time_, dt);
+      double time_tmp = time_;
+      ode_.Step(temperature_, time_tmp, dt);
     }
 
     cycle_ += 1;
@@ -703,7 +701,7 @@ public:
           temperature_.space().TrueVSize(),
 
           [this](const mfem::Vector& u, mfem::Vector& r) {
-            const mfem::Vector res = (*residual_)(ode_time_point_, shape_displacement_, u, temperature_rate_,
+            const mfem::Vector res = (*residual_)(time_, shape_displacement_, u, temperature_rate_,
                                                   *parameters_[parameter_indices].state...);
 
             // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
@@ -714,7 +712,7 @@ public:
           },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(u), temperature_rate_,
+            auto [r, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(u), temperature_rate_,
                                           *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
             J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
@@ -726,7 +724,7 @@ public:
 
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
             add(1.0, u_, dt_, du_dt, u_predicted_);
-            const mfem::Vector res = (*residual_)(ode_time_point_, shape_displacement_, u_predicted_, du_dt,
+            const mfem::Vector res = (*residual_)(time_, shape_displacement_, u_predicted_, du_dt,
                                                   *parameters_[parameter_indices].state...);
 
             // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
@@ -740,13 +738,13 @@ public:
             add(1.0, u_, dt_, du_dt, u_predicted_);
 
             // K := dR/du
-            auto K = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_,
+            auto K = serac::get<DERIVATIVE>((*residual_)(time_, shape_displacement_,
                                                          differentiate_wrt(u_predicted_), du_dt,
                                                          *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/du_dot
-            auto M = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_, u_predicted_,
+            auto M = serac::get<DERIVATIVE>((*residual_)(time_, shape_displacement_, u_predicted_,
                                                          differentiate_wrt(du_dt),
                                                          *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
@@ -849,12 +847,10 @@ public:
 
     double dt_np1_to_np2 = cycle_ < getCheckpointedTimestep(cycle_+1);
     time_ -= dt_np1_to_np2; // this is the time at the end of forward step n
-    ode_time_point_ = time_;
 
     auto end_step_solution = getCheckpointedStates(cycle_+1);
 
     temperature_      = end_step_solution.at("temperature");
-    temperature_rate_ = end_step_solution.at("temperature_rate");
 
     double dt = getCheckpointedTimestep(cycle_);
 
@@ -862,7 +858,7 @@ public:
       // We store the previous timestep's temperature as the current temperature for use in the lambdas computing the
       // sensitivities.
 
-      auto [_, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(temperature_),
+      auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(temperature_),
                                     temperature_rate_, *parameters_[parameter_indices].state...);
       auto jacobian  = assemble(drdu);
       auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
@@ -880,13 +876,15 @@ public:
       SLIC_ERROR_ROOT_IF(ode_.GetTimestepper() != TimestepMethod::BackwardEuler,
                         "Only backward Euler implemented for transient adjoint heat conduction.");
 
+      temperature_rate_ = end_step_solution.at("temperature_rate");
+
       // K := dR/du
-      auto K = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(temperature_),
+      auto K = serac::get<DERIVATIVE>((*residual_)(time_, shape_displacement_, differentiate_wrt(temperature_),
                                                   temperature_rate_, *parameters_[parameter_indices].state...));
       std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
       // M := dR/du_dot
-      auto M = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_, temperature_,
+      auto M = serac::get<DERIVATIVE>((*residual_)(time_, shape_displacement_, temperature_,
                                                   differentiate_wrt(temperature_rate_),
                                                   *parameters_[parameter_indices].state...));
       std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
@@ -932,7 +930,7 @@ public:
   {
     // TODO: the time is likely not being handled correctly on the reverse pass, but we don't
     //       have tests to confirm.
-    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](ode_time_point_));
+    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](time_));
     auto drdparam_mat = assemble(drdparam);
 
     drdparam_mat->MultTranspose(adjoint_temperature_, *parameters_[parameter_field].sensitivity);
@@ -951,7 +949,7 @@ public:
   FiniteElementDual& computeTimestepShapeSensitivity() override
   {
     auto drdshape =
-        serac::get<DERIVATIVE>((*residual_)(ode_time_point_, differentiate_wrt(shape_displacement_), temperature_,
+        serac::get<DERIVATIVE>((*residual_)(time_, differentiate_wrt(shape_displacement_), temperature_,
                                             temperature_rate_, *parameters_[parameter_indices].state...));
 
     auto drdshape_mat = assemble(drdshape);

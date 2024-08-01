@@ -77,30 +77,33 @@ TEST(Thermomechanics, ParameterizedMaterial)
   double outer_radius = 1.25;
   double height       = 2.0;
 
-  // clang-format off
-    auto mesh = mesh::refineAndDistribute(build_hollow_quarter_cylinder(radial_divisions,
-                                                                        angular_divisions,
-                                                                        vertical_divisions,
-                                                                        inner_radius,
-                                                                        outer_radius,
-                                                                        height), serial_refinement, parallel_refinement);
+  auto mesh = mesh::refineAndDistribute(build_hollow_quarter_cylinder(radial_divisions, 
+                                                                      angular_divisions, 
+                                                                      vertical_divisions,
+                                                                      inner_radius, 
+                                                                      outer_radius, 
+                                                                      height), serial_refinement, parallel_refinement);
 
-  // clang-format on
   std::string mesh_tag{"mesh"};
   auto&       pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   NonlinearSolverOptions nonlinear_opts = solid_mechanics::default_nonlinear_options;
-  LinearSolverOptions    linear_opts    = solid_mechanics::default_linear_options;
+  LinearSolverOptions   linear_opts    = solid_mechanics::default_linear_options;
+
+  nonlinear_opts.relative_tol = 1e-8;
+  nonlinear_opts.absolute_tol = 1e-10;
+
 #ifdef SERAC_USE_PETSC
   nonlinear_opts.nonlin_solver = NonlinearSolver::PetscNewton;
-
   linear_opts.linear_solver        = LinearSolver::PetscGMRES;
   linear_opts.preconditioner       = Preconditioner::Petsc;
   linear_opts.petsc_preconditioner = PetscPCType::HMG;
 #endif
+
   SolidMechanics<p, dim, Parameters<H1<p>, H1<p>>> simulation(
-      nonlinear_opts, linear_opts, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On,
-      "thermomechanics_simulation", mesh_tag, {"theta", "alpha"});
+      nonlinear_opts, linear_opts,
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermomechanics_simulation", mesh_tag,
+      {"theta", "alpha"});
 
   double density   = 1.0;     ///< density
   double E         = 1000.0;  ///< Young's modulus
