@@ -275,8 +275,9 @@ public:
    */
   void initializeThermalStates()
   {
-    dt_          = 0.0;
-    previous_dt_ = -1.0;
+    dt_            = 0.0;
+    previous_dt_   = -1.0;
+    time_end_step_ = 0.0;
 
     u_                                              = 0.0;
     temperature_                                    = 0.0;
@@ -844,14 +845,10 @@ public:
 
     cycle_--;  // cycle is now at n \in [0,N-1]
 
-    double dt_np1_to_np2 = cycle_ < getCheckpointedTimestep(cycle_ + 1);
-    time_ -= dt_np1_to_np2;  // this is the time at the end of forward step n
-
-    auto end_step_solution = getCheckpointedStates(cycle_ + 1);
+    double dt                = getCheckpointedTimestep(cycle_);
+    auto   end_step_solution = getCheckpointedStates(cycle_ + 1);
 
     temperature_ = end_step_solution.at("temperature");
-
-    double dt = getCheckpointedTimestep(cycle_);
 
     if (is_quasistatic_) {
       // We store the previous timestep's temperature as the current temperature for use in the lambdas computing the
@@ -868,8 +865,6 @@ public:
 
       lin_solver.SetOperator(*J_T);
       lin_solver.Mult(temperature_adjoint_load_, adjoint_temperature_);
-
-      return;
     } else {
       SLIC_ERROR_ROOT_IF(ode_.GetTimestepper() != TimestepMethod::BackwardEuler,
                          "Only backward Euler implemented for transient adjoint heat conduction.");
@@ -913,6 +908,9 @@ public:
       implicit_sensitivity_temperature_start_of_step_.Add(1.0 / dt,
                                                           temperature_rate_adjoint_load_);  // already multiplied by -1
     }
+
+    time_end_step_ = time_;
+    time_ -= dt;
   }
 
   /**
@@ -928,7 +926,7 @@ public:
   {
     // TODO: the time is likely not being handled correctly on the reverse pass, but we don't
     //       have tests to confirm.
-    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](time_));
+    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](time_end_step_));
     auto drdparam_mat = assemble(drdparam);
 
     drdparam_mat->MultTranspose(adjoint_temperature_, *parameters_[parameter_field].sensitivity);
@@ -946,8 +944,9 @@ public:
    */
   FiniteElementDual& computeTimestepShapeSensitivity() override
   {
-    auto drdshape = serac::get<DERIVATIVE>((*residual_)(time_, differentiate_wrt(shape_displacement_), temperature_,
-                                                        temperature_rate_, *parameters_[parameter_indices].state...));
+    auto drdshape =
+        serac::get<DERIVATIVE>((*residual_)(time_end_step_, differentiate_wrt(shape_displacement_), temperature_,
+                                            temperature_rate_, *parameters_[parameter_indices].state...));
 
     auto drdshape_mat = assemble(drdshape);
 
@@ -1036,6 +1035,10 @@ protected:
 
   /// The previous timestep
   double previous_dt_;
+
+  /// @brief End of step time used in reverse mode so that the time can be decremented on reverse steps
+  /// @note This time is important to save to evaluate various parameter sensitivities after each reverse step
+  double time_end_step_;
 
   /// Predicted temperature true dofs
   mfem::Vector u_;

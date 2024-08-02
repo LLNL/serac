@@ -369,6 +369,8 @@ public:
     c0_ = 0.0;
     c1_ = 0.0;
 
+    time_end_step_ = 0.0;
+
     displacement_ = 0.0;
     velocity_     = 0.0;
     acceleration_ = 0.0;
@@ -1355,14 +1357,11 @@ public:
 
     cycle_--;  // cycle is now at n \in [0,N-1]
 
-    double dt_np1_to_np2 = getCheckpointedTimestep(cycle_ + 1);
-    time_ -= dt_np1_to_np2;
+    double       dt_np1_to_np2     = getCheckpointedTimestep(cycle_ + 1);
+    const double dt_n_to_np1       = getCheckpointedTimestep(cycle_);
+    auto         end_step_solution = getCheckpointedStates(cycle_ + 1);
 
-    auto end_step_solution = getCheckpointedStates(cycle_ + 1);
-    // Load the end of step disp
     displacement_ = end_step_solution.at("displacement");
-
-    const double dt_n_to_np1 = getCheckpointedTimestep(cycle_);
 
     if (is_quasistatic_) {
       auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
@@ -1379,8 +1378,6 @@ public:
 
       // Reset the equation solver to use the full nonlinear residual operator.  MRT, is this needed?
       nonlin_solver_->setOperator(*residual_with_bcs_);
-
-      return;
     } else {
       SLIC_ERROR_ROOT_IF(ode2_.GetTimestepper() != TimestepMethod::Newmark,
                          "Only Newmark implemented for transient adjoint solid mechanics.");
@@ -1406,6 +1403,9 @@ public:
           acceleration_adjoint_load_, adjoint_displacement_, implicit_sensitivity_displacement_start_of_step_,
           implicit_sensitivity_velocity_start_of_step_, adjoint_essential, bcs_, lin_solver);
     }
+
+    time_end_step_ = time_;
+    time_ -= dt_n_to_np1;
   }
 
   /// @overload
@@ -1414,7 +1414,7 @@ public:
     SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
                     axom::fmt::format("Invalid parameter index '{}' requested for sensitivity."));
 
-    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](time_));
+    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](time_end_step_));
     auto drdparam_mat = assemble(drdparam);
 
     drdparam_mat->MultTranspose(adjoint_displacement_, *parameters_[parameter_field].sensitivity);
@@ -1425,8 +1425,9 @@ public:
   /// @overload
   FiniteElementDual& computeTimestepShapeSensitivity() override
   {
-    auto drdshape = serac::get<DERIVATIVE>((*residual_)(time_, differentiate_wrt(shape_displacement_), displacement_,
-                                                        acceleration_, *parameters_[parameter_indices].state...));
+    auto drdshape =
+        serac::get<DERIVATIVE>((*residual_)(time_end_step_, differentiate_wrt(shape_displacement_), displacement_,
+                                            acceleration_, *parameters_[parameter_indices].state...));
 
     auto drdshape_mat = assemble(drdshape);
 
@@ -1487,7 +1488,7 @@ public:
     SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
                     axom::fmt::format("Invalid parameter index '{}' requested for reaction sensitivity."));
 
-    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](time_));
+    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](time_end_step_));
     auto drdparam_mat = assemble(drdparam);
 
     drdparam_mat->MultTranspose(reaction_direction, *parameters_[parameter_field].sensitivity);
@@ -1499,8 +1500,9 @@ public:
   const serac::FiniteElementDual& computeDualShapeSensitivity(
       const serac::FiniteElementState& reaction_direction) override
   {
-    auto drdshape = serac::get<DERIVATIVE>((*residual_)(time_, differentiate_wrt(shape_displacement_), displacement_,
-                                                        acceleration_, *parameters_[parameter_indices].state...));
+    auto drdshape =
+        serac::get<DERIVATIVE>((*residual_)(time_end_step_, differentiate_wrt(shape_displacement_), displacement_,
+                                            acceleration_, *parameters_[parameter_indices].state...));
     auto drdshape_mat = assemble(drdshape);
     drdshape_mat->MultTranspose(reaction_direction, *shape_displacement_sensitivity_);
     return *shape_displacement_sensitivity_;
@@ -1592,6 +1594,10 @@ protected:
   /// coefficient used to calculate predicted velocity: dudt_p := dudt + c1 * d2u_dt2
   double c1_;
 
+  /// @brief End of step time used in reverse mode so that the time can be decremented on reverse steps
+  /// @note This time is important to save to evaluate various parameter sensitivities after each reverse step
+  double time_end_step_;
+
   /// @brief A flag denoting whether to compute geometric nonlinearities in the residual
   GeometricNonlinearities geom_nonlin_;
 
@@ -1621,7 +1627,6 @@ protected:
     // warm start must be called prior to the time update so that the previous Jacobians can be used consistently
     // throughout.
     warmStartDisplacement(dt);
-
     time_ += dt;
 
     // this method is essentially equivalent to the 1-liner
