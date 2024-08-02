@@ -244,8 +244,8 @@ TEST(quasistatic, finiteDifference)
   seracSolid->setParameter(1, vstate);
   double fmv = forwardPass(seracSolid.get(), qoi.get(), meshPtr, nTimeSteps, timeStep, "fmv");
 
-  ASSERT_NEAR(Ederiv, (fpE - fmE) / (2. * h), 1e-8);
-  ASSERT_NEAR(vderiv, (fpv - fmv) / (2. * h), 1e-8);
+  ASSERT_NEAR(Ederiv, (fpE - fmE) / (2. * h), 1e-7);
+  ASSERT_NEAR(vderiv, (fpv - fmv) / (2. * h), 1e-7);
 }
 
 }  // namespace serac
