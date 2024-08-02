@@ -259,7 +259,6 @@ public:
     v_.SetSize(true_size);
 
     du_.SetSize(true_size);
-    dr_.SetSize(true_size);
     predicted_displacement_.SetSize(true_size);
 
     shape_displacement_ = 0.0;
@@ -386,7 +385,6 @@ public:
     u_                      = 0.0;
     v_                      = 0.0;
     du_                     = 0.0;
-    dr_                     = 0.0;
     predicted_displacement_ = 0.0;
 
     if (checkpoint_to_disk_) {
@@ -1606,9 +1604,6 @@ protected:
   /// vector used to store the change in essential bcs between timesteps
   mfem::Vector du_;
 
-  /// vector used to store forces arising from du_ when applying time-dependent bcs
-  mfem::Vector dr_;
-
   /// @brief used to communicate the ODE solver's predicted displacement to the residual operator
   mfem::Vector u_;
 
@@ -1766,20 +1761,19 @@ protected:
       du_[j] -= displacement_(j);
     }
 
-    dr_ = r;
-    dr_ *= -1.0;
+    r *= -1.0;
 
-    mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, dr_);
+    mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, r);
     for (int i = 0; i < constrained_dofs.Size(); i++) {
       int j  = constrained_dofs[i];
-      dr_[j] = du_[j];
+      r[j] = du_[j];
     }
 
     auto& lin_solver = nonlin_solver_->linearSolver();
 
     lin_solver.SetOperator(*J_);
 
-    lin_solver.Mult(dr_, du_);
+    lin_solver.Mult(r, du_);
     displacement_ += du_;
   }
 };

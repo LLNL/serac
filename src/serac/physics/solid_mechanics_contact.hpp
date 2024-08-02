@@ -253,7 +253,6 @@ protected:
   using SolidMechanicsBase::d_residual_d_;
   using SolidMechanicsBase::DERIVATIVE;
   using SolidMechanicsBase::displacement_;
-  using SolidMechanicsBase::dr_;
   using SolidMechanicsBase::du_;
   using SolidMechanicsBase::J_;
   using SolidMechanicsBase::J_e_;
