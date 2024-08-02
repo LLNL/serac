@@ -66,7 +66,7 @@ void functional_solid_test_nonlinear_buckle()
                                                   .print_level                = 1};
 
   serac::LinearSolverOptions linear_options = {.linear_solver  = LinearSolver::CG,
-                                               .preconditioner = Preconditioner::HypreJacobi,
+                                               .preconditioner = Preconditioner::HypreAMG,
                                                .relative_tol   = 1.0e-6,
                                                .absolute_tol   = 1.0e-12,
                                                .max_iterations = 3 * Nx * Ny * Nz};

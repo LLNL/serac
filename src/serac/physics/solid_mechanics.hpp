@@ -14,6 +14,7 @@
 
 #include "mfem.hpp"
 
+#include "serac/serac_config.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/physics/common.hpp"
 #include "serac/physics/solid_mechanics_input.hpp"
@@ -241,12 +242,15 @@ public:
     // to be the displacement
     auto* amg_prec = dynamic_cast<mfem::HypreBoomerAMG*>(&nonlin_solver_->preconditioner());
     if (amg_prec) {
-      // amg_prec->SetElasticityOptions(&displacement_.space());
-
-      // TODO: The above call was seg faulting in the HYPRE_BoomerAMGSetInterpRefine(amg_precond, interp_refine)
-      // method as of Hypre version v2.26.0. Instead, we just set the system size for Hypre. This is a temporary work
-      // around as it will decrease the effectiveness of the preconditioner.
-      amg_prec->SetSystemsOptions(dim, true);
+      // ZRA - Iterative refinement tends to be more expensive than it is worth
+      // We should add a flag allowing users to enable it
+      if constexpr (serac::ordering == mfem::Ordering::byVDIM) {
+        bool iterative_refinement = false;
+        amg_prec->SetElasticityOptions(&displacement_.space(), iterative_refinement);
+      } else {
+        // SetElasticityOptions only works with byVDIM ordering, instead fallback to SetSystemsOptions
+        amg_prec->SetSystemsOptions(displacement_.space().GetVDim(), serac::ordering == mfem::Ordering::byNODES);
+      }
     }
 
     int true_size = velocity_.space().TrueVSize();
@@ -1215,6 +1219,16 @@ public:
           });
     }
 
+#ifdef SERAC_USE_PETSC
+    auto* space_dep_pc =
+        dynamic_cast<serac::mfem_ext::PetscPreconditionerSpaceDependent*>(&nonlin_solver_->preconditioner());
+    if (space_dep_pc) {
+      // This call sets the displacement ParFiniteElementSpace used to get the spatial coordinates and to
+      // generate the near null space for the PCGAMG preconditioner
+      space_dep_pc->SetFESpace(&displacement_.space());
+    }
+#endif
+
     nonlin_solver_->setOperator(*residual_with_bcs_);
 
     if (checkpoint_to_disk_) {
@@ -1679,13 +1693,15 @@ protected:
     for (int i = 0; i < num_nodes; i++) {
       // Determine if this "local" node (L-vector node) is in the local true vector. I.e. ensure this node is not a
       // shared node owned by another processor
-      if (nodal_positions.ParFESpace()->GetLocalTDofNumber(i) >= 0) {
+      int idof = mfem::Ordering::Map<serac::ordering>(nodal_positions.FESpace()->GetNDofs(),
+                                                      nodal_positions.FESpace()->GetVDim(), i, 0);
+      if (nodal_positions.ParFESpace()->GetLocalTDofNumber(idof) >= 0) {
         mfem::Vector     node_coords(dim);
         mfem::Array<int> node_dofs;
         for (int d = 0; d < dim; d++) {
           // Get the local dof number for the prescribed component
-          int local_vector_dof = mfem::Ordering::Map<mfem::Ordering::byNODES>(
-              nodal_positions.FESpace()->GetNDofs(), nodal_positions.FESpace()->GetVDim(), i, d);
+          int local_vector_dof = mfem::Ordering::Map<serac::ordering>(nodal_positions.FESpace()->GetNDofs(),
+                                                                      nodal_positions.FESpace()->GetVDim(), i, d);
 
           // Save the spatial position for this coordinate dof
           node_coords(d) = nodal_positions(local_vector_dof);

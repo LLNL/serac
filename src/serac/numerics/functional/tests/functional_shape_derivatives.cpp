@@ -264,33 +264,31 @@ void functional_test_2D(mfem::ParMesh& mesh, double tolerance)
 {
   constexpr int dim = 2;
 
-  // Create standard MFEM bilinear and linear forms on H1
-  auto                        fec1 = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace1(&mesh, &fec1);
-
-  auto                        fec2 = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace2(&mesh, &fec2, dim);
-
-  mfem::Vector ones(fespace1.TrueVSize());
-  ones = 1;
-
-  mfem::Vector U1(fespace1.TrueVSize());
-  U1.Randomize();
-
-  mfem::Vector U2(fespace2.TrueVSize());
-  U2.Randomize();
-  U2 *= 0.1;
-
-  mfem::Vector dU2(fespace2.TrueVSize());
-  dU2.Randomize();
-
   // Define the types for the test and trial spaces using the function arguments
   using test_space  = H1<p>;
   using trial_space = H1<p>;
   using shape_space = H1<p, dim>;
 
+  // Create standard MFEM bilinear and linear forms on H1
+  auto [fespace1, fec1] = serac::generateParFiniteElementSpace<test_space>(&mesh);
+
+  auto [fespace2, fec2] = serac::generateParFiniteElementSpace<shape_space>(&mesh);
+
+  mfem::Vector ones(fespace1->TrueVSize());
+  ones = 1;
+
+  mfem::Vector U1(fespace1->TrueVSize());
+  U1.Randomize();
+
+  mfem::Vector U2(fespace2->TrueVSize());
+  U2.Randomize();
+  U2 *= 0.1;
+
+  mfem::Vector dU2(fespace2->TrueVSize());
+  dU2.Randomize();
+
   // Construct the new functional object using the known test and trial spaces
-  ShapeAwareFunctional<shape_space, test_space(trial_space)> residual(&fespace2, &fespace1, {&fespace1});
+  ShapeAwareFunctional<shape_space, test_space(trial_space)> residual(fespace2.get(), fespace1.get(), {fespace1.get()});
 
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<>{}, TestFunctorOne<dim, p>{}, mesh);
 
@@ -309,33 +307,31 @@ void functional_test_3D(mfem::ParMesh& mesh, double tolerance)
 {
   constexpr int dim = 3;
 
-  // Create standard MFEM bilinear and linear forms on H1
-  auto                        fec1 = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace1(&mesh, &fec1);
-
-  auto                        fec2 = mfem::H1_FECollection(p, dim);
-  mfem::ParFiniteElementSpace fespace2(&mesh, &fec2, dim);
-
-  mfem::Vector ones(fespace1.TrueVSize());
-  ones = 1;
-
-  mfem::Vector U1(fespace1.TrueVSize());
-  U1.Randomize();
-
-  mfem::Vector U2(fespace2.TrueVSize());
-  U2.Randomize();
-  U2 *= 0.1;
-
-  mfem::Vector dU2(fespace2.TrueVSize());
-  dU2.Randomize();
-
   // Define the types for the test and trial spaces using the function arguments
   using test_space  = H1<p>;
   using trial_space = H1<p>;
   using shape_space = H1<p, dim>;
 
+  // Create standard MFEM bilinear and linear forms on H1
+  auto [fespace1, fec1] = serac::generateParFiniteElementSpace<test_space>(&mesh);
+
+  auto [fespace2, fec2] = serac::generateParFiniteElementSpace<shape_space>(&mesh);
+
+  mfem::Vector ones(fespace1->TrueVSize());
+  ones = 1;
+
+  mfem::Vector U1(fespace1->TrueVSize());
+  U1.Randomize();
+
+  mfem::Vector U2(fespace2->TrueVSize());
+  U2.Randomize();
+  U2 *= 0.1;
+
+  mfem::Vector dU2(fespace2->TrueVSize());
+  dU2.Randomize();
+
   // Construct the new functional object using the known test and trial spaces
-  ShapeAwareFunctional<shape_space, test_space(trial_space)> residual(&fespace2, &fespace1, {&fespace1});
+  ShapeAwareFunctional<shape_space, test_space(trial_space)> residual(fespace2.get(), fespace1.get(), {fespace1.get()});
 
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<>{}, TestFunctorOne<dim, p>{}, mesh);
 

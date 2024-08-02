@@ -86,27 +86,25 @@ tensor<double, dim> average(std::vector<tensor<double, dim>>& positions)
 template <int ptest, int ptrial, int dim>
 void whole_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 {
-  // Create standard MFEM bilinear and linear forms on H1
-  auto                        test_fec = mfem::H1_FECollection(ptest, dim);
-  mfem::ParFiniteElementSpace test_fespace(mesh.get(), &test_fec);
-
-  auto                        trial_fec = mfem::H1_FECollection(ptrial, dim);
-  mfem::ParFiniteElementSpace trial_fespace(mesh.get(), &trial_fec);
-
-  mfem::Vector U(trial_fespace.TrueVSize());
-
-  mfem::ParGridFunction     U_gf(&trial_fespace);
-  mfem::FunctionCoefficient x_squared([](mfem::Vector x) { return x[0] * x[0]; });
-  U_gf.ProjectCoefficient(x_squared);
-  U_gf.GetTrueDofs(U);
-
   // Define the types for the test and trial spaces using the function arguments
   using test_space  = H1<ptest>;
   using trial_space = H1<ptrial>;
 
+  // Create standard MFEM bilinear and linear forms on H1
+  auto [test_fespace, test_fec] = serac::generateParFiniteElementSpace<test_space>(mesh.get());
+
+  auto [trial_fespace, trial_fec] = serac::generateParFiniteElementSpace<trial_space>(mesh.get());
+
+  mfem::Vector U(trial_fespace->TrueVSize());
+
+  mfem::ParGridFunction     U_gf(trial_fespace.get());
+  mfem::FunctionCoefficient x_squared([](mfem::Vector x) { return x[0] * x[0]; });
+  U_gf.ProjectCoefficient(x_squared);
+  U_gf.GetTrueDofs(U);
+
   // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space)> residual(&test_fespace, {&trial_fespace});
-  Functional<test_space(trial_space)> residual_comparison(&test_fespace, {&trial_fespace});
+  Functional<test_space(trial_space)> residual(test_fespace.get(), {trial_fespace.get()});
+  Functional<test_space(trial_space)> residual_comparison(test_fespace.get(), {trial_fespace.get()});
 
   auto everything = [](std::vector<tensor<double, dim>>, int /* attr */) { return true; };
   auto on_left    = [](std::vector<tensor<double, dim>> X, int /* attr */) { return average(X)[0] < 0.5; };
@@ -187,27 +185,25 @@ TEST(mixed, whole_mesh_comparison_tets_and_hexes)
 template <int ptest, int ptrial, int dim>
 void partial_mesh_comparison_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
 {
-  // Create standard MFEM bilinear and linear forms on H1
-  auto                        test_fec = mfem::H1_FECollection(ptest, dim);
-  mfem::ParFiniteElementSpace test_fespace(mesh.get(), &test_fec);
-
-  auto                        trial_fec = mfem::H1_FECollection(ptrial, dim);
-  mfem::ParFiniteElementSpace trial_fespace(mesh.get(), &trial_fec);
-
-  mfem::Vector U(trial_fespace.TrueVSize());
-
-  mfem::ParGridFunction     U_gf(&trial_fespace);
-  mfem::FunctionCoefficient x_squared([](mfem::Vector x) { return x[0] * x[0]; });
-  U_gf.ProjectCoefficient(x_squared);
-  U_gf.GetTrueDofs(U);
-
   // Define the types for the test and trial spaces using the function arguments
   using test_space  = H1<ptest>;
   using trial_space = H1<ptrial>;
 
+  // Create standard MFEM bilinear and linear forms on H1
+  auto [test_fespace, test_fec] = serac::generateParFiniteElementSpace<test_space>(mesh.get());
+
+  auto [trial_fespace, trial_fec] = serac::generateParFiniteElementSpace<trial_space>(mesh.get());
+
+  mfem::Vector U(trial_fespace->TrueVSize());
+
+  mfem::ParGridFunction     U_gf(trial_fespace.get());
+  mfem::FunctionCoefficient x_squared([](mfem::Vector x) { return x[0] * x[0]; });
+  U_gf.ProjectCoefficient(x_squared);
+  U_gf.GetTrueDofs(U);
+
   // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space)> residual(&test_fespace, {&trial_fespace});
-  Functional<test_space(trial_space)> residual_comparison(&test_fespace, {&trial_fespace});
+  Functional<test_space(trial_space)> residual(test_fespace.get(), {trial_fespace.get()});
+  Functional<test_space(trial_space)> residual_comparison(test_fespace.get(), {trial_fespace.get()});
 
   auto   on_left = [](std::vector<tensor<double, dim>> X, int /* attr */) { return average(X)[0] < 4.0; };
   Domain left    = Domain::ofElements(*mesh, on_left);
@@ -261,22 +257,21 @@ TEST(qoi, partial_boundary)
   constexpr auto dim  = 3;
   auto           mesh = mesh::refineAndDistribute(buildMeshFromFile(SERAC_REPO_DIR "/data/meshes/beam-hex.mesh"), 1);
 
-  auto                        trial_fec = mfem::H1_FECollection(1, dim);
-  mfem::ParFiniteElementSpace trial_fespace(mesh.get(), &trial_fec);
-
-  mfem::Vector U(trial_fespace.TrueVSize());
-
-  mfem::ParGridFunction     U_gf(&trial_fespace);
-  mfem::FunctionCoefficient x_squared([](mfem::Vector x) { return x[0] * x[0]; });
-  U_gf.ProjectCoefficient(x_squared);
-  U_gf.GetTrueDofs(U);
-
   // Define the types for the test and trial spaces using the function arguments
   using test_space  = double;
   using trial_space = H1<1>;
 
+  auto [trial_fespace, trial_fec] = serac::generateParFiniteElementSpace<trial_space>(mesh.get());
+
+  mfem::Vector U(trial_fespace->TrueVSize());
+
+  mfem::ParGridFunction     U_gf(trial_fespace.get());
+  mfem::FunctionCoefficient x_squared([](mfem::Vector x) { return x[0] * x[0]; });
+  U_gf.ProjectCoefficient(x_squared);
+  U_gf.GetTrueDofs(U);
+
   // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space)> qoi({&trial_fespace});
+  Functional<test_space(trial_space)> qoi({trial_fespace.get()});
 
   auto   on_top       = [](std::vector<tensor<double, 3>> X, int /* attr */) { return average(X)[1] >= 0.99; };
   Domain top_boundary = Domain::ofBoundaryElements(*mesh, on_top);
@@ -295,22 +290,21 @@ TEST(qoi, partial_domain)
   constexpr auto dim  = 3;
   auto           mesh = mesh::refineAndDistribute(buildMeshFromFile(SERAC_REPO_DIR "/data/meshes/beam-hex.mesh"), 1);
 
-  auto                        trial_fec = mfem::H1_FECollection(1, dim);
-  mfem::ParFiniteElementSpace trial_fespace(mesh.get(), &trial_fec);
-
-  mfem::Vector U(trial_fespace.TrueVSize());
-
-  mfem::ParGridFunction     U_gf(&trial_fespace);
-  mfem::FunctionCoefficient x_squared([](mfem::Vector x) { return x[0] * x[0]; });
-  U_gf.ProjectCoefficient(x_squared);
-  U_gf.GetTrueDofs(U);
-
   // Define the types for the test and trial spaces using the function arguments
   using test_space  = double;
   using trial_space = H1<1>;
 
+  auto [trial_fespace, trial_fec] = serac::generateParFiniteElementSpace<trial_space>(mesh.get());
+
+  mfem::Vector U(trial_fespace->TrueVSize());
+
+  mfem::ParGridFunction     U_gf(trial_fespace.get());
+  mfem::FunctionCoefficient x_squared([](mfem::Vector x) { return x[0] * x[0]; });
+  U_gf.ProjectCoefficient(x_squared);
+  U_gf.GetTrueDofs(U);
+
   // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space)> qoi({&trial_fespace});
+  Functional<test_space(trial_space)> qoi({trial_fespace.get()});
 
   auto   on_left = [](std::vector<tensor<double, dim>> X, int /* attr */) { return average(X)[0] < 4.0; };
   Domain left    = Domain::ofElements(*mesh, on_left);

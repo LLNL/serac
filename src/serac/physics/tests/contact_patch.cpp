@@ -18,6 +18,8 @@
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/materials/solid_material.hpp"
 #include "serac/serac_config.hpp"
+#include "serac/infrastructure/initialize.hpp"
+#include "serac/infrastructure/terminator.hpp"
 
 namespace serac {
 
@@ -42,8 +44,18 @@ TEST_P(ContactTest, patch)
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), 2, 0);
   StateManager::setMesh(std::move(mesh), "patch_mesh");
 
+#ifdef SERAC_USE_PETSC
+  LinearSolverOptions linear_options{
+      .linear_solver        = LinearSolver::PetscGMRES,
+      .preconditioner       = Preconditioner::Petsc,
+      .petsc_preconditioner = PetscPCType::HMG,
+      .absolute_tol         = 1e-16,
+      .print_level          = 1,
+  };
+#elif defined(MFEM_USE_STRUMPACK)
+  // #ifdef MFEM_USE_STRUMPACK
   LinearSolverOptions linear_options{.linear_solver = LinearSolver::Strumpack, .print_level = 1};
-#ifndef MFEM_USE_STRUMPACK
+#else
   SLIC_INFO_ROOT("Contact requires MFEM built with strumpack.");
   return;
 #endif
@@ -51,7 +63,7 @@ TEST_P(ContactTest, patch)
   NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
                                            .relative_tol   = 1.0e-12,
                                            .absolute_tol   = 1.0e-12,
-                                           .max_iterations = 200,
+                                           .max_iterations = 20,
                                            .print_level    = 1};
 
   ContactOptions contact_options{.method      = ContactMethod::SingleMortar,
@@ -84,15 +96,15 @@ TEST_P(ContactTest, patch)
   // Finalize the data structures
   solid_solver.completeSetup();
 
-  // std::string paraview_name = name + "_paraview";
-  // solid_solver.outputStateToDisk(paraview_name);
+  std::string paraview_name = name + "_paraview";
+  solid_solver.outputStateToDisk(paraview_name);
 
   // Perform the quasi-static solve
   double dt = 1.0;
   solid_solver.advanceTimestep(dt);
 
   // Output the sidre-based plot files
-  // solid_solver.outputStateToDisk(paraview_name);
+  solid_solver.outputStateToDisk(paraview_name);
 
   // Check the l2 norm of the displacement dofs
   auto                            c = (3.0 * K - 2.0 * G) / (3.0 * K + G);
@@ -119,13 +131,11 @@ INSTANTIATE_TEST_SUITE_P(tribol, ContactTest,
 
 int main(int argc, char* argv[])
 {
-  ::testing::InitGoogleTest(&argc, argv);
-  MPI_Init(&argc, &argv);
+  testing::InitGoogleTest(&argc, argv);
 
-  axom::slic::SimpleLogger logger;
+  serac::initialize(argc, argv);
 
   int result = RUN_ALL_TESTS();
-  MPI_Finalize();
 
-  return result;
+  serac::exitGracefully(result);
 }
