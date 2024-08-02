@@ -1716,35 +1716,43 @@ protected:
 
   /**
    * @brief Sets the Dirichlet BCs for the current time and computes an initial guess for parameters and displacement
-   * 
+   *
    * @note
    * We want to solve
    *\f$
    *r(u_{n+1}, p_{n+1}, U_{n+1}, t_{n+1}) = 0
    *\f$
-   *for $u_{n+1}$, given new values of parameters, essential b.c.s and time. The problem is that if we use $u_n$ as the initial guess for this new solve, most nonlinear solver algorithms will start off by linearizing at (or near) the initial guess. But, if the essential boundary conditions change by an amount on the order of the mesh size, then it's possible to invert elements and make that linearization point inadmissible (either because it converges slowly or that the inverted elements crash the program).
-   *So, we need a better initial guess. This "warm start" generates a guess by linear extrapolation from the previous known solution:
+   *for $u_{n+1}$, given new values of parameters, essential b.c.s and time. The problem is that if we use $u_n$ as the
+   initial guess for this new solve, most nonlinear solver algorithms will start off by linearizing at (or near) the
+   initial guess. But, if the essential boundary conditions change by an amount on the order of the mesh size, then it's
+   possible to invert elements and make that linearization point inadmissible (either because it converges slowly or
+   that the inverted elements crash the program). *So, we need a better initial guess. This "warm start" generates a
+   guess by linear extrapolation from the previous known solution:
 
    *\f$
-   *0 = r(u_{n+1}, p_{n+1}, U_{n+1}, t_{n+1}) \approx {r(u_n, p_n, U_n, t_n)} +  \frac{dr_n}{du} \Delta u + \frac{dr_n}{dp} \Delta p + \frac{dr_n}{dU} \Delta U + \frac{dr_n}{dt} \Delta t
+   *0 = r(u_{n+1}, p_{n+1}, U_{n+1}, t_{n+1}) \approx {r(u_n, p_n, U_n, t_n)} +  \frac{dr_n}{du} \Delta u +
+   \frac{dr_n}{dp} \Delta p + \frac{dr_n}{dU} \Delta U + \frac{dr_n}{dt} \Delta t
    *\f$
    *If we assume that suddenly changing p and t will not lead to inverted elements, we can simplify the approximation to
    *\f$
-   *0 = r(u_{n+1}, p_{n+1}, U_{n+1}, t_{n+1}) \approx r(u_n, p_{n+1}, U_n, t_{n+1}) +  \frac{dr_n}{du} \Delta u + \frac{dr_n}{dU} \Delta U 
+   *0 = r(u_{n+1}, p_{n+1}, U_{n+1}, t_{n+1}) \approx r(u_n, p_{n+1}, U_n, t_{n+1}) +  \frac{dr_n}{du} \Delta u +
+   \frac{dr_n}{dU} \Delta U
    *\f$
    *Move all the known terms to the rhs and solve for $\Delta u$,
    *\f$
-   *\Delta u = - \bigg(  \frac{dr_n}{du} \bigg)^{-1} \bigg( r(u_n, p_{n+1}, U_n, t_{n+1}) + \frac{dr_n}{dU} \Delta U \bigg)
+   *\Delta u = - \bigg(  \frac{dr_n}{du} \bigg)^{-1} \bigg( r(u_n, p_{n+1}, U_n, t_{n+1}) + \frac{dr_n}{dU} \Delta U
+   \bigg)
    *\f$
-   *It is especially important to use the previously solved Jacobian in problems with material instabilities, as good nonlinear solvers will ensure positive definiteness at equilibrium.
-   *Once any parameter is changed, it is no longer certain to be positive definite, which will cause issues for many types linear solvers.
+   *It is especially important to use the previously solved Jacobian in problems with material instabilities, as good
+   nonlinear solvers will ensure positive definiteness at equilibrium. *Once any parameter is changed, it is no longer
+   certain to be positive definite, which will cause issues for many types linear solvers.
    */
   void warmStartDisplacement(double dt)
   {
     // Update the linearized Jacobian matrix
     auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
                                   *parameters_[parameter_indices].previous_state...);
-    auto r = (*residual_)(time_ + dt, shape_displacement_, displacement_, acceleration_,
+    auto r         = (*residual_)(time_ + dt, shape_displacement_, displacement_, acceleration_,
                           *parameters_[parameter_indices].state...);
     J_             = assemble(drdu);
     J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
@@ -1765,8 +1773,8 @@ protected:
 
     mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, r);
     for (int i = 0; i < constrained_dofs.Size(); i++) {
-      int j  = constrained_dofs[i];
-      r[j] = du_[j];
+      int j = constrained_dofs[i];
+      r[j]  = du_[j];
     }
 
     auto& lin_solver = nonlin_solver_->linearSolver();
