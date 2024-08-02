@@ -1738,7 +1738,7 @@ protected:
    *0 = r(u_{n+1}, p_{n+1}, U_{n+1}, t_{n+1}) \approx r(u_n, p_{n+1}, U_n, t_{n+1}) +  \frac{dr_n}{du} \Delta u +
    \frac{dr_n}{dU} \Delta U
    *\f$
-   *Move all the known terms to the rhs and solve for $\Delta u$,
+   *Move all the known terms to the rhs and solve for \f$\Delta u\f$,
    *\f$
    *\Delta u = - \bigg(  \frac{dr_n}{du} \bigg)^{-1} \bigg( r(u_n, p_{n+1}, U_n, t_{n+1}) + \frac{dr_n}{dU} \Delta U
    \bigg)
