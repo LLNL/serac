@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
   constexpr int dim = 3;
 
   // Create DataStore
-  std::string            name = "contact_ironing_example";
+  std::string            name = "contact_ironing_smalldef";
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, name + "_data");
 
@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
 
   serac::SolidMechanicsContact<p, dim, serac::Parameters<serac::L2<0>, serac::L2<0>>> solid_solver(
       nonlinear_options, linear_options, serac::solid_mechanics::default_quasistatic_options,
-      serac::GeometricNonlinearities::On, name, "ironing_mesh", {"bulk_mod", "shear_mod"});
+      serac::GeometricNonlinearities::Off, name, "ironing_mesh", {"bulk_mod", "shear_mod"});
 
   serac::FiniteElementState K_field(serac::StateManager::newState(serac::L2<0>{}, "bulk_mod", "ironing_mesh"));
   // each vector value corresponds to a different element attribute:
@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
   G_field.project(G_coeff);
   solid_solver.setParameter(1, G_field);
 
-  serac::solid_mechanics::ParameterizedNeoHookeanSolid mat{1.0, 0.0, 0.0};
+  serac::solid_mechanics::ParameterizedLinearIsotropicSolid mat{1.0, 0.0, 0.0};
   solid_solver.setMaterial(serac::DependsOn<0, 1>{}, mat);
 
   // Pass the BC information to the solver object
