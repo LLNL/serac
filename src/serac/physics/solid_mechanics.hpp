@@ -210,9 +210,7 @@ public:
     }
 
     adjoints_.push_back(&adjoint_displacement_);
-
     duals_.push_back(&reactions_);
-
     dual_adjoints_.push_back(&reactions_adjoint_load_);
 
     // Create a pack of the primal field and parameter finite element spaces
@@ -259,7 +257,6 @@ public:
 
     u_.SetSize(true_size);
     v_.SetSize(true_size);
-
     du_.SetSize(true_size);
     predicted_displacement_.SetSize(true_size);
 
@@ -388,9 +385,6 @@ public:
     v_                      = 0.0;
     du_                     = 0.0;
     predicted_displacement_ = 0.0;
-
-    J_.reset();
-    J_e_.reset();
 
     if (checkpoint_to_disk_) {
       outputStateToDisk();
@@ -1775,12 +1769,10 @@ protected:
                             *parameters_[parameter_indices].state...);
 
       // use the most recently evaluated Jacobian
-      if (!J_ || !J_e_) {
-        auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
-                                      *parameters_[parameter_indices].previous_state...);
-        J_             = assemble(drdu);
-        J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
-      }
+      auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
+                                    *parameters_[parameter_indices].previous_state...);
+      J_             = assemble(drdu);
+      J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
 
       r *= -1.0;
 
