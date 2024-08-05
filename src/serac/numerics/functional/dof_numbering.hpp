@@ -374,6 +374,7 @@ struct GradientAssemblyLookupTables {
    */
   std::unordered_map<Entry, uint32_t, Entry::Hasher> nz_LUT;
 
+  /// @brief specifies if the table has already been initialized or not
   bool initialized;
 };
 
