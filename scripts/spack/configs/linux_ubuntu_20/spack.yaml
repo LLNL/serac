@@ -1,7 +1,7 @@
 spack:
   compilers::
   - compiler:
-      spec: gcc@9.3.0
+      spec: gcc@9.4.0
       paths:
         cc: /usr/bin/gcc
         cxx: /usr/bin/g++
@@ -116,7 +116,7 @@ spack:
       - spec: cmake@3.20.4
         prefix: /usr
     cppcheck:
-      version: [1.90]
+      version: ['1.90']
       buildable: false
       externals:
       - spec: cppcheck@1.90

@@ -62,11 +62,14 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   [[maybe_unused]] static constexpr double a = 1.7;
   [[maybe_unused]] static constexpr double b = 0.0;
 
-  // Create standard MFEM bilinear and linear forms on H1
-  auto                        fec = mfem::L2_FECollection(p, dim, mfem::BasisType::GaussLobatto);
-  mfem::ParFiniteElementSpace fespace(&mesh, &fec);
+  // Define the types for the test and trial spaces using the function arguments
+  using test_space  = decltype(test);
+  using trial_space = decltype(trial);
 
-  mfem::ParBilinearForm A(&fespace);
+  // Create standard MFEM bilinear and linear forms on H1
+  auto [fespace, fec] = serac::generateParFiniteElementSpace<test_space>(&mesh);
+
+  mfem::ParBilinearForm A(fespace.get());
 
   // Add the mass term using the standard MFEM method
   mfem::ConstantCoefficient a_coef(a);
@@ -78,7 +81,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   std::unique_ptr<mfem::HypreParMatrix> J(A.ParallelAssemble());
 
   // Create a linear form for the load term using the standard MFEM method
-  mfem::ParLinearForm       f(&fespace);
+  mfem::ParLinearForm       f(fespace.get());
   mfem::FunctionCoefficient load_func([&](const mfem::Vector& coords) { return 100 * coords(0) * coords(1); });
   // FunctionCoefficient load_func([&]([[maybe_unused]] const Vector& coords) { return 1.0; });
 
@@ -88,20 +91,16 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   std::unique_ptr<mfem::HypreParVector> F(f.ParallelAssemble());
 
   // Set a random state to evaluate the residual
-  mfem::ParGridFunction u_global(&fespace);
+  mfem::ParGridFunction u_global(fespace.get());
   u_global.Randomize();
 
-  mfem::Vector U(fespace.TrueVSize());
+  mfem::Vector U(fespace->TrueVSize());
   u_global.GetTrueDofs(U);
 
   // Set up the same problem using weak form
 
-  // Define the types for the test and trial spaces using the function arguments
-  using test_space  = decltype(test);
-  using trial_space = decltype(trial);
-
   // Construct the new weak form object using the known test and trial spaces
-  Functional<test_space(trial_space)> residual(&fespace, {&fespace});
+  Functional<test_space(trial_space)> residual(fespace.get(), {fespace.get()});
 
   // Add the total domain residual term to the weak form
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, test_qfunction{}, mesh);
@@ -171,13 +170,11 @@ TEST(L2, 2DMixed)
   using test_space  = L2<0>;
   using trial_space = H1<1, dim>;
 
-  auto                        L2fec = mfem::L2_FECollection(0, dim, mfem::BasisType::GaussLobatto);
-  mfem::ParFiniteElementSpace L2fespace(mesh2D.get(), &L2fec);
+  auto [L2fespace, L2fec] = serac::generateParFiniteElementSpace<test_space>(mesh2D.get());
 
-  auto                        H1fec = mfem::H1_FECollection(1, dim);
-  mfem::ParFiniteElementSpace H1fespace(mesh2D.get(), &H1fec, dim);
+  auto [H1fespace, H1fec] = serac::generateParFiniteElementSpace<trial_space>(mesh2D.get());
 
-  serac::Functional<test_space(trial_space)> f(&L2fespace, {&H1fespace});
+  serac::Functional<test_space(trial_space)> f(L2fespace.get(), {H1fespace.get()});
   f.AddDomainIntegral(serac::Dimension<dim>{}, serac::DependsOn<0>{}, hcurl_qfunction<dim>{}, *mesh2D);
 }
 

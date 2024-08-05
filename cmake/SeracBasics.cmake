@@ -50,6 +50,16 @@ endif()
 #------------------------------------------------------------------------------
 if(GLVIS_EXECUTABLE)
     add_custom_target(glvis_symlink ALL
-                      COMMAND ${CMAKE_COMMAND} 
+                      COMMAND ${CMAKE_COMMAND}
                       -E create_symlink ${GLVIS_EXECUTABLE} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/glvis)
+endif()
+
+#------------------------------------------------------------------------------
+# Set ordering configuration
+#------------------------------------------------------------------------------
+option(SERAC_USE_VDIM_ORDERING "Use mfem::Ordering::byVDIM for DOF vectors (experimental, faster for algebraic multigrid)" OFF)
+if (SERAC_USE_VDIM_ORDERING)
+  message(STATUS "Using byVDIM degree-of-freedom vector ordering.")
+else()
+  message(STATUS "Using byNODES degree-of-freedom vector ordering.")
 endif()
