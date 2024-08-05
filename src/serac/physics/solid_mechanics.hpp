@@ -162,7 +162,7 @@ public:
   SolidMechanics(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
                  const GeometricNonlinearities geom_nonlin, const std::string& physics_name, std::string mesh_tag,
                  std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0,
-                 bool checkpoint_to_disk = false)
+                 bool checkpoint_to_disk = false, bool use_warm_start = true)
       : BasePhysics(physics_name, mesh_tag, cycle, time, checkpoint_to_disk),
         displacement_(
             StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "displacement"), mesh_tag_)),
@@ -182,7 +182,8 @@ public:
         ode2_(displacement_.space().TrueVSize(),
               {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = v_, .d2u_dt2 = acceleration_},
               *nonlin_solver_, bcs_),
-        geom_nonlin_(geom_nonlin)
+        geom_nonlin_(geom_nonlin),
+        use_warm_start_(use_warm_start)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension, {0}, and runtime mesh dimension, {1}, mismatch", dim,
@@ -1619,6 +1620,9 @@ protected:
   /// @brief A flag denoting whether to compute geometric nonlinearities in the residual
   GeometricNonlinearities geom_nonlin_;
 
+  /// @brief A flag denoting whether to compute the warm start for improved robustness
+  bool use_warm_start_;
+
   /// @brief Coefficient containing the essential boundary values
   std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef_;
 
@@ -1749,39 +1753,43 @@ protected:
    */
   void warmStartDisplacement(double dt)
   {
-    // Update the linearized Jacobian matrix
-    auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
-                                  *parameters_[parameter_indices].previous_state...);
-    auto r         = (*residual_)(time_ + dt, shape_displacement_, displacement_, acceleration_,
-                          *parameters_[parameter_indices].state...);
-    J_             = assemble(drdu);
-    J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
-
     du_ = 0.0;
     for (auto& bc : bcs_.essentials()) {
       // apply the future boundary conditions, but use the most recent Jacobians stiffness.
       bc.setDofs(du_, time_ + dt);
     }
 
-    auto& constrained_dofs = bcs_.allEssentialTrueDofs();
-    for (int i = 0; i < constrained_dofs.Size(); i++) {
-      int j = constrained_dofs[i];
-      du_[j] -= displacement_(j);
+    if (use_warm_start_) {
+      // Update the linearized Jacobian matrix
+      auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
+                                    *parameters_[parameter_indices].previous_state...);
+
+      auto r = (*residual_)(time_ + dt, shape_displacement_, displacement_, acceleration_,
+                            *parameters_[parameter_indices].state...);
+      J_     = assemble(drdu);
+      J_e_   = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+
+      auto& constrained_dofs = bcs_.allEssentialTrueDofs();
+      for (int i = 0; i < constrained_dofs.Size(); i++) {
+        int j = constrained_dofs[i];
+        du_[j] -= displacement_(j);
+      }
+
+      r *= -1.0;
+
+      mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, r);
+      for (int i = 0; i < constrained_dofs.Size(); i++) {
+        int j = constrained_dofs[i];
+        r[j]  = du_[j];
+      }
+
+      auto& lin_solver = nonlin_solver_->linearSolver();
+
+      lin_solver.SetOperator(*J_);
+
+      lin_solver.Mult(r, du_);
     }
 
-    r *= -1.0;
-
-    mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, r);
-    for (int i = 0; i < constrained_dofs.Size(); i++) {
-      int j = constrained_dofs[i];
-      r[j]  = du_[j];
-    }
-
-    auto& lin_solver = nonlin_solver_->linearSolver();
-
-    lin_solver.SetOperator(*J_);
-
-    lin_solver.Mult(r, du_);
     displacement_ += du_;
   }
 };
