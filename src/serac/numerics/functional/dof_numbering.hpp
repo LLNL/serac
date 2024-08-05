@@ -276,9 +276,9 @@ struct GradientAssemblyLookupTables {
       }
     };
   };
-  
+
   /// dummy default ctor to enable deferred initialization
-  GradientAssemblyLookupTables() : initialized{false} {}; 
+  GradientAssemblyLookupTables() : initialized{false} {};
 
   /**
    * @param block_test_dofs object containing information about dofs for the test space
@@ -375,7 +375,6 @@ struct GradientAssemblyLookupTables {
   std::unordered_map<Entry, uint32_t, Entry::Hasher> nz_LUT;
 
   bool initialized;
-
 };
 
 }  // namespace serac

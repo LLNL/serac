@@ -576,7 +576,8 @@ private:
       constexpr bool col_ind_is_sorted = true;
 
       if (!lookup_tables.initialized) {
-        lookup_tables.init(form_.G_test_[Domain::Type::Elements], form_.G_trial_[Domain::Type::Elements][which_argument]);
+        lookup_tables.init(form_.G_test_[Domain::Type::Elements],
+                           form_.G_trial_[Domain::Type::Elements][which_argument]);
       }
 
       double* values = new double[lookup_tables.nnz]{};
