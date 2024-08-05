@@ -154,7 +154,8 @@ public:
    * @param cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param time The simulation time to initialize the physics module to
    * @param checkpoint_to_disk A flag to save the transient states on disk instead of memory for the transient adjoint
-   * solves
+   * @param use_warm_start A flag to turn on or off the displacement warm start predictor which helps robustness for
+   * large deformation problems
    *
    * @note On parallel file systems (e.g. lustre), significant slowdowns and occasional errors were observed when
    *       writing and reading the needed trainsient states to disk for adjoint solves
@@ -387,6 +388,9 @@ public:
     v_                      = 0.0;
     du_                     = 0.0;
     predicted_displacement_ = 0.0;
+
+    J_.reset();
+    J_e_.reset();
 
     if (checkpoint_to_disk_) {
       outputStateToDisk();
@@ -1759,20 +1763,23 @@ protected:
       bc.setDofs(du_, time_ + dt);
     }
 
-    if (use_warm_start_) {
-      // Update the linearized Jacobian matrix
-      auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
-                                    *parameters_[parameter_indices].previous_state...);
+    auto& constrained_dofs = bcs_.allEssentialTrueDofs();
+    for (int i = 0; i < constrained_dofs.Size(); i++) {
+      int j = constrained_dofs[i];
+      du_[j] -= displacement_(j);
+    }
 
+    if (use_warm_start_ && is_quasistatic_) {
+      // Update the linearized Jacobian matrix
       auto r = (*residual_)(time_ + dt, shape_displacement_, displacement_, acceleration_,
                             *parameters_[parameter_indices].state...);
-      J_     = assemble(drdu);
-      J_e_   = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
 
-      auto& constrained_dofs = bcs_.allEssentialTrueDofs();
-      for (int i = 0; i < constrained_dofs.Size(); i++) {
-        int j = constrained_dofs[i];
-        du_[j] -= displacement_(j);
+      // use the most recently evaluated Jacobian
+      if (!J_ || !J_e_) {
+        auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
+                                      *parameters_[parameter_indices].previous_state...);
+        J_             = assemble(drdu);
+        J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
       }
 
       r *= -1.0;
