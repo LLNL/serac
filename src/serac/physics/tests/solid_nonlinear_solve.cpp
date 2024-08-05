@@ -85,7 +85,7 @@ auto get_opts(int max_iters, double abs_tol = 1e-9)
                                                .relative_tol   = 0.7 * abs_tol,
                                                .absolute_tol   = 0.7 * abs_tol,
                                                .max_iterations = max_iters,
-                                               .print_level = 0};
+                                               .print_level = 1};
 
   switch(nonlinSolve) {
   case NonlinSolve::NEWTON: {
@@ -577,8 +577,8 @@ void functional_solid_test_nonlinear_buckle(double loadMagnitude)
   seracSolid->setMaterial(serac::DependsOn<>{}, material);
 
   // fix displacement on side surface
-  //seracSolid->setDisplacementBCs({2, 3, 4, 5}, [](const mfem::Vector&, mfem::Vector& u) { u = 0.0; });
-  seracSolid->setDisplacementBCs({3}, [](const mfem::Vector&, mfem::Vector& u) { u = 0.0; });
+  seracSolid->setDisplacementBCs({2, 3, 4, 5}, [](const mfem::Vector&, mfem::Vector& u) { u = 0.0; });
+  // seracSolid->setDisplacementBCs({3}, [](const mfem::Vector&, mfem::Vector& u) { u = 0.0; });
 
   serac::Domain topSurface = serac::Domain::ofBoundaryElements(*meshPtr, serac::by_attr<DIM>(6));
   //seracSolid->setTraction([&](auto, auto n, auto) { return -loadMagnitude * n; }, topSurface);
@@ -606,7 +606,6 @@ void functional_solid_test_nonlinear_arch()
   double v             = 0.33;
   double bulkMod       = E / (3. * (1. - 2. * v));
   double shearMod      = E / (2. * (1. + v));
-  //double loadMagnitude = 1.2e-2; //0.2e-5;  // 2e-2;
 
   std::string meshTag = "mesh";
   std::string input_file_name = mesh_path + "arch.g";

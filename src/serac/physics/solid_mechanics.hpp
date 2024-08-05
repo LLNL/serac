@@ -1743,7 +1743,7 @@ protected:
   {
     SERAC_MARK_FUNCTION;
 
-    bool use_warm_start=false;
+    bool use_warm_start=true;
 
     du_ = 0.0;
     for (auto& bc : bcs_.essentials()) {
