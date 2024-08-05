@@ -54,6 +54,8 @@ void exitGracefully(bool error)
   mfem::MFEMFinalizePetsc();
 #endif
 
+  profiling::finalize();
+  
   int mpi_initialized = 0;
   MPI_Initialized(&mpi_initialized);
   int mpi_finalized = 0;
@@ -61,7 +63,6 @@ void exitGracefully(bool error)
   if (mpi_initialized && !mpi_finalized) {
     MPI_Finalize();
   }
-  profiling::finalize();
 
   accelerator::terminateDevice();
 

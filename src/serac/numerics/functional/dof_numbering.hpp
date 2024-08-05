@@ -318,6 +318,7 @@ struct GradientAssemblyLookupTables {
         }
       }
     }
+
     std::vector<Entry> entries(nz_LUT.size());
 
     uint32_t count = 0;
