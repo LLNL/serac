@@ -48,7 +48,9 @@ void adjoint_integrate(double dt_n, double dt_np1, mfem::HypreParMatrix* m_mat, 
  * solid mechanics simulations
  */
 const LinearSolverOptions default_linear_options = {.linear_solver  = LinearSolver::GMRES,
-                                                    .preconditioner = serac::ordering==mfem::Ordering::byVDIM ? Preconditioner::HypreAMG : Preconditioner::HypreJacobi,
+                                                    .preconditioner = serac::ordering == mfem::Ordering::byVDIM
+                                                                          ? Preconditioner::HypreAMG
+                                                                          : Preconditioner::HypreJacobi,
                                                     .relative_tol   = 1.0e-6,
                                                     .absolute_tol   = 1.0e-16,
                                                     .max_iterations = 500,
