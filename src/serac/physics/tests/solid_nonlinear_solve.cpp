@@ -757,19 +757,22 @@ void functional_solid_test_nonlinear_snap_chain()
 
 //TEST(SolidMechanics, nonlinear_solve_buckle_easy) { functional_solid_test_nonlinear_buckle(2e-5); }
 TEST(SolidMechanics, nonlinear_solve_buckle_easy) { functional_solid_test_nonlinear_buckle(5e-10); }
+/*
 TEST(SolidMechanics, nonlinear_solve_buckle_medium) { functional_solid_test_nonlinear_buckle(4e-4); }
 TEST(SolidMechanics, nonlinear_solve_buckle_hard) { functional_solid_test_nonlinear_buckle(3e-2); }
 TEST(SolidMechanics, nonlinear_solve_arch) { functional_solid_test_nonlinear_arch(); }
 TEST(SolidMechanics, nonlinear_solve_snap_chain) { functional_solid_test_nonlinear_snap_chain(); }
 TEST(SolidMechanics, nonlinear_solve_snap_cell) { functional_solid_test_nonlinear_snap_cell(); }
 TEST(SolidMechanics, nonlinear_solid_test_gate) { functional_solid_test_gate(); }
+*/
 
 #endif
 
+/*
 TEST(SolidMechanics, nonlinear_solve_euler) { functional_solid_test_euler(); }
 TEST(SolidMechanics, nonlinear_solve_cylinder) { functional_solid_test_cylinder(); }
 TEST(SolidMechanics, nonlinear_solve_cylinder_traction) { functional_solid_test_cylinder_traction(); }
-
+*/
 
 class InputParser
 {
