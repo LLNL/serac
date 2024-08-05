@@ -188,6 +188,7 @@ public:
         geom_nonlin_(geom_nonlin),
         use_warm_start_(use_warm_start)
   {
+    SERAC_MARK_FUNCTION;
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension, {0}, and runtime mesh dimension, {1}, mismatch", dim,
                                          mesh_.Dimension()));
@@ -204,6 +205,7 @@ public:
     } else {
       is_quasistatic_ = true;
     }
+
 
     states_.push_back(&displacement_);
     if (!is_quasistatic_) {
@@ -1132,7 +1134,7 @@ public:
         [this](const mfem::Vector& u, mfem::Vector& r) {
           const mfem::Vector res = (*residual_)(ode_time_point_, shape_displacement_, u, acceleration_,
                                                 *parameters_[parameter_indices].state...);
-
+          SERAC_MARK_FUNCTION;
           // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
           // tracking strategy
           // See https://github.com/mfem/mfem/issues/3531
@@ -1142,6 +1144,7 @@ public:
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
+          SERAC_MARK_FUNCTION;
           auto [r, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(u), acceleration_,
                                         *parameters_[parameter_indices].state...);
           J_             = assemble(drdu);
@@ -1252,6 +1255,7 @@ public:
   /// @overload
   void advanceTimestep(double dt) override
   {
+    SERAC_MARK_FUNCTION;
     SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in SolidMechanics.");
 
     // If this is the first call, initialize the previous parameter values as the initial values
@@ -1753,16 +1757,11 @@ protected:
    */
   void warmStartDisplacement(double dt)
   {
+    SERAC_MARK_FUNCTION;
     du_ = 0.0;
     for (auto& bc : bcs_.essentials()) {
       // apply the future boundary conditions, but use the most recent Jacobians stiffness.
       bc.setDofs(du_, time_ + dt);
-    }
-
-    auto& constrained_dofs = bcs_.allEssentialTrueDofs();
-    for (int i = 0; i < constrained_dofs.Size(); i++) {
-      int j = constrained_dofs[i];
-      du_[j] -= displacement_(j);
     }
 
     if (use_warm_start_ && is_quasistatic_) {

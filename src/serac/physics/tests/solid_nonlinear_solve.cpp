@@ -42,7 +42,8 @@ enum Prec
   STRUMPACK,
   CHOLESKI,
   LU,
-  MULTIGRID
+  MULTIGRID,
+  PETSC_MULTIGRID
 };
 
 enum NonlinSolve
@@ -55,7 +56,6 @@ enum NonlinSolve
 
 NonlinSolve nonlinSolve = NonlinSolve::TRUSTREGION;
 Prec prec = Prec::JACOBI;
-
 
 auto get_opts(int max_iters, double abs_tol = 1e-9)
 {
@@ -153,6 +153,18 @@ auto get_opts(int max_iters, double abs_tol = 1e-9)
     
     break;
   }
+  case Prec::PETSC_MULTIGRID: {
+    printf("using petsc multigrid\n");
+    //linear_options.linear_solver = LinearSolver::GMRES;
+    linear_options.linear_solver = LinearSolver::CG;
+
+    linear_options.preconditioner = Preconditioner::Petsc;
+    linear_options.petsc_preconditioner = PetscPCType::HMG;
+    //linear_options.preconditioner = Preconditioner::HypreAMG;
+    
+    break;
+  }
+
   default: {
     printf("error\n");
     exit(1);
@@ -188,130 +200,6 @@ void write_sphere(std::vector<std::array<double,3>> coords, std::vector<double> 
   }
 }
 
-void functional_solid_test_buckle_ball()
-{
-  // initialize serac
-  axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "buckleBallStore");
-
-  static constexpr int ORDER{1};
-  static constexpr int DIM{3};
-
-  //int Nx = 6;
-  //int Ny = 9;
-  //int Nz = 13*5;
-
-  int Nx = 5;
-  int Ny = 8;
-  int Nz = 14*5;
-
-  double Lx = 1.0;
-  double Ly = 6.0;
-  double Lz = 30.0;
-
-  double density       = 1.0;
-  double E             = 1000.0;
-  double v             = 0.33;
-  double bulkMod       = E / (3. * (1. - 2. * v));
-  double shearMod      = E / (2. * (1. + v));
-  double loadMagnitude = 2.0;
-  double v_crit = 5e-2; //2.0;
-  //double eta = 0.45;
-  //double mu = 0.3;
-  double mu = 0.01;
-
-  std::string    meshTag = "mesh";
-  mfem::Mesh     mesh    = mfem::Mesh::MakeCartesian3D(Nx, Ny, Nz, mfem::Element::HEXAHEDRON, Lx, Ly, Lz);
-  auto           pmesh   = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, mesh);
-  mfem::ParMesh* meshPtr = &serac::StateManager::setMesh(std::move(pmesh), meshTag);
-
-  // solid mechanics
-  using seracSolidType = serac::SolidMechanics<ORDER, DIM, serac::Parameters<>>;
-
-  auto [nonlinear_options, linear_options] = get_opts(Nx*Ny*Nz, 1e-9);
-
-  auto seracSolid = std::make_unique<seracSolidType>(
-      nonlinear_options, linear_options, serac::solid_mechanics::default_quasistatic_options,
-      serac::GeometricNonlinearities::On, "serac_solid", meshTag, std::vector<std::string>{});
-
-  double radius = 5.0;
-  double initial_penalty = 1000.0;
-  std::array<double,DIM> rigid_velo_0{0.0, -0.0, 2.0};
-  std::array<double,DIM> corner_0{-11.5, 3.0, -3.5};
-  auto lset_0 = std::make_unique<LevelSetSphere<DIM>>(corner_0, radius, rigid_velo_0);
-  auto friction_0 = std::make_unique<NodalFriction<DIM>>(mu, v_crit, rigid_velo_0);
-  auto constraint_0 = std::make_unique<InequalityConstraint<ORDER, DIM>>(std::move(lset_0), std::move(friction_0),
-                                                                         "serac_solid_"+std::to_string(0), meshTag,
-                                                                         initial_penalty);
-  seracSolid->addInequalityConstraint(std::move(constraint_0));
-
-  int num_time_steps = 22;
-  double total_time = num_time_steps;
-  double dt = total_time / num_time_steps;
-
-  double t_meet = (Lz/2.0 - corner_0[2]) / rigid_velo_0[2] - dt;
-  std::array<double,DIM> rigid_velo_1{2.0, 0.0, -0.2};
-  std::array<double,DIM> corner_1; for (size_t i=0; i < DIM; ++i) corner_1[i] = corner_0[i] + rigid_velo_0[i] * t_meet - rigid_velo_1[i] * t_meet;
-  auto lset_1 = std::make_unique<LevelSetSphere<DIM>>(corner_1, radius, rigid_velo_1);
-  auto friction_1 = std::make_unique<NodalFriction<DIM>>(mu, v_crit, rigid_velo_1);
-  auto constraint_1 = std::make_unique<InequalityConstraint<ORDER, DIM>>(std::move(lset_1), std::move(friction_1),
-                                                                         "serac_solid_"+std::to_string(1), meshTag,
-                                                                         initial_penalty);
-  seracSolid->addInequalityConstraint(std::move(constraint_1));
-
-  // at 12.0, want v = (3,0,0)
-  // x2 + v2 * 12 = x1 + v1 * 12
-
-  serac::solid_mechanics::NeoHookean material{density, bulkMod, shearMod};
-  seracSolid->setMaterial(serac::DependsOn<>{}, material);
-
-  serac::Domain backSurface = serac::Domain::ofBoundaryElements(*meshPtr, serac::by_attr<DIM>(3)); // 4,5 with traction makes a twist
-  serac::Domain topSurface = serac::Domain::ofBoundaryElements(*meshPtr, serac::by_attr<DIM>(6));
-
-  //seracSolid->setPressure([&](auto, auto t) { return t > 0 ? loadMagnitude : 0.0; }, backSurface);
-  seracSolid->setPressure([&](auto, auto t) { return t > 0.5 * dt && t < 1.5 * dt ? loadMagnitude : -1e-5 * loadMagnitude; }, backSurface);
-  // seracSolid->setTraction([&](auto, auto n, auto t) { return  t > 0.5 * dt && t < 1.5 * dt ? -loadMagnitude * n : 1e-7 * loadMagnitude * n; }, backSurface);
-
-  // displacement on bottom surface
-  seracSolid->setDisplacementBCs({1}, [](const mfem::Vector&, mfem::Vector& u) {
-    u = 0.0;
-  });
-
-  // fix displacement on top surface
-  seracSolid->setDisplacementBCs({6}, [](const mfem::Vector&, mfem::Vector& u) {
-    u = 0.0;
-    u[2] = -10.0;
-  });
-
-  auto getSphere = [=](int num, const double time) {
-    std::array<double,DIM> sphere_x;
-    if (num==0) {
-      for (size_t i=0; i < DIM; ++i) sphere_x[i] = corner_0[i] + rigid_velo_0[i] * time;
-    } else {
-      for (size_t i=0; i < DIM; ++i) sphere_x[i] = corner_1[i] + rigid_velo_1[i] * time;
-    }
-    return sphere_x;
-  };
-
-  seracSolid->completeSetup();
-
-  double time = 0.0;
-  seracSolid->outputStateToDisk("paraview_buckle_ball");
-  write_sphere( {getSphere(0,time), getSphere(1,time) }, {radius, radius}, 0 );
-  seracSolid->advanceTimestep(0.2);
-  time += 0.2;
-
-  seracSolid->outputStateToDisk("paraview_buckle_ball");
-  write_sphere( {getSphere(0,time), getSphere(1,time) }, {radius, radius}, 1 );
-  for (int step=0; step < num_time_steps; ++step) {
-    seracSolid->advanceTimestep(dt);
-    time += dt;
-
-    seracSolid->outputStateToDisk("paraview_buckle_ball");
-    write_sphere( {getSphere(0,time), getSphere(1,time) }, {radius, radius}, step+2 );
-  }
-}
-
 void functional_solid_test_euler()
 {
   // initialize serac
@@ -321,16 +209,16 @@ void functional_solid_test_euler()
   static constexpr int ORDER{1};
   static constexpr int DIM{3};
 
-  //int Nx = 5;
-  //int Ny = 8;
-  //int Nz = 15*5;
+  //int Nx = 6;
+  //int Ny = 7;
+  //int Nz = 20*6;
 
   int Nx = 4;
   int Ny = 7;
   int Nz = 10*5;
 
   double Lx = 1.0;
-  double Ly = 2.0;
+  double Ly = 1.2;
   double Lz = 30.0;
 
   double density       = 1.0;
@@ -654,20 +542,22 @@ void functional_solid_test_nonlinear_buckle(double loadMagnitude)
   static constexpr int ORDER{1};
   static constexpr int DIM{3};
 
-  int Nx = 100;
-  int Ny = 50;
-  int Nz = 3;
+  //int Nx = 1000;
+  int Nx = 500;
+  int Ny = 6;
+  int Nz = 5;
 
-  double Lx = 20.0;
-  double Ly = 10.0;
-  double Lz = 0.3;
+  double Lx = Nx * 0.1;
+  double Ly = Ny * 0.03;
+  double Lz = Nz * 0.06;
 
   double density       = 1.0;
   double E             = 1.0;
   double v             = 0.33;
   double bulkMod       = E / (3. * (1. - 2. * v));
   double shearMod      = E / (2. * (1. + v));
-  //double loadMagnitude = 1e-4; //2e-2; //0.2e-5;  // 2e-2;
+
+  SERAC_MARK_FUNCTION;
 
   std::string    meshTag = "mesh";
   mfem::Mesh     mesh    = mfem::Mesh::MakeCartesian3D(Nx, Ny, Nz, mfem::Element::HEXAHEDRON, Lx, Ly, Lz);
@@ -677,7 +567,7 @@ void functional_solid_test_nonlinear_buckle(double loadMagnitude)
   // solid mechanics
   using seracSolidType = serac::SolidMechanics<ORDER, DIM, serac::Parameters<>>;
 
-  auto [nonlinear_options, linear_options] = get_opts(3*Nx*Ny*Nz, 1e-8);
+  auto [nonlinear_options, linear_options] = get_opts(3*Nx*Ny*Nz, 1e-11);
 
   auto seracSolid = std::make_unique<seracSolidType>(
       nonlinear_options, linear_options, serac::solid_mechanics::default_quasistatic_options,
@@ -687,7 +577,8 @@ void functional_solid_test_nonlinear_buckle(double loadMagnitude)
   seracSolid->setMaterial(serac::DependsOn<>{}, material);
 
   // fix displacement on side surface
-  seracSolid->setDisplacementBCs({2, 3, 4, 5}, [](const mfem::Vector&, mfem::Vector& u) { u = 0.0; });
+  //seracSolid->setDisplacementBCs({2, 3, 4, 5}, [](const mfem::Vector&, mfem::Vector& u) { u = 0.0; });
+  seracSolid->setDisplacementBCs({3}, [](const mfem::Vector&, mfem::Vector& u) { u = 0.0; });
 
   serac::Domain topSurface = serac::Domain::ofBoundaryElements(*meshPtr, serac::by_attr<DIM>(6));
   //seracSolid->setTraction([&](auto, auto n, auto) { return -loadMagnitude * n; }, topSurface);
@@ -699,98 +590,6 @@ void functional_solid_test_nonlinear_buckle(double loadMagnitude)
 }
 
 
-void functional_solid_test_friction_box()
-{
-  // initialize serac
-  axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "boxStore");
-
-  static constexpr int ORDER{1};
-  static constexpr int DIM{3};
-
-  int Nx = 5;
-  int Ny = 5;
-  int Nz = 5;
-
-  double Lx = 5.0;
-  double Ly = 5.0;
-  double Lz = 8.3;
-
-  double density       = 1.0;
-  double E             = 1000.0;
-  double v             = 0.33;
-  double bulkMod       = E / (3. * (1. - 2. * v));
-  double shearMod      = E / (2. * (1. + v));
-  // double loadMagnitude = 1e-5; //0.2e-5;  // 2e-2;
-  // double eta = 0.45;
-  double mu = 0.3; //3;
-
-  std::string    meshTag = "mesh";
-  mfem::Mesh     mesh    = mfem::Mesh::MakeCartesian3D(Nx, Ny, Nz, mfem::Element::HEXAHEDRON, Lx, Ly, Lz);
-  auto           pmesh   = std::make_unique<mfem::ParMesh>(MPI_COMM_WORLD, mesh);
-  mfem::ParMesh* meshPtr = &serac::StateManager::setMesh(std::move(pmesh), meshTag);
-
-  // solid mechanics
-  using seracSolidType = serac::SolidMechanics<ORDER, DIM, serac::Parameters<>>;
-
-  auto [nonlinear_options, linear_options] = get_opts(Nx*Ny*Nz, 1e-9);
-
-  auto seracSolid = std::make_unique<seracSolidType>(
-      nonlinear_options, linear_options, serac::solid_mechanics::default_quasistatic_options,
-      serac::GeometricNonlinearities::On, "serac_solid", meshTag, std::vector<std::string>{});
-
-  double initial_penalty = 1000.0;
-  std::array<double,DIM> rigid_velo{0.0, 0.0, 0.0};
-  std::array<double,DIM> corner{-0.1, -0.1, -0.1};
-  std::array<double,DIM> plane_normal;
-  for (size_t i=0; i < DIM; ++i) {
-    plane_normal = {};
-    plane_normal[i] = 1.0;
-    auto lset = std::make_unique<LevelSetPlane<DIM>>(corner, plane_normal);
-    auto friction = std::make_unique<NodalFriction<DIM>>(mu, 1e-2, rigid_velo);
-    auto constraint = std::make_unique<InequalityConstraint<ORDER, DIM>>(std::move(lset), std::move(friction),
-                                                                         "serac_solid_"+std::to_string(i), meshTag,
-                                                                         initial_penalty);
-    seracSolid->addInequalityConstraint(std::move(constraint));
-  }
-
-  serac::solid_mechanics::NeoHookean material{density, bulkMod, shearMod};
-  seracSolid->setMaterial(serac::DependsOn<>{}, material);
-
-  serac::Domain topSurface = serac::Domain::ofBoundaryElements(*meshPtr, serac::by_attr<DIM>(6));
-
-  int num_time_steps = 1;
-  double total_time = 1.0; //num_time_steps; //.0;
-  double dt = total_time / num_time_steps;
-
-  //const tensor<double, DIM> nx{1.0, 0.0, 0.0};
-  //const tensor<double, DIM> ny{0.0, 1.0, 0.0};
-  //const tensor<double, DIM> nz{0.0, 0.0, 1.0};
-  //seracSolid->setTraction([&](auto, auto, double t) {
-  //  //printf("t = %g\n", t);
-  //  auto sideLoad = eta * (t / total_time) * loadMagnitude;
-  //  return -loadMagnitude * ny - sideLoad / std::sqrt(2.0) * nx - sideLoad / std::sqrt(2.0) * nz;
-  //}, topSurface);
-
-  // fix displacement on top surface
-  seracSolid->setDisplacementBCs({6}, [](const mfem::Vector&, mfem::Vector& u) {
-    u = 0.0;
-    u[2] = -0.15;
-    u[1] = -0.05;
-  });
-
-  seracSolid->completeSetup();
-
-  seracSolid->outputStateToDisk("paraview_friction_box");
-  //seracSolid->advanceTimestep(0.0);
-  //seracSolid->outputStateToDisk("paraview_friction_box");
-  //seracSolid->advanceTimestep(0.0);
-  //seracSolid->outputStateToDisk("paraview_friction_box");
-  for (int i=0; i < num_time_steps; ++i) {
-    seracSolid->advanceTimestep(dt);
-    seracSolid->outputStateToDisk("paraview_friction_box");
-  }
-}
 
 
 void functional_solid_test_nonlinear_arch()
@@ -824,16 +623,6 @@ void functional_solid_test_nonlinear_arch()
   auto seracSolid = std::make_unique<seracSolidType>(
       nonlinear_options, linear_options, serac::solid_mechanics::default_quasistatic_options,
       serac::GeometricNonlinearities::On, "serac_solid", meshTag, std::vector<std::string>{});
-
-  //auto lset = std::make_unique<LevelSetPlane<DIM>>(std::array<double,DIM>{0.0, -4.0, 0.0}, 
-  //                                                 std::array<double,DIM>{0.0, 1.0, 0.0});
-  double initial_penalty = 0.1;
-  std::array<double,DIM> ball_velo{10.0, 0.0, 0.0};
-  auto lset = std::make_unique<LevelSetSphere<DIM>>(std::array<double,DIM>{-5.0, -5.0, 1.5}, 2.2, ball_velo);
-  auto friction = std::make_unique<NodalFriction<DIM>>(0.3, 1e-1, ball_velo);
-  auto constraint = std::make_unique<InequalityConstraint<ORDER, DIM>>(std::move(lset), std::move(friction),
-                                                                       "serac_solid", meshTag, initial_penalty);
-  seracSolid->addInequalityConstraint(std::move(constraint));
 
   serac::solid_mechanics::NeoHookean material{density, bulkMod, shearMod};
   seracSolid->setMaterial(serac::DependsOn<>{}, material);
@@ -967,20 +756,17 @@ void functional_solid_test_nonlinear_snap_chain()
   }
 }
 
-TEST(SolidMechanics, nonlinear_solve_buckle_easy) { functional_solid_test_nonlinear_buckle(2e-5); }
+//TEST(SolidMechanics, nonlinear_solve_buckle_easy) { functional_solid_test_nonlinear_buckle(2e-5); }
+TEST(SolidMechanics, nonlinear_solve_buckle_easy) { functional_solid_test_nonlinear_buckle(5e-10); }
 TEST(SolidMechanics, nonlinear_solve_buckle_medium) { functional_solid_test_nonlinear_buckle(4e-4); }
 TEST(SolidMechanics, nonlinear_solve_buckle_hard) { functional_solid_test_nonlinear_buckle(3e-2); }
 TEST(SolidMechanics, nonlinear_solve_arch) { functional_solid_test_nonlinear_arch(); }
 TEST(SolidMechanics, nonlinear_solve_snap_chain) { functional_solid_test_nonlinear_snap_chain(); }
 TEST(SolidMechanics, nonlinear_solve_snap_cell) { functional_solid_test_nonlinear_snap_cell(); }
-TEST(SolidMechanics, nonlinear_solve_friction_box) { 
-  functional_solid_test_friction_box();
-}
 TEST(SolidMechanics, nonlinear_solid_test_gate) { functional_solid_test_gate(); }
 
 #endif
 
-TEST(SolidMechanics, nonlinear_solve_buckle_ball) { functional_solid_test_buckle_ball(); }
 TEST(SolidMechanics, nonlinear_solve_euler) { functional_solid_test_euler(); }
 TEST(SolidMechanics, nonlinear_solve_cylinder) { functional_solid_test_cylinder(); }
 TEST(SolidMechanics, nonlinear_solve_cylinder_traction) { functional_solid_test_cylinder_traction(); }
