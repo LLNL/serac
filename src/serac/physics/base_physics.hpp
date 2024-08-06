@@ -134,12 +134,13 @@ public:
   virtual void resetStates(int cycle = 0, double time = 0.0) = 0;
 
   /**
-   * @brief Base method to reset physics states back to the end of time to start adjoint calculations again.  This does not reset design parameters or shape.
+   * @brief Base method to reset physics states back to the end of time to start adjoint calculations again.  This does
+   * not reset design parameters or shape.
    *
    */
   virtual void resetAdjointStates()
   {
-    time_ = max_time_;
+    time_  = max_time_;
     cycle_ = max_cycle_;
   }
 
