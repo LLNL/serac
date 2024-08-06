@@ -155,13 +155,7 @@ int main(int argc, char* argv[])
                                                                    serac::GeometricNonlinearities::On, name, mesh_tag);
     auto domain  = serac::Domain::ofBoundaryElements(
          StateManager::mesh(mesh_tag), [&](std::vector<vec3>, int attr) { return xpos.find(attr) != xpos.end(); });
-    solid_solver->setPressure(
-        [&](auto&, double t) {
-          auto p = 0.01 * t;
-          std::cout << axom::fmt::format("applied pressure {}\n", p);
-          return p;
-        },
-        domain);
+    solid_solver->setPressure([&](auto&, double t) { return 0.01 * t; }, domain);
   }
 
   // Define a Neo-Hookean material
