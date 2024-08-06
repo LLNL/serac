@@ -74,16 +74,6 @@ double forwardPass(serac::BasePhysics* solid, qoiType* qoi, mfem::ParMesh* /*mes
 {
   solid->resetStates();
 
-  // set up plotting
-  /*
-  mfem::ParGridFunction uGF(const_cast<mfem::ParFiniteElementSpace*>(&solid->state("displacement").space()));
-  solid->state("displacement").fillGridFunction(uGF);
-  mfem::VisItDataCollection visit_dc(saveName, meshPtr);
-  visit_dc.RegisterField("u", &uGF);
-  visit_dc.SetCycle(0);
-  visit_dc.Save();
-  */
-
   double                           qoiValue = 0.0;
   const serac::FiniteElementState& E        = solid->parameter("E");
   const serac::FiniteElementState& v        = solid->parameter("v");
@@ -93,13 +83,6 @@ double forwardPass(serac::BasePhysics* solid, qoiType* qoi, mfem::ParMesh* /*mes
   for (int i = 0; i < nTimeSteps; i++) {
     // solve
     solid->advanceTimestep(timeStep);
-
-    // plot
-    /*
-    u.fillGridFunction(uGF);
-    visit_dc.SetCycle(i + 1);
-    visit_dc.Save();
-    */
 
     // accumulate
     double curr = (*qoi)(solid->time(), E, v, u);
@@ -169,10 +152,10 @@ TEST(quasistatic, finiteDifference)
                                                          .print_level    = 1};
   auto seracSolid = ::std::make_unique<solidType>(nonlinear_options, serac::solid_mechanics::direct_linear_options,
                                                   ::serac::solid_mechanics::default_quasistatic_options,
-                                                  ::serac::GeometricNonlinearities::Off, physics_prefix, mesh_tag,
+                                                  ::serac::GeometricNonlinearities::On, physics_prefix, mesh_tag,
                                                   std::vector<std::string>{"E", "v"});
 
-  using materialType = ParameterizedLinearIsotropicSolid;
+  using materialType = ParameterizedNeoHookeanSolid;
   materialType material;
   seracSolid->setMaterial(::serac::DependsOn<0, 1>{}, material);
 
@@ -221,6 +204,13 @@ TEST(quasistatic, finiteDifference)
   // ADJOINT GRADIENT
   double Ederiv, vderiv;
   adjointPass(seracSolid.get(), qoi.get(), nTimeSteps, timeStep, *param_space, Ederiv, vderiv);
+
+  seracSolid->resetAdjointStates();
+
+  double Ederiv2, vderiv2;
+  adjointPass(seracSolid.get(), qoi.get(), nTimeSteps, timeStep, *param_space, Ederiv2, vderiv2);
+  EXPECT_EQ(Ederiv, Ederiv2);
+  EXPECT_EQ(vderiv, vderiv2);
 
   // FINITE DIFFERENCE GRADIENT
   double h = 1e-7;

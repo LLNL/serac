@@ -126,12 +126,22 @@ public:
   virtual const std::vector<double>& timesteps() const;
 
   /**
-   * @brief Base method to reset physics states to zero.  This does not reset design parameters or shape.
+   * @brief Base method to reset physics states to the initial time.  This does not reset design parameters or shape.
    *
    * @param[in] cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param[in] time The simulation time to initialize the physics module to
    */
   virtual void resetStates(int cycle = 0, double time = 0.0) = 0;
+
+  /**
+   * @brief Base method to reset physics states back to the end of time to start adjoint calculations again.  This does not reset design parameters or shape.
+   *
+   */
+  virtual void resetAdjointStates()
+  {
+    time_ = max_time_;
+    cycle_ = max_cycle_;
+  }
 
   /**
    * @brief Complete the setup and allocate the necessary data structures
