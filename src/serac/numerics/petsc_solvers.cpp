@@ -431,15 +431,12 @@ void PetscGAMGSolver::SetupNearNullSpace()
     mfem::VectorFunctionCoefficient coeff_coords(sdim, func_coords);
     mfem::ParGridFunction           gf_coords(fespace_coords);
     gf_coords.ProjectCoefficient(coeff_coords);
-    int                   num_nodes   = fespace_->GetNDofs();
     mfem::HypreParVector* hvec_coords = gf_coords.ParallelProject();
     auto data_coords = const_cast<PetscScalar*>(mfem::Read(hvec_coords->GetMemory(), hvec_coords->Size(), false));
-    PetscCallAbort(GetComm(), PCSetCoordinates(*this, sdim, num_nodes, data_coords));
 
     Vec pvec_coords;
-    PetscCallAbort(GetComm(), VecCreateMPIWithArray(GetComm(), sdim, hvec_coords->Size(), hvec_coords->GlobalSize(),
-                                                    data_coords, &pvec_coords));
-    VecViewFromOptions(pvec_coords, NULL, "-view_coords");
+    PetscCallAbort(GetComm(), VecCreateMPIWithArray(GetComm(), sdim, hvec_coords->Size(),
+                                                    fespace_coords->GlobalTrueVSize(), data_coords, &pvec_coords));
     PetscCallAbort(GetComm(), MatNullSpaceCreateRigidBody(pvec_coords, &nnsp));
     PetscCallAbort(GetComm(), MatSetNearNullSpace(pA, nnsp));
     PetscCallAbort(GetComm(), MatNullSpaceDestroy(&nnsp));
