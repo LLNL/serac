@@ -253,13 +253,6 @@ protected:
     forces_.SetVector(contact_.forces(), 0);
   }
 
-  void warmStartDisplacement()
-  {
-    SolidMechanicsBase::warmStartDisplacement();
-    auto dt = 1.0;
-    contact_.update(cycle_, time_, dt);
-  }
-
   using BasePhysics::bcs_;
   using BasePhysics::cycle_;
   using BasePhysics::duals_;
