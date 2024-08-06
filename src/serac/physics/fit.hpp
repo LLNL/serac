@@ -43,6 +43,9 @@ FiniteElementState fit(std::integer_sequence<int, i...>, func f, mfem::ParMesh &
 
   mfem::CGSolver cg;
   cg.SetOperator(M);
+  cg.SetRelTol(1e-12);
+  cg.SetMaxIter(200);
+  cg.SetPrintLevel(2);
   cg.Mult(b, fitted_field);
 
   return fitted_field;

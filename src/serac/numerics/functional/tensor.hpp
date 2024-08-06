@@ -1208,6 +1208,21 @@ SERAC_HOST_DEVICE constexpr auto transpose(const tensor<T, m, n>& A)
 }
 
 /**
+ * @brief Returns the second invariant of a 3x3 matrix
+ * @param[in] A The matrix
+ */
+template <typename T>
+SERAC_HOST_DEVICE constexpr auto I2(const tensor<T, 3, 3>& A)
+{
+  return + A[0][0] * A[1][1] 
+         + A[1][1] * A[2][2] 
+         + A[2][2] * A[0][0] 
+         - A[0][1] * A[1][0] 
+         - A[1][2] * A[2][1] 
+         - A[2][0] * A[0][2];
+}
+
+/**
  * @brief Returns the determinant of a matrix
  * @param[in] A The matrix to obtain the determinant of
  */
@@ -1216,6 +1231,7 @@ SERAC_HOST_DEVICE constexpr auto det(const tensor<T, 2, 2>& A)
 {
   return A[0][0] * A[1][1] - A[0][1] * A[1][0];
 }
+
 /// @overload
 template <typename T>
 SERAC_HOST_DEVICE constexpr auto det(const tensor<T, 3, 3>& A)
