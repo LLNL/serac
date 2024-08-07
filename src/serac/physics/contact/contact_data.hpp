@@ -265,6 +265,10 @@ private:
    * @note This is mutable so it can be updated when pressures/gaps/Jacobians are retrieved.
    */
   mutable mfem::Array<HYPRE_BigInt> global_pressure_dof_offsets_;
+
+  int    cycle_{0};
+  double time_{0.0};
+  double dt_{1.0};
 };
 
 }  // namespace serac
