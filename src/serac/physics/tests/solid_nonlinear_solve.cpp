@@ -16,9 +16,12 @@
 #include "mfem.hpp"
 
 #include "serac/mesh/mesh_utils.hpp"
+#include "serac/infrastructure/terminator.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/physics/materials/solid_material.hpp"
 #include "serac/serac_config.hpp"
+//#include <slepceps.h>
+//#include <slepceps.h>
 
 using namespace serac;
 
@@ -100,15 +103,66 @@ void functional_solid_test_nonlinear_buckle()
 
 TEST(SolidMechanics, nonlinear_solve) { functional_solid_test_nonlinear_buckle(); }
 
+
+auto test(MPI_Comm comm) {
+  Mat A;           /* problem matrix */
+  Vec            xr,xi;
+  int n = 5;
+  PetscCall(MatCreate(comm,&A));
+  PetscCall(MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,n,n));
+  PetscCall(MatSetFromOptions(A));
+
+  int Istart,Iend;
+  PetscCall(MatGetOwnershipRange(A,&Istart,&Iend));
+  for (int i=Istart;i<Iend;i++) {
+    printf("i = %d\n", i);
+    if (i>0) PetscCall(MatSetValue(A,i,i-1,-1.0,INSERT_VALUES));
+    if (i<n-1) PetscCall(MatSetValue(A,i,i+1,-1.0,INSERT_VALUES));
+    PetscCall(MatSetValue(A,i,i,2.0,INSERT_VALUES));
+  }
+
+  PetscCall(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY));
+
+  PetscCall(MatCreateVecs(A,NULL,&xr));
+  PetscCall(MatCreateVecs(A,NULL,&xi));
+
+  //mfem::slepc::EPS    eps;         /* eigenproblem solver context */
+  //EPSType        type;
+
+  mfem::SlepcEigenSolver eig(comm);
+  eig.SetNumModes(4);
+  eig.SetOperator(A);
+  eig.Solve();
+
+
+  //PetscCall(EPSCreate(PETSC_COMM_WORLD,&eps));
+
+  return 0;
+}
+
+TEST(A,B) {
+  int world_rank;
+  MPI_Comm comm;
+  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+  MPI_Comm_split(MPI_COMM_WORLD, (0 != world_rank)?MPI_UNDEFINED:0, 0, &comm);
+
+  if (world_rank!=0) return;
+  test(comm);
+
+
+}
+
+
 int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);
-  MPI_Init(&argc, &argv);
 
-  axom::slic::SimpleLogger logger;
+  serac::initialize(argc, argv);
 
   int result = RUN_ALL_TESTS();
-  MPI_Finalize();
+
+  serac::exitGracefully();
 
   return result;
 }
