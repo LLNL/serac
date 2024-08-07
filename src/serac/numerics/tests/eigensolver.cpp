@@ -12,7 +12,7 @@
 
 using namespace serac;
 
-#ifdef MFEM_USE_SLEPC
+#ifdef SERAC_USE_SLEPC
 
 TEST(PETSC_AND_SLEPC, CanComputeSmallestEigenvalueAndEigenvectors)
 {
