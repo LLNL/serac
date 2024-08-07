@@ -65,7 +65,6 @@ std::pair<int, int> initialize(int argc, char* argv[], MPI_Comm comm)
 #ifdef SERAC_USE_PETSC
 
 #ifdef SERAC_USE_SLEPC
-  //mfem::MFEMInitializeSlepc(&argc, &argv);
   mfem::MFEMInitializeSlepc(&argc, &argv);
 #else
   mfem::MFEMInitializePetsc(&argc, &argv);

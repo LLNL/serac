@@ -59,7 +59,7 @@ void exitGracefully(bool error)
 #endif
 
   profiling::finalize();
-  
+
   int mpi_initialized = 0;
   MPI_Initialized(&mpi_initialized);
   int mpi_finalized = 0;
