@@ -156,7 +156,8 @@ public:
    * @param cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param time The simulation time to initialize the physics module to
    * @param checkpoint_to_disk A flag to save the transient states on disk instead of memory for the transient adjoint
-   * solves
+   * @param use_warm_start A flag to turn on or off the displacement warm start predictor which helps robustness for
+   * large deformation problems
    *
    * @note On parallel file systems (e.g. lustre), significant slowdowns and occasional errors were observed when
    *       writing and reading the needed trainsient states to disk for adjoint solves
@@ -164,7 +165,7 @@ public:
   SolidMechanics(std::unique_ptr<serac::EquationSolver> solver, const serac::TimesteppingOptions timestepping_opts,
                  const GeometricNonlinearities geom_nonlin, const std::string& physics_name, std::string mesh_tag,
                  std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0,
-                 bool checkpoint_to_disk = false)
+                 bool checkpoint_to_disk = false, bool use_warm_start = true)
       : BasePhysics(physics_name, mesh_tag, cycle, time, checkpoint_to_disk),
         displacement_(
             StateManager::newState(H1<order, dim>{}, detail::addPrefix(physics_name, "displacement"), mesh_tag_)),
@@ -184,7 +185,8 @@ public:
         ode2_(displacement_.space().TrueVSize(),
               {.time = ode_time_point_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = v_, .d2u_dt2 = acceleration_},
               *nonlin_solver_, bcs_),
-        geom_nonlin_(geom_nonlin)
+        geom_nonlin_(geom_nonlin),
+        use_warm_start_(use_warm_start)
   {
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension, {0}, and runtime mesh dimension, {1}, mismatch", dim,
@@ -210,9 +212,7 @@ public:
     }
 
     adjoints_.push_back(&adjoint_displacement_);
-
     duals_.push_back(&reactions_);
-
     dual_adjoints_.push_back(&reactions_adjoint_load_);
 
     // Create a pack of the primal field and parameter finite element spaces
@@ -259,9 +259,7 @@ public:
 
     u_.SetSize(true_size);
     v_.SetSize(true_size);
-
     du_.SetSize(true_size);
-    dr_.SetSize(true_size);
     predicted_displacement_.SetSize(true_size);
 
     shape_displacement_ = 0.0;
@@ -388,7 +386,6 @@ public:
     u_                      = 0.0;
     v_                      = 0.0;
     du_                     = 0.0;
-    dr_                     = 0.0;
     predicted_displacement_ = 0.0;
 
     if (checkpoint_to_disk_) {
@@ -1608,9 +1605,6 @@ protected:
   /// vector used to store the change in essential bcs between timesteps
   mfem::Vector du_;
 
-  /// vector used to store forces arising from du_ when applying time-dependent bcs
-  mfem::Vector dr_;
-
   /// @brief used to communicate the ODE solver's predicted displacement to the residual operator
   mfem::Vector u_;
 
@@ -1625,6 +1619,9 @@ protected:
 
   /// @brief A flag denoting whether to compute geometric nonlinearities in the residual
   GeometricNonlinearities geom_nonlin_;
+
+  /// @brief A flag denoting whether to compute the warm start for improved robustness
+  bool use_warm_start_;
 
   /// @brief Coefficient containing the essential boundary values
   std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef_;
@@ -1641,19 +1638,6 @@ protected:
       d_residual_d_ = {[&](double t) {
         return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + 1 + parameter_indices>{}, t, shape_displacement_,
                             displacement_, acceleration_, *parameters_[parameter_indices].state...);
-      }...};
-
-  /// @brief Array functions computing the derivative of the residual with respect to each given parameter evaluated at
-  /// the previous value of state
-  /// @note This is needed so the user can ask for a specific sensitivity at runtime as opposed to it being a
-  /// template parameter.
-  std::array<
-      std::function<decltype((*residual_)(DifferentiateWRT<1>{}, 0.0, shape_displacement_, displacement_, acceleration_,
-                                          *parameters_[parameter_indices].previous_state...))(double)>,
-      sizeof...(parameter_indices)>
-      d_residual_d_previous_ = {[&](double t) {
-        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + 1 + parameter_indices>{}, t, shape_displacement_,
-                            displacement_, acceleration_, *parameters_[parameter_indices].previous_state...);
       }...};
 
   /// @brief Solve the Quasi-static Newton system
@@ -1736,15 +1720,39 @@ protected:
 
   /**
    * @brief Sets the Dirichlet BCs for the current time and computes an initial guess for parameters and displacement
+   *
+   * @note
+   * We want to solve
+   *\f$
+   *r(u_{n+1}, p_{n+1}, U_{n+1}, t_{n+1}) = 0
+   *\f$
+   *for $u_{n+1}$, given new values of parameters, essential b.c.s and time. The problem is that if we use $u_n$ as the
+   initial guess for this new solve, most nonlinear solver algorithms will start off by linearizing at (or near) the
+   initial guess. But, if the essential boundary conditions change by an amount on the order of the mesh size, then it's
+   possible to invert elements and make that linearization point inadmissible (either because it converges slowly or
+   that the inverted elements crash the program). *So, we need a better initial guess. This "warm start" generates a
+   guess by linear extrapolation from the previous known solution:
+
+   *\f$
+   *0 = r(u_{n+1}, p_{n+1}, U_{n+1}, t_{n+1}) \approx {r(u_n, p_n, U_n, t_n)} +  \frac{dr_n}{du} \Delta u +
+   \frac{dr_n}{dp} \Delta p + \frac{dr_n}{dU} \Delta U + \frac{dr_n}{dt} \Delta t
+   *\f$
+   *If we assume that suddenly changing p and t will not lead to inverted elements, we can simplify the approximation to
+   *\f$
+   *0 = r(u_{n+1}, p_{n+1}, U_{n+1}, t_{n+1}) \approx r(u_n, p_{n+1}, U_n, t_{n+1}) +  \frac{dr_n}{du} \Delta u +
+   \frac{dr_n}{dU} \Delta U
+   *\f$
+   *Move all the known terms to the rhs and solve for \f$\Delta u\f$,
+   *\f$
+   *\Delta u = - \bigg(  \frac{dr_n}{du} \bigg)^{-1} \bigg( r(u_n, p_{n+1}, U_n, t_{n+1}) + \frac{dr_n}{dU} \Delta U
+   \bigg)
+   *\f$
+   *It is especially important to use the previously solved Jacobian in problems with material instabilities, as good
+   nonlinear solvers will ensure positive definiteness at equilibrium. *Once any parameter is changed, it is no longer
+   certain to be positive definite, which will cause issues for many types linear solvers.
    */
   void warmStartDisplacement(double dt)
   {
-    // Update the linearized Jacobian matrix
-    auto [r, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
-                                  *parameters_[parameter_indices].previous_state...);
-    J_             = assemble(drdu);
-    J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
-
     du_ = 0.0;
     for (auto& bc : bcs_.essentials()) {
       // apply the future boundary conditions, but use the most recent Jacobians stiffness.
@@ -1757,37 +1765,32 @@ protected:
       du_[j] -= displacement_(j);
     }
 
-    dr_ = 0.0;
-    mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, dr_);
+    if (use_warm_start_ && is_quasistatic_) {
+      // Update the linearized Jacobian matrix
+      auto r = (*residual_)(time_ + dt, shape_displacement_, displacement_, acceleration_,
+                            *parameters_[parameter_indices].state...);
 
-    // Update the initial guess for changes in the parameters if this is not the first solve
-    for (std::size_t parameter_index = 0; parameter_index < parameters_.size(); ++parameter_index) {
-      // Compute the change in parameters parameter_diff = parameter_new - parameter_old
-      serac::FiniteElementState parameter_difference = *parameters_[parameter_index].state;
-      parameter_difference -= *parameters_[parameter_index].previous_state;
+      // use the most recently evaluated Jacobian
+      auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
+                                    *parameters_[parameter_indices].previous_state...);
+      J_             = assemble(drdu);
+      J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
 
-      // Compute a linearized estimate of the residual forces due to this change in parameter
-      auto drdparam        = serac::get<DERIVATIVE>(d_residual_d_previous_[parameter_index](time_));
-      auto residual_update = drdparam(parameter_difference);
+      r *= -1.0;
 
-      // Flip the sign to get the RHS of the Newton update system
-      // J^-1 du = - residual
-      dr_ -= residual_update;
+      mfem::EliminateBC(*J_, *J_e_, constrained_dofs, du_, r);
+      for (int i = 0; i < constrained_dofs.Size(); i++) {
+        int j = constrained_dofs[i];
+        r[j]  = du_[j];
+      }
 
-      // Save the current parameter value for the next timestep
-      *parameters_[parameter_index].previous_state = *parameters_[parameter_index].state;
+      auto& lin_solver = nonlin_solver_->linearSolver();
+
+      lin_solver.SetOperator(*J_);
+
+      lin_solver.Mult(r, du_);
     }
 
-    for (int i = 0; i < constrained_dofs.Size(); i++) {
-      int j  = constrained_dofs[i];
-      dr_[j] = du_[j];
-    }
-
-    auto& lin_solver = nonlin_solver_->linearSolver();
-
-    lin_solver.SetOperator(*J_);
-
-    lin_solver.Mult(dr_, du_);
     displacement_ += du_;
   }
 };
