@@ -41,10 +41,10 @@ FiniteElementState fit(std::integer_sequence<int, i...>, func f, mfem::ParMesh &
   phi_f.AddDomainIntegral(Dimension<dim>{}, DependsOn<i...>{}, f, mesh);
   mfem::Vector b = phi_f(0.0, solution_fields ...);
 
-  mfem::CGSolver cg;
+  mfem::CGSolver cg(MPI_COMM_WORLD);
   cg.SetOperator(M);
   cg.SetRelTol(1e-12);
-  cg.SetMaxIter(200);
+  cg.SetMaxIter(500);
   cg.SetPrintLevel(2);
   cg.Mult(b, fitted_field);
 
