@@ -488,8 +488,8 @@ public:
     TrustRegionResults  trResults(X.Size());
     TrustRegionSettings settings;
     settings.maxCgIterations = static_cast<size_t>(linear_options.max_iterations);
-    settings.cgTol           = 0.2 * norm_goal;
-    double trSize            = 10.0;
+    settings.cgTol           = 0.5 * norm_goal;
+    double trSize            = 0.1 * std::sqrt(X.Size());
     size_t cumulativeCgIters = 0;
 
     int it = 0;
@@ -499,6 +499,8 @@ public:
         mfem::out << "Newton iteration " << std::setw(3) << it << " : ||r|| = " << std::setw(13) << norm;
         if (it > 0) {
           mfem::out << ", ||r||/||r_0|| = " << std::setw(13) << norm / initial_norm;
+        } else {
+          mfem::out << ", norm goal = " << std::setw(13) << norm_goal << "\n";
         }
         mfem::out << '\n';
       }
@@ -554,7 +556,7 @@ public:
         trResults.cgIterationsCount = 1;
         trResults.interiorStatus    = TrustRegionResults::Status::OnBoundary;
       } else {
-        settings.cgTol = std::max(0.2 * norm_goal, 1e-3 * norm);
+        settings.cgTol = std::max(0.5 * norm_goal, 5e-5 * norm);
         solve_trust_region_minimization(r, scratch, hess_vec_func, precond_func, settings, trSize, trResults);
       }
       cumulativeCgIters += trResults.cgIterationsCount;
