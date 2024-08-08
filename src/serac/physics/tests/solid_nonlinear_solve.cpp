@@ -307,7 +307,7 @@ TEST(SolidMechanics, nonlinear_solve_buckle_easy) { functional_solid_test_nonlin
 int main(int argc, char* argv[])
 {
   axom::CLI::App app{"Nonlinear problems"};
-  app.add_option("-p", mesh_path, "Mesh file to use")->check(axom::CLI::ExistingFile);
+  app.add_option("-p", mesh_path, "Mesh file to use")->check(axom::CLI::ExistingDirectory);
   app.add_option("--nonlinear-solver", nonlinSolve, "Nonlinear solver", true);
   app.add_option("--preconditioner", prec, "Preconditioner", true);
   app.set_help_flag("--help");
