@@ -66,6 +66,7 @@ ContactInteraction::ContactInteraction(int interaction_id, const mfem::ParMesh& 
 
 FiniteElementDual ContactInteraction::forces() const
 {
+  SERAC_MARK_SCOPE("tribol::getMfemResponse");
   FiniteElementDual f(*current_coords_.ParFESpace());
   auto&             f_loc = f.linearForm();
   tribol::getMfemResponse(getInteractionId(), f_loc);
@@ -75,6 +76,7 @@ FiniteElementDual ContactInteraction::forces() const
 
 FiniteElementState ContactInteraction::pressure() const
 {
+  SERAC_MARK_SCOPE("tribol::getMfemPressure");
   auto&              p_tribol = tribol::getMfemPressure(getInteractionId());
   FiniteElementState p(*p_tribol.ParFESpace());
   p.setFromGridFunction(p_tribol);
@@ -83,6 +85,7 @@ FiniteElementState ContactInteraction::pressure() const
 
 FiniteElementDual ContactInteraction::gaps() const
 {
+  SERAC_MARK_SCOPE("tribol::getMfemGap");
   FiniteElementDual g(pressureSpace());
   auto&             g_loc = g.linearForm();
   tribol::getMfemGap(getInteractionId(), g_loc);
@@ -92,6 +95,7 @@ FiniteElementDual ContactInteraction::gaps() const
 
 std::unique_ptr<mfem::BlockOperator> ContactInteraction::jacobian() const
 {
+  SERAC_MARK_SCOPE("tribol::getMfemBlockJacobian");
   return tribol::getMfemBlockJacobian(getInteractionId());
 }
 
@@ -109,11 +113,13 @@ mfem::ParFiniteElementSpace& ContactInteraction::pressureSpace() const
 
 void ContactInteraction::setPressure(const FiniteElementState& pressure) const
 {
-  tribol::getMfemPressure(getInteractionId()) = pressure.gridFunction();
+  SERAC_MARK_FUNCTION;
+  tribol::getMfemPressure(getInteractionId()).SetFromTrueDofs(pressure);
 }
 
 const mfem::Array<int>& ContactInteraction::inactiveDofs() const
 {
+  SERAC_MARK_FUNCTION;
   if (getContactOptions().type == ContactType::Frictionless) {
     auto             p = pressure();
     auto             g = gaps();

@@ -244,11 +244,13 @@ public:
     // to be the displacement
     auto* amg_prec = dynamic_cast<mfem::HypreBoomerAMG*>(&nonlin_solver_->preconditioner());
     if (amg_prec) {
+      SERAC_MARK_SCOPE("HypreBoomerAMG Setup");
       // ZRA - Iterative refinement tends to be more expensive than it is worth
       // We should add a flag allowing users to enable it
       if constexpr (serac::ordering == mfem::Ordering::byVDIM) {
-        bool iterative_refinement = false;
-        amg_prec->SetElasticityOptions(&displacement_.space(), iterative_refinement);
+        // bool iterative_refinement = false;
+        // amg_prec->SetElasticityOptions(&displacement_.space(), iterative_refinement);
+        amg_prec->SetSystemsOptions(displacement_.space().GetVDim(), serac::ordering == mfem::Ordering::byNODES);
       } else {
         // SetElasticityOptions only works with byVDIM ordering, instead fallback to SetSystemsOptions
         amg_prec->SetSystemsOptions(displacement_.space().GetVDim(), serac::ordering == mfem::Ordering::byNODES);
@@ -1174,6 +1176,7 @@ public:
   /// @overload
   void completeSetup() override
   {
+    SERAC_MARK_FUNCTION;
     // Build the dof array lookup tables
     displacement_.space().BuildDofToArrays();
 
@@ -1255,6 +1258,7 @@ public:
   /// @overload
   void advanceTimestep(double dt) override
   {
+    SERAC_MARK_FUNCTION;
     SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in SolidMechanics.");
 
     // If this is the first call, initialize the previous parameter values as the initial values
@@ -1264,14 +1268,17 @@ public:
       }
     }
 
+    SERAC_MARK_BEGIN("solve");
     if (is_quasistatic_) {
       quasiStaticSolve(dt);
     } else {
       ode2_.Step(displacement_, velocity_, time_, dt);
     }
+    SERAC_MARK_END("solve");
 
     cycle_ += 1;
 
+    SERAC_MARK_BEGIN("checkpoint");
     if (checkpoint_to_disk_) {
       outputStateToDisk();
     } else {
@@ -1280,8 +1287,10 @@ public:
         checkpoint_states_[state_name].push_back(state(state_name));
       }
     }
+    SERAC_MARK_END("checkpoint");
 
     {
+      SERAC_MARK_SCOPE("updateQdata");
       // after finding displacements that satisfy equilibrium,
       // compute the residual one more time, this time enabling
       // the material state buffers to be updated
@@ -1659,6 +1668,7 @@ protected:
   /// @brief Solve the Quasi-static Newton system
   virtual void quasiStaticSolve(double dt)
   {
+    SERAC_MARK_FUNCTION;
     // warm start must be called prior to the time update so that the previous Jacobians can be used consistently
     // throughout.
     warmStartDisplacement(dt);
@@ -1684,6 +1694,7 @@ protected:
   mfem::Array<int> calculateConstrainedDofs(std::function<bool(const mfem::Vector&)> is_node_constrained,
                                             std::optional<int>                       component = {}) const
   {
+    SERAC_MARK_FUNCTION;
     // Get the nodal positions for the displacement vector in grid function form
     mfem::ParGridFunction nodal_positions(
         const_cast<mfem::ParFiniteElementSpace*>(&displacement_.space()));  // MRT mfem const correctness issue
@@ -1739,6 +1750,7 @@ protected:
    */
   void warmStartDisplacement(double dt)
   {
+    SERAC_MARK_FUNCTION;
     // Update the linearized Jacobian matrix
     auto [r, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
                                   *parameters_[parameter_indices].previous_state...);

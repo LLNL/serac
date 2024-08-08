@@ -309,6 +309,7 @@ public:
   void project_to_boundary_with_coefs(mfem::Vector& z, const mfem::Vector& d, double trSize, double zz, double zd,
                                       double dd) const
   {
+    SERAC_MARK_FUNCTION;
     double tau = (std::sqrt((trSize * trSize - zz) * dd + zd * zd) - zd) / dd;
     z.Add(tau, d);
   }
@@ -317,6 +318,7 @@ public:
   void project_to_boundary_between_with_coefs(mfem::Vector& z, const mfem::Vector& y, double trSize, double zz,
                                               double zy, double yy) const
   {
+    SERAC_MARK_FUNCTION;
     double dd  = yy - 2 * zy + zz;
     double zd  = zy - zz;
     double tau = (std::sqrt((trSize * trSize - zz) * dd + zd * zd) - zd) / dd;
@@ -463,6 +465,7 @@ public:
   /// @overload
   void Mult(const mfem::Vector&, mfem::Vector& X) const
   {
+    SERAC_MARK_FUNCTION;
     MFEM_ASSERT(oper != NULL, "the Operator is not set (use SetOperator).");
     MFEM_ASSERT(prec != NULL, "the Solver is not set (use SetSolver).");
 
@@ -667,6 +670,7 @@ EquationSolver::EquationSolver(std::unique_ptr<mfem::NewtonSolver> nonlinear_sol
 
 void EquationSolver::setOperator(const mfem::Operator& op)
 {
+  SERAC_MARK_FUNCTION;
   nonlin_solver_->SetOperator(op);
 
   // Now that the nonlinear solver knows about the operator, we can set its linear solver
@@ -678,6 +682,7 @@ void EquationSolver::setOperator(const mfem::Operator& op)
 
 void EquationSolver::solve(mfem::Vector& x) const
 {
+  SERAC_MARK_FUNCTION;
   mfem::Vector zero(x);
   zero = 0.0;
   // KINSOL does not handle non-zero RHS, so we enforce that the RHS
@@ -853,6 +858,7 @@ std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(const NonlinearSolverOp
 std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLinearSolverAndPreconditioner(
     LinearSolverOptions linear_opts, MPI_Comm comm)
 {
+  SERAC_MARK_FUNCTION;
   auto preconditioner = buildPreconditioner(linear_opts, comm);
 
   if (linear_opts.linear_solver == LinearSolver::SuperLU) {
@@ -966,6 +972,7 @@ std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MP
 
 std::unique_ptr<mfem::Solver> buildPreconditioner(LinearSolverOptions linear_opts, [[maybe_unused]] MPI_Comm comm)
 {
+  SERAC_MARK_FUNCTION;
   std::unique_ptr<mfem::Solver> preconditioner_solver;
   auto                          preconditioner = linear_opts.preconditioner;
   auto                          print_level    = linear_opts.print_level;

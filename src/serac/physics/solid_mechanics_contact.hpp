@@ -219,6 +219,7 @@ protected:
   /// @brief Solve the Quasi-static Newton system
   void quasiStaticSolve(double dt) override
   {
+    SERAC_MARK_FUNCTION;
     // we can use the base class method if we don't have Lagrange multipliers
     if (!contact_.haveLagrangeMultipliers()) {
       SolidMechanicsBase::quasiStaticSolve(dt);

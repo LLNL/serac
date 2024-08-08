@@ -8,6 +8,7 @@
 #include "mfem.hpp"
 #include "serac/serac_config.hpp"
 #include "serac/numerics/solver_config.hpp"
+#include "serac/infrastructure/profiling.hpp"
 
 #ifdef SERAC_USE_PETSC
 

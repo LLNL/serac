@@ -25,6 +25,7 @@ ContactData::ContactData(const mfem::ParMesh& mesh)
       num_pressure_dofs_{0},
       offsets_up_to_date_{false}
 {
+  SERAC_MARK_SCOPE("tribol::initialize");
   tribol::initialize(mesh_.SpaceDimension(), mesh_.GetComm());
 }
 
@@ -43,20 +44,28 @@ void ContactData::addContactInteraction(int interaction_id, const std::set<int>&
 
 void ContactData::update(int cycle, double time, double& dt)
 {
+  SERAC_MARK_FUNCTION;
   cycle_ = cycle;
   time_  = time;
   dt_    = dt;
   // This updates the redecomposed surface mesh based on the current displacement, then transfers field quantities to
   // the updated mesh.
-  tribol::updateMfemParallelDecomposition();
+  {
+    SERAC_MARK_SCOPE("tribol::updateMfemParallelDecomposition");
+    tribol::updateMfemParallelDecomposition();
+  }
   // This function computes forces, gaps, and Jacobian contributions based on the current field quantities. Note the
   // fields (with the exception of pressure) are stored on the redecomposed surface mesh until transferred by calling
   // forces(), mergedGaps(), etc.
-  tribol::update(cycle, time, dt);
+  {
+    SERAC_MARK_SCOPE("tribol::update");
+    tribol::update(cycle, time, dt);
+  }
 }
 
 FiniteElementDual ContactData::forces() const
 {
+  SERAC_MARK_FUNCTION;
   FiniteElementDual f(*reference_nodes_->ParFESpace(), "contact force");
   for (const auto& interaction : interactions_) {
     f += interaction.forces();
@@ -66,6 +75,7 @@ FiniteElementDual ContactData::forces() const
 
 mfem::HypreParVector ContactData::mergedPressures() const
 {
+  SERAC_MARK_FUNCTION;
   updateDofOffsets();
   mfem::HypreParVector merged_p(mesh_.GetComm(), global_pressure_dof_offsets_[global_pressure_dof_offsets_.Size() - 1],
                                 global_pressure_dof_offsets_.GetData());
@@ -83,6 +93,7 @@ mfem::HypreParVector ContactData::mergedPressures() const
 
 mfem::HypreParVector ContactData::mergedGaps(bool zero_inactive) const
 {
+  SERAC_MARK_SCOPE("ContactGaps");
   updateDofOffsets();
   mfem::HypreParVector merged_g(mesh_.GetComm(), global_pressure_dof_offsets_[global_pressure_dof_offsets_.Size() - 1],
                                 global_pressure_dof_offsets_.GetData());
@@ -228,6 +239,7 @@ std::unique_ptr<mfem::BlockOperator> ContactData::mergedJacobian() const
 
 void ContactData::residualFunction(const mfem::Vector& u, mfem::Vector& r)
 {
+  SERAC_MARK_SCOPE("ContactResidual");
   const int disp_size = reference_nodes_->ParFESpace()->GetTrueVSize();
 
   // u_const should not change in this method; const cast is to create vector views which are copied to Tribol
@@ -253,14 +265,10 @@ void ContactData::residualFunction(const mfem::Vector& u, mfem::Vector& r)
   g_blk.Set(1.0, mergedGaps(true));
 }
 
-std::unique_ptr<mfem::BlockOperator> ContactData::jacobianFunction(const mfem::Vector&   u,
+std::unique_ptr<mfem::BlockOperator> ContactData::jacobianFunction(const mfem::Vector&,
                                                                    mfem::HypreParMatrix* orig_J) const
 {
-  // u_const should not change in this method; const cast is to create vector views which are used to compute the
-  // (non-contact) Jacobian
-  auto&              u_const = const_cast<mfem::Vector&>(u);
-  const mfem::Vector u_blk(u_const, 0, reference_nodes_->ParFESpace()->GetTrueVSize());
-
+  SERAC_MARK_SCOPE("ContactJacobian");
   auto J_contact = mergedJacobian();
   if (J_contact->IsZeroBlock(0, 0)) {
     J_contact->SetBlock(0, 0, orig_J);
@@ -274,6 +282,7 @@ std::unique_ptr<mfem::BlockOperator> ContactData::jacobianFunction(const mfem::V
 
 void ContactData::setPressures(const mfem::Vector& merged_pressures) const
 {
+  SERAC_MARK_SCOPE("ContactSetPressures");
   updateDofOffsets();
   for (size_t i{0}; i < interactions_.size(); ++i) {
     FiniteElementState p_interaction(interactions_[i].pressureSpace());
@@ -303,6 +312,7 @@ void ContactData::setDisplacements(const mfem::Vector& u)
 
 void ContactData::updateDofOffsets() const
 {
+  SERAC_MARK_FUNCTION;
   if (offsets_up_to_date_) {
     return;
   }

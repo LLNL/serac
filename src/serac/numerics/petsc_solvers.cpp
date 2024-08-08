@@ -253,6 +253,7 @@ PetscPCSolver::PetscPCSolver(MPI_Comm comm_, Operator& op, PCType pc_type, const
 
 void PetscPCSolver::SetOperator(const mfem::Operator& op)
 {
+  SERAC_MARK_FUNCTION;
   PetscBool is_nest;
   bool      delete_pA = false;
 
@@ -313,6 +314,7 @@ void PetscPCSolver::SetOperator(const mfem::Operator& op)
 
 void PetscPCSolver::Mult(const mfem::Vector& b, mfem::Vector& x) const
 {
+  SERAC_MARK_FUNCTION;
   if (fieldsplit_pc_) {
     fieldsplit_pc_->Mult(b, x);
   } else {
@@ -322,6 +324,7 @@ void PetscPCSolver::Mult(const mfem::Vector& b, mfem::Vector& x) const
 
 void PetscPCSolver::MultTranspose(const mfem::Vector& b, mfem::Vector& x) const
 {
+  SERAC_MARK_FUNCTION;
   if (fieldsplit_pc_) {
     fieldsplit_pc_->MultTranspose(b, x);
   } else {
@@ -394,6 +397,7 @@ static void func_coords(const mfem::Vector& x, mfem::Vector& y) { y = x; }
 
 void PetscGAMGSolver::SetupNearNullSpace()
 {
+  SERAC_MARK_FUNCTION;
   Mat pA;
   PetscCallAbort(GetComm(), PCGetOperators(*this, NULL, &pA));
   MatNullSpace nnsp;
