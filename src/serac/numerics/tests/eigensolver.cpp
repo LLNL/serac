@@ -10,9 +10,9 @@
 #include "serac/infrastructure/terminator.hpp"
 #include "petsc.h"
 
-using namespace serac;
-
-#ifdef SERAC_USE_SLEPC
+#ifndef MFEM_USE_SLEPC
+#error This examples requires that MFEM is build with MFEM_USE_SLEPC=YES
+#endif
 
 TEST(PETSC_AND_SLEPC, CanComputeSmallestEigenvalueAndEigenvectors)
 {
@@ -58,8 +58,6 @@ TEST(PETSC_AND_SLEPC, CanComputeSmallestEigenvalueAndEigenvectors)
     EXPECT_NEAR(eval, static_cast<double>(i) - 2.0, 1e-14);
   }
 }
-
-#endif
 
 int main(int argc, char* argv[])
 {
