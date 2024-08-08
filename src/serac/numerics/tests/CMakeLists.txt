@@ -17,7 +17,21 @@ serac_add_tests( SOURCES ${numerics_serial_tests}
                  NUM_MPI_TASKS 1)
 
 if(PETSC_FOUND)
-    serac_add_tests(SOURCES       equationsolver_petsc.cpp
+    set(petsc_solver_tests
+        equationsolver_petsc.cpp
+        )
+    serac_add_tests(SOURCES       ${petsc_solver_tests}
                     DEPENDS_ON    ${test_dependencies}
                     NUM_MPI_TASKS 1)
+
+    if(SLEPC_FOUND)
+        set(slepc_solver_tests
+            eigensolver.cpp
+            )
+        serac_add_tests(SOURCES       ${slepc_solver_tests}
+                        DEPENDS_ON    ${test_dependencies}
+                        NUM_MPI_TASKS 2)
+    endif()
+
 endif()
+
