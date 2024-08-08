@@ -33,6 +33,6 @@ install(TARGETS              serac_contact
         DESTINATION          lib
         )
 
-# if(ENABLE_TESTS)
+# if(SERAC_ENABLE_TESTS)
 #     add_subdirectory(tests)
 # endif()
