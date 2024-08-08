@@ -344,6 +344,13 @@ public:
     } else {
       // Step the time integrator
       // Note that the ODE solver handles the essential boundary condition application itself
+      
+      // The current ode interface tracks 2 times, one internally which we have a handle to via time_,
+      // and one here via the step interface.
+      // We are ignoring this one, and just using the internal version for now.
+      // This may need to be revisited when more complex time integrators are required,
+      // but at the moment, the double times creates a lot of confusion, so 
+      // we short circuit the extra time here by passing a dummy time and ignoring it.
       double time_tmp = time_;
       ode_.Step(temperature_, time_tmp, dt);
     }
