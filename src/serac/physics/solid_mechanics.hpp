@@ -206,7 +206,6 @@ public:
       is_quasistatic_ = true;
     }
 
-
     states_.push_back(&displacement_);
     if (!is_quasistatic_) {
       states_.push_back(&velocity_);
@@ -1758,7 +1757,7 @@ protected:
   void warmStartDisplacement(double dt)
   {
     SERAC_MARK_FUNCTION;
-    
+
     du_ = 0.0;
     for (auto& bc : bcs_.essentials()) {
       // apply the future boundary conditions, but use the most recent Jacobians stiffness.
