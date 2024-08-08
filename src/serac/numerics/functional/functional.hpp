@@ -14,6 +14,7 @@
 
 #include "mfem.hpp"
 
+#include "serac/serac_config.hpp"
 #include "serac/infrastructure/logger.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/quadrature.hpp"
@@ -75,8 +76,8 @@ inline void check_for_missing_nodal_gridfunc(const mfem::Mesh& mesh)
   if (mesh.GetNodes() == nullptr) {
     SLIC_ERROR_ROOT(
         R"errmsg(
-      the provided mesh does not have a nodal gridfunction. 
-      If you created an mfem::Mesh manually, make sure that the 
+      the provided mesh does not have a nodal gridfunction.
+      If you created an mfem::Mesh manually, make sure that the
       following member functions are invoked before use
 
       > mfem::Mesh::EnsureNodes();
@@ -113,7 +114,6 @@ generateParFiniteElementSpace(mfem::ParMesh* mesh)
 {
   const int                                      dim = mesh->Dimension();
   std::unique_ptr<mfem::FiniteElementCollection> fec;
-  const auto                                     ordering = mfem::Ordering::byNODES;
 
   switch (function_space::family) {
     case Family::H1:
@@ -135,7 +135,8 @@ generateParFiniteElementSpace(mfem::ParMesh* mesh)
       break;
   }
 
-  auto fes = std::make_unique<mfem::ParFiniteElementSpace>(mesh, fec.get(), function_space::components, ordering);
+  auto fes =
+      std::make_unique<mfem::ParFiniteElementSpace>(mesh, fec.get(), function_space::components, serac::ordering);
 
   return std::pair(std::move(fes), std::move(fec));
 }
@@ -199,7 +200,7 @@ class Functional<test(trials...), exec> {
   class Gradient;
 
   // clang-format off
-  template <uint32_t i> 
+  template <uint32_t i>
   struct operator_paren_return {
     using type = typename std::conditional<
         i == NO_DIFFERENTIATION,               // if `i` indicates that we want to skip differentiation
@@ -537,7 +538,6 @@ private:
     Gradient(Functional<test(trials...), exec>& f, uint32_t which = 0)
         : mfem::Operator(f.test_space_->GetTrueVSize(), f.trial_space_[which]->GetTrueVSize()),
           form_(f),
-          lookup_tables(f.G_test_[Domain::Type::Elements], f.G_trial_[Domain::Type::Elements][which]),
           which_argument(which),
           test_space_(f.test_space_),
           trial_space_(f.trial_space_[which]),
@@ -574,6 +574,11 @@ private:
       constexpr bool sparse_matrix_frees_values_ptr = true;
 
       constexpr bool col_ind_is_sorted = true;
+
+      if (!lookup_tables.initialized) {
+        lookup_tables.init(form_.G_test_[Domain::Type::Elements],
+                           form_.G_trial_[Domain::Type::Elements][which_argument]);
+      }
 
       double* values = new double[lookup_tables.nnz]{};
 

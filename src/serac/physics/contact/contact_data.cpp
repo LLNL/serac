@@ -43,6 +43,9 @@ void ContactData::addContactInteraction(int interaction_id, const std::set<int>&
 
 void ContactData::update(int cycle, double time, double& dt)
 {
+  cycle_ = cycle;
+  time_  = time;
+  dt_    = dt;
   // This updates the redecomposed surface mesh based on the current displacement, then transfers field quantities to
   // the updated mesh.
   tribol::updateMfemParallelDecomposition();
@@ -236,14 +239,13 @@ void ContactData::residualFunction(const mfem::Vector& u, mfem::Vector& r)
   mfem::Vector r_blk(r, 0, disp_size);
   mfem::Vector g_blk(r, disp_size, numPressureDofs());
 
-  double dt = 1.0;
   setDisplacements(u_blk);
   // we need to call update first to update gaps
-  update(1, 1.0, dt);
+  update(cycle_, time_, dt_);
   // with updated gaps, we can update pressure for contact interactions with penalty enforcement
   setPressures(p_blk);
   // call update again with the right pressures
-  update(1, 1.0, dt);
+  update(cycle_, time_, dt_);
 
   r_blk += forces();
   // calling mergedGaps() with true will zero out gap on inactive dofs (so the residual converges and the linearized
