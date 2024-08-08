@@ -1758,10 +1758,17 @@ protected:
   void warmStartDisplacement(double dt)
   {
     SERAC_MARK_FUNCTION;
+    
     du_ = 0.0;
     for (auto& bc : bcs_.essentials()) {
       // apply the future boundary conditions, but use the most recent Jacobians stiffness.
       bc.setDofs(du_, time_ + dt);
+    }
+
+    auto& constrained_dofs = bcs_.allEssentialTrueDofs();
+    for (int i = 0; i < constrained_dofs.Size(); i++) {
+      int j = constrained_dofs[i];
+      du_[j] -= displacement_(j);
     }
 
     if (use_warm_start_ && is_quasistatic_) {

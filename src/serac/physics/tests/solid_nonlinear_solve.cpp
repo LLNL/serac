@@ -26,11 +26,6 @@
 #include "serac/infrastructure/profiling.hpp"
 #include "serac/infrastructure/terminator.hpp"
 
-//#include "mesh/vtk.hpp"
-//#include <vtkSimplePointsWriter.h>
-//#include <vtkSphereSource.h>
-
-
 using namespace serac;
 
 std::string mesh_path = ".";
@@ -314,40 +309,11 @@ TEST(SolidMechanics, nonlinear_solve_buckle_easy) { functional_solid_test_nonlin
 //TEST(SolidMechanics, nonlinear_solve_buckle_hard) { functional_solid_test_nonlinear_buckle(3e-2); }
 //TEST(SolidMechanics, nonlinear_solve_euler) { functional_solid_test_euler(); }
 
-class InputParser
-{
-public:
-  InputParser(int& argc, char** argv){
-    for (int i=1; i < argc; ++i) {
-      this->tokens.push_back(std::string(argv[i]));
-    }
-  }
-  std::string getCmdOption(const std::string& option) const {
-    std::vector<std::string>::const_iterator itr;
-    itr =  std::find(this->tokens.begin(), this->tokens.end(), option);
-    if (itr != this->tokens.end() && ++itr != this->tokens.end()) {
-        return *itr;
-    }
-    static const std::string empty_string("");
-    return empty_string;
-  }
-  bool cmdOptionExists(const std::string& option) const {
-    return std::find(this->tokens.begin(), this->tokens.end(), option)
-            != this->tokens.end();
-  }
-private:
-  std::vector <std::string> tokens;
-};
 
 int main(int argc, char* argv[])
 {
-  InputParser parser(argc, argv);
-  auto filename = parser.getCmdOption("-p");
-  if (!filename.empty()) {
-    mesh_path = filename;
-  }
-
   axom::CLI::App app{"Nonlinear problems"};
+  app.add_option("-p", mesh_path, "Mesh file to use")->check(axom::CLI::ExistingFile);
   app.add_option("--nonlinear-solver", nonlinSolve, "Nonlinear solver", true);
   app.add_option("--preconditioner", prec, "Preconditioner", true);
   app.set_help_flag("--help");
