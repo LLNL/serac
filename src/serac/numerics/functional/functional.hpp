@@ -264,15 +264,12 @@ public:
 
     output_T_.SetSize(test_fes->GetTrueVSize(), mem_type);
 
-    SERAC_MARK_BEGIN("EMPLACE_GRADS");
-
     // gradient objects depend on some member variables in
     // Functional, so we initialize the gradient objects last
     // to ensure that those member variables are initialized first
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       grad_.emplace_back(*this, i);
     }
-    SERAC_MARK_END("EMPLACE_GRADS");
   }
 
   /**
