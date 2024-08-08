@@ -137,10 +137,11 @@ public:
   SolidMechanics(const NonlinearSolverOptions nonlinear_opts, const LinearSolverOptions lin_opts,
                  const serac::TimesteppingOptions timestepping_opts, const GeometricNonlinearities geom_nonlin,
                  const std::string& physics_name, std::string mesh_tag, std::vector<std::string> parameter_names = {},
-                 int cycle = 0, double time = 0.0, bool checkpoint_to_disk = false)
+                 int cycle = 0, double time = 0.0, bool checkpoint_to_disk = false, bool use_warm_start = true)
       : SolidMechanics(
             std::make_unique<EquationSolver>(nonlinear_opts, lin_opts, StateManager::mesh(mesh_tag).GetComm()),
-            timestepping_opts, geom_nonlin, physics_name, mesh_tag, parameter_names, cycle, time, checkpoint_to_disk)
+            timestepping_opts, geom_nonlin, physics_name, mesh_tag, parameter_names, cycle, time, checkpoint_to_disk,
+            use_warm_start)
   {
   }
 
@@ -183,8 +184,8 @@ public:
         reactions_adjoint_load_(reactions_.space(), "reactions_shape_sensitivity"),
         nonlin_solver_(std::move(solver)),
         ode2_(displacement_.space().TrueVSize(),
-              {.time = time_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = v_, .d2u_dt2 = acceleration_},
-              *nonlin_solver_, bcs_),
+              {.time = time_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = v_, .d2u_dt2 = acceleration_}, *nonlin_solver_,
+              bcs_),
         geom_nonlin_(geom_nonlin),
         use_warm_start_(use_warm_start)
   {
