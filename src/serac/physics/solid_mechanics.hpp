@@ -130,6 +130,8 @@ public:
    * @param time The simulation time to initialize the physics module to
    * @param checkpoint_to_disk A flag to save the transient states on disk instead of memory for the transient adjoint
    * solves
+   * @param use_warm_start A flag to turn on or off the displacement warm start predictor which helps robustness for
+   * large deformation problems
    *
    * @note On parallel file systems (e.g. lustre), significant slowdowns and occasional errors were observed when
    *       writing and reading the needed trainsient states to disk for adjoint solves
