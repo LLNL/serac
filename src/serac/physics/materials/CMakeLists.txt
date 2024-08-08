@@ -44,4 +44,3 @@ install(TARGETS              serac_physics_materials
 if(SERAC_ENABLE_TESTS)
     add_subdirectory(tests)
 endif()
-

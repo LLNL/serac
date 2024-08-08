@@ -36,4 +36,3 @@ install(TARGETS              serac_contact
 # if(ENABLE_TESTS)
 #     add_subdirectory(tests)
 # endif()
-

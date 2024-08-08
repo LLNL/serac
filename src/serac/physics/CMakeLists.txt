@@ -58,4 +58,3 @@ endif()
 if(SERAC_ENABLE_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif()
-
