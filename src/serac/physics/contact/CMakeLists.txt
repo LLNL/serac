@@ -4,10 +4,6 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-# if(ENABLE_TESTS)
-#     add_subdirectory(tests)
-# endif()
-
 set(contact_headers
     contact_config.hpp
     contact_data.hpp
@@ -36,3 +32,7 @@ install(TARGETS              serac_contact
         EXPORT               serac-targets
         DESTINATION          lib
         )
+
+# if(SERAC_ENABLE_TESTS)
+#     add_subdirectory(tests)
+# endif()

@@ -4,10 +4,6 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-if(ENABLE_TESTS)
-    add_subdirectory(tests)
-endif()
-
 # This file contains metadata that often changes (ie. git sha).
 # Hide these changes in the source file so we do not force
 # a full rebuild.
@@ -73,3 +69,7 @@ install(TARGETS              serac_infrastructure
         EXPORT               serac-targets
         DESTINATION          lib
         )
+
+if(SERAC_ENABLE_TESTS)
+    add_subdirectory(tests)
+endif()

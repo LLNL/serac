@@ -4,10 +4,6 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-if(ENABLE_TESTS)
-    add_subdirectory(tests)
-endif()
-
 set(mesh_headers
     mesh_utils.hpp
     mesh_utils_base.hpp
@@ -32,3 +28,7 @@ install(TARGETS              serac_mesh
         EXPORT               serac-targets
         DESTINATION          lib
         )
+
+if(SERAC_ENABLE_TESTS)
+    add_subdirectory(tests)
+endif()

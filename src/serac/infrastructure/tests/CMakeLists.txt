@@ -4,12 +4,12 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause) 
 
-set(test_dependencies gtest serac_physics serac_mesh)
+set(infrastructure_test_depends serac_physics serac_mesh gtest)
 
-set(infrastructure_tests
+set(infrastructure_test_sources
     error_handling.cpp
     input.cpp
     profiling.cpp)
 
-serac_add_tests( SOURCES ${infrastructure_tests}
-                 DEPENDS_ON ${test_dependencies})
+serac_add_tests( SOURCES    ${infrastructure_test_sources}
+                 DEPENDS_ON ${infrastructure_test_depends})
