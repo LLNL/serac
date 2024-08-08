@@ -6,10 +6,6 @@
 
 add_subdirectory(functional)
 
-if(ENABLE_TESTS)
-    add_subdirectory(tests)
-endif()
-
 set(numerics_headers
     equation_solver.hpp
     odes.hpp
@@ -39,3 +35,8 @@ install(TARGETS              serac_numerics
         EXPORT               serac-targets
         DESTINATION          lib
         )
+
+if(SERAC_ENABLE_TESTS)
+    add_subdirectory(tests)
+endif()
+        

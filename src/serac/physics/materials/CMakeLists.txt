@@ -4,10 +4,6 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-if(ENABLE_TESTS)
-    add_subdirectory(tests)
-endif()
-
 set(materials_sources
     hardening_input.cpp
     thermal_material_input.cpp
@@ -44,3 +40,9 @@ install(TARGETS              serac_physics_materials
         EXPORT               serac-targets
         DESTINATION          lib
         )
+
+if(SERAC_ENABLE_TESTS)
+    add_subdirectory(tests)
+endif()
+    
+    
