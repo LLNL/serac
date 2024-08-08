@@ -1064,6 +1064,16 @@ SERAC_HOST_DEVICE auto normalize(const tensor<T, n...>& A)
   return A / norm(A);
 }
 
+template <typename T>
+SERAC_HOST_DEVICE tensor<T, 3, 3> to_3x3(const tensor<T, 2, 2>& A) {
+  tensor<T,3,3> output{};
+  output[0][0] = A[0][0];
+  output[0][1] = A[0][1];
+  output[1][0] = A[1][0];
+  output[1][1] = A[1][1];
+  return output;
+}
+
 /**
  * @brief Returns the trace of a square matrix
  * @param[in] A The matrix to compute the trace of

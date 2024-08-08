@@ -93,13 +93,8 @@ void stress_extrapolation_test() {
   Empty internal_variables{};
 
   sigma_J2 = fit< dim, output_space(input_space) >([&](double /*t*/, [[maybe_unused]] auto position, [[maybe_unused]] auto displacement_){ 
-    auto du_dx = get_value(get<1>(displacement_));
-    mat3 du_dx3 = {{
-      {du_dx[0][0], du_dx[0][1], 0.0},
-      {du_dx[1][0], du_dx[1][1], 0.0},
-      {0.0, 0.0, 0.0}
-    }};
-    auto stress = mat(internal_variables, du_dx3);
+    mat3 du_dx = to_3x3(get_value(get<1>(displacement_)));
+    auto stress = mat(internal_variables, du_dx);
     return tuple{I2(dev(stress)), zero{}};
   }, pmesh, u);
 

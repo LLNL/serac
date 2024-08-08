@@ -1635,8 +1635,8 @@ protected:
   std::array<std::function<decltype((*residual_)(DifferentiateWRT<1>{}, 0.0, shape_displacement_, displacement_,
                                                  acceleration_, *parameters_[parameter_indices].state...))(double)>,
              sizeof...(parameter_indices)>
-      d_residual_d_ = {[&](double t) {
-        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + 1 + parameter_indices>{}, t, shape_displacement_,
+      d_residual_d_ = {[&](double _t) {
+        return (*residual_)(DifferentiateWRT<NUM_STATE_VARS + 1 + parameter_indices>{}, _t, shape_displacement_,
                             displacement_, acceleration_, *parameters_[parameter_indices].state...);
       }...};
 

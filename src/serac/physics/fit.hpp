@@ -22,7 +22,7 @@ FiniteElementState fit(std::integer_sequence<int, i...>, func f, mfem::ParMesh &
 
   // signature looks like return_type(arg0_type, arg1_type);
   // so this unpacks the return type
-  using output_space = FunctionSignature< signature >::return_type;
+  using output_space = typename FunctionSignature< signature >::return_type;
 
   FiniteElementState fitted_field(mesh, output_space{}, "displacement");
   fitted_field = 0.0;
