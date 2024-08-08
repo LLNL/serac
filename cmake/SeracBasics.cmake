@@ -27,6 +27,8 @@ else()
 endif()
 option(SERAC_ENABLE_CODE_CHECKS "Enable Serac's code checks" ${_enable_serac_code_checks})
 
+cmake_dependent_option(SERAC_ENABLE_TESTS "Enables Serac Tests" ON "ENABLE_TESTS" OFF)
+
 #------------------------------------------------------------------------------
 # Profiling options
 #------------------------------------------------------------------------------
