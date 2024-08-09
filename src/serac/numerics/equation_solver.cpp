@@ -101,7 +101,7 @@ public:
       if (print_options.iterations) {
         mfem::out << "Newton iteration " << std::setw(3) << it << " : ||r|| = " << std::setw(13) << norm;
         if (it > 0) {
-          mfem::out << ", ||r||/||r_0|| = " << std::setw(13) << norm / initial_norm;
+          mfem::out << ", ||r||/||r_0|| = " << std::setw(13) << (initial_norm != 0.0 ? norm / initial_norm : norm);
         }
         mfem::out << '\n';
       }
@@ -387,7 +387,7 @@ public:
     for (cgIter = 1; cgIter <= settings.maxCgIterations; ++cgIter) {
       hess_vec_func(d, Hd);
       const double curvature = Dot(d, Hd);
-      const double alphaCg   = rPr / curvature;
+      const double alphaCg   = curvature != 0.0 ? rPr / curvature : 0.0;
 
       auto& zPred = Hd;  // re-use Hd, this is where bugs come from
       add(z, alphaCg, d, zPred);
@@ -498,7 +498,7 @@ public:
       if (print_options.iterations) {
         mfem::out << "Newton iteration " << std::setw(3) << it << " : ||r|| = " << std::setw(13) << norm;
         if (it > 0) {
-          mfem::out << ", ||r||/||r_0|| = " << std::setw(13) << norm / initial_norm;
+          mfem::out << ", ||r||/||r_0|| = " << std::setw(13) << (initial_norm != 0.0 ? norm / initial_norm : norm);
         }
         mfem::out << '\n';
       }

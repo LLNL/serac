@@ -4,20 +4,20 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause) 
 
-set(test_dependencies gtest serac_numerics serac_mesh serac_boundary_conditions)
+set(mesh_test_depends serac_numerics serac_mesh serac_boundary_conditions gtest)
 
-set(mesh_parallel_tests
+set(mesh_parallel_test_sources
     mesh_test.cpp
     )
 
-serac_add_tests( SOURCES ${mesh_parallel_tests}
-                 DEPENDS_ON ${test_dependencies}
+serac_add_tests( SOURCES       ${mesh_parallel_test_sources}
+                 DEPENDS_ON    ${mesh_test_depends}
                  NUM_MPI_TASKS 2)
 
-set(mesh_serial_tests
+set(mesh_serial_test_sources
     mesh_generation.cpp
     )
 
-serac_add_tests( SOURCES ${mesh_serial_tests}
-                 DEPENDS_ON ${test_dependencies}
+serac_add_tests( SOURCES       ${mesh_serial_test_sources}
+                 DEPENDS_ON    ${mesh_test_depends}
                  NUM_MPI_TASKS 1)

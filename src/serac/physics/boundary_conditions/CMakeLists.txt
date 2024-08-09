@@ -4,10 +4,6 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-if(ENABLE_TESTS)
-    add_subdirectory(tests)
-endif()
-
 set(boundary_conditions_headers
     boundary_condition.hpp
     boundary_condition_helper.hpp
@@ -35,3 +31,7 @@ install(TARGETS              serac_boundary_conditions
         EXPORT               serac-targets
         DESTINATION          lib
         )
+
+if(SERAC_ENABLE_TESTS)
+    add_subdirectory(tests)
+endif()
