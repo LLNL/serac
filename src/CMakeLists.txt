@@ -11,6 +11,6 @@ if (ENABLE_DOCS)
     add_subdirectory(docs)
 endif()
 
-if(ENABLE_TESTS)
+if(SERAC_ENABLE_TESTS)
     add_subdirectory(tests)
 endif()

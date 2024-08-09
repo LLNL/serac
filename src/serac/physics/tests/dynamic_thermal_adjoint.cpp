@@ -57,7 +57,7 @@ std::unique_ptr<HeatTransfer<p, dim>> createNonlinearHeatTransfer(
   // Note that we are testing the non-default checkpoint to disk capability here
   auto thermal = std::make_unique<HeatTransfer<p, dim>>(nonlinear_opts, heat_transfer::direct_linear_options, dyn_opts,
                                                         thermal_prefix + std::to_string(iter++), mesh_tag,
-                                                        std::vector<std::string>{}, 0, 0.0, true);
+                                                        std::vector<std::string>{}, 0, 0.0);
   thermal->setMaterial(mat);
   thermal->setTemperature([](const mfem::Vector&, double) { return 0.0; });
   thermal->setTemperatureBCs({1}, [](const mfem::Vector&, double) { return 0.0; });
