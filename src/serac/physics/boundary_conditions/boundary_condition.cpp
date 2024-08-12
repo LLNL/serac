@@ -53,21 +53,6 @@ void BoundaryCondition::setTrueDofList(const mfem::Array<int>& true_dofs)
   mfem::FiniteElementSpace::MarkerToList(local_dof_marker, local_dofs_);
 }
 
-void BoundaryCondition::setLocalDofList(const mfem::Array<int>& local_dofs)
-{
-  local_dofs_ = local_dofs;
-
-  // Create a marker arrays for the true and local dofs
-  mfem::Array<int> true_dof_marker(space_.GetTrueVSize());
-  mfem::Array<int> local_dof_marker(space_.GetVSize());
-
-  mfem::FiniteElementSpace::ListToMarker(local_dofs_, space_.GetVSize(), local_dof_marker);
-
-  space_.GetRestrictionMatrix()->BooleanMult(local_dof_marker, true_dof_marker);
-
-  mfem::FiniteElementSpace::MarkerToList(true_dof_marker, true_dofs_);
-}
-
 void BoundaryCondition::setDofListsFromAttributeMarkers()
 {
   auto& mutable_space = const_cast<mfem::ParFiniteElementSpace&>(space_);
