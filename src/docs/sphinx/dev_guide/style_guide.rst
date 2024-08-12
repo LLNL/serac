@@ -35,9 +35,10 @@ is not required because the lifetime of ``B`` is entirely dependent on the lifet
 How to style your code
 ----------------------
 
-We have two methods of enabling styling your code via ClangFormat. The first is to use the `style` build
-target on a configuration with the correct version of ClangFormat enabled. Here is an example on how to do
-it on LC's Ruby machine:
+We have two methods of enabling styling your code via ClangFormat. 
+
+The first method is to use the `style` build target on a configuration with the correct version of
+ClangFormat enabled. Here is an example on how to do it on LC's Ruby machine:
 
 .. code-block:: bash
 
