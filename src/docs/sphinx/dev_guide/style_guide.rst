@@ -46,7 +46,7 @@ ClangFormat enabled. Here is an example on how to do it on LC's Ruby machine:
     $ cd build-ruby-toss_4_x86_64_ib-clang@14.0.6-debug
     $ make style
 
-The second method is to make a comment of `/style` on your open GitHub pull request. This will trigger
+The second method is to make a comment of ``/style`` on your open GitHub pull request. This will trigger
 a GitHub Action that will automatically style your code and commit it to your branch. You will need to
 `git pull` after it is finished to continue to work on that branch.
 
