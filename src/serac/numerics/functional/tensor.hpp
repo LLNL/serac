@@ -1064,6 +1064,10 @@ SERAC_HOST_DEVICE auto normalize(const tensor<T, n...>& A)
   return A / norm(A);
 }
 
+/**
+ * @brief promotes a 2x2 matrix to a 3x3 matrix, by populating the upper left block, leaving zeroes in the third row / column
+ * @param[in] A the 2x2 matrix to be promoted to a 3x3 matrix 
+ */
 template <typename T>
 SERAC_HOST_DEVICE tensor<T, 3, 3> to_3x3(const tensor<T, 2, 2>& A) {
   tensor<T,3,3> output{};

@@ -15,8 +15,7 @@ namespace serac {
 
 namespace detail {
 
-// note: mesh is passed by non-const ref because mfem mutates the
-//       mesh when creating ParGridFunctions
+/// @overload
 template < int dim, typename signature, int ... i, typename func, typename ... T  >
 FiniteElementState fit(std::integer_sequence<int, i...>, func f, mfem::ParMesh & mesh, const T & ... solution_fields) {
 
@@ -24,7 +23,7 @@ FiniteElementState fit(std::integer_sequence<int, i...>, func f, mfem::ParMesh &
   // so this unpacks the return type
   using output_space = typename FunctionSignature< signature >::return_type;
 
-  FiniteElementState fitted_field(mesh, output_space{}, "displacement");
+  FiniteElementState fitted_field(mesh, output_space{});
   fitted_field = 0.0;
 
   // mass term
@@ -54,8 +53,14 @@ FiniteElementState fit(std::integer_sequence<int, i...>, func f, mfem::ParMesh &
 
 }
 
-// note: mesh is passed by non-const ref because mfem mutates the
-//       mesh when creating ParGridFunctions
+/**
+ * @brief determine field parameters to approximate the output of a user-provided q-function
+ * @param[in] f the user-provided function to approximate
+ * @param[in] mesh the region over which to approximate the function f
+ * @param[in] solution_fields [optional] any auxiliary field quantities needed to evaluate f
+ * 
+ * @note: mesh is passed by non-const ref because mfem mutates the mesh when creating ParGridFunctions
+ */
 template < int dim, typename signature, int ... n, typename func, typename ... T  >
 FiniteElementState fit(func f, mfem::ParMesh & mesh, const T & ... solution_fields) {
   auto iseq = std::make_integer_sequence<int, sizeof ... (T) >{};
