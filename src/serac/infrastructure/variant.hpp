@@ -229,7 +229,7 @@ struct variant {
   /**
    * @brief "Parameterized" constructor with which a value can be assigned
    * @tparam T The type of the parameter to assign to one of the variant elements
-   * @param[in] t The parameter to assign to the variant's contents
+   * @param[in] t_ The parameter to assign to the variant's contents
    * @pre The parameter type @p T must be equal to or assignable to either @p T0 or @p T1
    * @note If the conversion is ambiguous, i.e., if @a t is equal or convertible to *both* @p T0 and @p T1,
    * the first element of the variant - of type @p T0 - will be assigned to
