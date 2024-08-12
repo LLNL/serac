@@ -133,48 +133,4 @@ void BoundaryCondition::apply(mfem::HypreParMatrix& k_mat, mfem::Vector& rhs, mf
   mfem::EliminateBC(k_mat, *eliminated_entries, true_dofs_, state, rhs);
 }
 
-const mfem::Coefficient& BoundaryCondition::scalarCoefficient() const
-{
-  auto scalar_coef = get_if<std::shared_ptr<mfem::Coefficient>>(&coef_);
-  if (scalar_coef) {
-    return **scalar_coef;
-  } else {
-    SLIC_ERROR_ROOT("Asking for a scalar coefficient on a BoundaryCondition that contains a vector coefficient.");
-    exit(1);
-  }
-}
-
-mfem::Coefficient& BoundaryCondition::scalarCoefficient()
-{
-  auto scalar_coef = get_if<std::shared_ptr<mfem::Coefficient>>(&coef_);
-  if (scalar_coef) {
-    return **scalar_coef;
-  } else {
-    SLIC_ERROR_ROOT("Asking for a scalar coefficient on a BoundaryCondition that contains a vector coefficient.");
-    exit(1);
-  }
-}
-
-const mfem::VectorCoefficient& BoundaryCondition::vectorCoefficient() const
-{
-  auto vec_coef = get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_);
-  if (vec_coef) {
-    return **vec_coef;
-  } else {
-    SLIC_ERROR_ROOT("Asking for a vector coefficient on a BoundaryCondition that contains a scalar coefficient.");
-    exit(1);
-  }
-}
-
-mfem::VectorCoefficient& BoundaryCondition::vectorCoefficient()
-{
-  auto vec_coef = get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_);
-  if (vec_coef) {
-    return **vec_coef;
-  } else {
-    SLIC_ERROR_ROOT("Asking for a vector coefficient on a BoundaryCondition that contains a scalar coefficient.");
-    exit(1);
-  }
-}
-
 }  // namespace serac

@@ -94,46 +94,6 @@ public:
   mfem::Array<int>& markers() { return attr_markers_; }
 
   /**
-   * @brief Accessor for the underlying vector coefficient
-   *
-   * This method performs an internal check to verify the underlying GeneralCoefficient
-   * is in fact a vector.
-   *
-   * @return A non-owning reference to the underlying vector coefficient
-   */
-  const mfem::VectorCoefficient& vectorCoefficient() const;
-
-  /**
-   * @brief Accessor for the underlying vector coefficient
-   *
-   * This method performs an internal check to verify the underlying GeneralCoefficient
-   * is in fact a vector.
-   *
-   * @return A non-owning reference to the underlying vector coefficient
-   */
-  mfem::VectorCoefficient& vectorCoefficient();
-
-  /**
-   * @brief Accessor for the underlying scalar coefficient
-   *
-   * This method performs an internal check to verify the underlying GeneralCoefficient
-   * is in fact a scalar.
-   *
-   * @return A non-owning reference to the underlying scalar coefficient
-   */
-  const mfem::Coefficient& scalarCoefficient() const;
-
-  /**
-   * @brief Accessor for the underlying scalar coefficient
-   *
-   * This method performs an internal check to verify the underlying GeneralCoefficient
-   * is in fact a scalar.
-   *
-   * @return A non-owning reference to the underlying scalar coefficient
-   */
-  mfem::Coefficient& scalarCoefficient();
-
-  /**
    * @brief Returns the DOF indices for an essential boundary condition
    * @return A non-owning reference to the array of indices
    *
