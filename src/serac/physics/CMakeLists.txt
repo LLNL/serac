@@ -20,6 +20,7 @@ set(physics_sources
 set(physics_headers
     base_physics.hpp
     common.hpp
+    fit.hpp
     heat_transfer.hpp
     heat_transfer_input.hpp
     solid_mechanics.hpp
