@@ -8,6 +8,7 @@ set(physics_test_depends serac_physics serac_mesh gtest)
 
 set(physics_serial_test_sources
     beam_bending.cpp
+    fit_test.cpp
     thermal_finite_diff.cpp
     thermal_statics_patch.cpp
     thermal_dynamics_patch.cpp
