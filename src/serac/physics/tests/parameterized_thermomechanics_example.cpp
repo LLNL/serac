@@ -77,22 +77,30 @@ TEST(Thermomechanics, ParameterizedMaterial)
   double outer_radius = 1.25;
   double height       = 2.0;
 
-  // clang-format off
-    auto mesh = mesh::refineAndDistribute(build_hollow_quarter_cylinder(radial_divisions, 
-                                                                        angular_divisions, 
-                                                                        vertical_divisions,
-                                                                        inner_radius, 
-                                                                        outer_radius, 
-                                                                        height), serial_refinement, parallel_refinement);
+  auto mesh =
+      mesh::refineAndDistribute(build_hollow_quarter_cylinder(radial_divisions, angular_divisions, vertical_divisions,
+                                                              inner_radius, outer_radius, height),
+                                serial_refinement, parallel_refinement);
 
-  // clang-format on
   std::string mesh_tag{"mesh"};
   auto&       pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
+  NonlinearSolverOptions nonlinear_opts = solid_mechanics::default_nonlinear_options;
+  LinearSolverOptions    linear_opts    = solid_mechanics::default_linear_options;
+
+  nonlinear_opts.relative_tol = 1e-8;
+  nonlinear_opts.absolute_tol = 1e-10;
+
+#ifdef SERAC_USE_PETSC
+  nonlinear_opts.nonlin_solver     = NonlinearSolver::PetscNewton;
+  linear_opts.linear_solver        = LinearSolver::PetscGMRES;
+  linear_opts.preconditioner       = Preconditioner::Petsc;
+  linear_opts.petsc_preconditioner = PetscPCType::HMG;
+#endif
+
   SolidMechanics<p, dim, Parameters<H1<p>, H1<p>>> simulation(
-      solid_mechanics::default_nonlinear_options, solid_mechanics::direct_linear_options,
-      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermomechanics_simulation", mesh_tag,
-      {"theta", "alpha"});
+      nonlinear_opts, linear_opts, solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On,
+      "thermomechanics_simulation", mesh_tag, {"theta", "alpha"});
 
   double density   = 1.0;     ///< density
   double E         = 1000.0;  ///< Young's modulus
@@ -157,6 +165,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
   double initial_qoi = qoi(time, simulation.displacement());
   SLIC_INFO_ROOT(axom::fmt::format("vertical displacement integrated over the top surface: {}", initial_qoi));
+  EXPECT_NEAR(initial_qoi, 0.000883477, 1e-5);
 
   Functional<double(H1<p, dim>)> area({&simulation.displacement().space()});
   area.AddSurfaceIntegral(
@@ -174,12 +183,16 @@ TEST(Thermomechanics, ParameterizedMaterial)
   double exact_area = M_PI_4 * ((outer_radius * outer_radius) - (inner_radius * inner_radius));
 
   SLIC_INFO_ROOT(axom::fmt::format("exact area of the top surface: {}", exact_area));
+  EXPECT_NEAR(top_area, exact_area, 1e-3);
 
   double avg_disp = qoi(time, simulation.displacement()) / area(time, simulation.displacement());
 
   SLIC_INFO_ROOT(axom::fmt::format("average vertical displacement: {}", avg_disp));
 
-  SLIC_INFO_ROOT(axom::fmt::format("expected average vertical displacement: {}", alpha0 * deltaT * height));
+  double exact_avg_disp = alpha0 * deltaT * height;
+
+  SLIC_INFO_ROOT(axom::fmt::format("expected average vertical displacement: {}", exact_avg_disp));
+  EXPECT_NEAR(avg_disp, exact_avg_disp, 1e-5);
 
   serac::FiniteElementDual adjoint_load(simulation.displacement().space(), "adjoint_load");
   auto                     dqoi_du = get<1>(qoi(DifferentiateWRT<0>{}, time, simulation.displacement()));
@@ -229,7 +242,7 @@ TEST(Thermomechanics, ParameterizedMaterial)
 
 int main(int argc, char* argv[])
 {
-  ::testing::InitGoogleTest(&argc, argv);
+  testing::InitGoogleTest(&argc, argv);
 
   serac::initialize(argc, argv);
 

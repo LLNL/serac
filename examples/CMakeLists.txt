@@ -40,3 +40,13 @@ install(
     DESTINATION
         examples/serac/contact
 )
+
+# Add the buckling examples
+add_subdirectory(buckling)
+
+install(
+    FILES
+        buckling/cylinder.cpp
+    DESTINATION
+        examples/serac/buckling
+)

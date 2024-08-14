@@ -15,6 +15,7 @@
 #include <variant>
 
 #include "mfem.hpp"
+#include "axom/fmt.hpp"
 
 namespace serac {
 
@@ -100,12 +101,38 @@ struct TimesteppingOptions {
 /// Linear solution method indicator
 enum class LinearSolver
 {
-  CG,       /**< Conjugate gradient */
-  GMRES,    /**< Generalized minimal residual method */
-  SuperLU,  /**< SuperLU MPI-enabled direct nodal solver */
-  Strumpack /**< Strumpack MPI-enabled direct frontal solver*/
+  CG,        /**< Conjugate gradient */
+  GMRES,     /**< Generalized minimal residual method */
+  SuperLU,   /**< SuperLU MPI-enabled direct nodal solver */
+  Strumpack, /**< Strumpack MPI-enabled direct frontal solver*/
+  PetscCG,   /**< PETSc MPI-enabled conjugate gradient solver */
+  PetscGMRES /**< PETSc MPI-enabled generalize minimal residual solver */
 };
 // _linear_solvers_end
+
+/// Convert linear solver enums to their string names
+inline std::string linearName(const LinearSolver& s)
+{
+  switch (s) {
+    case LinearSolver::CG:
+      return "CG";
+    case LinearSolver::GMRES:
+      return "GMRES";
+    case LinearSolver::SuperLU:
+      return "SuperLU";
+    case LinearSolver::Strumpack:
+      return "Strumpack";
+    case LinearSolver::PetscCG:
+      return "PetscCG";
+    case LinearSolver::PetscGMRES:
+      return "PetscGMRES";
+  }
+  // This cannot happen, but GCC doesn't know that
+  return "UNKNOWN";
+}
+
+/// output linear solver string representation to a stream
+inline std::ostream& operator<<(std::ostream& os, LinearSolver s) { return os << linearName(s); }
 
 // Add a custom list of strings? conduit node?
 // Arbitrary string (e.g. json) to define parameters?
@@ -114,16 +141,53 @@ enum class LinearSolver
 /// Nonlinear solver method indicator
 enum class NonlinearSolver
 {
-  Newton,           /**< MFEM-native Newton-Raphson */
-  LBFGS,            /**< MFEM-native Limited memory BFGS */
-  NewtonLineSearch, /**< Custom solver using preconditioned earch direction with backtracking line search */
-  Nesterov,         /**< Custom solver using Nesterov dynamic (damped) dynamics for accelerating implicit solves */
-  TrustRegion,      /**< Custom solver using a trust region solver */
-  KINFullStep,      /**< KINSOL Full Newton (Sundials must be enabled) */
+  Newton,                    /**< MFEM-native Newton-Raphson */
+  LBFGS,                     /**< MFEM-native Limited memory BFGS */
+  NewtonLineSearch,          /**< Custom solver using preconditioned earch direction with backtracking line search */
+  TrustRegion,               /**< Custom solver using a trust region solver */
+  KINFullStep,               /**< KINSOL Full Newton (Sundials must be enabled) */
   KINBacktrackingLineSearch, /**< KINSOL Newton with Backtracking Line Search (Sundials must be enabled) */
-  KINPicard                  /**< KINSOL Picard (Sundials must be enabled) */
+  KINPicard,                 /**< KINSOL Picard (Sundials must be enabled) */
+  PetscNewton,               /**< PETSc Full Newton */
+  PetscNewtonBacktracking,   /**< PETSc Newton with backtracking line search */
+  PetscNewtonCriticalPoint,  /**< PETSc Newton with critical point line search */
+  PetscTrustRegion           /**< PETSc trust region solver */
 };
 // _nonlinear_solvers_end
+
+/// Convert nonlinear linear solver enums to their string names
+inline std::string nonlinearName(const NonlinearSolver& s)
+{
+  switch (s) {
+    case NonlinearSolver::Newton:
+      return "Newton";
+    case NonlinearSolver::LBFGS:
+      return "LBFGS";
+    case NonlinearSolver::NewtonLineSearch:
+      return "NewtonLineSearch";
+    case NonlinearSolver::TrustRegion:
+      return "TrustRegion";
+    case NonlinearSolver::KINFullStep:
+      return "KINFullStep";
+    case NonlinearSolver::KINBacktrackingLineSearch:
+      return "KINBacktrackingLineSearch";
+    case NonlinearSolver::KINPicard:
+      return "KINPicard";
+    case NonlinearSolver::PetscNewton:
+      return "PetscNewton";
+    case NonlinearSolver::PetscNewtonBacktracking:
+      return "PetscNewtonBacktracking";
+    case NonlinearSolver::PetscNewtonCriticalPoint:
+      return "PetscNewtonCriticalPoint";
+    case NonlinearSolver::PetscTrustRegion:
+      return "PetscTrustRegion";
+  }
+  // This cannot happen, but GCC doesn't know that
+  return "UNKNOWN";
+}
+
+/// output nonlinear solver string representation to a stream
+inline std::ostream& operator<<(std::ostream& os, NonlinearSolver s) { return os << nonlinearName(s); }
 
 /**
  * @brief Solver types supported by AMGX
@@ -164,6 +228,72 @@ struct AMGXOptions {
   bool verbose = false;
 };
 
+/**
+ * @brief Preconditioner types supported by PETSc
+ */
+enum class PetscPCType
+{
+  JACOBI,        /**< Jacobi with diagonal scaling */
+  JACOBI_L1,     /**< Jacobi with row-wise L1 norm scaling */
+  JACOBI_ROWSUM, /**< Jacobi with row sum (no absolute value) scaling */
+  JACOBI_ROWMAX, /**< Jacobi with L-infinity norm scaling */
+  PBJACOBI,      /**< Point-block Jacobi with LU factorization on sub-blocks */
+  BJACOBI,       /**< Block Jacobi with LU factorization on sub-blocks, set number of blocks with -pc_bjacobi_blocks */
+  LU,            /**< Direct solver based on LU factorization */
+  ILU,           /**< Incomplete LU factorization */
+  CHOLESKY,      /**< Cholesky factorization */
+  SVD,           /**< LAPACK xGESVD SVD decomposition, fully redundant (SLOW for MPI) */
+  ASM,  /**< Additive Schwarz method, each block is solved with its own KSP object, blocks cannot be shared between MPI
+           processes. Set total number of blocks with -pc_asm_blocks N */
+  GASM, /**< Additive Schwarz method, each block is solved with its own KSP object, blocks can be shared between MPI
+           processes. Set total number of blocks with -pc_gasm_total_subdomains N */
+  GAMG, /**< PETSc built-in AMG preconditioner */
+  HMG,  /**< Hierarchical AMG for multi-component PDE problems */
+  NONE, /**< No preconditioner, or type set via -pc_type CLI flag */
+};
+
+/// Convert Petsc preconditioner enums to their string names
+inline std::string petscPCName(const PetscPCType& s)
+{
+  switch (s) {
+    case PetscPCType::JACOBI:
+      return "JACOBI";
+    case PetscPCType::JACOBI_L1:
+      return "JACOBI_L1";
+    case PetscPCType::JACOBI_ROWSUM:
+      return "JACOBI_ROWSUM";
+    case PetscPCType::JACOBI_ROWMAX:
+      return "JACOBI_ROWMAX";
+    case PetscPCType::PBJACOBI:
+      return "PBJACOBI";
+    case PetscPCType::BJACOBI:
+      return "BJACOBI";
+    case PetscPCType::LU:
+      return "LU";
+    case PetscPCType::ILU:
+      return "ILU";
+    case PetscPCType::CHOLESKY:
+      return "CHOLESKY";
+    case PetscPCType::SVD:
+      return "SVD";
+    case PetscPCType::ASM:
+      return "ASM";
+    case PetscPCType::GASM:
+      return "GASM";
+    case PetscPCType::GAMG:
+      return "GAMG";
+    case PetscPCType::HMG:
+      return "HMG";
+    case PetscPCType::NONE:
+      return "NONE";
+  }
+  // This cannot happen, but GCC doesn't know that
+  return "UNKNOWN";
+}
+
+/// output PETSc preconditioner string representation to a stream
+inline std::ostream& operator<<(std::ostream& os, PetscPCType s) { return os << petscPCName(s); }
+
 // _preconditioners_start
 /// The type of preconditioner to be used
 enum class Preconditioner
@@ -174,9 +304,38 @@ enum class Preconditioner
   HypreAMG,         /**< Hypre's BoomerAMG algebraic multi-grid */
   HypreILU,         /**< Hypre's Incomplete LU */
   AMGX,             /**< NVIDIA's AMGX GPU-enabled algebraic multi-grid, GPU builds only */
+  Petsc,            /**< PETSc preconditioner,  */
   None              /**< No preconditioner used */
 };
 // _preconditioners_end
+
+/// Convert preconditioner enums to their string names
+inline std::string preconditionerName(Preconditioner p)
+{
+  switch (p) {
+    case Preconditioner::HypreJacobi:
+      return "HypreJacobi";
+    case Preconditioner::HypreL1Jacobi:
+      return "HypreL1Jacobi";
+    case Preconditioner::HypreGaussSeidel:
+      return "HypreGaussSeidel";
+    case Preconditioner::HypreAMG:
+      return "HypreAMG";
+    case Preconditioner::HypreILU:
+      return "HypreILU";
+    case Preconditioner::AMGX:
+      return "AMGX";
+    case Preconditioner::Petsc:
+      return "Petsc";
+    case Preconditioner::None:
+      return "None";
+  }
+  // This cannot happen, but GCC doesn't know that
+  return "UNKNOWN";
+}
+
+/// output preconditioner string representation to a stream
+inline std::ostream& operator<<(std::ostream& os, Preconditioner p) { return os << preconditionerName(p); }
 
 // _linear_options_start
 /// Parameters for an iterative linear solution scheme
@@ -186,6 +345,12 @@ struct LinearSolverOptions {
 
   /// PreconditionerOptions selection
   Preconditioner preconditioner = Preconditioner::HypreJacobi;
+
+  /// AMGX Options, used for Preconditioner::AMGX
+  AMGXOptions amgx_options = AMGXOptions{};
+
+  /// PETSc preconditioner type
+  PetscPCType petsc_preconditioner = PetscPCType::JACOBI;
 
   /// Relative tolerance
   double relative_tol = 1.0e-8;
@@ -227,7 +392,32 @@ struct NonlinearSolverOptions {
 
   /// Debug print level
   int print_level = 0;
+
+  /// Should the gradient be converted to a monolithic matrix
+  bool force_monolithic = false;
 };
 // _nonlinear_options_end
 
 }  // namespace serac
+
+// fmt support for serac::NonlinearSolver
+namespace axom::fmt {
+template <>
+struct formatter<serac::NonlinearSolver> : ostream_formatter {
+};
+
+// fmt support for serac::LinearSolver
+template <>
+struct formatter<serac::LinearSolver> : ostream_formatter {
+};
+
+// fmt support for serac::Preconditioner
+template <>
+struct formatter<serac::Preconditioner> : ostream_formatter {
+};
+
+// fmt support for serac::PetscPCType
+template <>
+struct formatter<serac::PetscPCType> : ostream_formatter {
+};
+}  // namespace axom::fmt

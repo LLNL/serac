@@ -4,10 +4,6 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-if(ENABLE_TESTS)
-    add_subdirectory(tests)
-endif()
-
 # This file contains metadata that often changes (ie. git sha).
 # Hide these changes in the source file so we do not force
 # a full rebuild.
@@ -61,7 +57,7 @@ blt_add_library(
 # Set file back to C++ due to nvcc compiler error
 set_source_files_properties(input.cpp PROPERTIES LANGUAGE CXX)
 
-target_include_directories(serac_infrastructure PUBLIC 
+target_include_directories(serac_infrastructure PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../..>
     $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>
@@ -73,3 +69,7 @@ install(TARGETS              serac_infrastructure
         EXPORT               serac-targets
         DESTINATION          lib
         )
+
+if(SERAC_ENABLE_TESTS)
+    add_subdirectory(tests)
+endif()

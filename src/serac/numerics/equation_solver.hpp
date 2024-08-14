@@ -20,6 +20,7 @@
 
 #include "serac/infrastructure/input.hpp"
 #include "serac/numerics/solver_config.hpp"
+#include "serac/numerics/petsc_solvers.hpp"
 
 namespace serac {
 
@@ -250,6 +251,16 @@ private:
 #endif
 
 /**
+ * @brief Function for building a monolithic parallel Hypre matrix from a block system of smaller Hypre matrices
+ *
+ * @param block_operator The block system of HypreParMatrices
+ * @return The assembled monolithic HypreParMatrix
+ *
+ * @pre @a block_operator must have assembled HypreParMatrices for its sub-blocks
+ */
+std::unique_ptr<mfem::HypreParMatrix> buildMonolithicMatrix(const mfem::BlockOperator& block_operator);
+
+/**
  * @brief Build a nonlinear solver using the nonlinear option struct
  *
  * @param nonlinear_opts The options to configure the nonlinear solution scheme
@@ -274,13 +285,11 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
 
 /**
  * @brief Build a preconditioner from the available options
- *
- * @param preconditioner The preconditioner type to be built
- * @param print_level The print level for the constructed preconditioner
+ * @param linear_opts The options to configure the linear solver and preconditioner
  * @param comm The communicator for the underlying operator and HypreParVectors
  * @return A constructed preconditioner based on the input option
  */
-std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner, int print_level = 0,
+std::unique_ptr<mfem::Solver> buildPreconditioner(LinearSolverOptions       linear_opts,
                                                   [[maybe_unused]] MPI_Comm comm = MPI_COMM_WORLD);
 
 #ifdef MFEM_USE_AMGX
@@ -293,6 +302,7 @@ std::unique_ptr<mfem::Solver> buildPreconditioner(Preconditioner preconditioner,
  */
 std::unique_ptr<mfem::AmgXSolver> buildAMGX(const AMGXOptions& options, const MPI_Comm comm);
 #endif
+
 }  // namespace serac
 
 /**
