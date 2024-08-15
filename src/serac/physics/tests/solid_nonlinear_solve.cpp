@@ -17,7 +17,7 @@
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
-#include <serac/physics/materials/liquid_crystal_elastomer.hpp>
+#include "serac/physics/materials/liquid_crystal_elastomer.hpp"
 
 #include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/state/state_manager.hpp"
