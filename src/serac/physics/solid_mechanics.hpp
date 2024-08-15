@@ -128,9 +128,8 @@ public:
    * @param parameter_names A vector of the names of the requested parameter fields
    * @param cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param time The simulation time to initialize the physics module to
-   * @param checkpoint_to_disk A flag to save the transient states on disk instead of memory for the transient adjoint
-   * solves
-   * @param use_warm_start A flag to turn on or off the displacement warm start predictor which helps robustness for
+   * @param checkpoint_to_disk Flag to save the transient states on disk instead of memory for transient adjoint solver
+   * @param use_warm_start Flag to turn on or off the displacement warm start predictor which helps robustness for
    * large deformation problems
    *
    * @note On parallel file systems (e.g. lustre), significant slowdowns and occasional errors were observed when
@@ -158,7 +157,7 @@ public:
    * @param parameter_names A vector of the names of the requested parameter fields
    * @param cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param time The simulation time to initialize the physics module to
-   * @param checkpoint_to_disk A flag to save the transient states on disk instead of memory for the transient adjoint
+   * @param checkpoint_to_disk Flag to save the transient states on disk instead of memory for transient adjoint solves
    * @param use_warm_start A flag to turn on or off the displacement warm start predictor which helps robustness for
    * large deformation problems
    *
@@ -249,13 +248,12 @@ public:
     if (amg_prec) {
       // ZRA - Iterative refinement tends to be more expensive than it is worth
       // We should add a flag allowing users to enable it
-      if constexpr (serac::ordering == mfem::Ordering::byVDIM) {
-        bool iterative_refinement = false;
-        amg_prec->SetElasticityOptions(&displacement_.space(), iterative_refinement);
-      } else {
-        // SetElasticityOptions only works with byVDIM ordering, instead fallback to SetSystemsOptions
-        amg_prec->SetSystemsOptions(displacement_.space().GetVDim(), serac::ordering == mfem::Ordering::byNODES);
-      }
+
+      // bool iterative_refinement = false;
+      // amg_prec->SetElasticityOptions(&displacement_.space(), iterative_refinement);
+
+      // SetElasticityOptions only works with byVDIM ordering, some evidence that it is not often optimal
+      amg_prec->SetSystemsOptions(displacement_.space().GetVDim(), serac::ordering == mfem::Ordering::byNODES);
     }
 
     int true_size = velocity_.space().TrueVSize();
