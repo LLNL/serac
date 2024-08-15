@@ -51,8 +51,14 @@ void exitGracefully(bool error)
   }
 
 #ifdef SERAC_USE_PETSC
+#ifdef SERAC_USE_SLEPC
+  mfem::MFEMFinalizeSlepc();
+#else
   mfem::MFEMFinalizePetsc();
 #endif
+#endif
+
+  profiling::finalize();
 
   profiling::finalize();
 

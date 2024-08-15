@@ -202,7 +202,7 @@ one of the following commands:
 
 If you built the dependencies using Spack/uberenv, the host-config file is output at the
 project root. To use the pre-built dependencies on LC, you must be in the appropriate
-LC group. Contact `Jamie Bramwell <bramwell1@llnl.gov>`_ for access.
+LC group. Contact `Brandon Talamini <talamini1@llnl.gov>`_ for access.
 
 Some build options frequently used by Serac include:
 
@@ -210,6 +210,7 @@ Some build options frequently used by Serac include:
 * ``ENABLE_BENCHMARKS``: Enables Google Benchmark performance tests, defaults to ``OFF``
 * ``ENABLE_WARNINGS_AS_ERRORS``: Turns compiler warnings into errors, defaults to ``ON``
 * ``ENABLE_ASAN``: Enables the Address Sanitizer for memory safety inspections, defaults to ``OFF``
+* ``SERAC_ENABLE_TESTS``: Enables Serac unit tests, defaults to ``ON``
 * ``SERAC_ENABLE_CODEVELOP``: Enables local development build of MFEM/Axom, see :ref:`codevelop-label`, defaults to ``OFF``
 * ``SERAC_USE_VDIM_ORDERING``: Sets the vector ordering to be ``byVDIM``, which is significantly faster for algebraic multigrid,
    but may conflict with other packages if Serac is being used as a dependency, defaults to ``OFF``.

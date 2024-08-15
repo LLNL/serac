@@ -32,6 +32,24 @@ to one of ``A``'s instance variables ``Foo f``, ``B`` should store a non-owning 
 either ``Foo&`` or ``Foo*``.  This should be ``const`` if at all possible.  In this case, shared ownership
 is not required because the lifetime of ``B`` is entirely dependent on the lifetime of ``A``.
 
+How to style your code
+----------------------
+
+We have two methods of enabling styling your code via ClangFormat. 
+
+The first method is to use the `style` build target on a configuration with the correct version of
+ClangFormat enabled. Here is an example on how to do it on LC's Ruby machine:
+
+.. code-block:: bash
+
+    $ ./config-build.py host-configs/ruby-toss_4_x86_64_ib-clang@14.0.6.cmake
+    $ cd build-ruby-toss_4_x86_64_ib-clang@14.0.6-debug
+    $ make style
+
+The second method is to make a comment of ``/style`` on your open GitHub pull request. This will trigger
+a GitHub Action that will automatically style your code and commit it to your branch. You will need to
+`git pull` after it is finished to continue to work on that branch.
+
 Documentation
 -------------
 

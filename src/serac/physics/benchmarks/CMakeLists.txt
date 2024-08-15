@@ -4,16 +4,16 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause) 
 
-set(benchmark_dependencies serac_physics)
+set(benchmark_depends serac_physics)
 
 blt_add_executable(NAME benchmark_thermal
                    SOURCES benchmark_thermal.cpp
-                   DEPENDS_ON ${benchmark_dependencies}
+                   DEPENDS_ON ${benchmark_depends}
                    OUTPUT_DIR ${PROJECT_BINARY_DIR}/benchmarks
                    FOLDER serac/benchmarks)
 
 blt_add_executable(NAME benchmark_functional
                    SOURCES benchmark_functional.cpp
-                   DEPENDS_ON ${benchmark_dependencies}
+                   DEPENDS_ON ${benchmark_depends}
                    OUTPUT_DIR ${PROJECT_BINARY_DIR}/benchmarks
                    FOLDER serac/benchmarks)

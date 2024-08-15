@@ -101,7 +101,7 @@ public:
       if (print_options.iterations) {
         mfem::out << "Newton iteration " << std::setw(3) << it << " : ||r|| = " << std::setw(13) << norm;
         if (it > 0) {
-          mfem::out << ", ||r||/||r_0|| = " << std::setw(13) << norm / initial_norm;
+          mfem::out << ", ||r||/||r_0|| = " << std::setw(13) << (initial_norm != 0.0 ? norm / initial_norm : norm);
         }
         mfem::out << '\n';
       }
@@ -398,7 +398,7 @@ public:
     for (cgIter = 1; cgIter <= settings.max_cg_iterations; ++cgIter) {
       hess_vec_func(d, Hd);
       const double curvature = Dot(d, Hd);
-      const double alphaCg   = rPr / curvature;
+      const double alphaCg   = curvature != 0.0 ? rPr / curvature : 0.0;
 
       auto& zPred = Hd;  // re-use Hd, this is where bugs come from
       add(z, alphaCg, d, zPred);
@@ -518,7 +518,7 @@ public:
     settings.min_cg_iterations = static_cast<size_t>(nonlinear_options.min_iterations);
     settings.max_cg_iterations = static_cast<size_t>(linear_options.max_iterations);
     settings.cg_tol            = 0.5 * norm_goal;
-    double trSize              = 100.0;
+    double trSize              = 0.1 * std::sqrt(X.Size());
     size_t cumulativeCgIters   = 0;
 
     auto& d  = trResults.d;   // reuse, maybe dangerous!
@@ -530,8 +530,10 @@ public:
       if (print_options.iterations) {
         mfem::out << "Newton iteration " << std::setw(3) << it << " : ||r|| = " << std::setw(13) << norm;
         if (it > 0) {
-          mfem::out << ", ||r||/||r_0|| = " << std::setw(13) << norm / initial_norm;
+          mfem::out << ", ||r||/||r_0|| = " << std::setw(13) << (initial_norm != 0.0 ? norm / initial_norm : norm);
           mfem::out << ", x_incr = " << std::setw(13) << d.Norml2();
+        } else {
+          mfem::out << ", norm goal = " << std::setw(13) << norm_goal << "\n";
         }
         mfem::out << '\n';
       }
@@ -593,8 +595,8 @@ public:
         trResults.cg_iterations_count = 1;
         trResults.interior_status     = TrustRegionResults::Status::OnBoundary;
       } else {
-        settings.cg_tol = std::max(0.5 * norm_goal, 1e-4 * norm);
-        solveTrustRegionModelProblem(r, scratch, hess_vec_func, precond_func, settings, trSize, trResults);
+        settings.cgTol = std::max(0.5 * norm_goal, 5e-5 * norm);
+        solve_trust_region_minimization(r, scratch, hess_vec_func, precond_func, settings, trSize, trResults);
       }
       cumulativeCgIters += trResults.cg_iterations_count;
 
