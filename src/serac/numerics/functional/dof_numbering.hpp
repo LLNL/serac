@@ -277,6 +277,9 @@ struct GradientAssemblyLookupTables {
     };
   };
 
+  /// dummy default ctor to enable deferred initialization
+  GradientAssemblyLookupTables() : initialized{false} {};
+
   /**
    * @param block_test_dofs object containing information about dofs for the test space
    * @param block_trial_dofs object containing information about dofs for the trial space
@@ -284,8 +287,8 @@ struct GradientAssemblyLookupTables {
    * @brief create lookup tables describing which degrees of freedom
    * correspond to each domain/boundary element
    */
-  GradientAssemblyLookupTables(const serac::BlockElementRestriction& block_test_dofs,
-                               const serac::BlockElementRestriction& block_trial_dofs)
+  void init(const serac::BlockElementRestriction& block_test_dofs,
+            const serac::BlockElementRestriction& block_trial_dofs)
   {
     // we start by having each element and boundary element emit the (i,j) entry that it
     // touches in the global "stiffness matrix", and also keep track of some metadata about
@@ -342,6 +345,8 @@ struct GradientAssemblyLookupTables {
     }
 
     row_ptr.back() = static_cast<int>(nnz);
+
+    initialized = true;
   }
 
   /**
@@ -368,6 +373,9 @@ struct GradientAssemblyLookupTables {
    * corresponding to the (i,j) entry
    */
   std::unordered_map<Entry, uint32_t, Entry::Hasher> nz_LUT;
+
+  /// @brief specifies if the table has already been initialized or not
+  bool initialized;
 };
 
 }  // namespace serac

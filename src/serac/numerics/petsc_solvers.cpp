@@ -431,15 +431,12 @@ void PetscGAMGSolver::SetupNearNullSpace()
     mfem::VectorFunctionCoefficient coeff_coords(sdim, func_coords);
     mfem::ParGridFunction           gf_coords(fespace_coords);
     gf_coords.ProjectCoefficient(coeff_coords);
-    int                   num_nodes   = fespace_->GetNDofs();
     mfem::HypreParVector* hvec_coords = gf_coords.ParallelProject();
     auto data_coords = const_cast<PetscScalar*>(mfem::Read(hvec_coords->GetMemory(), hvec_coords->Size(), false));
-    PetscCallAbort(GetComm(), PCSetCoordinates(*this, sdim, num_nodes, data_coords));
 
     Vec pvec_coords;
-    PetscCallAbort(GetComm(), VecCreateMPIWithArray(GetComm(), sdim, hvec_coords->Size(), hvec_coords->GlobalSize(),
-                                                    data_coords, &pvec_coords));
-    VecViewFromOptions(pvec_coords, NULL, "-view_coords");
+    PetscCallAbort(GetComm(), VecCreateMPIWithArray(GetComm(), sdim, hvec_coords->Size(),
+                                                    fespace_coords->GlobalTrueVSize(), data_coords, &pvec_coords));
     PetscCallAbort(GetComm(), MatNullSpaceCreateRigidBody(pvec_coords, &nnsp));
     PetscCallAbort(GetComm(), MatSetNearNullSpace(pA, nnsp));
     PetscCallAbort(GetComm(), MatNullSpaceDestroy(&nnsp));
@@ -601,7 +598,7 @@ PetscErrorCode convertKSPPreSolve(KSP ksp, [[maybe_unused]] Vec rhs, [[maybe_unu
   if (!solver->checked_for_convert_ || solver->needs_hypre_wrapping_) {
     PetscBool is_hypre;
     PetscCall(PetscObjectTypeCompare(reinterpret_cast<PetscObject>(A), MATHYPRE, &is_hypre));
-    SLIC_WARNING_ROOT_IF(
+    SLIC_DEBUG_ROOT_IF(
         is_hypre && petsc_pc,
         "convertKSPPreSolve(...) - MATHYPRE is not supported for most PETSc preconditioners, converting to MATAIJ.");
     if (!is_hypre || petsc_pc) {
@@ -706,9 +703,7 @@ void PetscKSPSolver::SetOperator(const mfem::Operator& op)
         SLIC_DEBUG_ROOT("PetscKSPSolver::SetOperator(...) - Wrapping existing HYPRE matrix");
         pA = new mfem::PetscParMatrix(hA, wrap_ ? PETSC_MATSHELL : PETSC_MATHYPRE);
       } else {
-        SLIC_WARNING_ROOT(
-            "PetscKSPSolver::SetOperator(...) - Converting operator, consider using PetscParMatrix to avoid "
-            "conversion costs");
+        SLIC_DEBUG_ROOT("PetscKSPSolver::SetOperator(...) - Converting operator from HYPRE to MATAIJ");
         pA = new mfem::PetscParMatrix(hA, wrap_ ? PETSC_MATSHELL : PETSC_MATAIJ);
       }
     } else if (oA) {

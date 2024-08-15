@@ -57,6 +57,10 @@ public:
   {
     SERAC_MARK_FUNCTION;
     grad = &oper->GetGradient(x);
+    if (nonlinear_options.force_monolithic) {
+      auto* grad_blocked = dynamic_cast<mfem::BlockOperator*>(grad);
+      if (grad_blocked) grad = buildMonolithicMatrix(*grad_blocked).release();
+    }
   }
 
   /// set the preconditioner for the linear solver
@@ -97,7 +101,7 @@ public:
       if (print_options.iterations) {
         mfem::out << "Newton iteration " << std::setw(3) << it << " : ||r|| = " << std::setw(13) << norm;
         if (it > 0) {
-          mfem::out << ", ||r||/||r_0|| = " << std::setw(13) << norm / initial_norm;
+          mfem::out << ", ||r||/||r_0|| = " << std::setw(13) << (initial_norm != 0.0 ? norm / initial_norm : norm);
         }
         mfem::out << '\n';
       }
@@ -383,7 +387,7 @@ public:
     for (cgIter = 1; cgIter <= settings.maxCgIterations; ++cgIter) {
       hess_vec_func(d, Hd);
       const double curvature = Dot(d, Hd);
-      const double alphaCg   = rPr / curvature;
+      const double alphaCg   = curvature != 0.0 ? rPr / curvature : 0.0;
 
       auto& zPred = Hd;  // re-use Hd, this is where bugs come from
       add(z, alphaCg, d, zPred);
@@ -428,6 +432,10 @@ public:
   {
     SERAC_MARK_FUNCTION;
     grad = &oper->GetGradient(x);
+    if (nonlinear_options.force_monolithic) {
+      auto* grad_blocked = dynamic_cast<mfem::BlockOperator*>(grad);
+      if (grad_blocked) grad = buildMonolithicMatrix(*grad_blocked).release();
+    }
   }
 
   /// evaluate the nonlinear residual
@@ -480,8 +488,8 @@ public:
     TrustRegionResults  trResults(X.Size());
     TrustRegionSettings settings;
     settings.maxCgIterations = static_cast<size_t>(linear_options.max_iterations);
-    settings.cgTol           = 0.2 * norm_goal;
-    double trSize            = 10.0;
+    settings.cgTol           = 0.5 * norm_goal;
+    double trSize            = 0.1 * std::sqrt(X.Size());
     size_t cumulativeCgIters = 0;
 
     int it = 0;
@@ -490,7 +498,9 @@ public:
       if (print_options.iterations) {
         mfem::out << "Newton iteration " << std::setw(3) << it << " : ||r|| = " << std::setw(13) << norm;
         if (it > 0) {
-          mfem::out << ", ||r||/||r_0|| = " << std::setw(13) << norm / initial_norm;
+          mfem::out << ", ||r||/||r_0|| = " << std::setw(13) << (initial_norm != 0.0 ? norm / initial_norm : norm);
+        } else {
+          mfem::out << ", norm goal = " << std::setw(13) << norm_goal << "\n";
         }
         mfem::out << '\n';
       }
@@ -546,7 +556,7 @@ public:
         trResults.cgIterationsCount = 1;
         trResults.interiorStatus    = TrustRegionResults::Status::OnBoundary;
       } else {
-        settings.cgTol = std::max(0.2 * norm_goal, 1e-3 * norm);
+        settings.cgTol = std::max(0.5 * norm_goal, 5e-5 * norm);
         solve_trust_region_minimization(r, scratch, hess_vec_func, precond_func, settings, trSize, trResults);
       }
       cumulativeCgIters += trResults.cgIterationsCount;
@@ -685,14 +695,6 @@ void SuperLUSolver::Mult(const mfem::Vector& input, mfem::Vector& output) const
   superlu_solver_.Mult(input, output);
 }
 
-/**
- * @brief Function for building a monolithic parallel Hypre matrix from a block system of smaller Hypre matrices
- *
- * @param block_operator The block system of HypreParMatrices
- * @return The assembled monolithic HypreParMatrix
- *
- * @pre @a block_operator must have assembled HypreParMatrices for its sub-blocks
- */
 std::unique_ptr<mfem::HypreParMatrix> buildMonolithicMatrix(const mfem::BlockOperator& block_operator)
 {
   int row_blocks = block_operator.NumRowBlocks();

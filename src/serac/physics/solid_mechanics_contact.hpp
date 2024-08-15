@@ -80,8 +80,11 @@ public:
                         std::vector<std::string> parameter_names = {}, int cycle = 0, double time = 0.0)
       : SolidMechanicsBase(std::move(solver), timestepping_opts, geom_nonlin, physics_name, mesh_tag, parameter_names,
                            cycle, time),
-        contact_(mesh_)
+        contact_(mesh_),
+        forces_(StateManager::newDual(displacement_.space(), detail::addPrefix(physics_name, "contact_forces")))
   {
+    forces_ = 0;
+    duals_.push_back(&forces_);
   }
 
   /**
@@ -95,8 +98,12 @@ public:
    */
   SolidMechanicsContact(const SolidMechanicsInputOptions& input_options, const std::string& physics_name,
                         std::string mesh_tag, int cycle = 0, double time = 0.0)
-      : SolidMechanicsBase(input_options, physics_name, mesh_tag, cycle, time), contact_(mesh_)
+      : SolidMechanicsBase(input_options, physics_name, mesh_tag, cycle, time),
+        contact_(mesh_),
+        forces_(StateManager::newDual(displacement_.space(), detail::addPrefix(physics_name, "contact_forces")))
   {
+    forces_ = 0;
+    duals_.push_back(&forces_);
   }
 
   /// @brief Build the quasi-static operator corresponding to the total Lagrangian formulation
@@ -215,6 +222,8 @@ protected:
     // we can use the base class method if we don't have Lagrange multipliers
     if (!contact_.haveLagrangeMultipliers()) {
       SolidMechanicsBase::quasiStaticSolve(dt);
+      contact_.update(cycle_, ode_time_point_, dt);
+      forces_.SetVector(contact_.forces(), 0);
       return;
     }
 
@@ -240,20 +249,24 @@ protected:
     nonlin_solver_->solve(augmented_solution);
     displacement_.Set(1.0, mfem::Vector(augmented_solution, 0, displacement_.Size()));
     contact_.setPressures(mfem::Vector(augmented_solution, displacement_.Size(), contact_.numPressureDofs()));
+    contact_.update(cycle_, ode_time_point_, dt);
+    forces_.SetVector(contact_.forces(), 0);
   }
 
   using BasePhysics::bcs_;
   using BasePhysics::cycle_;
+  using BasePhysics::duals_;
   using BasePhysics::is_quasistatic_;
   using BasePhysics::mesh_;
+  using BasePhysics::name_;
   using BasePhysics::parameters_;
   using BasePhysics::shape_displacement_;
+  using BasePhysics::states_;
   using BasePhysics::time_;
   using SolidMechanicsBase::acceleration_;
   using SolidMechanicsBase::d_residual_d_;
   using SolidMechanicsBase::DERIVATIVE;
   using SolidMechanicsBase::displacement_;
-  using SolidMechanicsBase::dr_;
   using SolidMechanicsBase::du_;
   using SolidMechanicsBase::J_;
   using SolidMechanicsBase::J_e_;
@@ -290,6 +303,9 @@ protected:
 
   /// @brief Class holding contact constraint data
   ContactData contact_;
+
+  /// forces for output
+  FiniteElementDual forces_;
 };
 
 }  // namespace serac

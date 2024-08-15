@@ -4,16 +4,18 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
+set(functional_test_depends gtest serac_functional ${functional_depends})
+
 # This test is all constexpr-evaluated, so it doesn't
 # actually need to run, if it compiles without error, the tests have passed
 blt_add_executable(NAME        tensor_unit_tests
                    SOURCES     tensor_unit_tests.cpp
                    OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
-                   DEPENDS_ON  gtest serac_functional ${functional_depends}
+                   DEPENDS_ON  ${functional_test_depends}
                    FOLDER      serac/tests)
 
 # Then add the examples/tests
-set(functional_tests_serial
+set(functional_serial_test_sources
     functional_shape_derivatives.cpp
     simplex_basis_function_unit_tests.cpp
     bug_boundary_qoi.cpp
@@ -25,13 +27,13 @@ set(functional_tests_serial
     tuple_arithmetic_unit_tests.cpp
     test_newton.cpp)
 
-serac_add_tests( SOURCES ${functional_tests_serial}
-                 DEPENDS_ON gtest serac_functional ${functional_depends})
+serac_add_tests(SOURCES    ${functional_serial_test_sources}
+                DEPENDS_ON ${functional_test_depends})
 
 set_source_files_properties(functional_tet_quality PROPERTIES LANGUAGE CXX)
 
 # Then add the examples/tests
-set(functional_tests_mpi
+set(functional_parallel_test_sources
     #functional_basic_hcurl.cpp
     functional_with_domain.cpp
     functional_basic_h1_scalar.cpp
@@ -44,11 +46,11 @@ set(functional_tests_mpi
     functional_comparison_L2.cpp
     )
 
-serac_add_tests( SOURCES ${functional_tests_mpi}
-                 DEPENDS_ON gtest serac_functional serac_state ${functional_depends}
-                 NUM_MPI_TASKS 4 )
+serac_add_tests(SOURCES       ${functional_parallel_test_sources}
+                DEPENDS_ON    ${functional_test_depends}
+                NUM_MPI_TASKS 4 )
 
-foreach(filename ${functional_tests_mpi})
+foreach(filename ${functional_parallel_test_sources})
     set_source_files_properties(${filename} PROPERTIES LANGUAGE CXX)
 endforeach()
 
@@ -56,7 +58,7 @@ target_link_libraries(bug_boundary_qoi PUBLIC serac_physics)
 
 if(ENABLE_CUDA)
 
-    set(functional_tests_cuda 
+    set(functional_cuda_test_sources 
         tensor_unit_tests_cuda.cu 
 #        some of the GPU functionality is temporarily disabled to 
 #        help incrementally roll-out the variadic implementation of Functional
@@ -64,7 +66,7 @@ if(ENABLE_CUDA)
 #        functional_comparisons_cuda.cu
        )
 
-    serac_add_tests( SOURCES ${functional_tests_cuda}
-                     DEPENDS_ON gtest serac_functional serac_state ${functional_depends})
+    serac_add_tests( SOURCES    ${functional_cuda_test_sources}
+                     DEPENDS_ON ${functional_test_depends})
 
 endif()
