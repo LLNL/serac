@@ -595,8 +595,8 @@ public:
         trResults.cg_iterations_count = 1;
         trResults.interior_status     = TrustRegionResults::Status::OnBoundary;
       } else {
-        settings.cgTol = std::max(0.5 * norm_goal, 5e-5 * norm);
-        solve_trust_region_minimization(r, scratch, hess_vec_func, precond_func, settings, trSize, trResults);
+        settings.cg_tol = std::max(0.5 * norm_goal, 5e-5 * norm);
+        solveTrustRegionModelProblem(r, scratch, hess_vec_func, precond_func, settings, trSize, trResults);
       }
       cumulativeCgIters += trResults.cg_iterations_count;
 
