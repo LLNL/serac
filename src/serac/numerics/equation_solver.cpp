@@ -518,8 +518,8 @@ public:
     settings.min_cg_iterations = static_cast<size_t>(nonlinear_options.min_iterations);
     settings.max_cg_iterations = static_cast<size_t>(linear_options.max_iterations);
     settings.cg_tol            = 0.5 * norm_goal;
-    double trSize              = 0.1 * std::sqrt(X.Size());
-    size_t cumulativeCgIters   = 0;
+    double tr_size              = 0.1 * std::sqrt(X.Size());
+    size_t cumulative_cg_iters_from_last_precond_update   = 0;
 
     auto& d  = trResults.d;   // reuse, maybe dangerous!
     auto& Hd = trResults.Hd;  // reuse, maybe dangerous!
@@ -555,9 +555,9 @@ public:
       assembleJacobian(X);
 
       if (it == 0 || (trResults.cg_iterations_count >= settings.max_cg_iterations ||
-                      cumulativeCgIters >= settings.max_cumulative_iteration)) {
+                      cumulative_cg_iters_from_last_precond_update >= settings.max_cumulative_iteration)) {
         tr_precond.SetOperator(*grad);
-        cumulativeCgIters = 0;
+        cumulative_cg_iters_from_last_precond_update = 0;
         if (print_options.iterations) {
           // currently it will always be updated
           // mfem::out << "Updating trust region preconditioner." << std::endl;
@@ -567,7 +567,7 @@ public:
       auto hess_vec_func = [&](const mfem::Vector& x_, mfem::Vector& v_) { hessVec(x_, v_); };
       auto precond_func  = [&](const mfem::Vector& x_, mfem::Vector& v_) { precond(x_, v_); };
 
-      double cauchyPointNormSquared = trSize * trSize;
+      double cauchyPointNormSquared = tr_size * tr_size;
       trResults.reset();
 
       hess_vec_func(r, trResults.Hd);
@@ -577,7 +577,7 @@ public:
         add(trResults.cauchy_point, alphaCp, r, trResults.cauchy_point);
         cauchyPointNormSquared = Dot(trResults.cauchy_point, trResults.cauchy_point);
       } else {
-        const double alphaTr = -trSize / std::sqrt(Dot(r, r));
+        const double alphaTr = -tr_size / std::sqrt(Dot(r, r));
         add(trResults.cauchy_point, alphaTr, r, trResults.cauchy_point);
         if (print_options.iterations) {
           mfem::out << "Negative curvature un-preconditioned cauchy point direction found."
@@ -585,27 +585,27 @@ public:
         }
       }
 
-      if (cauchyPointNormSquared >= trSize * trSize) {
+      if (cauchyPointNormSquared >= tr_size * tr_size) {
         if (print_options.iterations) {
           mfem::out << "Un-preconditioned gradient cauchy point outside trust region, step size = "
                     << std::sqrt(cauchyPointNormSquared) << "\n";
         }
-        trResults.cauchy_point *= (trSize / std::sqrt(cauchyPointNormSquared));
+        trResults.cauchy_point *= (tr_size / std::sqrt(cauchyPointNormSquared));
         trResults.z                   = trResults.cauchy_point;
         trResults.cg_iterations_count = 1;
         trResults.interior_status     = TrustRegionResults::Status::OnBoundary;
       } else {
         settings.cg_tol = std::max(0.5 * norm_goal, 5e-5 * norm);
-        solveTrustRegionModelProblem(r, scratch, hess_vec_func, precond_func, settings, trSize, trResults);
+        solveTrustRegionModelProblem(r, scratch, hess_vec_func, precond_func, settings, tr_size, trResults);
       }
-      cumulativeCgIters += trResults.cg_iterations_count;
+      cumulative_cg_iters_from_last_precond_update += trResults.cg_iterations_count;
 
       bool happyAboutTrSize = false;
       int  lineSearchIter   = 0;
       while (!happyAboutTrSize && lineSearchIter <= nonlinear_options.max_line_search_iterations) {
         ++lineSearchIter;
 
-        doglegStep(trResults.cauchy_point, trResults.z, trSize, d);
+        doglegStep(trResults.cauchy_point, trResults.z, tr_size, d);
 
         static constexpr double roundOffTol = 0.0;  // 1e-14;
 
@@ -638,7 +638,7 @@ public:
           norm             = normPred;
           happyAboutTrSize = true;
           if (print_options.iterations) {
-            printTrustRegionInfo(realObjective, modelObjective, trResults.cg_iterations_count, trSize, true);
+            printTrustRegionInfo(realObjective, modelObjective, trResults.cg_iterations_count, tr_size, true);
             trResults.cg_iterations_count =
                 0;  // zero this output so it doesn't look like the linesearch is doing cg iterations
           }
@@ -657,9 +657,9 @@ public:
         }
 
         if (!(rho >= settings.eta2)) {  // write it this way to handle NaNs
-          trSize *= settings.t1;
+          tr_size *= settings.t1;
         } else if ((rho > settings.eta3) && (trResults.interior_status == TrustRegionResults::Status::OnBoundary)) {
-          trSize *= settings.t2;
+          tr_size *= settings.t2;
         }
 
         // eventually extend to handle this case to handle occasional roundoff issues
@@ -669,7 +669,7 @@ public:
         bool willAccept = rho >= settings.eta1;  // or (rho >= -0 and realResNorm <= gNorm)
 
         if (print_options.iterations) {
-          printTrustRegionInfo(realObjective, modelObjective, trResults.cg_iterations_count, trSize, willAccept);
+          printTrustRegionInfo(realObjective, modelObjective, trResults.cg_iterations_count, tr_size, willAccept);
           trResults.cg_iterations_count =
               0;  // zero this output so it doesn't look like the linesearch is doing cg iterations
         }

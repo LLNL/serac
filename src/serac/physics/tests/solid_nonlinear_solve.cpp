@@ -316,6 +316,11 @@ int main(int argc, char* argv[])
   ::testing::InitGoogleTest(&argc, argv);
 
   serac::initialize(argc, argv);
+
+  SERAC_SET_METADATA("test", "solid_nonlinear_solve");
+  SERAC_SET_METADATA("nonlinear solver", std::to_string(nonlinSolve));
+  SERAC_SET_METADATA("preconditioner", std::to_string(prec));
+
   int result = RUN_ALL_TESTS();
   serac::exitGracefully(result);
 
