@@ -515,11 +515,11 @@ public:
 
     TrustRegionResults  trResults(X.Size());
     TrustRegionSettings settings;
-    settings.min_cg_iterations = static_cast<size_t>(nonlinear_options.min_iterations);
-    settings.max_cg_iterations = static_cast<size_t>(linear_options.max_iterations);
-    settings.cg_tol            = 0.5 * norm_goal;
-    double tr_size              = 0.1 * std::sqrt(X.Size());
-    size_t cumulative_cg_iters_from_last_precond_update   = 0;
+    settings.min_cg_iterations                          = static_cast<size_t>(nonlinear_options.min_iterations);
+    settings.max_cg_iterations                          = static_cast<size_t>(linear_options.max_iterations);
+    settings.cg_tol                                     = 0.5 * norm_goal;
+    double tr_size                                      = 0.1 * std::sqrt(X.Size());
+    size_t cumulative_cg_iters_from_last_precond_update = 0;
 
     auto& d  = trResults.d;   // reuse, maybe dangerous!
     auto& Hd = trResults.Hd;  // reuse, maybe dangerous!
