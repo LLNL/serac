@@ -23,7 +23,7 @@ TEST(Thermal, FiniteDifference)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  int serial_refinement   = 1;
+  int serial_refinement = 1;
   int parallel_refinement = 0;
 
   // Create DataStore
@@ -39,7 +39,7 @@ TEST(Thermal, FiniteDifference)
 
   auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
-  constexpr int p   = 1;
+  constexpr int p = 1;
   constexpr int dim = 2;
 
   // Define a boundary attribute set
@@ -101,7 +101,7 @@ TEST(Thermal, FiniteDifference)
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
   // This adjoint load is equivalent to a discrete L1 norm on the temperature.
-  serac::FiniteElementDual              adjoint_load(thermal_solver.temperature().space(), "adjoint_load");
+  serac::FiniteElementDual adjoint_load(thermal_solver.temperature().space(), "adjoint_load");
   std::unique_ptr<mfem::HypreParVector> assembled_vector(adjoint_load_form.ParallelAssemble());
   adjoint_load = *assembled_vector;
 
@@ -156,7 +156,7 @@ TEST(HeatTransfer, FiniteDifferenceShape)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  int serial_refinement   = 0;
+  int serial_refinement = 0;
   int parallel_refinement = 0;
 
   // Create DataStore
@@ -172,7 +172,7 @@ TEST(HeatTransfer, FiniteDifferenceShape)
 
   auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
-  constexpr int p   = 1;
+  constexpr int p = 1;
   constexpr int dim = 2;
 
   // Define a boundary attribute set
@@ -224,7 +224,7 @@ TEST(HeatTransfer, FiniteDifferenceShape)
 
   // Construct a dummy adjoint load (this would come from a QOI downstream).
   // This adjoint load is equivalent to a discrete L1 norm on the temperature.
-  serac::FiniteElementDual              adjoint_load(thermal_solver.temperature().space(), "adjoint_load");
+  serac::FiniteElementDual adjoint_load(thermal_solver.temperature().space(), "adjoint_load");
   std::unique_ptr<mfem::HypreParVector> assembled_vector(adjoint_load_form.ParallelAssemble());
   adjoint_load = *assembled_vector;
 

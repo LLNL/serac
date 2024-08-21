@@ -26,13 +26,13 @@ class ContactTest : public testing::TestWithParam<std::tuple<ContactEnforcement,
 TEST_P(ContactTest, beam)
 {
   // NOTE: p must be equal to 1 for now
-  constexpr int p   = 1;
+  constexpr int p = 1;
   constexpr int dim = 3;
 
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Create DataStore
-  std::string            name = "contact_beam_" + std::get<2>(GetParam());
+  std::string name = "contact_beam_" + std::get<2>(GetParam());
   axom::sidre::DataStore datastore;
   StateManager::initialize(datastore, name + "_data");
 
@@ -48,11 +48,11 @@ TEST_P(ContactTest, beam)
   return;
 #endif
 
-  NonlinearSolverOptions nonlinear_options{.nonlin_solver  = NonlinearSolver::Newton,
-                                           .relative_tol   = 1.0e-12,
-                                           .absolute_tol   = 1.0e-12,
+  NonlinearSolverOptions nonlinear_options{.nonlin_solver = NonlinearSolver::Newton,
+                                           .relative_tol = 1.0e-12,
+                                           .absolute_tol = 1.0e-12,
                                            .max_iterations = 200,
-                                           .print_level    = 1};
+                                           .print_level = 1};
 #ifdef SERAC_USE_SUNDIALS
   // KINFullStep is preferred, but has issues when active set is enabled
   if (std::get<1>(GetParam()) == ContactType::TiedNormal) {
@@ -60,17 +60,17 @@ TEST_P(ContactTest, beam)
   }
 #endif
 
-  ContactOptions contact_options{.method      = ContactMethod::SingleMortar,
+  ContactOptions contact_options{.method = ContactMethod::SingleMortar,
                                  .enforcement = std::get<0>(GetParam()),
-                                 .type        = std::get<1>(GetParam()),
-                                 .penalty     = 1.0e2};
+                                 .type = std::get<1>(GetParam()),
+                                 .penalty = 1.0e2};
 
   SolidMechanicsContact<p, dim> solid_solver(nonlinear_options, linear_options,
                                              solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On,
                                              name, "beam_mesh");
 
-  double                      K = 10.0;
-  double                      G = 0.25;
+  double K = 10.0;
+  double G = 0.25;
   solid_mechanics::NeoHookean mat{1.0, K, G};
   solid_solver.setMaterial(mat);
 
@@ -81,7 +81,7 @@ TEST_P(ContactTest, beam)
   });
   solid_solver.setDisplacementBCs({6}, [](const mfem::Vector&, mfem::Vector& u) {
     u.SetSize(dim);
-    u    = 0.0;
+    u = 0.0;
     u[2] = -0.15;
   });
 

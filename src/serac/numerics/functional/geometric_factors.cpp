@@ -19,17 +19,17 @@ void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobian
 {
   static constexpr TensorProductQuadratureRule<Q> rule{};
 
-  constexpr int spatial_dim   = function_space::components;
-  constexpr int geometry_dim  = dimension_of(geom);
+  constexpr int spatial_dim = function_space::components;
+  constexpr int geometry_dim = dimension_of(geom);
   constexpr int qpts_per_elem = num_quadrature_points(geom, Q);
 
-  using element_type  = finite_element<geom, function_space>;
+  using element_type = finite_element<geom, function_space>;
   using position_type = tensor<double, spatial_dim, qpts_per_elem>;
   using jacobian_type = tensor<double, geometry_dim, spatial_dim, qpts_per_elem>;
 
   auto X_q = reinterpret_cast<position_type*>(positions_q.ReadWrite());
   auto J_q = reinterpret_cast<jacobian_type*>(jacobians_q.ReadWrite());
-  auto X   = reinterpret_cast<const typename element_type::dof_type*>(positions_e.Read());
+  auto X = reinterpret_cast<const typename element_type::dof_type*>(positions_e.Read());
 
   std::size_t num_elements = elements.size();
 
@@ -62,17 +62,17 @@ void compute_geometric_factors(mfem::Vector& positions_q, mfem::Vector& jacobian
 GeometricFactors::GeometricFactors(const Domain& d, int q, mfem::Geometry::Type g)
 {
   auto* nodes = d.mesh_.GetNodes();
-  auto* fes   = nodes->FESpace();
+  auto* fes = nodes->FESpace();
 
-  auto         restriction = serac::ElementRestriction(fes, g);
+  auto restriction = serac::ElementRestriction(fes, g);
   mfem::Vector X_e(int(restriction.ESize()));
   restriction.Gather(*nodes, X_e);
 
   // assumes all elements are the same order
   int p = fes->GetElementOrder(0);
 
-  int spatial_dim   = d.mesh_.SpaceDimension();
-  int geometry_dim  = dimension_of(g);
+  int spatial_dim = d.mesh_.SpaceDimension();
+  int geometry_dim = dimension_of(g);
   int qpts_per_elem = num_quadrature_points(g, q);
 
   if (g == mfem::Geometry::TRIANGLE) elements = d.tri_ids_;
@@ -140,17 +140,17 @@ GeometricFactors::GeometricFactors(const Domain& d, int q, mfem::Geometry::Type 
 GeometricFactors::GeometricFactors(const Domain& d, int q, mfem::Geometry::Type g, FaceType type)
 {
   auto* nodes = d.mesh_.GetNodes();
-  auto* fes   = nodes->FESpace();
+  auto* fes = nodes->FESpace();
 
-  auto         restriction = serac::ElementRestriction(fes, g, type);
+  auto restriction = serac::ElementRestriction(fes, g, type);
   mfem::Vector X_e(int(restriction.ESize()));
   restriction.Gather(*nodes, X_e);
 
   // assumes all elements are the same order
   int p = fes->GetElementOrder(0);
 
-  int spatial_dim   = d.mesh_.SpaceDimension();
-  int geometry_dim  = dimension_of(g);
+  int spatial_dim = d.mesh_.SpaceDimension();
+  int geometry_dim = dimension_of(g);
   int qpts_per_elem = num_quadrature_points(g, q);
 
   // NB: we only want the number of elements with the specified

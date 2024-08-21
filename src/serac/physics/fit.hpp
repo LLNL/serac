@@ -38,7 +38,7 @@ FiniteElementState fit(std::integer_sequence<int, i...>, func f, mfem::ParMesh& 
 
   // rhs
   std::array<const mfem::ParFiniteElementSpace*, sizeof...(T)> trial_spaces = {&solution_fields.space()...};
-  serac::Functional<signature>                                 phi_f(&fitted_field.space(), trial_spaces);
+  serac::Functional<signature> phi_f(&fitted_field.space(), trial_spaces);
   phi_f.AddDomainIntegral(Dimension<dim>{}, DependsOn<i...>{}, f, mesh);
   mfem::Vector b = phi_f(0.0, solution_fields...);
 

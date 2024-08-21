@@ -88,7 +88,7 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet)
  */
 std::unique_ptr<serac::BasePhysics> createPhysics(
     int dim, int order, std::optional<serac::SolidMechanicsInputOptions> solid_mechanics_options,
-    std::optional<serac::HeatTransferInputOptions>    heat_transfer_options,
+    std::optional<serac::HeatTransferInputOptions> heat_transfer_options,
     std::optional<serac::ThermomechanicsInputOptions> thermomechanics_options, std::string mesh_tag, int cycle,
     double t)
 {
@@ -206,19 +206,19 @@ std::unique_ptr<serac::BasePhysics> createPhysics(
  *
  * @return The order of the discretization
  */
-int getOrder(std::optional<serac::SolidMechanicsInputOptions>  solid_mechanics_options,
-             std::optional<serac::HeatTransferInputOptions>    heat_transfer_options,
+int getOrder(std::optional<serac::SolidMechanicsInputOptions> solid_mechanics_options,
+             std::optional<serac::HeatTransferInputOptions> heat_transfer_options,
              std::optional<serac::ThermomechanicsInputOptions> thermomechanics_options)
 {
   int order = 0;
   if (thermomechanics_options) {
-    order             = thermomechanics_options->solid_options.order;
+    order = thermomechanics_options->solid_options.order;
     int thermal_order = thermomechanics_options->thermal_options.order;
     SLIC_ERROR_ROOT_IF(
         order != thermal_order,
         axom::fmt::format("Solid order '{0}' and thermal order '{1}'' do not match.", order, thermal_order));
   } else if (solid_mechanics_options && heat_transfer_options) {
-    order             = solid_mechanics_options->order;
+    order = solid_mechanics_options->order;
     int thermal_order = heat_transfer_options->order;
     SLIC_ERROR_ROOT_IF(
         order != thermal_order,
@@ -265,7 +265,7 @@ int main(int argc, char* argv[])
 
   // Read input file
   std::string input_file_path = "";
-  auto        search          = cli_opts.find("input-file");
+  auto search = cli_opts.find("input-file");
   if (search != cli_opts.end()) {
     input_file_path = search->second;
   }
@@ -277,7 +277,7 @@ int main(int argc, char* argv[])
   // * StateManager state files
   // * Summary file
   std::string output_directory = "";
-  search                       = cli_opts.find("output-directory");
+  search = cli_opts.find("output-directory");
   if (search != cli_opts.end()) {
     output_directory = search->second;
   }
@@ -334,10 +334,10 @@ int main(int argc, char* argv[])
   datastore.getRoot()->getGroup("input_file")->save(input_values_path, "json");
 
   // Initialize/set the time information
-  double t       = 0;
+  double t = 0;
   double t_final = inlet["t_final"];
-  double dt      = inlet["dt"];
-  int    cycle   = 0;
+  double dt = inlet["dt"];
+  int cycle = 0;
 
   std::string mesh_tag{"mesh}"};
 
@@ -353,13 +353,13 @@ int main(int argc, char* argv[])
     serac::StateManager::setMesh(std::move(mesh), mesh_tag);
   } else {
     // If restart_cycle is non-empty, then this is a restart run and the data will be loaded here
-    t     = serac::StateManager::load(*restart_cycle, mesh_tag);
+    t = serac::StateManager::load(*restart_cycle, mesh_tag);
     cycle = *restart_cycle;
   }
 
   // Create nullable containers for the solid and thermal input file options
-  std::optional<serac::SolidMechanicsInputOptions>  solid_mechanics_options;
-  std::optional<serac::HeatTransferInputOptions>    heat_transfer_options;
+  std::optional<serac::SolidMechanicsInputOptions> solid_mechanics_options;
+  std::optional<serac::HeatTransferInputOptions> heat_transfer_options;
   std::optional<serac::ThermomechanicsInputOptions> thermomechanics_options;
 
   // If the blocks exist, read the appropriate input file options
