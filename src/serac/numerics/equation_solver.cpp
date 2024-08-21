@@ -471,19 +471,6 @@ public:
     tr_precond.Mult(x_, v_);
   };
 
-  /// estimate the minimum eigenvalue and its eigenvector
-  // void estimateExtremalEigenvector(const mfem::Operator& op, mfem::Vector& v, mfem::Vector& w, size_t iters, double
-  // changeTol)
-  //{
-  // CALI_CXX_MARK_FUNCTION;
-  // v /= v.Norml2();
-  // op.Mult(v, w);
-  // double lam = Dot(v, w); // first eigenvalue estimate
-  // for (size_t i=0; i < iters; ++i) {
-  //   w /= w.Norml2();
-  // }
-  //}
-
   /// @overload
   void Mult(const mfem::Vector&, mfem::Vector& X) const
   {
@@ -560,7 +547,6 @@ public:
         cumulative_cg_iters_from_last_precond_update = 0;
         if (print_options.iterations) {
           // currently it will always be updated
-          // mfem::out << "Updating trust region preconditioner." << std::endl;
         }
       }
 
@@ -619,7 +605,7 @@ public:
         double normPred      = std::numeric_limits<double>::max();
         try {
           normPred    = computeResidual(x_pred, r_pred);
-          double obj1 = 0.5 * (Dot(r, d) + Dot(r_pred, d)) - roundOffTol;  // can collapse
+          double obj1 = 0.5 * (Dot(r, d) + Dot(r_pred, d)) - roundOffTol;
 
           // midstep work estimate
           // add(X, 0.5, d, x_mid);

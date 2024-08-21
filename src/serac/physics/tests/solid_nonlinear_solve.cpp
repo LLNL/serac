@@ -84,27 +84,27 @@ auto get_opts(int max_iters, double abs_tol = 1e-9)
 
   switch (nonlinSolve) {
     case NonlinSolve::NEWTON: {
-      printf("using newton solver\n");
+      SLIC_INFO_ROOT("using newton solver");
       nonlinear_options.min_iterations             = 0;
       nonlinear_options.max_line_search_iterations = 0;
       nonlinear_options.nonlin_solver              = NonlinearSolver::Newton;
       break;
     }
     case NonlinSolve::LINESEARCH: {
-      printf("using newton linesearch solver\n");
+      SLIC_INFO_ROOT("using newton linesearch solver");
       nonlinear_options.min_iterations = 0;
       nonlinear_options.nonlin_solver  = NonlinearSolver::PetscNewtonBacktracking;
       // nonlinear_options.nonlin_solver = NonlinearSolver::NewtonLineSearch;
       break;
     }
     case NonlinSolve::CRITICALPOINT: {
-      printf("using newton critical point solver\n");
+      SLIC_INFO_ROOT("using newton critical point solver");
       nonlinear_options.min_iterations = 0;
       nonlinear_options.nonlin_solver  = NonlinearSolver::PetscNewtonCriticalPoint;
       break;
     }
     case NonlinSolve::TRUSTREGION: {
-      printf("using trust region solver\n");
+      SLIC_INFO_ROOT("using trust region solver");
       nonlinear_options.nonlin_solver = NonlinearSolver::TrustRegion;
       break;
     }
@@ -112,57 +112,45 @@ auto get_opts(int max_iters, double abs_tol = 1e-9)
 
   switch (prec) {
     case Prec::JACOBI: {
-      printf("using jacobi\n");
+      SLIC_INFO_ROOT("using jacobi");
       linear_options.linear_solver  = LinearSolver::CG;
       linear_options.preconditioner = Preconditioner::HypreJacobi;
       break;
     }
     case Prec::STRUMPACK: {
-      printf("using strumpack\n");
+      SLIC_INFO_ROOT("using strumpack");
       linear_options.linear_solver = LinearSolver::Strumpack;
       break;
     }
     case Prec::CHOLESKI: {
-      printf("using choleski\n");
-      // linear_options.linear_solver = LinearSolver::GMRES;
+      SLIC_INFO_ROOT("using choleski");
       linear_options.linear_solver        = LinearSolver::CG;
       linear_options.preconditioner       = Preconditioner::Petsc;
       linear_options.petsc_preconditioner = PetscPCType::CHOLESKY;
       break;
     }
     case Prec::LU: {
-      printf("using lu\n");
+      SLIC_INFO_ROOT("using lu");
       linear_options.linear_solver        = LinearSolver::GMRES;
       linear_options.preconditioner       = Preconditioner::Petsc;
       linear_options.petsc_preconditioner = PetscPCType::LU;
       break;
     }
     case Prec::MULTIGRID: {
-      printf("using multigrid\n");
-      // linear_options.linear_solver = LinearSolver::GMRES;
+      SLIC_INFO_ROOT("using multigrid");
       linear_options.linear_solver = LinearSolver::CG;
-
-      // linear_options.preconditioner = Preconditioner::Petsc;
-      // linear_options.petsc_preconditioner = PetscPCType::HMG;
       linear_options.preconditioner = Preconditioner::HypreAMG;
-
       break;
     }
     case Prec::PETSC_MULTIGRID: {
-      printf("using petsc multigrid\n");
-      // linear_options.linear_solver = LinearSolver::GMRES;
+      SLIC_INFO_ROOT("using petsc multigrid");
       linear_options.linear_solver = LinearSolver::CG;
-
       linear_options.preconditioner       = Preconditioner::Petsc;
       linear_options.petsc_preconditioner = PetscPCType::HMG;
-      // linear_options.preconditioner = Preconditioner::HypreAMG;
-
       break;
     }
-
     default: {
-      printf("error\n");
-      exit(1);
+      SLIC_ERROR_ROOT("error, invalid preconditioner specified");
     }
   }
 
@@ -180,10 +168,6 @@ void functional_solid_test_euler()
 
   static constexpr int ORDER{1};
   static constexpr int DIM{3};
-
-  // int Nx = 6;
-  // int Ny = 7;
-  // int Nz = 20*6;
 
   int Nx = 4;
   int Ny = 7;
@@ -224,9 +208,6 @@ void functional_solid_test_euler()
   int    num_time_steps = 2;
   double total_time     = 1.0;
   double dt             = total_time / num_time_steps;
-
-  // seracSolid->setPressure([&](auto, auto t) { return t > 0 ? loadMagnitude : 0.0; }, backSurface);
-  // seracSolid->setPressure([&](auto, auto t) { return 0.014 * t; }, topSurface);
 
   seracSolid->setTraction([&](auto, auto n, auto t) { return -load * t * n; }, topSurface);
   seracSolid->setTraction([&](auto, auto n, auto) { return 1e-5 * n; }, backSurface);
@@ -307,7 +288,7 @@ TEST(SolidMechanics, nonlinear_solve_buckle_easy) { functional_solid_test_nonlin
 int main(int argc, char* argv[])
 {
   axom::CLI::App app{"Nonlinear problems"};
-  app.add_option("-p", mesh_path, "Mesh file to use")->check(axom::CLI::ExistingDirectory);
+  //app.add_option("-p", mesh_path, "Path to mesh files")->check(axom::CLI::ExistingDirectory);
   app.add_option("--nonlinear-solver", nonlinSolve, "Nonlinear solver", true);
   app.add_option("--preconditioner", prec, "Preconditioner", true);
   app.set_help_flag("--help");
@@ -320,6 +301,9 @@ int main(int argc, char* argv[])
   SERAC_SET_METADATA("test", "solid_nonlinear_solve");
   SERAC_SET_METADATA("nonlinear solver", std::to_string(nonlinSolve));
   SERAC_SET_METADATA("preconditioner", std::to_string(prec));
+
+  double x = 1.0/ 0.0;
+  std::cout << "x = " << x << std::endl;
 
   int result = RUN_ALL_TESTS();
   serac::exitGracefully(result);
