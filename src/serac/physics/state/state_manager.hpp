@@ -48,6 +48,13 @@ public:
   static void initialize(axom::sidre::DataStore& ds, const std::string& output_directory);
 
   /**
+   * @brief Checks if StateManager has a state with the given name
+   * @param[in] name A string that uniquely identifies the state
+   * @return True if state exists with the given name
+   */
+  static bool hasState(const std::string& name) { return named_states_.find(name) != named_states_.end(); }
+
+  /**
    * @brief Factory method for creating a new FEState object
    *
    * @tparam FunctionSpace The function space (e.g. H1<1>) to build the finite element state on
@@ -62,9 +69,8 @@ public:
   static FiniteElementState newState(FunctionSpace space, const std::string& state_name, const std::string& mesh_tag)
   {
     SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
-    SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
-                       axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
-    SLIC_ERROR_ROOT_IF(named_states_.find(state_name) != named_states_.end(),
+    SLIC_ERROR_ROOT_IF(!hasMesh(mesh_tag), axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
+    SLIC_ERROR_ROOT_IF(hasState(state_name),
                        axom::fmt::format("StateManager already contains a state named '{}'", state_name));
 
     auto state = FiniteElementState(mesh(mesh_tag), space, state_name);
@@ -100,11 +106,11 @@ public:
    * @return std::shared_ptr< QuadratureData<T> >
    */
   template <typename T>
-  static std::shared_ptr<QuadratureData<T>> newQuadratureDataBuffer(const std::string& mesh_tag, int order, int dim, T initial_state)
+  static std::shared_ptr<QuadratureData<T>> newQuadratureDataBuffer(const std::string& mesh_tag, int order, int dim,
+                                                                    T initial_state)
   {
     SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
-    SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
-                       axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
+    SLIC_ERROR_ROOT_IF(!hasMesh(mesh_tag), axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
 
     int Q = order + 1;
 
@@ -122,12 +128,15 @@ public:
       qpts_per_elem[size_t(geom)] = uint32_t(num_quadrature_points(geom, Q));
     }
 
-    auto qdata = std::make_shared<QuadratureData<T>>(elems, qpts_per_elem, initial_state);
-
-    ds_->
-
-    return qdata;
+    return std::make_shared<QuadratureData<T>>(elems, qpts_per_elem, initial_state);
   }
+
+  /**
+   * @brief Checks if StateManager has a dual with the given name
+   * @param name A string that uniquely identifies the name
+   * @return True if dual exists with the given name
+   */
+  static bool hasDual(const std::string& name) { return named_duals_.find(name) != named_duals_.end(); }
 
   /**
    * @brief Factory method for creating a new FEDual object
@@ -144,9 +153,8 @@ public:
   static FiniteElementDual newDual(FunctionSpace space, const std::string& dual_name, const std::string& mesh_tag)
   {
     SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
-    SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
-                       axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
-    SLIC_ERROR_ROOT_IF(named_states_.find(dual_name) != named_duals_.end(),
+    SLIC_ERROR_ROOT_IF(!hasMesh(mesh_tag), axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
+    SLIC_ERROR_ROOT_IF(hasDual(dual_name),
                        axom::fmt::format("StateManager already contains a dual named '{}'", dual_name));
 
     auto dual = FiniteElementDual(mesh(mesh_tag), space, dual_name);
@@ -180,7 +188,7 @@ public:
    */
   static void updateState(const FiniteElementState& state)
   {
-    SLIC_ERROR_ROOT_IF(named_states_.find(state.name()) == named_states_.end(),
+    SLIC_ERROR_ROOT_IF(!hasState(state.name()),
                        axom::fmt::format("State manager does not contain state named '{}'", state.name()));
 
     state.fillGridFunction(*named_states_[state.name()]);
@@ -196,7 +204,7 @@ public:
    */
   static void updateDual(const FiniteElementDual& dual)
   {
-    SLIC_ERROR_ROOT_IF(named_duals_.find(dual.name()) == named_duals_.end(),
+    SLIC_ERROR_ROOT_IF(!hasDual(dual.name()),
                        axom::fmt::format("State manager does not contain dual named '{}'", dual.name()));
 
     dual.space().GetRestrictionMatrix()->MultTranspose(dual, *named_duals_[dual.name()]);
@@ -242,6 +250,13 @@ public:
     is_restart_ = false;
     ds_         = nullptr;
   };
+
+  /**
+   * @brief Checks if StateManager has a mesh with the given mesh_tag
+   * @param[in] mesh_tag A string that uniquely identifies the mesh
+   * @return True if mesh exists with the given mesh_tag
+   */
+  static bool hasMesh(const std::string& mesh_tag) { return datacolls_.find(mesh_tag) != datacolls_.end(); }
 
   /**
    * @brief Gives ownership of mesh to StateManager
