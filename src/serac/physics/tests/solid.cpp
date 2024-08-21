@@ -74,9 +74,9 @@ void functional_solid_test_static_J2()
 
   Material::State initial_state{};
 
-  auto state = solid_solver.createQuadratureDataBuffer(initial_state);
+  auto qdata = solid_solver.createQuadratureDataBuffer(initial_state);
 
-  solid_solver.setMaterial(mat, state);
+  solid_solver.setMaterial(mat, qdata);
 
   // prescribe zero displacement at the supported end of the beam,
   std::set<int> support           = {1};
