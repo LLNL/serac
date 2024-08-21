@@ -98,12 +98,12 @@ public:
   /**
    * @brief Create a shared ptr to a quadrature data buffer for the given material type
    *
-   * @tparam order The order of the discretization of the displacement and velocity fields
-   * @tparam dim The spatial dimension of the mesh
    * @tparam T the type to be created at each quadrature point
    * @param mesh_tag The tag for the stored mesh used to construct the finite element state
+   * @param order The order of the discretization of the displacement and velocity fields
+   * @param dim The spatial dimension of the mesh
    * @param initial_state the value to be broadcast to each quadrature point
-   * @return std::shared_ptr< QuadratureData<T> >
+   * @return shared pointer to quadrature data buffer
    */
   template <typename T>
   static std::shared_ptr<QuadratureData<T>> newQuadratureDataBuffer(const std::string& mesh_tag, int order, int dim,
