@@ -138,13 +138,13 @@ auto get_opts(int max_iters, double abs_tol = 1e-9)
     }
     case Prec::MULTIGRID: {
       SLIC_INFO_ROOT("using multigrid");
-      linear_options.linear_solver = LinearSolver::CG;
+      linear_options.linear_solver  = LinearSolver::CG;
       linear_options.preconditioner = Preconditioner::HypreAMG;
       break;
     }
     case Prec::PETSC_MULTIGRID: {
       SLIC_INFO_ROOT("using petsc multigrid");
-      linear_options.linear_solver = LinearSolver::CG;
+      linear_options.linear_solver        = LinearSolver::CG;
       linear_options.preconditioner       = Preconditioner::Petsc;
       linear_options.petsc_preconditioner = PetscPCType::HMG;
       break;
@@ -288,7 +288,7 @@ TEST(SolidMechanics, nonlinear_solve_buckle_easy) { functional_solid_test_nonlin
 int main(int argc, char* argv[])
 {
   axom::CLI::App app{"Nonlinear problems"};
-  //app.add_option("-p", mesh_path, "Path to mesh files")->check(axom::CLI::ExistingDirectory);
+  // app.add_option("-p", mesh_path, "Path to mesh files")->check(axom::CLI::ExistingDirectory);
   app.add_option("--nonlinear-solver", nonlinSolve, "Nonlinear solver", true);
   app.add_option("--preconditioner", prec, "Preconditioner", true);
   app.set_help_flag("--help");
@@ -302,7 +302,7 @@ int main(int argc, char* argv[])
   SERAC_SET_METADATA("nonlinear solver", std::to_string(nonlinSolve));
   SERAC_SET_METADATA("preconditioner", std::to_string(prec));
 
-  double x = 1.0/ 0.0;
+  double x = 1.0 / 0.0;
   std::cout << "x = " << x << std::endl;
 
   int result = RUN_ALL_TESTS();
