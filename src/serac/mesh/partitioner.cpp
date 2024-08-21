@@ -24,13 +24,15 @@ std::vector< uint32_t > partition_range(uint32_t n, uint32_t num_blocks) {
   uint32_t remainder = n % num_blocks;
 
   std::vector< uint32_t > blocks(num_blocks + 1);
-  blocks[0] = 0;
-  for (uint32_t i = 1; i < num_blocks + 1; i++) {
-    if (remainder > 0) {
-      blocks[i] = blocks[i-1] + quotient + 1;
-      remainder--;
-    } else {
-      blocks[i] = blocks[i-1] + quotient;
+  if (blocks.size() > 0) {
+    blocks[0] = 0;
+    for (uint32_t i = 1; i < num_blocks + 1; i++) {
+      if (remainder > 0) {
+        blocks[i] = blocks[i-1] + quotient + 1;
+        remainder--;
+      } else {
+        blocks[i] = blocks[i-1] + quotient;
+      }
     }
   }
   return blocks;
