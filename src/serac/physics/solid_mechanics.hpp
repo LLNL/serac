@@ -420,23 +420,7 @@ public:
   template <typename T>
   qdata_type<T> createQuadratureDataBuffer(T initial_state)
   {
-    constexpr auto Q = order + 1;
-
-    std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> elems = geometry_counts(mesh_);
-    std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> qpts_per_elem{};
-
-    std::vector<mfem::Geometry::Type> geometries;
-    if (dim == 2) {
-      geometries = {mfem::Geometry::TRIANGLE, mfem::Geometry::SQUARE};
-    } else {
-      geometries = {mfem::Geometry::TETRAHEDRON, mfem::Geometry::CUBE};
-    }
-
-    for (auto geom : geometries) {
-      qpts_per_elem[size_t(geom)] = uint32_t(num_quadrature_points(geom, Q));
-    }
-
-    return std::make_shared<QuadratureData<T>>(elems, qpts_per_elem, initial_state);
+    return StateManager::newQuadratureDataBuffer(mesh_tag_, order, dim, initial_state);
   }
 
   /**
