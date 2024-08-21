@@ -302,9 +302,6 @@ int main(int argc, char* argv[])
   SERAC_SET_METADATA("nonlinear solver", std::to_string(nonlinSolve));
   SERAC_SET_METADATA("preconditioner", std::to_string(prec));
 
-  double x = 1.0 / 0.0;
-  std::cout << "x = " << x << std::endl;
-
   int result = RUN_ALL_TESTS();
   serac::exitGracefully(result);
 
