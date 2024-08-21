@@ -106,7 +106,7 @@ namespace serac {
  * @tparam the data type to be stored at each quadrature point
  *
  * @note users are not intended to create these objects directly, instead
- *       they should use the PhysicsModule::createQuadratureDataBuffer()
+ *       they should use the StateManager::newQuadratureDataBuffer()
  */
 template <typename T>
 struct QuadratureData {

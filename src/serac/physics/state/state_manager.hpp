@@ -48,7 +48,7 @@ public:
   static void initialize(axom::sidre::DataStore& ds, const std::string& output_directory);
 
   /**
-   * @brief Factory method for creating a new FEState object\
+   * @brief Factory method for creating a new FEState object
    *
    * @tparam FunctionSpace The function space (e.g. H1<1>) to build the finite element state on
    * @param space The function space (e.g. H1<1>) to build the finite element state on
@@ -88,6 +88,46 @@ public:
    * @param state The finite element state to store
    */
   static void storeState(FiniteElementState& state);
+
+  /**
+   * @brief Create a shared ptr to a quadrature data buffer for the given material type
+   *
+   * @tparam order The order of the discretization of the displacement and velocity fields
+   * @tparam dim The spatial dimension of the mesh
+   * @tparam T the type to be created at each quadrature point
+   * @param mesh_tag The tag for the stored mesh used to construct the finite element state
+   * @param initial_state the value to be broadcast to each quadrature point
+   * @return std::shared_ptr< QuadratureData<T> >
+   */
+  template <typename T>
+  static std::shared_ptr<QuadratureData<T>> newQuadratureDataBuffer(const std::string& mesh_tag, int order, int dim, T initial_state)
+  {
+    SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
+    SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
+                       axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
+
+    int Q = order + 1;
+
+    std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> elems = geometry_counts(mesh(mesh_tag));
+    std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> qpts_per_elem{};
+
+    std::vector<mfem::Geometry::Type> geometries;
+    if (dim == 2) {
+      geometries = {mfem::Geometry::TRIANGLE, mfem::Geometry::SQUARE};
+    } else {
+      geometries = {mfem::Geometry::TETRAHEDRON, mfem::Geometry::CUBE};
+    }
+
+    for (auto geom : geometries) {
+      qpts_per_elem[size_t(geom)] = uint32_t(num_quadrature_points(geom, Q));
+    }
+
+    auto qdata = std::make_shared<QuadratureData<T>>(elems, qpts_per_elem, initial_state);
+
+    ds_->
+
+    return qdata;
+  }
 
   /**
    * @brief Factory method for creating a new FEDual object
