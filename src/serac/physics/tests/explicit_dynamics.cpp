@@ -58,9 +58,31 @@ TEST(A,B) {
   mat.K = E / (3. * (1. - 2. * v));
   mat.G = E / (2. * (1. + v));
 
-  Field displacement = Field::create(H1<p,dim>{}, detail::addPrefix("solid", "displacement"), mesh_tag);
+  std::string physicsName = "solid";
+  Field displacement = Field::create(H1<p,dim>{}, detail::addPrefix(physicsName, "displacement"), mesh_tag);
+  Field acceleration = Field::create(H1<p,dim>{}, detail::addPrefix(physicsName, "acceleration"), mesh_tag);
+  Resultant residual = Resultant::create(H1<p,dim>{}, detail::addPrefix(physicsName, "residual"), mesh_tag);
 
-  SolidSystem<p,dim> system("solid", meshTag, displacement.space());
+  //auto system = create_solid_system("solid", )
+  SolidSystem< p, dim, Parameters<H1<p>> > system(physicsName, meshTag, displacement.space());
+
+  //Ma - f = 0.  
+
+
+  //create_solid_residual() 
+  // 
+
+  double time = 0.0;
+
+  std::vector<Field> fields{displacement};
+  std::vector<Field> params{acceleration};
+  std::vector<Resultant> resultants{residual};
+  system.residual(time, fields, params, resultants);
+
+  std::cout << "residual = " << resultants[0].get().Norml2() << std::endl;
+
+  //system.
+
 }
 
 }
