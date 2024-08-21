@@ -251,6 +251,19 @@ public:
   }
 
   /**
+   * @brief Create a shared ptr to a quadrature data buffer for the given material type
+   *
+   * @tparam T the type to be created at each quadrature point
+   * @param initial_state the value to be broadcast to each quadrature point
+   * @return std::shared_ptr< QuadratureData<T> >
+   */
+  template <typename T>
+  std::shared_ptr<QuadratureData<T>> createQuadratureDataBuffer(T initial_state)
+  {
+    return solid_.createQuadratureDataBuffer(initial_state);
+  }
+
+  /**
    * @brief This is an adaptor class that makes a thermomechanical material usable by
    * the thermal module, by discarding the solid-mechanics-specific information
    *

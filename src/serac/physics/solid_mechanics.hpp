@@ -292,7 +292,7 @@ public:
         if constexpr (dim == 3) {
           serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::LinearHardening>::State initial_state{};
           setMaterial(std::get<serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::LinearHardening>>(mat),
-                      StateManager::newQuadratureDataBuffer(mesh_tag, order, dim, initial_state));
+                      createQuadratureDataBuffer(initial_state));
         } else {
           SLIC_ERROR_ROOT("J2 materials only work for 3D simulations");
         }
@@ -301,7 +301,7 @@ public:
         if constexpr (dim == 3) {
           serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::PowerLawHardening>::State initial_state{};
           setMaterial(std::get<serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::PowerLawHardening>>(mat),
-                      StateManager::newQuadratureDataBuffer(mesh_tag, order, dim, initial_state));
+                      createQuadratureDataBuffer(initial_state));
         } else {
           SLIC_ERROR_ROOT("J2 materials only work for 3D simulations");
         }
@@ -310,7 +310,7 @@ public:
         if constexpr (dim == 3) {
           serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::VoceHardening>::State initial_state{};
           setMaterial(std::get<serac::solid_mechanics::J2SmallStrain<serac::solid_mechanics::VoceHardening>>(mat),
-                      StateManager::newQuadratureDataBuffer(mesh_tag, order, dim, initial_state));
+                      createQuadratureDataBuffer(initial_state));
         } else {
           SLIC_ERROR_ROOT("J2 materials only work for 3D simulations");
         }
@@ -407,6 +407,19 @@ public:
   {
     BasePhysics::initializeBasePhysicsStates(cycle, time);
     initializeSolidMechanicsStates();
+  }
+
+  /**
+   * @brief Create a shared ptr to a quadrature data buffer for the given material type
+   *
+   * @tparam T the type to be created at each quadrature point
+   * @param initial_state the value to be broadcast to each quadrature point
+   * @return std::shared_ptr< QuadratureData<T> >
+   */
+  template <typename T>
+  qdata_type<T> createQuadratureDataBuffer(T initial_state)
+  {
+    return StateManager::newQuadratureDataBuffer(mesh_tag_, order, dim, initial_state);
   }
 
   /**

@@ -74,7 +74,7 @@ void functional_solid_test_static_J2()
 
   Material::State initial_state{};
 
-  auto qdata = StateManager::newQuadratureDataBuffer(mesh_tag, p, dim, initial_state);
+  auto qdata = solid_solver.createQuadratureDataBuffer(initial_state);
 
   solid_solver.setMaterial(mat, qdata);
 

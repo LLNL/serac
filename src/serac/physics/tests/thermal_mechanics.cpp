@@ -72,7 +72,7 @@ void functional_test_static_3D(double expected_norm)
 
   GreenSaintVenantThermoelasticMaterial        material{rho, E, nu, c, alpha, theta_ref, k};
   GreenSaintVenantThermoelasticMaterial::State initial_state{};
-  auto qdata = StateManager::newQuadratureDataBuffer(mesh_tag, p, dim, initial_state);
+  auto                                         qdata = thermal_solid_solver.createQuadratureDataBuffer(initial_state);
   thermal_solid_solver.setMaterial(material, qdata);
 
   // Define the function for the initial temperature and boundary condition
@@ -154,7 +154,7 @@ void functional_test_shrinking_3D(double expected_norm)
   double                                       k         = 1.0;
   GreenSaintVenantThermoelasticMaterial        material{rho, E, nu, c, alpha, theta_ref, k};
   GreenSaintVenantThermoelasticMaterial::State initial_state{};
-  auto qdata = StateManager::newQuadratureDataBuffer(mesh_tag, p, dim, initial_state);
+  auto                                         qdata = thermal_solid_solver.createQuadratureDataBuffer(initial_state);
   thermal_solid_solver.setMaterial(material, qdata);
 
   // Define the function for the initial temperature
@@ -249,7 +249,7 @@ void parameterized()
 
   ParameterizedGreenSaintVenantThermoelasticMaterial        material{rho, E, nu, c, alpha0, theta_ref, k};
   ParameterizedGreenSaintVenantThermoelasticMaterial::State initial_state{};
-  auto qdata = StateManager::newQuadratureDataBuffer(mesh_tag, p, dim, initial_state);
+  auto qdata = thermal_solid_solver.createQuadratureDataBuffer(initial_state);
   thermal_solid_solver.setMaterial(material, qdata);
 
   // parameterize the coefficient of thermal expansion

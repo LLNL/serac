@@ -117,7 +117,7 @@ TEST(LiquidCrystalElastomer, Brighenti)
                                     transition_temperature, Nb2);
 
   LiquidCrystElastomerBrighenti::State initial_state{};
-  auto                                 qdata = StateManager::newQuadratureDataBuffer(mesh_tag, p, dim, initial_state);
+  auto                                 qdata = solid_solver.createQuadratureDataBuffer(initial_state);
   solid_solver.setMaterial(DependsOn<TEMPERATURE_INDEX, GAMMA_INDEX>{}, mat, qdata);
 
   // prescribe symmetry conditions
