@@ -22,6 +22,9 @@ blt_add_library(
     DEPENDS_ON  ${mesh_depends}
     )
 
+add_executable(partitioner partitioner.cpp)
+target_link_libraries(partitioner PUBLIC serac_mesh)
+
 install(FILES ${mesh_headers} DESTINATION include/serac/mesh )
 
 install(TARGETS              serac_mesh
