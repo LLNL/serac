@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-if(TRIBOL_FOUND)
+if(TRIBOL_FOUND AND PETSC_FOUND)
     blt_add_executable( NAME        buckling_cylinder
                         SOURCES     cylinder.cpp
                         OUTPUT_DIR ${EXAMPLE_OUTPUT_DIRECTORY}
