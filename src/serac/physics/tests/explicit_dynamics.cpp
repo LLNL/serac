@@ -110,7 +110,7 @@ TEST(A,B) {
   std::vector<Field> fields;
   std::vector<Field> params;
   std::vector<Resultant> resultants;
-  auto systems = create_solid_system<p, dim, H1<p>> (physicsName, {"acceleration"}, meshTag, fields, params, resultants);
+  auto systems = create_solid_system<p, dim, H1<p,dim>> (physicsName, {"acceleration"}, meshTag, fields, params, resultants);
 
 }
 
