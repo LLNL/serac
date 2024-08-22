@@ -14,6 +14,7 @@
 
 #include "serac/physics/state/finite_element_state.hpp"
 #include "serac/physics/state/finite_element_dual.hpp"
+#include "serac/physics/common.hpp"
 
 namespace serac {
 
@@ -28,7 +29,7 @@ struct Field {
     Field f;
     f.field = std::make_shared<FiniteElementState>(StateManager::newState(space, name, mesh_tag));
     if (make_dual) {
-      f.dual = std::make_shared<FiniteElementDual>(StateManager::newDual(space, name, mesh_tag));
+      f.dual = std::make_shared<FiniteElementDual>(StateManager::newDual(space, detail::addPrefix(name,"dual"), mesh_tag));
     }
     return f;
   }
@@ -61,7 +62,7 @@ struct Resultant {
     Resultant f;
     f.resultant = std::make_shared<FiniteElementDual>(StateManager::newDual(space, name, mesh_tag));
     if (make_dual) {
-      f.resultantDual = std::make_shared<FiniteElementState>(StateManager::newState(space, name, mesh_tag));
+      f.resultantDual = std::make_shared<FiniteElementState>(StateManager::newState(space, detail::addPrefix(name,"dual"), mesh_tag));
     }
     return f;
   }

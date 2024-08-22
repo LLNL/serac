@@ -16,6 +16,8 @@
 #include "mfem.hpp"
 
 #include "serac/mesh/mesh_utils.hpp"
+#include "serac/infrastructure/initialize.hpp"
+#include "serac/infrastructure/terminator.hpp"
 
 #include "nonlinear_system.hpp"
 
@@ -24,6 +26,51 @@
 namespace serac {
 
 using SolidMaterial = solid_mechanics::NeoHookean;
+
+template <int order, int dim, typename ... parameter_space>
+auto create_solid_system(const std::string& physics_name, 
+                         const std::vector<std::string>& parameter_names,
+                         const std::string& mesh_tag,
+                         std::vector<Field>& fields,
+                         std::vector<Field>& params,
+                         std::vector<Resultant>& resultants)
+{
+  fields.push_back(Field::create(H1<order,dim>{}, detail::addPrefix(physics_name, "displacement"), mesh_tag));
+  resultants.push_back(Resultant::create(H1<order,dim>{}, detail::addPrefix(physics_name, "residual"), mesh_tag));
+
+  std::vector<const mfem::ParFiniteElementSpace*> parameter_fe_spaces;
+  if constexpr (sizeof...(parameter_space) > 0) {
+    tuple<parameter_space...> types{};
+    for_constexpr<sizeof...(parameter_space)>([&](auto i) {
+      auto f = Field::create(get<i>(types), parameter_names[i], mesh_tag);
+      params.push_back(f);
+      parameter_fe_spaces.push_back(&params.back().space());
+    });
+  }
+
+  SolidSystem< order, dim, Parameters<parameter_space...> > system(physics_name, mesh_tag, fields[0].space(),
+                                                                   parameter_fe_spaces, parameter_names);
+
+  //Ma - f = 0.  
+  //create_solid_residual() 
+  // 
+
+  double time = 0.0;
+
+  // std::vector<Field> fields{displacement};
+  // std::vector<Field> params{acceleration};
+  // std::vector<Resultant> resultants{residual};
+  system.residual(time, fields, params, resultants);
+
+  std::cout << "residual = " << resultants[0].get().Norml2() << std::endl;
+
+  //Field acceleration = Field::create(H1<order,dim>{}, detail::addPrefix(physics_name, "acceleration"), mesh_tag);
+
+  return 0;
+  //auto system = create_solid_system<dim, p, Parameters<H1<p>> > (physicsName, meshTag, fields, params, resultants);
+  //SolidSystem< p, dim, Parameters<H1<p>> > system(physicsName, meshTag, displacement.space());
+}
+
 
 TEST(A,B) {
 
@@ -59,30 +106,23 @@ TEST(A,B) {
   mat.G = E / (2. * (1. + v));
 
   std::string physicsName = "solid";
-  Field displacement = Field::create(H1<p,dim>{}, detail::addPrefix(physicsName, "displacement"), mesh_tag);
-  Field acceleration = Field::create(H1<p,dim>{}, detail::addPrefix(physicsName, "acceleration"), mesh_tag);
-  Resultant residual = Resultant::create(H1<p,dim>{}, detail::addPrefix(physicsName, "residual"), mesh_tag);
 
-  //auto system = create_solid_system("solid", )
-  SolidSystem< p, dim, Parameters<H1<p>> > system(physicsName, meshTag, displacement.space());
-
-  //Ma - f = 0.  
-
-
-  //create_solid_residual() 
-  // 
-
-  double time = 0.0;
-
-  std::vector<Field> fields{displacement};
-  std::vector<Field> params{acceleration};
-  std::vector<Resultant> resultants{residual};
-  system.residual(time, fields, params, resultants);
-
-  std::cout << "residual = " << resultants[0].get().Norml2() << std::endl;
-
-  //system.
+  std::vector<Field> fields;
+  std::vector<Field> params;
+  std::vector<Resultant> resultants;
+  auto systems = create_solid_system<p, dim, H1<p>> (physicsName, {"acceleration"}, meshTag, fields, params, resultants);
 
 }
 
+}
+
+int main(int argc, char* argv[])
+{
+  ::testing::InitGoogleTest(&argc, argv);
+
+  serac::initialize(argc, argv);
+  int result = RUN_ALL_TESTS();
+  serac::exitGracefully(result);
+
+  return result;
 }

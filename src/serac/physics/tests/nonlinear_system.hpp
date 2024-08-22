@@ -53,7 +53,7 @@ class SolidSystem<order, dim, Parameters<parameter_space...>, std::integer_seque
 {
   public:
 
-  static constexpr auto NUM_STATE_VARS = 2; // we want to change this to 3 to include velocity?
+  static constexpr auto NUM_STATE_VARS = 1; // just shape displacement
 
   /// @brief a container holding quadrature point data of the specified type
   /// @tparam T the type of data to store at each quadrature point
@@ -61,7 +61,8 @@ class SolidSystem<order, dim, Parameters<parameter_space...>, std::integer_seque
   using qdata_type = std::shared_ptr<QuadratureData<T>>;
 
   SolidSystem(const std::string& physics_name, const std::string& mesh_tag, const mfem::ParFiniteElementSpace& test_space,
-              std::vector<const mfem::ParFiniteElementSpace*> parameter_spaces={})
+              std::vector<const mfem::ParFiniteElementSpace*> parameter_fe_spaces={},
+              std::vector<std::string> parameter_names={})
   : mesh_tag_(mesh_tag)
   , mesh_(StateManager::mesh(mesh_tag_))
   , shape_displacement_(Field::create(H1<1,dim>{}, detail::addPrefix(physics_name, "shape_displacement"), mesh_tag))
@@ -69,21 +70,20 @@ class SolidSystem<order, dim, Parameters<parameter_space...>, std::integer_seque
 
     std::array<const mfem::ParFiniteElementSpace*, NUM_STATE_VARS + sizeof...(parameter_space)> trial_spaces;
     trial_spaces[0] = &test_space;
-    trial_spaces[1] = &test_space;
 
-    //SLIC_ERROR_ROOT_IF(
-    //    sizeof...(parameter_space) != parameter_names.size(),
-    //    axom::fmt::format("{} parameter spaces given in the template argument but {} parameter names were supplied.",
-    //                      sizeof...(parameter_space), parameter_names.size()));
+    SLIC_ERROR_ROOT_IF(
+        sizeof...(parameter_space) != parameter_names.size(),
+        axom::fmt::format("{} parameter spaces given in the template argument but {} parameter names were supplied.",
+                          sizeof...(parameter_space), parameter_names.size()));
 
     if constexpr (sizeof...(parameter_space) > 0) {
       tuple<parameter_space...> types{};
       for_constexpr<sizeof...(parameter_space)>([&](auto i) {
-        trial_spaces[i + NUM_STATE_VARS] = parameter_spaces[i];
+        trial_spaces[i + NUM_STATE_VARS] = parameter_fe_spaces[i];
       });
     }
 
-    residual_ = std::make_unique<ShapeAwareFunctional<shape_trial, test(trial, trial, parameter_space...)>>(
+    residual_ = std::make_unique<ShapeAwareFunctional<shape_trial, test(trial, parameter_space...)>>(
         &shape_displacement_.space(), &test_space, trial_spaces);
   }
 
@@ -346,7 +346,7 @@ class SolidSystem<order, dim, Parameters<parameter_space...>, std::integer_seque
   // computes residual outputs
   void residual(double time, const std::vector<Field> fields, const std::vector<Field>& parameters, std::vector<Resultant>& residuals) override
   {
-    auto sol = (*residual_)(time, shape_displacement_.get(), fields[0].get(), fields[0].get(), parameters[parameter_indices].get()...);
+    auto sol = (*residual_)(time, shape_displacement_.get(), fields[0].get(), parameters[parameter_indices].get()...);
     residuals[0].get() = sol;
   }
 
@@ -439,7 +439,7 @@ class SolidSystem<order, dim, Parameters<parameter_space...>, std::integer_seque
 
   Field shape_displacement_;
 
-  std::unique_ptr<ShapeAwareFunctional<shape_trial, test(trial, trial, parameter_space...)>> residual_;
+  std::unique_ptr<ShapeAwareFunctional<shape_trial, test(trial, parameter_space...)>> residual_;
 };
 
 //std::shared_ptr<
