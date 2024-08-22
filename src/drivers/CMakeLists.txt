@@ -15,19 +15,19 @@ if (SERAC_ENABLE_TESTS)
 
     # Make sure running serac driver doesn't completely fail
    blt_add_test(NAME          serac_driver_default
-                COMMAND       ${PROJECT_BINARY_DIR}/serac -o default -i ${input_files_dir}/default.lua
+                COMMAND       ${PROJECT_BINARY_DIR}/bin/serac -o default -i ${input_files_dir}/default.lua
                 NUM_MPI_TASKS 1 )
 
    blt_add_test(NAME          serac_driver_default_parallel
-                COMMAND       ${PROJECT_BINARY_DIR}/serac -o default_parallel -i ${input_files_dir}/default.lua
+                COMMAND       ${PROJECT_BINARY_DIR}/bin/serac -o default_parallel -i ${input_files_dir}/default.lua
                 NUM_MPI_TASKS 2 )
 
     blt_add_test(NAME          serac_driver_help
-                 COMMAND       ${PROJECT_BINARY_DIR}/serac --help 
+                 COMMAND       ${PROJECT_BINARY_DIR}/bin/serac --help 
                  NUM_MPI_TASKS 1 )
 
     blt_add_test(NAME          serac_driver_docs
-                 COMMAND       ${PROJECT_BINARY_DIR}/serac -o default_docs -d -i ${input_files_dir}/default.lua
+                 COMMAND       ${PROJECT_BINARY_DIR}/bin/serac -o default_docs -d -i ${input_files_dir}/default.lua
                  NUM_MPI_TASKS 1 )
 endif()
 
