@@ -17,10 +17,11 @@
 
 using timer = axom::utilities::Timer;
 
-// partition the range {0, 1, 2, ... , n - 1} into 
+// partition the range {0, 1, 2, ... , n - 1} into
 // `num_blocks` roughly equal-sized contiguous chunks
-std::vector< uint32_t > partition_range(uint32_t n, uint32_t num_blocks) {
-  uint32_t quotient = n / num_blocks;
+std::vector<uint32_t> partition_range(uint32_t n, uint32_t num_blocks)
+{
+  uint32_t quotient  = n / num_blocks;
   uint32_t remainder = n % num_blocks;
 
   std::vector< uint32_t > blocks(num_blocks + 1);
@@ -42,7 +43,6 @@ std::vector< uint32_t > partition_range(uint32_t n, uint32_t num_blocks) {
 
 int main(int argc, char* argv[])
 {
-
   axom::CLI::App app{"a tool for partitioning large meshes into smaller parts suitable for MPI"};
 
   std::string input_mesh;
@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
 
   uint32_t num_threads = 1;
   // this is disabled temporarily, as it seems mfem's implementation is not thread safe
-  //app.add_option("-j, --num_threads", num_threads, "number of partitions to generate");
+  // app.add_option("-j, --num_threads", num_threads, "number of partitions to generate");
 
   CLI11_PARSE(app, argc, argv);
 
@@ -65,13 +65,13 @@ int main(int argc, char* argv[])
   std::cout << "reading in mesh file ... ";
   stopwatch.start();
   std::ifstream infile(input_mesh);
-  mfem::Mesh mesh(infile);
+  mfem::Mesh    mesh(infile);
   stopwatch.stop();
   std::cout << "completed after " << stopwatch.elapsed() * 1000.0 << "ms" << std::endl;
 
   std::cout << "partitioning mesh into " << num_parts << " pieces ... ";
   stopwatch.start();
-  int * partitioning = mesh.GeneratePartitioning(int(num_parts));
+  int* partitioning = mesh.GeneratePartitioning(int(num_parts));
   stopwatch.stop();
   std::cout << "completed after " << stopwatch.elapsed() * 1000.0 << "ms" << std::endl;
 
@@ -79,35 +79,38 @@ int main(int argc, char* argv[])
 
   timer fileio;
   fileio.start();
-  std::vector< uint32_t > chunks = partition_range(num_parts, num_threads);
+  std::vector<uint32_t> chunks = partition_range(num_parts, num_threads);
 
-  std::vector< std::thread > threads;
+  std::vector<std::thread> threads;
   for (uint32_t k = 0; k < num_threads; k++) {
-    threads.push_back(std::thread([&](uint32_t tid){
-      mfem::MeshPart mesh_part;
-      for (uint32_t i = chunks[tid]; i < chunks[tid+1]; i++) {
-        std::string filename = mfem::MakeParFilename(output_prefix + ".mesh.", int(i));
-        if (num_threads == 1) {
-          std::cout << "extracting part " << i << " and writing it to " << filename << " ... ";
-        } 
-        stopwatch.start();
-        partitioner.ExtractPart(int(i), mesh_part);
-        std::ofstream f(filename);
-        f.precision(16);
-        mesh_part.Print(f);
-        stopwatch.stop();
-        if (num_threads == 1) {
-          std::cout << "completed after " << stopwatch.elapsed() * 1000.0 << "ms" << std::endl;
-        }
-      }
-    }, k));
+    threads.push_back(std::thread(
+        [&](uint32_t tid) {
+          mfem::MeshPart mesh_part;
+          for (uint32_t i = chunks[tid]; i < chunks[tid + 1]; i++) {
+            std::string filename = mfem::MakeParFilename(output_prefix + ".mesh.", int(i));
+            if (num_threads == 1) {
+              std::cout << "extracting part " << i << " and writing it to " << filename << " ... ";
+            }
+            stopwatch.start();
+            partitioner.ExtractPart(int(i), mesh_part);
+            std::ofstream f(filename);
+            f.precision(16);
+            mesh_part.Print(f);
+            stopwatch.stop();
+            if (num_threads == 1) {
+              std::cout << "completed after " << stopwatch.elapsed() * 1000.0 << "ms" << std::endl;
+            }
+          }
+        },
+        k));
   }
 
-  for (auto & thread : threads) { thread.join(); }
+  for (auto& thread : threads) {
+    thread.join();
+  }
 
   fileio.stop();
   std::cout << "writing files to disk took " << fileio.elapsed() * 1000.0 << "ms total" << std::endl;
 
   delete partitioning;
-
 }
