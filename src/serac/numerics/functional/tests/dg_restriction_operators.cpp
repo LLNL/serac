@@ -54,8 +54,8 @@ mfem::Mesh generate_permuted_meshes(mfem::Geometry::Type geom, int i) {
     constexpr int num_vertices = 6;
     constexpr int num_permutations = 4;
     int positive_permutations[num_permutations][4] = {{0, 1, 2, 3}, {1, 2, 3, 0}, {2, 3, 0, 1}, {3, 0, 1, 2}}; 
-    int elements[2][4] = {{0, 1, 4, 3}, {1, 2, 5, 4}}; 
-    double vertices[6][2] = {{0.0, 0.0}, {1.0, 0.0}, {2.0, 0.0}, {0.0, 1.0}, {1.0, 1.0}, {2.0, 1.0}};
+    int elements[num_elements][4] = {{0, 1, 4, 3}, {1, 2, 5, 4}}; 
+    double vertices[num_vertices][dim] = {{0.0, 0.0}, {1.0, 0.0}, {2.0, 0.0}, {0.0, 1.0}, {1.0, 1.0}, {2.0, 1.0}};
 
     mfem::Mesh output(dim, num_vertices, num_elements);
 
@@ -82,7 +82,7 @@ mfem::Mesh generate_permuted_meshes(mfem::Geometry::Type geom, int i) {
       {2, 3, 0, 1}, {3, 0, 2, 1}, {3, 1, 0, 2}, {3, 2, 1, 0}
     }; 
     int elements[num_elements][4] = {{0, 1, 2, 3}, {1, 2, 3, 4}}; 
-    double vertices[num_vertices][3] = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {1, 1, 1}};
+    double vertices[num_vertices][dim] = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {1, 1, 1}};
 
     mfem::Mesh output(dim, num_vertices, num_elements);
 
@@ -114,7 +114,7 @@ mfem::Mesh generate_permuted_meshes(mfem::Geometry::Type geom, int i) {
       {7, 3, 2, 6, 4, 0, 1, 5}, {7, 4, 0, 3, 6, 5, 1, 2}, {7, 6, 5, 4, 3, 2, 1, 0}
     };
 
-    double vertices[num_vertices][3] = {
+    double vertices[num_vertices][dim] = {
       {0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0},
       {0, 0, 1}, {1, 0, 1}, {1, 1, 1}, {0, 1, 1},
       {0, 0, 2}, {1, 0, 2}, {1, 1, 2}, {0, 1, 2}
@@ -130,11 +130,11 @@ mfem::Mesh generate_permuted_meshes(mfem::Geometry::Type geom, int i) {
     for (auto vertex : vertices) { output.AddVertex(vertex); }
 
     // the first element is always fixed
-    output.AddTet(elements[0]);
+    output.AddHex(elements[0]);
 
     // but the second element is permuted to the specified orientation
     auto permuted_element = apply_permutation(elements[1], positive_permutations[i]);
-    output.AddTet(permuted_element.data());
+    output.AddHex(permuted_element.data());
 
     return output;
   }
