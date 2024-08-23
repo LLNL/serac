@@ -213,6 +213,25 @@ std::ostream & operator<<(std::ostream & out, axom::Array<DoF, 2, axom::MemorySp
   return out;
 }
 
+double scalar_func_2D(const mfem::Vector & x, double /*t*/) {
+    return x[0] + 10 * x[1];
+}
+
+double scalar_func_3D(const mfem::Vector & x, double /*t*/) {
+    return x[0] + 10 * x[1] + 100 * x[2];
+}
+
+void vector_func_2D(const mfem::Vector & x, double /*t*/, mfem::Vector & output) {
+    output[0] = +x[1];
+    output[1] = -x[0];
+}
+
+void vector_func_3D(const mfem::Vector & x, double /*t*/, mfem::Vector & output) {
+    output[0] = +x[1];
+    output[1] = -x[0]+x[2];
+    output[2] =      -x[1];
+}
+
 TEST(DomainInterior, TriMesh) {
   constexpr int p = 1;
   constexpr int dim = 2;
@@ -233,6 +252,17 @@ TEST(DomainInterior, TriMesh) {
   auto H1_fes = std::make_unique<mfem::FiniteElementSpace>(&mesh, H1_fec.get());
   auto Hcurl_fes = std::make_unique<mfem::FiniteElementSpace>(&mesh, Hcurl_fec.get());
   auto L2_fes = std::make_unique<mfem::FiniteElementSpace>(&mesh, L2_fec.get());
+
+  mfem::GridFunction H1_gf(H1_fes.get());
+  mfem::GridFunction Hcurl_gf(Hcurl_fes.get());
+  mfem::GridFunction L2_gf(L2_fes.get());
+
+  mfem::FunctionCoefficient scalar_func(scalar_func_2D);
+  mfem::VectorFunctionCoefficient vector_func(dim, vector_func_2D);
+
+  H1_gf.ProjectCoefficient(scalar_func);
+  Hcurl_gf.ProjectCoefficient(vector_func);
+  H1_gf.ProjectCoefficient(scalar_func);
 
   auto H1_dofs = GetFaceDofs(H1_fes.get(), mfem::Geometry::SEGMENT, FaceType::INTERIOR);
   std::cout << H1_dofs << std::endl;
