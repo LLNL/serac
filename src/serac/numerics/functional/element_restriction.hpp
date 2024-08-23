@@ -243,7 +243,7 @@ struct BlockElementRestriction {
  * @param fes the finite element space containing the dof information
  * @param geom the kind of element geometry
  */
-Array2D<DoF> GetElementDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type geom);
+axom::Array<DoF, 2, axom::MemorySpace::Host> GetElementDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type geom);
 
 /**
  * @brief Get the list of dofs for each face element (of the specified geometry) from the mfem::FiniteElementSpace
@@ -252,4 +252,4 @@ Array2D<DoF> GetElementDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type 
  * @param geom the kind of element geometry
  * @param type whether the face is of interior or boundary type
  */
-Array2D<DoF> GetFaceDofs(mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type);
+axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type);
