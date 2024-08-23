@@ -676,6 +676,10 @@ def get_shared_libs_dir():
     return pjoin(get_shared_base_dir(), "libs", get_project_name())
 
 
+def get_shared_spot_dir():
+    return pjoin(get_shared_base_dir(), "spot")
+
+
 def get_uberenv_path():
     return pjoin(get_script_dir(), "../uberenv/uberenv.py")
 
@@ -709,3 +713,4 @@ def convertSecondsToReadableTime(seconds):
     m, s = divmod(seconds, 60)
     h, m = divmod(m, 60)
     return "%d:%02d:%02d" % (h, m, s)
+
