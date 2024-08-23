@@ -23,7 +23,7 @@ std::array< int, n > apply_permutation(const int (&arr)[n], const int (&p)[n]) {
     return permuted_arr;
 }
 
-mfem::Mesh generate_permuted_meshes(mfem::Geometry::Type geom, int i) {
+mfem::Mesh generate_permuted_mesh(mfem::Geometry::Type geom, int i) {
 
   if (geom == mfem::Geometry::TRIANGLE) {
     constexpr int dim = 2;
@@ -44,6 +44,8 @@ mfem::Mesh generate_permuted_meshes(mfem::Geometry::Type geom, int i) {
     // but the second element is permuted to the specified orientation
     auto permuted_element = apply_permutation(elements[1], positive_permutations[i]);
     output.AddTri(permuted_element.data());
+
+    output.FinalizeMesh();
 
     return output;
   }
@@ -67,6 +69,8 @@ mfem::Mesh generate_permuted_meshes(mfem::Geometry::Type geom, int i) {
     // but the second element is permuted to the specified orientation
     auto permuted_element = apply_permutation(elements[1], positive_permutations[i]);
     output.AddQuad(permuted_element.data());
+
+    output.FinalizeMesh();
 
     return output;
   }
@@ -94,6 +98,8 @@ mfem::Mesh generate_permuted_meshes(mfem::Geometry::Type geom, int i) {
     // but the second element is permuted to the specified orientation
     auto permuted_element = apply_permutation(elements[1], positive_permutations[i]);
     output.AddTet(permuted_element.data());
+
+    output.FinalizeMesh();
 
     return output;
   }
@@ -136,9 +142,55 @@ mfem::Mesh generate_permuted_meshes(mfem::Geometry::Type geom, int i) {
     auto permuted_element = apply_permutation(elements[1], positive_permutations[i]);
     output.AddHex(permuted_element.data());
 
+    output.FinalizeMesh();
+
     return output;
   }
 
   return {};
 
+}
+
+TEST(DomainInterior, TriMesh) {
+    mfem::Mesh mesh = generate_permuted_mesh(mfem::Geometry::TRIANGLE, 0);
+    EXPECT_EQ(mesh.GetNE(), 2);
+    std::ofstream outfile("triangle.mesh");
+    mesh.Print(outfile);
+
+    Domain interior_faces = InteriorFaces(mesh);
+    EXPECT_EQ(interior_faces.edge_ids_.size(), 1);
+    EXPECT_EQ(interior_faces.mfem_edge_ids_.size(), 1);
+}
+
+TEST(DomainInterior, QuadMesh) {
+    mfem::Mesh mesh = generate_permuted_mesh(mfem::Geometry::SQUARE, 0);
+    EXPECT_EQ(mesh.GetNE(), 2);
+    std::ofstream outfile("quad.mesh");
+    mesh.Print(outfile);
+
+    Domain interior_faces = InteriorFaces(mesh);
+    EXPECT_EQ(interior_faces.edge_ids_.size(), 1);
+    EXPECT_EQ(interior_faces.mfem_edge_ids_.size(), 1);
+}
+
+TEST(DomainInterior, TetMesh) {
+    mfem::Mesh mesh = generate_permuted_mesh(mfem::Geometry::TETRAHEDRON, 0);
+    EXPECT_EQ(mesh.GetNE(), 2);
+    std::ofstream outfile("tet.mesh");
+    mesh.Print(outfile);
+
+    Domain interior_faces = InteriorFaces(mesh);
+    EXPECT_EQ(interior_faces.tri_ids_.size(), 1);
+    EXPECT_EQ(interior_faces.mfem_tri_ids_.size(), 1);
+}
+
+TEST(DomainInterior, HexMesh) {
+    mfem::Mesh mesh = generate_permuted_mesh(mfem::Geometry::CUBE, 0);
+    EXPECT_EQ(mesh.GetNE(), 2);
+    std::ofstream outfile("hex.mesh");
+    mesh.Print(outfile);
+
+    Domain interior_faces = InteriorFaces(mesh);
+    EXPECT_EQ(interior_faces.quad_ids_.size(), 1);
+    EXPECT_EQ(interior_faces.mfem_quad_ids_.size(), 1);
 }
