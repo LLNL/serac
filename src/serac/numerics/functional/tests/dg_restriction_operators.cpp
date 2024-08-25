@@ -7,6 +7,14 @@ using namespace serac;
 
 std::string mesh_dir = SERAC_REPO_DIR "/data/meshes/";
 
+constexpr mfem::Geometry::Type face_type(mfem::Geometry::Type geom) {
+  if (geom == mfem::Geometry::TRIANGLE) return mfem::Geometry::SEGMENT;
+  if (geom == mfem::Geometry::SQUARE) return mfem::Geometry::SEGMENT;
+  if (geom == mfem::Geometry::TETRAHEDRON) return mfem::Geometry::TRIANGLE;
+  if (geom == mfem::Geometry::CUBE) return mfem::Geometry::SQUARE;
+  return mfem::Geometry::INVALID;
+}
+
 int possible_permutations(mfem::Geometry::Type geom) {
   if (geom == mfem::Geometry::TRIANGLE) return 3;
   if (geom == mfem::Geometry::SQUARE) return 4;
@@ -38,11 +46,11 @@ mfem::Mesh generate_permuted_mesh(mfem::Geometry::Type geom, int i) {
         ^
         |
         3----------2
-        |\,        |
-        |  \,      |
-        |    \,    |
-        |      \,  |
-        |        \,|
+        |'.        |
+        |  '.      |
+        |    '.    |
+        |      '.  |
+        |        '.|
         0----------1--> x 
     */ 
     int elements[num_elements][3] = {{0, 1, 3}, {1, 2, 3}}; 
@@ -112,6 +120,24 @@ mfem::Mesh generate_permuted_mesh(mfem::Geometry::Type geom, int i) {
       {1, 2, 0, 3}, {1, 3, 2, 0}, {2, 0, 1, 3}, {2, 1, 3, 0}, 
       {2, 3, 0, 1}, {3, 0, 2, 1}, {3, 1, 0, 2}, {3, 2, 1, 0}
     }; 
+
+    /*
+
+                    .4.
+          y      .*'/  '*. 
+           \  .*'  /      '*.
+            2--.../          '*.       
+            |\   / '---...      '*.          x
+            | \ /         '''---...'*.   .*' 
+            |  /                   :::>1  
+      z     | / \         ...---'''.*'  
+        '*. |/   ...---'''      .*'      
+            3--'''\          .*'       
+              '*.  \      .*'       
+                 '*.\  .*'       
+                    '0'
+
+    */
     int elements[num_elements][4] = {{0, 1, 2, 3}, {1, 2, 3, 4}}; 
     double vertices[num_vertices][dim] = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {1, 1, 1}};
 
@@ -213,41 +239,59 @@ std::ostream & operator<<(std::ostream & out, axom::Array<DoF, 2, axom::MemorySp
   return out;
 }
 
-double scalar_func_2D(const mfem::Vector & x, double /*t*/) {
-    return x[0] + 10 * x[1];
+template < int dim >
+double scalar_func(const mfem::Vector & x, double /*t*/) {
+    if constexpr (dim == 2) {
+        return x[0] + 10 * x[1];
+    } else {
+        return x[0] + 10 * x[1] + 100 * x[2];
+    }
 }
 
-double scalar_func_3D(const mfem::Vector & x, double /*t*/) {
-    return x[0] + 10 * x[1] + 100 * x[2];
+template < int dim >
+void vector_func(const mfem::Vector & x, double /*t*/, mfem::Vector & output) {
+    if constexpr (dim == 2) {
+        output[0] = +x[1];
+        output[1] = -x[0];
+    } else {
+        output[0] = +x[1];
+        output[1] = -x[0]+x[2];
+        output[2] =      -x[1];
+    }
 }
 
-void vector_func_2D(const mfem::Vector & x, double /*t*/, mfem::Vector & output) {
-    output[0] = +x[1];
-    output[1] = -x[0];
-}
+template < mfem::Geometry::Type geom >
+void parametrized_test(int polynomial_order, int permutation) {
 
-void vector_func_3D(const mfem::Vector & x, double /*t*/, mfem::Vector & output) {
-    output[0] = +x[1];
-    output[1] = -x[0]+x[2];
-    output[2] =      -x[1];
-}
+  constexpr mfem::Geometry::Type face_geom = face_type(geom);
+  constexpr int dim = dimension_of(geom);
 
-TEST(DomainInterior, TriMesh) {
-  constexpr int p = 1;
-  constexpr int dim = 2;
-
-  mfem::Mesh mesh = generate_permuted_mesh(mfem::Geometry::TRIANGLE, 1);
-  EXPECT_EQ(mesh.GetNE(), 2);
-  std::ofstream outfile("triangle.mesh");
-  mesh.Print(outfile);
+  mfem::Mesh mesh = generate_permuted_mesh(geom, permutation);
 
   Domain interior_faces = InteriorFaces(mesh);
-  EXPECT_EQ(interior_faces.edge_ids_.size(), 1);
-  EXPECT_EQ(interior_faces.mfem_edge_ids_.size(), 1);
 
-  auto H1_fec = std::make_unique<mfem::H1_FECollection>(p, dim);
-  auto Hcurl_fec = std::make_unique<mfem::ND_FECollection>(p, dim);
-  auto L2_fec = std::make_unique<mfem::L2_FECollection>(p, dim, mfem::BasisType::GaussLobatto);
+  // each one of these meshes should have two elements
+  // and a single "face" that separates them
+  EXPECT_EQ(mesh.GetNE(), 2);
+
+  if (face_geom == mfem::Geometry::SEGMENT) {
+    EXPECT_EQ(interior_faces.edge_ids_.size(), 1);
+    EXPECT_EQ(interior_faces.mfem_edge_ids_.size(), 1);
+  }
+
+  if (face_geom == mfem::Geometry::TRIANGLE) {
+    EXPECT_EQ(interior_faces.tri_ids_.size(), 1);
+    EXPECT_EQ(interior_faces.mfem_tri_ids_.size(), 1);
+  }
+
+  if (face_geom == mfem::Geometry::SQUARE) {
+    EXPECT_EQ(interior_faces.quad_ids_.size(), 1);
+    EXPECT_EQ(interior_faces.mfem_quad_ids_.size(), 1);
+  }
+
+  auto H1_fec = std::make_unique<mfem::H1_FECollection>(polynomial_order, dim);
+  auto Hcurl_fec = std::make_unique<mfem::ND_FECollection>(polynomial_order, dim);
+  auto L2_fec = std::make_unique<mfem::L2_FECollection>(polynomial_order, dim, mfem::BasisType::GaussLobatto);
 
   auto H1_fes = std::make_unique<mfem::FiniteElementSpace>(&mesh, H1_fec.get());
   auto Hcurl_fes = std::make_unique<mfem::FiniteElementSpace>(&mesh, Hcurl_fec.get());
@@ -257,53 +301,181 @@ TEST(DomainInterior, TriMesh) {
   mfem::GridFunction Hcurl_gf(Hcurl_fes.get());
   mfem::GridFunction L2_gf(L2_fes.get());
 
-  mfem::FunctionCoefficient scalar_func(scalar_func_2D);
-  mfem::VectorFunctionCoefficient vector_func(dim, vector_func_2D);
+  mfem::FunctionCoefficient sfunc(scalar_func<dim>);
+  mfem::VectorFunctionCoefficient vfunc(dim, vector_func<dim>);
 
-  H1_gf.ProjectCoefficient(scalar_func);
-  Hcurl_gf.ProjectCoefficient(vector_func);
-  H1_gf.ProjectCoefficient(scalar_func);
+  H1_gf.ProjectCoefficient(sfunc);
+  Hcurl_gf.ProjectCoefficient(vfunc);
+  L2_gf.ProjectCoefficient(sfunc);
 
-  auto H1_dofs = GetFaceDofs(H1_fes.get(), mfem::Geometry::SEGMENT, FaceType::INTERIOR);
-  std::cout << H1_dofs << std::endl;
-
-  auto Hcurl_dofs = GetFaceDofs(Hcurl_fes.get(), mfem::Geometry::SEGMENT, FaceType::INTERIOR);
-  std::cout << Hcurl_dofs << std::endl;
-
-  auto L2_dofs = GetFaceDofs(L2_fes.get(), mfem::Geometry::SEGMENT, FaceType::INTERIOR);
-  std::cout << L2_dofs << std::endl;
-
+  auto H1_dofs = GetFaceDofs(H1_fes.get(), face_geom, FaceType::INTERIOR);
+  auto Hcurl_dofs = GetFaceDofs(Hcurl_fes.get(), face_geom, FaceType::INTERIOR);
+  auto L2_dofs = GetFaceDofs(L2_fes.get(), face_geom, FaceType::INTERIOR);
+  
+  // verify that the dofs for the L2 faces are aligned properly
+  // 
+  // sam: we should also check that the actual values match
+  //      the scalar function evaluated at nodes, but I don't know
+  //      how to get that info from mfem
+  int dofs_per_side = L2_dofs.shape()[1] / 2;
+  for (int i = 0; i < dofs_per_side; i++) {
+    int id1 = int(L2_dofs(0, i).index());
+    int id2 = int(L2_dofs(0, i + dofs_per_side).index());
+    EXPECT_NEAR(L2_gf[id1], L2_gf[id2], 5.0e-14);
+  }
 }
 
-TEST(DomainInterior, QuadMesh) {
-  mfem::Mesh mesh = generate_permuted_mesh(mfem::Geometry::SQUARE, 0);
-  EXPECT_EQ(mesh.GetNE(), 2);
-  std::ofstream outfile("quad.mesh");
-  mesh.Print(outfile);
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
-  Domain interior_faces = InteriorFaces(mesh);
-  EXPECT_EQ(interior_faces.edge_ids_.size(), 1);
-  EXPECT_EQ(interior_faces.mfem_edge_ids_.size(), 1);
-}
+TEST(DomainInterior, TriMesh10) { parametrized_test<mfem::Geometry::TRIANGLE>(1, 0); }
+TEST(DomainInterior, TriMesh11) { parametrized_test<mfem::Geometry::TRIANGLE>(1, 1); }
+TEST(DomainInterior, TriMesh12) { parametrized_test<mfem::Geometry::TRIANGLE>(1, 2); }
 
-TEST(DomainInterior, TetMesh) {
-  mfem::Mesh mesh = generate_permuted_mesh(mfem::Geometry::TETRAHEDRON, 0);
-  EXPECT_EQ(mesh.GetNE(), 2);
-  std::ofstream outfile("tet.mesh");
-  mesh.Print(outfile);
+TEST(DomainInterior, TriMesh20) { parametrized_test<mfem::Geometry::TRIANGLE>(2, 0); }
+TEST(DomainInterior, TriMesh21) { parametrized_test<mfem::Geometry::TRIANGLE>(2, 1); }
+TEST(DomainInterior, TriMesh22) { parametrized_test<mfem::Geometry::TRIANGLE>(2, 2); }
 
-  Domain interior_faces = InteriorFaces(mesh);
-  EXPECT_EQ(interior_faces.tri_ids_.size(), 1);
-  EXPECT_EQ(interior_faces.mfem_tri_ids_.size(), 1);
-}
+TEST(DomainInterior, TriMesh30) { parametrized_test<mfem::Geometry::TRIANGLE>(3, 0); }
+TEST(DomainInterior, TriMesh31) { parametrized_test<mfem::Geometry::TRIANGLE>(3, 1); }
+TEST(DomainInterior, TriMesh32) { parametrized_test<mfem::Geometry::TRIANGLE>(3, 2); }
 
-TEST(DomainInterior, HexMesh) {
-  mfem::Mesh mesh = generate_permuted_mesh(mfem::Geometry::CUBE, 0);
-  EXPECT_EQ(mesh.GetNE(), 2);
-  std::ofstream outfile("hex.mesh");
-  mesh.Print(outfile);
+////////////////////////////////////////////////////////////////////////////////
 
-  Domain interior_faces = InteriorFaces(mesh);
-  EXPECT_EQ(interior_faces.quad_ids_.size(), 1);
-  EXPECT_EQ(interior_faces.mfem_quad_ids_.size(), 1);
-}
+TEST(DomainInterior, QuadMesh10) { parametrized_test<mfem::Geometry::SQUARE>(1, 0); }
+TEST(DomainInterior, QuadMesh11) { parametrized_test<mfem::Geometry::SQUARE>(1, 1); }
+TEST(DomainInterior, QuadMesh12) { parametrized_test<mfem::Geometry::SQUARE>(1, 2); }
+TEST(DomainInterior, QuadMesh13) { parametrized_test<mfem::Geometry::SQUARE>(1, 3); }
+
+TEST(DomainInterior, QuadMesh20) { parametrized_test<mfem::Geometry::SQUARE>(2, 0); }
+TEST(DomainInterior, QuadMesh21) { parametrized_test<mfem::Geometry::SQUARE>(2, 1); }
+TEST(DomainInterior, QuadMesh22) { parametrized_test<mfem::Geometry::SQUARE>(2, 2); }
+TEST(DomainInterior, QuadMesh23) { parametrized_test<mfem::Geometry::SQUARE>(2, 3); }
+
+TEST(DomainInterior, QuadMesh30) { parametrized_test<mfem::Geometry::SQUARE>(3, 0); }
+TEST(DomainInterior, QuadMesh31) { parametrized_test<mfem::Geometry::SQUARE>(3, 1); }
+TEST(DomainInterior, QuadMesh32) { parametrized_test<mfem::Geometry::SQUARE>(3, 2); }
+TEST(DomainInterior, QuadMesh33) { parametrized_test<mfem::Geometry::SQUARE>(3, 3); }
+
+////////////////////////////////////////////////////////////////////////////////
+
+TEST(DomainInterior, TetMesh100) { parametrized_test<mfem::Geometry::TETRAHEDRON>(1,  0); }
+TEST(DomainInterior, TetMesh101) { parametrized_test<mfem::Geometry::TETRAHEDRON>(1,  1); }
+TEST(DomainInterior, TetMesh102) { parametrized_test<mfem::Geometry::TETRAHEDRON>(1,  2); }
+TEST(DomainInterior, TetMesh103) { parametrized_test<mfem::Geometry::TETRAHEDRON>(1,  3); }
+TEST(DomainInterior, TetMesh104) { parametrized_test<mfem::Geometry::TETRAHEDRON>(1,  4); }
+TEST(DomainInterior, TetMesh105) { parametrized_test<mfem::Geometry::TETRAHEDRON>(1,  5); }
+TEST(DomainInterior, TetMesh106) { parametrized_test<mfem::Geometry::TETRAHEDRON>(1,  6); }
+TEST(DomainInterior, TetMesh107) { parametrized_test<mfem::Geometry::TETRAHEDRON>(1,  7); }
+TEST(DomainInterior, TetMesh108) { parametrized_test<mfem::Geometry::TETRAHEDRON>(1,  8); }
+TEST(DomainInterior, TetMesh109) { parametrized_test<mfem::Geometry::TETRAHEDRON>(1,  9); }
+TEST(DomainInterior, TetMesh110) { parametrized_test<mfem::Geometry::TETRAHEDRON>(1, 10); }
+TEST(DomainInterior, TetMesh111) { parametrized_test<mfem::Geometry::TETRAHEDRON>(1, 11); }
+
+TEST(DomainInterior, TetMesh200) { parametrized_test<mfem::Geometry::TETRAHEDRON>(2,  0); }
+TEST(DomainInterior, TetMesh201) { parametrized_test<mfem::Geometry::TETRAHEDRON>(2,  1); }
+TEST(DomainInterior, TetMesh202) { parametrized_test<mfem::Geometry::TETRAHEDRON>(2,  2); }
+TEST(DomainInterior, TetMesh203) { parametrized_test<mfem::Geometry::TETRAHEDRON>(2,  3); }
+TEST(DomainInterior, TetMesh204) { parametrized_test<mfem::Geometry::TETRAHEDRON>(2,  4); }
+TEST(DomainInterior, TetMesh205) { parametrized_test<mfem::Geometry::TETRAHEDRON>(2,  5); }
+TEST(DomainInterior, TetMesh206) { parametrized_test<mfem::Geometry::TETRAHEDRON>(2,  6); }
+TEST(DomainInterior, TetMesh207) { parametrized_test<mfem::Geometry::TETRAHEDRON>(2,  7); }
+TEST(DomainInterior, TetMesh208) { parametrized_test<mfem::Geometry::TETRAHEDRON>(2,  8); }
+TEST(DomainInterior, TetMesh209) { parametrized_test<mfem::Geometry::TETRAHEDRON>(2,  9); }
+TEST(DomainInterior, TetMesh210) { parametrized_test<mfem::Geometry::TETRAHEDRON>(2, 10); }
+TEST(DomainInterior, TetMesh211) { parametrized_test<mfem::Geometry::TETRAHEDRON>(2, 11); }
+
+TEST(DomainInterior, TetMesh300) { parametrized_test<mfem::Geometry::TETRAHEDRON>(3,  0); }
+TEST(DomainInterior, TetMesh301) { parametrized_test<mfem::Geometry::TETRAHEDRON>(3,  1); }
+TEST(DomainInterior, TetMesh302) { parametrized_test<mfem::Geometry::TETRAHEDRON>(3,  2); }
+TEST(DomainInterior, TetMesh303) { parametrized_test<mfem::Geometry::TETRAHEDRON>(3,  3); }
+TEST(DomainInterior, TetMesh304) { parametrized_test<mfem::Geometry::TETRAHEDRON>(3,  4); }
+TEST(DomainInterior, TetMesh305) { parametrized_test<mfem::Geometry::TETRAHEDRON>(3,  5); }
+TEST(DomainInterior, TetMesh306) { parametrized_test<mfem::Geometry::TETRAHEDRON>(3,  6); }
+TEST(DomainInterior, TetMesh307) { parametrized_test<mfem::Geometry::TETRAHEDRON>(3,  7); }
+TEST(DomainInterior, TetMesh308) { parametrized_test<mfem::Geometry::TETRAHEDRON>(3,  8); }
+TEST(DomainInterior, TetMesh309) { parametrized_test<mfem::Geometry::TETRAHEDRON>(3,  9); }
+TEST(DomainInterior, TetMesh310) { parametrized_test<mfem::Geometry::TETRAHEDRON>(3, 10); }
+TEST(DomainInterior, TetMesh311) { parametrized_test<mfem::Geometry::TETRAHEDRON>(3, 11); }
+
+////////////////////////////////////////////////////////////////////////////////
+
+TEST(DomainInterior, HexMesh100) { parametrized_test<mfem::Geometry::CUBE>(1,  0); }
+TEST(DomainInterior, HexMesh101) { parametrized_test<mfem::Geometry::CUBE>(1,  1); }
+TEST(DomainInterior, HexMesh102) { parametrized_test<mfem::Geometry::CUBE>(1,  2); }
+TEST(DomainInterior, HexMesh103) { parametrized_test<mfem::Geometry::CUBE>(1,  3); }
+TEST(DomainInterior, HexMesh104) { parametrized_test<mfem::Geometry::CUBE>(1,  4); }
+TEST(DomainInterior, HexMesh105) { parametrized_test<mfem::Geometry::CUBE>(1,  5); }
+TEST(DomainInterior, HexMesh106) { parametrized_test<mfem::Geometry::CUBE>(1,  6); }
+TEST(DomainInterior, HexMesh107) { parametrized_test<mfem::Geometry::CUBE>(1,  7); }
+TEST(DomainInterior, HexMesh108) { parametrized_test<mfem::Geometry::CUBE>(1,  8); }
+TEST(DomainInterior, HexMesh109) { parametrized_test<mfem::Geometry::CUBE>(1,  9); }
+TEST(DomainInterior, HexMesh110) { parametrized_test<mfem::Geometry::CUBE>(1, 10); }
+TEST(DomainInterior, HexMesh111) { parametrized_test<mfem::Geometry::CUBE>(1, 11); }
+TEST(DomainInterior, HexMesh112) { parametrized_test<mfem::Geometry::CUBE>(1, 12); }
+TEST(DomainInterior, HexMesh113) { parametrized_test<mfem::Geometry::CUBE>(1, 13); }
+TEST(DomainInterior, HexMesh114) { parametrized_test<mfem::Geometry::CUBE>(1, 14); }
+TEST(DomainInterior, HexMesh115) { parametrized_test<mfem::Geometry::CUBE>(1, 15); }
+TEST(DomainInterior, HexMesh116) { parametrized_test<mfem::Geometry::CUBE>(1, 16); }
+TEST(DomainInterior, HexMesh117) { parametrized_test<mfem::Geometry::CUBE>(1, 17); }
+TEST(DomainInterior, HexMesh118) { parametrized_test<mfem::Geometry::CUBE>(1, 18); }
+TEST(DomainInterior, HexMesh119) { parametrized_test<mfem::Geometry::CUBE>(1, 19); }
+TEST(DomainInterior, HexMesh120) { parametrized_test<mfem::Geometry::CUBE>(1, 20); }
+TEST(DomainInterior, HexMesh121) { parametrized_test<mfem::Geometry::CUBE>(1, 21); }
+TEST(DomainInterior, HexMesh122) { parametrized_test<mfem::Geometry::CUBE>(1, 22); }
+TEST(DomainInterior, HexMesh123) { parametrized_test<mfem::Geometry::CUBE>(1, 23); }
+
+TEST(DomainInterior, HexMesh200) { parametrized_test<mfem::Geometry::CUBE>(2,  0); }
+TEST(DomainInterior, HexMesh201) { parametrized_test<mfem::Geometry::CUBE>(2,  1); }
+TEST(DomainInterior, HexMesh202) { parametrized_test<mfem::Geometry::CUBE>(2,  2); }
+TEST(DomainInterior, HexMesh203) { parametrized_test<mfem::Geometry::CUBE>(2,  3); }
+TEST(DomainInterior, HexMesh204) { parametrized_test<mfem::Geometry::CUBE>(2,  4); }
+TEST(DomainInterior, HexMesh205) { parametrized_test<mfem::Geometry::CUBE>(2,  5); }
+TEST(DomainInterior, HexMesh206) { parametrized_test<mfem::Geometry::CUBE>(2,  6); }
+TEST(DomainInterior, HexMesh207) { parametrized_test<mfem::Geometry::CUBE>(2,  7); }
+TEST(DomainInterior, HexMesh208) { parametrized_test<mfem::Geometry::CUBE>(2,  8); }
+TEST(DomainInterior, HexMesh209) { parametrized_test<mfem::Geometry::CUBE>(2,  9); }
+TEST(DomainInterior, HexMesh210) { parametrized_test<mfem::Geometry::CUBE>(2, 10); }
+TEST(DomainInterior, HexMesh211) { parametrized_test<mfem::Geometry::CUBE>(2, 11); }
+TEST(DomainInterior, HexMesh212) { parametrized_test<mfem::Geometry::CUBE>(2, 12); }
+TEST(DomainInterior, HexMesh213) { parametrized_test<mfem::Geometry::CUBE>(2, 13); }
+TEST(DomainInterior, HexMesh214) { parametrized_test<mfem::Geometry::CUBE>(2, 14); }
+TEST(DomainInterior, HexMesh215) { parametrized_test<mfem::Geometry::CUBE>(2, 15); }
+TEST(DomainInterior, HexMesh216) { parametrized_test<mfem::Geometry::CUBE>(2, 16); }
+TEST(DomainInterior, HexMesh217) { parametrized_test<mfem::Geometry::CUBE>(2, 17); }
+TEST(DomainInterior, HexMesh218) { parametrized_test<mfem::Geometry::CUBE>(2, 18); }
+TEST(DomainInterior, HexMesh219) { parametrized_test<mfem::Geometry::CUBE>(2, 19); }
+TEST(DomainInterior, HexMesh220) { parametrized_test<mfem::Geometry::CUBE>(2, 20); }
+TEST(DomainInterior, HexMesh221) { parametrized_test<mfem::Geometry::CUBE>(2, 21); }
+TEST(DomainInterior, HexMesh222) { parametrized_test<mfem::Geometry::CUBE>(2, 22); }
+TEST(DomainInterior, HexMesh223) { parametrized_test<mfem::Geometry::CUBE>(2, 23); }
+
+TEST(DomainInterior, HexMesh300) { parametrized_test<mfem::Geometry::CUBE>(3,  0); }
+TEST(DomainInterior, HexMesh301) { parametrized_test<mfem::Geometry::CUBE>(3,  1); }
+TEST(DomainInterior, HexMesh302) { parametrized_test<mfem::Geometry::CUBE>(3,  2); }
+TEST(DomainInterior, HexMesh303) { parametrized_test<mfem::Geometry::CUBE>(3,  3); }
+TEST(DomainInterior, HexMesh304) { parametrized_test<mfem::Geometry::CUBE>(3,  4); }
+TEST(DomainInterior, HexMesh305) { parametrized_test<mfem::Geometry::CUBE>(3,  5); }
+TEST(DomainInterior, HexMesh306) { parametrized_test<mfem::Geometry::CUBE>(3,  6); }
+TEST(DomainInterior, HexMesh307) { parametrized_test<mfem::Geometry::CUBE>(3,  7); }
+TEST(DomainInterior, HexMesh308) { parametrized_test<mfem::Geometry::CUBE>(3,  8); }
+TEST(DomainInterior, HexMesh309) { parametrized_test<mfem::Geometry::CUBE>(3,  9); }
+TEST(DomainInterior, HexMesh310) { parametrized_test<mfem::Geometry::CUBE>(3, 10); }
+TEST(DomainInterior, HexMesh311) { parametrized_test<mfem::Geometry::CUBE>(3, 11); }
+TEST(DomainInterior, HexMesh312) { parametrized_test<mfem::Geometry::CUBE>(3, 12); }
+TEST(DomainInterior, HexMesh313) { parametrized_test<mfem::Geometry::CUBE>(3, 13); }
+TEST(DomainInterior, HexMesh314) { parametrized_test<mfem::Geometry::CUBE>(3, 14); }
+TEST(DomainInterior, HexMesh315) { parametrized_test<mfem::Geometry::CUBE>(3, 15); }
+TEST(DomainInterior, HexMesh316) { parametrized_test<mfem::Geometry::CUBE>(3, 16); }
+TEST(DomainInterior, HexMesh317) { parametrized_test<mfem::Geometry::CUBE>(3, 17); }
+TEST(DomainInterior, HexMesh318) { parametrized_test<mfem::Geometry::CUBE>(3, 18); }
+TEST(DomainInterior, HexMesh319) { parametrized_test<mfem::Geometry::CUBE>(3, 19); }
+TEST(DomainInterior, HexMesh320) { parametrized_test<mfem::Geometry::CUBE>(3, 20); }
+TEST(DomainInterior, HexMesh321) { parametrized_test<mfem::Geometry::CUBE>(3, 21); }
+TEST(DomainInterior, HexMesh322) { parametrized_test<mfem::Geometry::CUBE>(3, 22); }
+TEST(DomainInterior, HexMesh323) { parametrized_test<mfem::Geometry::CUBE>(3, 23); }
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
