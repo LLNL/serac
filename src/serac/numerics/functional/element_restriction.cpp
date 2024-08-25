@@ -363,7 +363,11 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteEleme
 
       if (isHcurl(*fes)) {
         for (int k = 0; k < dofs.Size(); k++) {
-          face_dofs.push_back(uint64_t(dofs[k]));
+          if (dofs[k] >= 0) {
+            face_dofs.push_back(DoF{uint64_t(dofs[k]), 0});
+          } else {
+            face_dofs.push_back(DoF{uint64_t(-1 - dofs[k]), 1});
+          }
         }
       } else {
         for (int k = 0; k < dofs.Size(); k++) {
