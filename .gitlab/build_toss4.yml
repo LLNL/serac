@@ -5,7 +5,7 @@
     SCHEDULER_PARAMETERS: "--res=ci --exclusive=user --deadline=now+1hour -N ${ALLOC_NODES} -t ${ALLOC_TIME} -A ${ALLOC_BANK}"
   tags:
     - batch
-    - dane
+    - ruby
   rules:
     - if: '$CI_COMMIT_BRANCH =~ /_qnone/ || $ON_TOSS4 == "OFF"' #run except if ...
       when: never
