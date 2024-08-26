@@ -313,16 +313,16 @@ void parametrized_test(int polynomial_order, int permutation) {
   auto L2_dofs = GetFaceDofs(L2_fes.get(), face_geom, FaceType::INTERIOR);
   
   // verify that the dofs for the L2 faces are aligned properly
-  // 
-  // sam: we should also check that the actual values match
-  //      the scalar function evaluated at nodes, but I don't know
-  //      how to get that info from mfem
   int dofs_per_side = L2_dofs.shape()[1] / 2;
   for (int i = 0; i < dofs_per_side; i++) {
     int id1 = int(L2_dofs(0, i).index());
     int id2 = int(L2_dofs(0, i + dofs_per_side).index());
     EXPECT_NEAR(L2_gf[id1], L2_gf[id2], 5.0e-14);
   }
+
+  // TODO: check that the actual values match their respective functions
+  //       evaluated directly at the nodes (for H1, Hcurl, and L2 gfs)
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////

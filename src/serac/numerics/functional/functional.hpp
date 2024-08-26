@@ -352,6 +352,19 @@ public:
   }
 
   /**
+   * @brief TODO
+   */
+  template <int dim, int... args, typename Integrand>
+  void AddInteriorFaceIntegral(Dimension<dim>, DependsOn<args...>, const Integrand& integrand, mfem::Mesh& mesh)
+  {
+    check_for_missing_nodal_gridfunc(mesh);
+
+    using signature = test(decltype(serac::type<args>(trial_spaces))...);
+    integrals_.push_back(
+        MakeInteriorFaceIntegral<signature, Q, dim>(InteriorFaces(mesh), integrand, std::vector<uint32_t>{args...}));
+  }
+
+  /**
    * @brief Adds an area integral, i.e., over 2D elements in R^2 space
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @tparam qpt_data_type The type of the data to store for each quadrature point
