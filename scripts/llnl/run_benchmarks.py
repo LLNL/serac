@@ -24,15 +24,19 @@ import os
 def parse_args():
     "Parses args from command line"
     parser = ArgumentParser()
-    parser.add_argument("-sd", "--spot-directory",
-                      dest="spot_dir",
-                      default=get_shared_spot_dir(),
-                      help="Where to put all resulting caliper files to use for SPOT analysis (defaults to a shared location)")
+    parser.add_argument("-e", "--extra-cmake-options",
+                      dest="extra_cmake_options",
+                      default="",
+                      help="Extra cmake options to add to the cmake configure line. Note '-DENABLE_BENCHMARKS=ON -DENABLE_DOCS=OFF' is always appended.")
     parser.add_argument("-hc", "--host-config",
                     dest="host_config",
                     default="",
                     required=True,
                     help="Specific host-config file to build")
+    parser.add_argument("-sd", "--spot-directory",
+                      dest="spot_dir",
+                      default=get_shared_spot_dir(),
+                      help="Where to put all resulting caliper files to use for SPOT analysis (defaults to a shared location)")
     parser.add_argument("-t", "--timestamp",
                     dest="timestamp",
                     default=get_timestamp(),
@@ -49,8 +53,9 @@ def main():
     args = parse_args()
 
     # Args
-    spot_dir = args["spot_dir"]
+    cmake_options = args["extra_cmake_options"] + " -DENABLE_BENCHMARKS=ON -DENABLE_DOCS=OFF"
     host_config = args["host_config"]
+    spot_dir = args["spot_dir"]
     timestamp = args["timestamp"]
 
     # Vars
@@ -59,8 +64,8 @@ def main():
 
     # Build Serac
     os.chdir(repo_dir)
-    os.makedirs(test_root)
-    build_and_test_host_config(test_root, host_config, True, "-DENABLE_BENCHMARKS=ON", True, True, "")
+    os.makedirs(test_root, exist_ok=True)
+    build_and_test_host_config(test_root, host_config, True, cmake_options, True, True, "")
 
     # Go to build location
     build_dir=""
@@ -80,10 +85,11 @@ def main():
     # Move resulting .cali files to specified directory
     os.makedirs(spot_dir, exist_ok=True)
     cali_files = glob.glob(pjoin(build_dir, "*.cali"))
-    print(cali_files)
     for cali_file in cali_files:
         if os.path.exists(cali_file):
             shutil.move(cali_file, spot_dir)
+
+    print("[View SPOT directory here: https://lc.llnl.gov/spot2/?sf={0}]".format(spot_dir))
 
     return 0
 
