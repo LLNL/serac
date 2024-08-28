@@ -306,11 +306,19 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         # Build MFEM shared if Serac is being built shared
         set(MFEM_SHARED_BUILD ${BUILD_SHARED_LIBS} CACHE BOOL "")
 
+        # Unset runtime output directory to prevent duplication issue that occurs when using Ninja
+        # https://github.com/LLNL/blt/issues/695
+        set(tmp_cmake_runtime_output_directory ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+        unset(CMAKE_RUNTIME_OUTPUT_DIRECTORY CACHE)
+
         if(${PROJECT_NAME} STREQUAL "smith")
             add_subdirectory(${PROJECT_SOURCE_DIR}/serac/mfem  ${CMAKE_BINARY_DIR}/mfem)
         else()
             add_subdirectory(${PROJECT_SOURCE_DIR}/mfem  ${CMAKE_BINARY_DIR}/mfem)
         endif()
+
+        # Restore previous runtime output directory
+        set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${tmp_cmake_runtime_output_directory} CACHE PATH "" FORCE)
  
         set(MFEM_FOUND TRUE CACHE BOOL "" FORCE)
 
