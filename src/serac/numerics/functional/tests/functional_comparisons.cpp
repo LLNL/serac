@@ -46,26 +46,26 @@ struct hcurl_qfunction {
 
 template <int dim>
 struct StressFunctor {
-  template <typename X, typename Displacement>
-  SERAC_HOST_DEVICE auto operator()(double /*t*/, X /*x*/, Displacement displacement)
+  template <typename Position, typename Displacement>
+  SERAC_HOST_DEVICE auto operator()(double /*t*/, Position, Displacement displacement) const
   {
-    [[maybe_unused]] static constexpr auto I = DenseIdentity<dim>();
-    auto [u, du_dx]                          = displacement;
-    auto body_force                          = a * u + I[0];
-    auto strain                              = 0.5 * (du_dx + transpose(du_dx));
-    auto stress                              = b * tr(strain) * I + 2.0 * b * strain;
+    static constexpr auto I = DenseIdentity<dim>();
+    auto [u, du_dx]         = displacement;
+    auto body_force         = a * u + I[0];
+    auto strain             = 0.5 * (du_dx + transpose(du_dx));
+    auto stress             = b * tr(strain) * I + 2.0 * b * strain;
     return serac::tuple{body_force, stress};
   }
 };
 
 struct SourceFluxFunctor {
-  template <typename X, typename Temperature>
-  SERAC_HOST_DEVICE auto operator()(double /*t*/, X x, Temperature temperature)
+  template <typename Position, typename Temperature>
+  SERAC_HOST_DEVICE auto operator()(double /*t*/, Position position, Temperature temperature) const
   {
-    // get the value and the gradient from the input tuple
-    auto [u, du_dx] = temperature;
-    auto source     = a * u - (100 * x[0] * x[1]);
-    auto flux       = b * du_dx;
+    auto [X, dX_dxi] = position;
+    auto [u, du_dX]  = temperature;
+    auto source      = a * u - (100 * X[0] * X[1]);
+    auto flux        = b * du_dX;
     return serac::tuple{source, flux};
   }
 };
@@ -198,6 +198,9 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   // Ensure the two methods generate the same result
   EXPECT_NEAR(0.0, diff1.Norml2() / g1.Norml2(), 1.e-14);
   EXPECT_NEAR(0.0, diff2.Norml2() / g1.Norml2(), 1.e-14);
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+  printCUDAMemUsage();
+#endif
 }
 
 // this test sets up a toy "elasticity" problem where the residual includes contributions
@@ -250,13 +253,13 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   std::unique_ptr<mfem::HypreParVector> F(f.ParallelAssemble());
 
   mfem::ParGridFunction u_global(fespace.get());
-  u_global.Randomize();
+  u_global.Randomize(42);
 
   mfem::Vector U(fespace->TrueVSize());
   u_global.GetTrueDofs(U);
 
-  using test_space  = decltype(test);
-  using trial_space = decltype(trial);
+  using test_space                         = decltype(test);
+  using trial_space                        = decltype(trial);
   [[maybe_unused]] static constexpr auto I = DenseIdentity<dim>();
 
 #ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
@@ -315,6 +318,9 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 
   EXPECT_NEAR(0., diff1.Norml2() / g1.Norml2(), 1.e-14);
   EXPECT_NEAR(0., diff2.Norml2() / g1.Norml2(), 1.e-14);
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+  printCUDAMemUsage();
+#endif
 }
 
 // this test sets up part of a toy "magnetic diffusion" problem where the residual includes contributions
@@ -383,7 +389,6 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(fespace.get(), {fespace.get()});
 #endif
 
-
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, hcurl_qfunction<dim>{}, mesh);
 
   // mfem::Vector r1 = (*J_mfem) * U - (*F);
@@ -432,24 +437,27 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   }
   EXPECT_NEAR(0., diff1.Norml2() / g1.Norml2(), 1.e-13);
   EXPECT_NEAR(0., diff2.Norml2() / g1.Norml2(), 1.e-13);
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+  printCUDAMemUsage();
+#endif
 }
 
-//#ifndef SERAC_USE_CUDA_KERNEL_EVALUATION
-// TEST(Thermal, 2DLinear) { functional_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
-// TEST(Thermal, 2DQuadratic) { functional_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
-// TEST(Thermal, 2DCubic) { functional_test(*mesh2D, H1<3>{}, H1<3>{}, Dimension<2>{}); }
-//
-// TEST(Elasticity, 2DLinear) { functional_test(*mesh2D, H1<1, 2>{}, H1<1, 2>{}, Dimension<2>{}); }
-// TEST(Elasticity, 2DQuadratic) { functional_test(*mesh2D, H1<2, 2>{}, H1<2, 2>{}, Dimension<2>{}); }
-// TEST(Elasticity, 2DCubic) { functional_test(*mesh2D, H1<3, 2>{}, H1<3, 2>{}, Dimension<2>{}); }
-//#endif
+#ifndef SERAC_USE_CUDA_KERNEL_EVALUATION
+TEST(Thermal, 2DLinear) { functional_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
+TEST(Thermal, 2DQuadratic) { functional_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
+TEST(Thermal, 2DCubic) { functional_test(*mesh2D, H1<3>{}, H1<3>{}, Dimension<2>{}); }
+
+TEST(Elasticity, 2DLinear) { functional_test(*mesh2D, H1<1, 2>{}, H1<1, 2>{}, Dimension<2>{}); }
+TEST(Elasticity, 2DQuadratic) { functional_test(*mesh2D, H1<2, 2>{}, H1<2, 2>{}, Dimension<2>{}); }
+TEST(Elasticity, 2DCubic) { functional_test(*mesh2D, H1<3, 2>{}, H1<3, 2>{}, Dimension<2>{}); }
+#endif
 TEST(Thermal, 3DLinear) { functional_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
-// TEST(Thermal, 3DQuadratic) { functional_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
-// TEST(Thermal, 3DCubic) { functional_test(*mesh3D, H1<3>{}, H1<3>{}, Dimension<3>{}); }
-//
-// TEST(Elasticity, 3DLinear) { functional_test(*mesh3D, H1<1, 3>{}, H1<1, 3>{}, Dimension<3>{}); }
-// TEST(Elasticity, 3DQuadratic) { functional_test(*mesh3D, H1<2, 3>{}, H1<2, 3>{}, Dimension<3>{}); }
-// TEST(Elasticity, 3DCubic) { functional_test(*mesh3D, H1<3, 3>{}, H1<3, 3>{}, Dimension<3>{}); }
+TEST(Thermal, 3DQuadratic) { functional_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
+TEST(Thermal, 3DCubic) { functional_test(*mesh3D, H1<3>{}, H1<3>{}, Dimension<3>{}); }
+
+TEST(Elasticity, 3DLinear) { functional_test(*mesh3D, H1<1, 3>{}, H1<1, 3>{}, Dimension<3>{}); }
+TEST(Elasticity, 3DQuadratic) { functional_test(*mesh3D, H1<2, 3>{}, H1<2, 3>{}, Dimension<3>{}); }
+TEST(Elasticity, 3DCubic) { functional_test(*mesh3D, H1<3, 3>{}, H1<3, 3>{}, Dimension<3>{}); }
 
 // TODO: reenable these once hcurl implements of simplex elements is finished
 // TEST(Hcurl, 2DLinear) { functional_test(*mesh2D, Hcurl<1>{}, Hcurl<1>{}, Dimension<2>{}); }

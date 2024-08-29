@@ -37,6 +37,14 @@ struct finite_element<mfem::Geometry::CUBE, Hcurl<p>> {
   using residual_type =
       typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components>>::type;
 
+  template <typename in_t, int q>
+  struct batch_apply_shape_fn_output {
+    using source_t = decltype(dot(get<0>(get<0>(in_t{})), vec3{}) + dot(get<1>(get<0>(in_t{})), vec3{}));
+    using flux_t   = decltype(dot(get<0>(get<1>(in_t{})), vec3{}) + dot(get<1>(get<1>(in_t{})), vec3{}));
+
+    using type = tensor<tuple<source_t, flux_t>, q * q * q>;
+  };
+
   // this is how mfem provides the data to us for these elements
   struct dof_type {
     tensor<double, p + 1, p + 1, p> x;
@@ -258,6 +266,7 @@ struct finite_element<mfem::Geometry::CUBE, Hcurl<p>> {
 
   template <typename in_t, int q>
   static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q * q> input,
+                                                    typename batch_apply_shape_fn_output<in_t, q>::type* output,
                                                     const TensorProductQuadratureRule<q>&, RAJA::LaunchContext)
   {
     constexpr bool                     apply_weights = false;
@@ -289,11 +298,6 @@ struct finite_element<mfem::Geometry::CUBE, Hcurl<p>> {
         jz = remainder / ((p + 1) * (p + 1));
         break;
     }
-
-    using source_t = decltype(dot(get<0>(get<0>(in_t{})), vec3{}) + dot(get<1>(get<0>(in_t{})), vec3{}));
-    using flux_t   = decltype(dot(get<0>(get<1>(in_t{})), vec3{}) + dot(get<1>(get<1>(in_t{})), vec3{}));
-
-    tensor<tuple<source_t, flux_t>, q * q * q> output;
 
     for (int qz = 0; qz < q; qz++) {
       for (int qy = 0; qy < q; qy++) {

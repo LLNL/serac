@@ -43,6 +43,13 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, L2<p, c>> {
       typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim>>::type;
   using qf_input_type = tuple<value_type, derivative_type>;
 
+  template <typename in_t, int q>
+  struct batch_apply_shape_fn_output {
+    using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, dim>{}));
+    using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, dim>{}));
+    using type     = tensor<tuple<source_t, flux_t>, nqpts(q)>;
+  };
+
   SERAC_HOST_DEVICE static constexpr double shape_function([[maybe_unused]] tensor<double, dim> xi,
                                                            [[maybe_unused]] int                 i)
   {
@@ -344,14 +351,10 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, L2<p, c>> {
 
   template <typename in_t, int q>
   static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, nqpts(q)> input,
+                                                    typename batch_apply_shape_fn_output<in_t, q>::type* output,
                                                     const TensorProductQuadratureRule<q>&, RAJA::LaunchContext)
   {
-    using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, dim>{}));
-    using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, dim>{}));
-
     constexpr auto xi = GaussLegendreNodes<q, mfem::Geometry::TETRAHEDRON>();
-
-    tensor<tuple<source_t, flux_t>, nqpts(q)> output;
 
     for (int i = 0; i < nqpts(q); i++) {
       double              phi_j      = shape_function(xi[i], j);
@@ -362,7 +365,7 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, L2<p, c>> {
       auto& d10 = get<0>(get<1>(input(i)));
       auto& d11 = get<1>(get<1>(input(i)));
 
-      output[i] = {d00 * phi_j + dot(d01, dphi_j_dxi), d10 * phi_j + dot(d11, dphi_j_dxi)};
+      (*output)[i] = {d00 * phi_j + dot(d01, dphi_j_dxi), d10 * phi_j + dot(d11, dphi_j_dxi)};
     }
 
     return output;

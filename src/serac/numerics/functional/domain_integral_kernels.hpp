@@ -66,6 +66,29 @@ struct QFunctionArgument<Hcurl<p>, Dimension<3>> {
   using type = tuple<tensor<double, 3>, tensor<double, 3>>;  ///< what will be passed to the q-function
 };
 
+template <typename lambda, typename state_type, int dim, int n, typename... T>
+struct QFunctionOutputHelper {
+  using position_type  = serac::tuple<tensor<double, dim>, tensor<double, dim, dim>>;
+  using qf_return_type = decltype(lambda{}(double{}, position_type{}, state_type{}, T{}[0]...));
+  using type           = tensor<qf_return_type, n>;
+};
+
+template <typename lambda, int dim, int n, typename... T>
+struct QFunctionOutputHelper<lambda, Nothing, dim, n, T...> {
+  using position_type = serac::tuple<tensor<double, dim>, tensor<double, dim, dim>>;
+  // using t_1 =  typename std::enable_if<std::is_same<state_type, Nothing>::value,
+  //                   >::type;
+  // using t_2 = typename std::enable_if<!std::is_same<state_type, Nothing>::value,
+  //                   decltype(lambda{}(double{}, position_type{}, state_type{}, T{}[0]...))>::type;
+  using qf_return_type = decltype(lambda{}(double{}, position_type{}, T{}[0]...));
+  using type           = tensor<qf_return_type, n>;
+};
+
+template <bool is_QOI, typename derivative_type, int n, typename T>
+struct BatchApplyChainRule {
+  using type = tensor<decltype(chain_rule<is_QOI>(derivative_type{}, T{})), n>;
+};
+
 /// @brief layer of indirection needed to unpack the entries of the argument tuple
 SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <typename lambda, typename coords_type, typename T, typename qpt_data_type, int... i>
@@ -105,15 +128,12 @@ auto get_derivative_type(const lambda& qf, qpt_data_type qpt_data)
 };
 
 template <typename lambda, int dim, int n, typename... T>
-SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(const lambda& qf, double t, const tensor<double, dim, n> x,
-                                               const tensor<double, dim, dim, n> J, RAJA::LaunchContext ctx,
-                                               const T&... inputs)
+SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(
+    const lambda& qf, double t, const tensor<double, dim, n> x, const tensor<double, dim, dim, n> J,
+    typename QFunctionOutputHelper<lambda, Nothing, dim, n, T...>::type* qf_output, RAJA::LaunchContext ctx,
+    const T&... inputs)
 {
-  using position_t  = serac::tuple<tensor<double, dim>, tensor<double, dim, dim>>;
-  using return_type = decltype(qf(double{}, position_t{}, T{}[0]...));
-
-  RAJA::RangeSegment     x_range(0, n);
-  tensor<return_type, n> outputs{};
+  RAJA::RangeSegment x_range(0, n);
   RAJA::loop<threads_x>(ctx, x_range, [&](int i) {
     tensor<double, dim>      x_q;
     tensor<double, dim, dim> J_q;
@@ -123,21 +143,17 @@ SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(const lambda& qf, double t, const
       }
       x_q[j] = x(j, i);
     }
-    outputs[i] = qf(t, serac::tuple{x_q, J_q}, inputs[i]...);
+    (*qf_output)[i] = qf(t, serac::tuple{x_q, J_q}, inputs[i]...);
   });
-  return outputs;
 }
 
 template <typename lambda, int dim, int n, typename qpt_data_type, typename... T>
-SERAC_HOST_DEVICE auto batch_apply_qf(const lambda& qf, double t, const tensor<double, dim, n> x,
-                                      const tensor<double, dim, dim, n> J, qpt_data_type* qpt_data, bool update_state,
-                                      RAJA::LaunchContext ctx, const T&... inputs)
+SERAC_HOST_DEVICE auto batch_apply_qf(
+    const lambda& qf, double t, const tensor<double, dim, n> x, const tensor<double, dim, dim, n> J,
+    typename QFunctionOutputHelper<lambda, qpt_data_type, dim, n, T...>::type* qf_output, qpt_data_type* qpt_data,
+    bool update_state, RAJA::LaunchContext ctx, const T&... inputs)
 {
-  using position_t  = serac::tuple<tensor<double, dim>, tensor<double, dim, dim>>;
-  using return_type = decltype(qf(double{}, position_t{}, qpt_data[0], T{}[0]...));
-
-  RAJA::RangeSegment     x_range(0, n);
-  tensor<return_type, n> outputs{};
+  RAJA::RangeSegment x_range(0, n);
   RAJA::loop<threads_x>(ctx, x_range, [&](int i) {
     tensor<double, dim>      x_q;
     tensor<double, dim, dim> J_q;
@@ -147,13 +163,12 @@ SERAC_HOST_DEVICE auto batch_apply_qf(const lambda& qf, double t, const tensor<d
       }
       x_q[j] = x(j, i);
     }
-    auto qdata = qpt_data[i];
-    outputs[i] = qf(t, serac::tuple{x_q, J_q}, qdata, inputs[i]...);
+    auto qdata      = qpt_data[i];
+    (*qf_output)[i] = qf(t, serac::tuple{x_q, J_q}, qdata, inputs[i]...);
     if (update_state) {
       qpt_data[i] = qdata;
     }
   });
-  return outputs;
 }
 
 template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, typename test_element_type,
@@ -168,11 +183,12 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
 {
   // mfem provides this information as opaque arrays of doubles,
   // so we reinterpret the pointer with
-  using X_Type                     = typename batched_position<geom, Q>::type;
-  using J_Type                     = typename batched_jacobian<geom, Q>::type;
-  auto                           r = reinterpret_cast<typename test_element_type::dof_type*>(outputs);
-  auto                           x = const_cast<X_Type*>(reinterpret_cast<const X_Type*>(positions));
-  auto                           J = const_cast<J_Type*>(reinterpret_cast<const J_Type*>(jacobians));
+  using X_Type = typename batched_position<geom, Q>::type;
+  using J_Type = typename batched_jacobian<geom, Q>::type;
+  auto r       = reinterpret_cast<typename test_element_type::dof_type*>(outputs);
+  auto x       = const_cast<X_Type*>(reinterpret_cast<const X_Type*>(positions));
+  auto J       = const_cast<J_Type*>(reinterpret_cast<const J_Type*>(jacobians));
+
   TensorProductQuadratureRule<Q> rule{};
 
   auto qpts_per_elem = num_quadrature_points(geom, Q);
@@ -187,10 +203,8 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
 
 #ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   std::string device_name = "DEVICE";
-  auto        device_r    = copy_data(r, serac::size(*r) * sizeof(double), device_name);
 #else
-  std::string                           device_name = "HOST";
-  typename test_element_type::dof_type* device_r    = r;
+  std::string device_name = "HOST";
 #endif
 
   auto&           rm        = umpire::ResourceManager::getInstance();
@@ -199,8 +213,21 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
   interpolate_out_type* interpolate_result =
       static_cast<interpolate_out_type*>(allocator.allocate(sizeof(interpolate_out_type) * num_elements));
 
+  using qf_outputs_type =
+      typename QFunctionOutputHelper<lambda_type, state_type, dimension<0>(X_Type{}), dimension<1>(X_Type{}),
+                                     decltype(get<indices>(qf_inputs_type{}))...>::type;
+  qf_outputs_type* qf_outputs =
+      static_cast<qf_outputs_type*>(allocator.allocate(sizeof(qf_outputs_type) * num_elements));
+
   rm.memset(qf_inputs, 0);
+  rm.memset(qf_outputs, 0);
   rm.memset(interpolate_result, 0);
+
+  if (std::is_same<forall_policy, RAJA::seq_exec>::value) {
+    std::cout << "seq\n";
+  } else {
+    std::cout << "cud\n";
+  }
 
   auto e_range = RAJA::TypedRangeSegment<uint32_t>(0, num_elements);
   // for each element in the domain
@@ -211,8 +238,8 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
             ctx, e_range,
             // The explicit capture list is needed here because the capture occurs in a function template with a
             // variadic non-type parameter.
-            [&ctx, t, J, x, u, trial_elements, qf, qpts_per_elem, rule, device_r, qf_state, elements, qf_derivatives,
-             qf_inputs, interpolate_result, update_state](uint32_t e) {
+            [&ctx, t, J, x, u, trial_elements, qf, qpts_per_elem, rule, r, qf_state, elements, qf_derivatives,
+             qf_inputs, qf_outputs, interpolate_result, update_state](uint32_t e) {
               (void)qf_state;
               (void)qf_derivatives;
               (void)update_state;
@@ -245,46 +272,45 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
               // note: the weird immediately-invoked lambda expression is
               // a workaround for a bug in GCC(<12.0) where it fails to
               // decide which function overload to use, and crashes
-              auto qf_outputs_lambda = [&]() {
-                if constexpr (std::is_same_v<state_type, Nothing>) {
-                  return batch_apply_qf_no_qdata(qf, t, x[e], J[e], ctx, get<indices>(qf_inputs[e])...);
-                }
-                if constexpr (!std::is_same_v<state_type, Nothing>) {
-                  return batch_apply_qf(qf, t, x[e], J[e], &qf_state(e, 0), update_state, ctx,
-                                        get<indices>(qf_inputs[e])...);
-                }
-              };
-              // RAJA_TEAM_SHARED
-              decltype(qf_outputs_lambda()) qf_outputs;
-              qf_outputs = qf_outputs_lambda();
+              if constexpr (std::is_same_v<state_type, Nothing>) {
+                batch_apply_qf_no_qdata(qf, t, x[e], J[e], &(qf_outputs[e]), ctx, get<indices>(qf_inputs[e])...);
+              }
+
+              if constexpr (!std::is_same_v<state_type, Nothing>) {
+                batch_apply_qf(qf, t, x[e], J[e], &(qf_outputs[e]), &qf_state(e, 0), update_state, ctx,
+                               get<indices>(qf_inputs[e])...);
+              }
               ctx.teamSync();
 
               // use J to transform sources / fluxes on the physical element
               // back to the corresponding sources / fluxes on the parent element
-              physical_to_parent<test_element_type::family>(qf_outputs, J, e, ctx);
+              physical_to_parent<test_element_type::family>(qf_outputs[e], J, e, ctx);
+              ctx.teamSync();
 
               // write out the q-function derivatives after applying the
               // physical_to_parent transformation, so that those transformations
               // won't need to be applied in the action_of_gradient and element_gradient kernels
               if constexpr (differentiation_index != serac::NO_DIFFERENTIATION) {
-                RAJA::RangeSegment x_range(0, leading_dimension(qf_outputs));
+                RAJA::RangeSegment x_range(0, leading_dimension(qf_outputs[e]));
                 RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
-                  qf_derivatives[e * uint32_t(qpts_per_elem) + uint32_t(q)] = get_gradient(qf_outputs[q]);
+                  qf_derivatives[e * uint32_t(qpts_per_elem) + uint32_t(q)] = get_gradient(qf_outputs[e][q]);
                 });
               }
               ctx.teamSync();
 
               // (batch) integrate the material response against the test-space basis functions
-              test_element_type::integrate(get_value(qf_outputs), rule, &device_r[elements[e]], ctx);
+              test_element_type::integrate(get_value(qf_outputs[e]), rule, &r[elements[e]], ctx);
+              ctx.teamSync();
             });
       });
+  RAJA::forall<forall_policy>(RAJA::RangeSegment(0, 1), [=] SERAC_HOST_DEVICE(int) {
+    printf("printing r\n");
+    print(*r);
+  });
 
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  rm.copy(r, device_r);
-  allocator.deallocate(device_r);
-#endif
   allocator.deallocate(qf_inputs);
   allocator.deallocate(interpolate_result);
+  allocator.deallocate(qf_outputs);
 }
 
 //clang-format off
@@ -306,14 +332,15 @@ SERAC_HOST_DEVICE auto chain_rule(const S& dfdx, const T& dx)
 //clang-format on
 
 template <bool is_QOI, typename derivative_type, int n, typename T>
-SERAC_HOST_DEVICE tensor<decltype(chain_rule<is_QOI>(derivative_type{}, T{})), n> batch_apply_chain_rule(
-    derivative_type* qf_derivatives, const tensor<T, n>& inputs, const RAJA::LaunchContext& ctx)
+SERAC_HOST_DEVICE void batch_apply_chain_rule(derivative_type* qf_derivatives, const tensor<T, n>& inputs,
+                                              tensor<decltype(chain_rule<is_QOI>(derivative_type{}, T{})), n>& outputs,
+                                              const RAJA::LaunchContext&                                       ctx)
 {
   using return_type = decltype(chain_rule<is_QOI>(derivative_type{}, T{}));
-  tensor<return_type, n> outputs{};
-  RAJA::RangeSegment     i_range(0, n);
+  // tensor<return_type, n> outputs{};
+  RAJA::RangeSegment i_range(0, n);
   RAJA::loop<threads_x>(ctx, i_range, [&](int i) { outputs[i] = chain_rule<is_QOI>(qf_derivatives[i], inputs[i]); });
-  return outputs;
+  // return tensor<return_type, n> {};
 }
 
 /**
@@ -362,7 +389,7 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
 
   using qf_inputs_type = decltype(trial_element::template interpolate_output_helper<Q>());
 
-// clang-format off
+  // clang-format off
 #ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   std::string device_name = "DEVICE";
 #else
@@ -375,21 +402,26 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
   qf_inputs_type* qf_inputs = static_cast<qf_inputs_type*>(allocator.allocate(sizeof(qf_inputs_type) * num_elements));
   rm.memset(qf_inputs, 0);
   // This typedef is needed to declare qf_outputs in shared memory.
-  using qf_outputs_type = decltype(batch_apply_chain_rule<is_QOI>(qf_derivatives, *qf_inputs, RAJA::LaunchContext{}));
+  // using qf_outputs_type = typename BatchApplyChainRule<is_QOI, derivatives_type, num_qpts, typename
+  // trial_element::qf_input_type>::type;
+  using chain_rule_dtype = decltype(chain_rule<is_QOI>(derivatives_type{}, typename trial_element::qf_input_type{}));
+  using qf_outputs_type  = tensor<chain_rule_dtype, num_qpts>;
 
-  // for each element in the domain
-  RAJA::launch<launch_policy>(
-      RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_X, BLOCK_Y, BLOCK_Z)),
-      [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
-        RAJA::loop<teams_e>(ctx, e_range, [=](int e) {
-          // (batch) interpolate each quadrature point's value
-          trial_element::interpolate(du[elements[e]], rule, qf_inputs, ctx);
-          RAJA_TEAM_SHARED qf_outputs_type qf_outputs;
-          qf_outputs = batch_apply_chain_rule<is_QOI>(qf_derivatives + e * num_qpts, *qf_inputs, ctx);
+  //  for each element in the domain
+  RAJA::launch<launch_policy>(RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_SZ)),
+                              [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
+                                RAJA::loop<teams_e>(ctx, e_range, [&](int e) {
+                                  // (batch) interpolate each quadrature point's value
+                                  trial_element::interpolate(du[elements[e]], rule, &(qf_inputs[e]), ctx);
+                                  ctx.teamSync();
 
-          test_element::integrate(qf_outputs, rule, &dr[elements[e]], ctx);
-        });
-      });
+                                  RAJA_TEAM_SHARED qf_outputs_type qf_outputs;
+                                  batch_apply_chain_rule<is_QOI>(qf_derivatives + e * num_qpts, qf_inputs[e],
+                                                                 qf_outputs, ctx);
+                                  ctx.teamSync();
+                                  test_element::integrate(qf_outputs, rule, &dr[elements[e]], ctx);
+                                });
+                              });
   rm.deallocate(qf_inputs);
 }
 
@@ -433,6 +465,18 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
   constexpr int                            nquad = num_quadrature_points(g, Q);
   constexpr TensorProductQuadratureRule<Q> rule{};
 
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+  std::string device_name = "DEVICE";
+#else
+  std::string device_name = "HOST";
+#endif
+
+  auto& rm        = umpire::ResourceManager::getInstance();
+  auto  allocator = rm.getAllocator(device_name);
+  // TODO(cuda): Use a dynamic shared memory buffer to avoid allocating device memory here.
+  tensor<padded_derivative_type, nquad>* derivatives = static_cast<tensor<padded_derivative_type, nquad>*>(
+      allocator.allocate(sizeof(tensor<padded_derivative_type, nquad>) * num_elements));
+
   // for each element in the domain
   RAJA::launch<launch_policy>(
       RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_SZ)),
@@ -442,32 +486,32 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
           [[maybe_unused]] auto* output_ptr =
               reinterpret_cast<typename test_element::dof_type*>(&dK(elements[e], 0, 0));
 
-          RAJA::RangeSegment                                         x_range(0, nquad);
-          /*RAJA_TEAM_SHARED*/ tensor<padded_derivative_type, nquad> derivatives;
-          RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
-            if constexpr (is_QOI_2) {
-              get<0>(derivatives(q)) = qf_derivatives[e * nquad + uint32_t(q)];
-            }
-            if constexpr (!is_QOI_2) {
-              derivatives(q) = qf_derivatives[e * nquad + uint32_t(q)];
+          RAJA::RangeSegment x_range(0, nquad);
+          RAJA::loop<threads_x>(ctx, x_range, [&](int /*q*/) {
+            for (int q = 0; q < nquad; ++q) {
+              if constexpr (is_QOI_2) {
+                get<0>(derivatives[e](q)) = qf_derivatives[e * nquad + uint32_t(q)];
+              }
+              if constexpr (!is_QOI_2) {
+                derivatives[e](q) = qf_derivatives[e * nquad + uint32_t(q)];
+              }
             }
           });
 
           ctx.teamSync();
 
+          RAJA_TEAM_SHARED typename trial_element::template batch_apply_shape_fn_output<padded_derivative_type, Q>::type
+              source_and_flux;
           for (int J = 0; J < trial_element::ndof; ++J) {
-            decltype(trial_element::batch_apply_shape_fn(J, derivatives, rule, ctx)) source_and_flux;
-            source_and_flux = trial_element::batch_apply_shape_fn(J, derivatives, rule, ctx);
+            trial_element::batch_apply_shape_fn(J, derivatives[e], &source_and_flux, rule, ctx);
             ctx.teamSync();
-            print(source_and_flux);
-            test_element::integrate(source_and_flux, rule, output_ptr + J, ctx, trial_element::ndof);
-          }
 
-          ctx.teamSync();
+            test_element::integrate(source_and_flux, rule, output_ptr + J, ctx, trial_element::ndof);
+            ctx.teamSync();
+          }
         });
       });
-  axom::Array<double, 3, axom::MemorySpace::Host> bar = dK;
-  std::cout << bar << std::endl;
+  rm.deallocate(derivatives);
 }
 
 template <uint32_t wrt, int Q, mfem::Geometry::Type geom, typename signature, typename lambda_type, typename state_type,

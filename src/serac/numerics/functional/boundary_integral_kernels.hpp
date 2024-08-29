@@ -189,10 +189,10 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
 
 #ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   std::string device_name = "DEVICE";
-  auto        device_r    = copy_data(r, serac::size(*r) * sizeof(double), device_name);
+  // auto        device_r    = copy_data(r, serac::size(*r) * sizeof(double), device_name);
 #else
-  std::string                      device_name = "HOST";
-  typename test_element::dof_type* device_r    = r;
+  std::string device_name = "HOST";
+  // typename test_element::dof_type* device_r    = r;
 #endif
 
   auto&           rm        = umpire::ResourceManager::getInstance();
@@ -214,7 +214,7 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
             ctx, e_range,
             // The explicit capture list is needed here because the capture occurs in a function
             // template with a variadic non-type parameter.
-            [&ctx, t, J, x, u, qf, trial_elements, qpts_per_elem, rule, device_r, elements, qf_derivatives, qf_inputs,
+            [&ctx, t, J, x, u, qf, trial_elements, qpts_per_elem, rule, r, elements, qf_derivatives, qf_inputs,
              interpolate_result](uint32_t e) {
               // These casts are needed to suppres -Werror compilation errors
               // caused by the explicit capture above.
@@ -254,12 +254,12 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
               ctx.teamSync();
 
               // (batch) integrate the material response against the test-space basis functions
-              test_element::integrate(get_value(qf_outputs), rule, &device_r[elements[e]], ctx);
+              test_element::integrate(get_value(qf_outputs), rule, &r[elements[e]], ctx);
             });
       });
 #ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  rm.copy(r, device_r);
-  allocator.deallocate(device_r);
+  // rm.copy(r, device_r);
+  // allocator.deallocate(device_r);
 #endif
   allocator.deallocate(qf_inputs);
   allocator.deallocate(interpolate_result);
@@ -332,7 +332,7 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
 #ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   std::string device_name = "DEVICE";
 #else
-  std::string                      device_name = "HOST";
+  std::string device_name = "HOST";
 #endif
 
   auto&           rm        = umpire::ResourceManager::getInstance();

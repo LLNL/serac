@@ -39,6 +39,14 @@ struct finite_element<mfem::Geometry::SEGMENT, H1<p, c> > {
   using residual_type =
       typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
 
+  template <typename T, int q>
+  struct batch_apply_shape_fn_output {
+    using source_t = decltype(get<0>(get<0>(T{})) + get<1>(get<0>(T{})));
+    using flux_t   = decltype(get<0>(get<1>(T{})) + get<1>(get<1>(T{})));
+
+    using type = tensor<tuple<source_t, flux_t>, q>;
+  };
+
   SERAC_HOST_DEVICE static constexpr tensor<double, ndof> shape_functions(double xi)
   {
     return GaussLobattoInterpolation<ndof>(xi);
@@ -96,18 +104,13 @@ struct finite_element<mfem::Geometry::SEGMENT, H1<p, c> > {
   }
 
   template <typename T, int q>
-  RAJA_HOST_DEVICE static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int jx, tensor<T, q> input,
-                                                                     const TensorProductQuadratureRule<q>&,
-                                                                     RAJA::LaunchContext)
+  RAJA_HOST_DEVICE static auto RAJA_HOST_DEVICE
+  batch_apply_shape_fn(int jx, tensor<T, q> input, typename batch_apply_shape_fn_output<T, q>::type* output,
+                       const TensorProductQuadratureRule<q>&, RAJA::LaunchContext)
   {
     static constexpr bool apply_weights = false;
     static constexpr auto B             = calculate_B<apply_weights, q>();
     static constexpr auto G             = calculate_G<apply_weights, q>();
-
-    using source_t = decltype(get<0>(get<0>(T{})) + get<1>(get<0>(T{})));
-    using flux_t   = decltype(get<0>(get<1>(T{})) + get<1>(get<1>(T{})));
-
-    tensor<tuple<source_t, flux_t>, q> output;
 
     for (int qx = 0; qx < q; qx++) {
       double phi_j      = B(qx, jx);
@@ -118,11 +121,10 @@ struct finite_element<mfem::Geometry::SEGMENT, H1<p, c> > {
       auto& d10 = get<0>(get<1>(input(qx)));
       auto& d11 = get<1>(get<1>(input(qx)));
 
-      output[qx] = {d00 * phi_j + d01 * dphi_j_dxi, d10 * phi_j + d11 * dphi_j_dxi};
+      (*output)[qx] = {d00 * phi_j + d01 * dphi_j_dxi, d10 * phi_j + d11 * dphi_j_dxi};
     }
-
-    return output;
   }
+
   template <int q>
   static auto interpolate_output_helper()
   {

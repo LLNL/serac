@@ -77,6 +77,7 @@ struct Integral {
       for (std::size_t i = 0; i < active_trial_spaces_.size(); i++) {
         inputs[i] = input_E[uint32_t(active_trial_spaces_[i])].GetBlock(geometry).Read();
       }
+      output_E.GetBlock(geometry) = 0.0;
       func(t, inputs, output_E.GetBlock(geometry).ReadWrite(), update_state);
     }
   }
@@ -98,6 +99,7 @@ struct Integral {
     // if this integral actually depends on the specified variable
     if (functional_to_integral_index_.count(differentiation_index) > 0) {
       for (auto& [geometry, func] : jvp_[functional_to_integral_index_.at(differentiation_index)]) {
+        output_E.GetBlock(geometry) = 0.0;
         func(input_E.GetBlock(geometry).Read(), output_E.GetBlock(geometry).ReadWrite());
       }
     }

@@ -42,6 +42,14 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c>> {
       typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim>>::type;
   using qf_input_type = tuple<value_type, derivative_type>;
 
+  template <typename in_t, int q>
+  struct batch_apply_shape_fn_output {
+    using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, dim>{}));
+    using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, dim>{}));
+
+    using type = tensor<tuple<source_t, flux_t>, q * q * q>;
+  };
+
   SERAC_HOST_DEVICE static constexpr tensor<double, ndof> shape_functions(tensor<double, dim> xi)
   {
     auto N_xi   = GaussLobattoInterpolation<p + 1>(xi[0]);
@@ -136,7 +144,8 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c>> {
   }
 
   template <typename in_t, int q>
-  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q * q> input,
+  static void RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q * q> input,
+                                                    typename batch_apply_shape_fn_output<in_t, q>::type* output,
                                                     const TensorProductQuadratureRule<q>&, RAJA::LaunchContext)
   {
     static constexpr bool apply_weights = false;
@@ -146,11 +155,6 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c>> {
     int jx = j % n;
     int jy = (j % (n * n)) / n;
     int jz = j / (n * n);
-
-    using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, dim>{}));
-    using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, dim>{}));
-
-    tensor<tuple<source_t, flux_t>, q * q * q> output;
 
     for (int qz = 0; qz < q; qz++) {
       for (int qy = 0; qy < q; qy++) {
@@ -165,12 +169,10 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c>> {
           auto& d10 = get<0>(get<1>(input(Q)));
           auto& d11 = get<1>(get<1>(input(Q)));
 
-          output[Q] = {d00 * phi_j + dot(d01, dphi_j_dxi), d10 * phi_j + dot(d11, dphi_j_dxi)};
+          (*output)[Q] = {d00 * phi_j + dot(d01, dphi_j_dxi), d10 * phi_j + dot(d11, dphi_j_dxi)};
         }
       }
     }
-
-    return output;
   }
 
   template <int q>

@@ -1427,35 +1427,40 @@ SERAC_HOST_DEVICE void contract(const tensor<S, m, n...>& A, const tensor<T, p, 
                                 int qy, int qz, bool accumulate = false)
 {
   constexpr int Adims[] = {m, n...};
-  for (int i0 = qz; i0 < n0; i0 += BLOCK_Z) {
-    for (int i1 = qy; i1 < n1; i1 += BLOCK_Y) {
-      for (int i2 = qx; i2 < n2; i2 += BLOCK_X) {
-        double sum = 0.0;
+  constexpr int Bdims[] = {p, q};
+  static_assert(sizeof...(n) < 3);
+  static_assert(Adims[l1] == Bdims[l2], "error: incompatible tensor dimensions");
+  static_assert(sizeof...(n) != 1);
+  using U = decltype(S{} * T{});
+  for (int i = qz; i < n0; i += BLOCK_Z) {
+    for (int j = qy; j < n1; j += BLOCK_Y) {
+      for (int k = qx; k < n2; k += BLOCK_X) {
+        U sum = 0.0;
 
-        for (int j = 0; j < Adims[l1]; j++) {
+        for (int l = 0; l < Adims[l1]; l++) {
           if constexpr (l1 == 0 && l2 == 0) {
-            sum += A(j, i1, i2) * B(j, i0);
+            sum += A(l, j, k) * B(l, i);
           }
           if constexpr (l1 == 1 && l2 == 0) {
-            sum += A(i0, j, i2) * B(j, i1);
+            sum += A(i, l, k) * B(l, j);
           }
           if constexpr (l1 == 2 && l2 == 0) {
-            sum += A(i0, i1, j) * B(j, i2);
+            sum += A(i, j, l) * B(l, k);
           }
           if constexpr (l1 == 0 && l2 == 1) {
-            sum += A(j, i1, i2) * B(i0, j);
+            sum += A(l, j, k) * B(i, l);
           }
           if constexpr (l1 == 1 && l2 == 1) {
-            sum += A(i0, j, i2) * B(i1, j);
+            sum += A(i, l, k) * B(j, l);
           }
           if constexpr (l1 == 2 && l2 == 1) {
-            sum += A(i0, i1, j) * B(i2, j);
+            sum += A(i, j, l) * B(k, l);
           }
         }
         if (accumulate) {
-          (*C)(i0, i1, i2) += sum;
+          (*C)(i, j, k) += sum;
         } else {
-          (*C)(i0, i1, i2) = sum;
+          (*C)(i, j, k) = sum;
         }
       }
     }
@@ -1471,13 +1476,6 @@ SERAC_HOST_DEVICE void contract(const zero&, const tensor<T, p, q>&, zero*, int,
 
 template <int l1, int l2, typename S, typename T, int p, int q, int n0, int n1, int n2>
 SERAC_HOST_DEVICE void contract(const zero&, const tensor<T, p, q>&, tensor<S, n0, n1, n2>*, int, int, int,
-                                [[maybe_unused]] bool accumulate = false)
-{
-  return;
-}
-
-template <int l1, int l2, typename S, int m, typename T, int p, int q, int... n>
-SERAC_HOST_DEVICE void contract(const tensor<S, m, n...>&, const tensor<T, p, q>&, zero*, int, int, int,
                                 [[maybe_unused]] bool accumulate = false)
 {
   return;
@@ -1789,16 +1787,31 @@ SERAC_HOST_DEVICE void print_shape(const tensor<T, m, n...>&)
 }
 
 template <typename T>
-SERAC_HOST_DEVICE void memset_tensor(T& A, T value)
+SERAC_HOST_DEVICE void memset_tensor(serac::zero&, T)
 {
-  A = value;
+}
+
+template <typename T, int m, int n>
+SERAC_HOST_DEVICE void memset_tensor(tensor<T, m, n>& A, T value, int qx, int qy, int)
+{
+  if (qx < m && qy < n) {
+    A(qx, qy) = value;
+  }
+}
+
+template <typename T, int m, int n, int l>
+SERAC_HOST_DEVICE void memset_tensor(tensor<T, m, n, l>& A, T value, int qx, int qy, int qz)
+{
+  if (qx < m && qy < n && qz < l) {
+    A(qx, qy, qz) = value;
+  }
 }
 
 template <typename T, int m, int... n>
-SERAC_HOST_DEVICE void memset_tensor(tensor<T, m, n...>& A, T value)
+SERAC_HOST_DEVICE void memset_tensor(tensor<T, m, n...>& A, T value, int qx, int qy, int qz)
 {
   for (int i = 0; i < m; ++i) {
-    memset_tensor(A[i], value);
+    memset_tensor(A[i], value, qx, qy, qz);
   }
 }
 
@@ -2099,127 +2112,6 @@ void deallocate(DataType* data, const std::string& destination)
 }  // namespace serac
 
 #if 0
-<<<<<<< HEAD
-// eigendecomposition for symmetric A
-//
-// based on "A robust algorithm for finding the eigenvalues and
-// eigenvectors of 3x3 symmetric matrices", by Scherzinger & Dohrmann
-__host__ __device__
-inline void eig(const r2tensor < 3, 3 > & A,
-                      r1tensor < 3 >    & eta,
-                      r2tensor < 3, 3 > & Q) {
-
-  for (int i = 0; i < 3; i++) {
-    eta(i) = 1.0;
-    for (int j = 0; j < 3; j++) {
-      Q(i,j) = (i == j);
-    }
-  }
-
-  auto A_dev = dev(A);
-
-  double J2 = I2(A_dev);
-  double J3 = I3(A_dev);
-
-  if (J2 > 0.0) {
-
-    // angle used to find eigenvalues
-    double tmp = (0.5 * J3) * pow(3.0 / J2, 1.5);
-    double alpha = acos(fmin(fmax(tmp, -1.0), 1.0)) / 3.0;
-
-    // consider the most distinct eigenvalue first
-    if (6.0 * alpha < M_PI) {
-      eta(0) = 2 * sqrt(J2 / 3.0) * cos(alpha);
-    } else {
-      eta(0) = 2 * sqrt(J2 / 3.0) * cos(alpha + 2.0 * M_PI / 3.0);
-    }
-
-    // find the eigenvector for that eigenvalue
-    r1tensor < 3 > r[3];
-
-    int imax = -1;
-    double norm_max = -1.0;
-
-    for (int i = 0; i < 3; i++) {
-
-      for (int j = 0; j < 3; j++) {
-        r[i](j) = A_dev(j,i) - (i == j) * eta(0);
-      }
-
-      double norm_r = norm(r[i]);
-      if (norm_max < norm_r) {
-        imax = i;
-        norm_max = norm_r;
-      }
-
-    }
-
-    r1tensor < 3 > s0, s1, t1, t2, v0, v1, v2, w;
-
-    s0 = normalize(r[imax]);
-    t1 = r[(imax+1)%3] - dot(r[(imax+1)%3], s0) * s0;
-    t2 = r[(imax+2)%3] - dot(r[(imax+2)%3], s0) * s0;
-    s1 = normalize((norm(t1) > norm(t2)) ? t1 : t2);
-
-    // record the first eigenvector
-    v0 = cross(s0, s1);
-    for (int i = 0; i < 3; i++) {
-      Q(i,0) = v0(i);
-    }
-
-    // get the other two eigenvalues by solving the
-    // remaining quadratic characteristic polynomial
-    auto A_dev_s0 = dot(A_dev, s0);
-    auto A_dev_s1 = dot(A_dev, s1);
-
-    double A11 = dot(s0, A_dev_s0);
-    double A12 = dot(s0, A_dev_s1);
-    double A21 = dot(s1, A_dev_s0);
-    double A22 = dot(s1, A_dev_s1);
-
-    double delta = 0.5 * signum(A11-A22) * sqrt((A11-A22)*(A11-A22) + 4*A12*A21);
-
-    eta(1) = 0.5 * (A11 + A22) - delta;
-    eta(2) = 0.5 * (A11 + A22) + delta;
-
-    // if the remaining eigenvalues are exactly the same
-    // then just use the basis for the orthogonal complement
-    // found earlier
-    if (fabs(delta) <= 1.0e-15) {
-
-      for (int i = 0; i < 3; i++){
-        Q(i,1) = s0(i);
-        Q(i,2) = s1(i);
-      }
-
-    // otherwise compute the remaining eigenvectors
-    } else {
-
-      t1 = A_dev_s0 - eta(1) * s0;
-      t2 = A_dev_s1 - eta(1) * s1;
-
-      w = normalize((norm(t1) > norm(t2)) ? t1 : t2);
-
-      v1 = normalize(cross(w, v0));
-      for (int i = 0; i < 3; i++) Q(i,1) = v1(i);
-
-      // define the last eigenvector as
-      // the direction perpendicular to the
-      // first two directions
-      v2 = normalize(cross(v0, v1));
-      for (int i = 0; i < 3; i++) Q(i,2) = v2(i);
-
-    }
-
-    // eta are actually eigenvalues of A_dev, so
-    // shift them to get eigenvalues of A
-    eta += tr(A) / 3.0;
-
-  }
-
-}
-=======
->>>>>>> develop
 
 inline float angle_between(const vec < 2 > & a, const vec < 2 > & b) {
   return acos(clip(dot(normalize(a), normalize(b)), -1.0f, 1.0f));

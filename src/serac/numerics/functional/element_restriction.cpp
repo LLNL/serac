@@ -5,13 +5,14 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/serac_config.hpp"
+#include "serac/infrastructure/accelerator.hpp"
 #include "serac/numerics/functional/element_restriction.hpp"
 
 #include "mfem.hpp"
 
 #include "serac/numerics/functional/geometry.hpp"
 
-std::vector<std::vector<int> > lexicographic_permutations(int p)
+std::vector<std::vector<int>> lexicographic_permutations(int p)
 {
   // p == 0 is admissible for L2 spaces, but lexicographic permutations
   // aren't needed in that corner case
@@ -19,7 +20,7 @@ std::vector<std::vector<int> > lexicographic_permutations(int p)
     return {};
   }
 
-  std::vector<std::vector<int> > output(mfem::Geometry::Type::NUM_GEOMETRIES);
+  std::vector<std::vector<int>> output(mfem::Geometry::Type::NUM_GEOMETRIES);
 
   {
     auto             P = mfem::H1_SegmentElement(p).GetLexicographicOrdering();
@@ -133,7 +134,7 @@ Array2D<int> face_permutations(mfem::Geometry::Type geom, int p)
   exit(1);
 }
 
-std::vector<Array2D<int> > geom_local_face_dofs(int p)
+std::vector<Array2D<int>> geom_local_face_dofs(int p)
 {
   // FullSimplify[InterpolatingPolynomial[{
   //   {{0, 2}, (p + 1) + p},
@@ -160,7 +161,7 @@ std::vector<Array2D<int> > geom_local_face_dofs(int p)
 
   auto hex_id = [p](int x, int y, int z) { return (p + 1) * ((p + 1) * z + y) + x; };
 
-  std::vector<Array2D<int> > output(mfem::Geometry::Type::NUM_GEOMETRIES);
+  std::vector<Array2D<int>> output(mfem::Geometry::Type::NUM_GEOMETRIES);
 
   Array2D<int> tris(3, p + 1);
   for (int k = 0; k <= p; k++) {
@@ -231,8 +232,8 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetElementRestriction(const mfem::F
   mfem::Mesh*      mesh = fes->GetMesh();
 
   // note: this assumes that all the elements are the same polynomial order
-  int                            p        = fes->GetElementOrder(0);
-  std::vector<std::vector<int> > lex_perm = lexicographic_permutations(p);
+  int                           p        = fes->GetElementOrder(0);
+  std::vector<std::vector<int>> lex_perm = lexicographic_permutations(p);
 
   uint64_t n = 0;
 
@@ -295,10 +296,10 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteEleme
   mfem::Table*     face_to_elem = mesh->GetFaceToElementTable();
 
   // note: this assumes that all the elements are the same polynomial order
-  int                            p               = fes->GetElementOrder(0);
-  Array2D<int>                   face_perm       = face_permutations(face_geom, p);
-  std::vector<Array2D<int> >     local_face_dofs = geom_local_face_dofs(p);
-  std::vector<std::vector<int> > lex_perm        = lexicographic_permutations(p);
+  int                           p               = fes->GetElementOrder(0);
+  Array2D<int>                  face_perm       = face_permutations(face_geom, p);
+  std::vector<Array2D<int>>     local_face_dofs = geom_local_face_dofs(p);
+  std::vector<std::vector<int>> lex_perm        = lexicographic_permutations(p);
 
   uint64_t n = 0;
 
@@ -465,9 +466,19 @@ void ElementRestriction::Gather(const mfem::Vector& L_vector, mfem::Vector& E_ve
   for (uint64_t i = 0; i < num_elements; i++) {
     for (uint64_t c = 0; c < components; c++) {
       for (uint64_t j = 0; j < nodes_per_elem; j++) {
-        uint64_t E_id       = (i * components + c) * nodes_per_elem + j;
-        uint64_t L_id       = GetVDof(dof_info(i, j), c).index();
-        E_vector[int(E_id)] = L_vector[int(L_id)];
+        uint64_t E_id  = (i * components + c) * nodes_per_elem + j;
+        uint64_t L_id  = GetVDof(dof_info(i, j), c).index();
+        auto     l_ptr = L_vector.Read();
+        auto     e_ptr = E_vector.ReadWrite();
+        // std::cout << "l vec space " << (int)(L_vector.GetMemory().GetMemoryType()) << std::endl;
+        // std::cout << "e vec space " << (int)(E_vector.GetMemory().GetMemoryType()) << std::endl;
+        // E_vector[int(E_id)] = L_vector[int(L_id)];
+        if (L_vector.GetMemory().GetMemoryType() != mfem::MemoryType::HOST) {
+          RAJA::forall<RAJA::cuda_exec<128>>(RAJA::RangeSegment(0, 1),
+                                             [=] SERAC_HOST_DEVICE(int idx) { e_ptr[int(E_id)] = l_ptr[int(L_id)]; });
+        } else {
+          E_vector[int(E_id)] = L_vector[int(L_id)];
+        }
       }
     }
   }
@@ -480,7 +491,17 @@ void ElementRestriction::ScatterAdd(const mfem::Vector& E_vector, mfem::Vector& 
       for (uint64_t j = 0; j < nodes_per_elem; j++) {
         uint64_t E_id = (i * components + c) * nodes_per_elem + j;
         uint64_t L_id = GetVDof(dof_info(i, j), c).index();
-        L_vector[int(L_id)] += E_vector[int(E_id)];
+        // std::cout << E_vector[int(E_id)] << std::endl;
+        auto l_ptr = L_vector.ReadWrite();
+        auto e_ptr = E_vector.Read();
+        // std::cout << "l vec space " << (int)(L_vector.GetMemory().GetMemoryType()) << std::endl;
+        // std::cout << "e vec space " << (int)(E_vector.GetMemory().GetMemoryType()) << std::endl;
+        if (L_vector.GetMemory().GetMemoryType() != mfem::MemoryType::HOST) {
+          RAJA::forall<RAJA::cuda_exec<128>>(RAJA::RangeSegment(0, 1),
+                                             [=] SERAC_HOST_DEVICE(int idx) { l_ptr[int(L_id)] += e_ptr[int(E_id)]; });
+        } else {
+          L_vector[int(L_id)] += E_vector[int(E_id)];
+        }
       }
     }
   }

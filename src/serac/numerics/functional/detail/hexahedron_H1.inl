@@ -39,6 +39,13 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
       typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim>>::type;
   using qf_input_type = tuple<value_type, derivative_type>;
 
+  template <typename in_t, int q>
+  struct batch_apply_shape_fn_output {
+    using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, dim>{}));
+    using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, dim>{}));
+    using type     = tensor<tuple<source_t, flux_t>, q * q * q>;
+  };
+
   SERAC_HOST_DEVICE static constexpr tensor<double, ndof> shape_functions(tensor<double, dim> xi)
   {
     auto N_xi   = GaussLobattoInterpolation<p + 1>(xi[0]);
@@ -133,7 +140,8 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
   }
 
   template <typename in_t, int q>
-  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q * q>                             input,
+  static void RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q * q> input,
+                                                    typename batch_apply_shape_fn_output<in_t, q>::type* output,
                                                     const TensorProductQuadratureRule<q>&, RAJA::LaunchContext ctx)
   {
     static constexpr bool apply_weights = false;
@@ -147,8 +155,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
     using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, dim>{}));
     using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, dim>{}));
 
-    tensor<tuple<source_t, flux_t>, q * q * q> output;
-    auto                                       x_range = RAJA::RangeSegment(0, q * q * q);
+    auto x_range = RAJA::RangeSegment(0, q * q * q);
     RAJA::loop<threads_x>(ctx, x_range, [&](int Q) {
       int qx = Q % q;
       int qy = (Q / q) % q;
@@ -163,13 +170,8 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
       auto& d10 = get<0>(get<1>(input(Q)));
       auto& d11 = get<1>(get<1>(input(Q)));
 
-      output[Q] = {d00 * phi_j + dot(d01, dphi_j_dxi), d10 * phi_j + dot(d11, dphi_j_dxi)};
-      // print(get<0>(output[Q]));
-      // print(get<1>(output[Q]));
+      (*output)[Q] = {d00 * phi_j + dot(d01, dphi_j_dxi), d10 * phi_j + dot(d11, dphi_j_dxi)};
     });
-    ctx.teamSync();
-
-    return output;
   }
 
   template <int q>
@@ -201,31 +203,19 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
 
     RAJA::RangeSegment x_range(0, BLOCK_SZ);
 
-#ifndef SERAC_USE_CUDA_KERNEL_EVALUATION
-    tensor<double, c, q, q, q>      value{};
-    tensor<double, c, dim, q, q, q> gradient{};
-    static constexpr auto           B = calculate_B<apply_weights, q>();
-    static constexpr auto           G = calculate_G<apply_weights, q>();
-
-    for (int i = 0; i < c; i++) {
-      auto A10 = contract<2, 1>(X[i], B);
-      auto A11 = contract<2, 1>(X[i], G);
-
-      auto A20 = contract<1, 1>(A10, B);
-      auto A21 = contract<1, 1>(A11, B);
-      auto A22 = contract<1, 1>(A10, G);
-
-      value(i)       = contract<0, 1>(A20, B);
-      gradient(i, 0) = contract<0, 1>(A21, B);
-      gradient(i, 1) = contract<0, 1>(A22, B);
-      gradient(i, 2) = contract<0, 1>(A20, G);
-    }
-#else
-
     RAJA_TEAM_SHARED tensor<double, c, q, q, q> value;
     RAJA_TEAM_SHARED tensor<double, c, dim, q, q, q> gradient;
     constexpr auto                                   B = calculate_B<apply_weights, q>();
     constexpr auto                                   G = calculate_G<apply_weights, q>();
+    RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
+      int qx = tid % BLOCK_X;
+      int qy = (tid / BLOCK_X) % BLOCK_Y;
+      int qz = tid / (BLOCK_X * BLOCK_Y);
+
+      memset_tensor(value, 0.0, qx, qy, qz);
+      memset_tensor(gradient, 0.0, qx, qy, qz);
+    });
+    ctx.teamSync();
     for (int i = 0; i < c; i++) {
       RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 1>(X[i], B)) A10;
       RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 1>(X[i], G)) A11;
@@ -236,29 +226,48 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
       RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
         int qx = tid % BLOCK_X;
         int qy = (tid / BLOCK_X) % BLOCK_Y;
-        int qz = (tid / (BLOCK_X * BLOCK_Y)) % BLOCK_Z;
-
+        int qz = tid / (BLOCK_X * BLOCK_Y);
+        memset_tensor(A20, 0.0, qx, qy, qz);
+        memset_tensor(A21, 0.0, qx, qy, qz);
+        memset_tensor(A22, 0.0, qx, qy, qz);
+        memset_tensor(A10, 0.0, qx, qy, qz);
+        memset_tensor(A11, 0.0, qx, qy, qz);
+        ctx.teamSync();
+      });
+      RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
+        int qx = tid % BLOCK_X;
+        int qy = (tid / BLOCK_X) % BLOCK_Y;
+        int qz = tid / (BLOCK_X * BLOCK_Y);
         // Perform actual contractions
         contract<2, 1>(X[i], B, &A10, qx, qy, qz);
         contract<2, 1>(X[i], G, &A11, qx, qy, qz);
-
         ctx.teamSync();
+      });
+
+      RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
+        int qx = tid % BLOCK_X;
+        int qy = (tid / BLOCK_X) % BLOCK_Y;
+        int qz = tid / (BLOCK_X * BLOCK_Y);
+
         contract<1, 1>(A10, B, &A20, qx, qy, qz);
-        contract<1, 1>(A10, G, &A22, qx, qy, qz);
         contract<1, 1>(A11, B, &A21, qx, qy, qz);
-
+        contract<1, 1>(A10, G, &A22, qx, qy, qz);
         ctx.teamSync();
+      });
+
+      RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
+        int qx = tid % BLOCK_X;
+        int qy = (tid / BLOCK_X) % BLOCK_Y;
+        int qz = tid / (BLOCK_X * BLOCK_Y);
 
         contract<0, 1>(A20, B, &value(i), qx, qy, qz);
         contract<0, 1>(A21, B, &gradient(i, 0), qx, qy, qz);
         contract<0, 1>(A22, B, &gradient(i, 1), qx, qy, qz);
         contract<0, 1>(A20, G, &gradient(i, 2), qx, qy, qz);
-
         ctx.teamSync();
       });
     }
 
-#endif
     // transpose the quadrature data into a flat tensor of tuples
 
     RAJA_TEAM_SHARED
@@ -282,6 +291,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
         }
       }
     });
+    ctx.teamSync();
     if (output_ptr) {
       RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
         if (tid < serac::size(output.one_dimensional)) {
@@ -309,10 +319,10 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
 
     RAJA::RangeSegment x_range(0, BLOCK_SZ);
 
+    RAJA_TEAM_SHARED s_buffer_type source;
+    RAJA_TEAM_SHARED f_buffer_type flux;
     for (int j = 0; j < ntrial; j++) {
       for (int i = 0; i < c; i++) {
-        s_buffer_type source;
-        f_buffer_type flux;
         ctx.teamSync();
         RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
           if (tid >= q * q * q) {
@@ -321,57 +331,31 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
           int qx = tid % q;
           int qy = (tid / q) % q;
           int qz = tid / (q * q);
-          int Q  = (qz * q + qy) * q + qx;
           if constexpr (!is_zero<source_type>{}) {
-            source(qz, qy, qx) = reinterpret_cast<const double*>(&get<SOURCE>(qf_output[Q]))[i * ntrial + j];
+            source(qz, qy, qx) = reinterpret_cast<const double*>(&get<SOURCE>(qf_output[tid]))[i * ntrial + j];
           }
         });
         for (int k = 0; k < dim; k++) {
-          // RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
-          //   if (tid >= q * q * q) {
-          //     return;
-          //   }
-          //   int qx = tid % q;
-          //   int qy = (tid / q) % q;
-          //   int qz = tid / (q * q);
-          for (int qz = 0; qz < q; qz++) {
-            for (int qy = 0; qy < q; qy++) {
-              for (int qx = 0; qx < q; qx++) {
-                int Q = (qz * q + qy) * q + qx;
-                if constexpr (!is_zero<flux_type>{}) {
-                  flux(k, qz, qy, qx) =
-                      reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
-                  // printf("%f\n", reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial +
-                  // j]);
-                }
-              }
+          ctx.teamSync();
+          RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
+            if (tid >= q * q * q) {
+              return;
             }
-          }
-          //});
+            int qx = tid % q;
+            int qy = (tid / q) % q;
+            int qz = tid / (q * q);
+            int Q  = (qz * q + qy) * q + qx;
+            if constexpr (!is_zero<flux_type>{}) {
+              flux(k, qz, qy, qx) =
+                  reinterpret_cast<const double*>(&get<FLUX>(qf_output[Q]))[(i * dim + k) * ntrial + j];
+            }
+          });
         }
         ctx.teamSync();
 
         constexpr auto B = calculate_B<apply_weights, q>();
         constexpr auto G = calculate_G<apply_weights, q>();
-        //#ifndef SERAC_USE_CUDA_KERNEL_EVALUATION
-        //        printf("printing B\n");
-        //        print(B);
-        //        printf("printing G\n");
-        //        print(G);
-        //        printf("printing flux\n");
-        //        print(flux);
-        //        printf("printing src\n");
-        //        print(source);
-        //
-        //        auto           A20 = contract<2, 0>(source, B) + contract<2, 0>(flux(0), G);
-        //        auto           A21 = contract<2, 0>(flux(1), B);
-        //        auto           A22 = contract<2, 0>(flux(2), B);
-        //
-        //        auto A10 = contract<1, 0>(A20, B) + contract<1, 0>(A21, G);
-        //        auto A11 = contract<1, 0>(A22, B);
-        //
-        //        element_residual[j * step](i) += contract<0, 0>(A10, B) + contract<0, 0>(A11, G);
-        //#else
+
         RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 0>(source, B))  A20;
         RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 0>(flux(1), B)) A21;
         RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 0>(flux(2), B)) A22;
@@ -379,27 +363,22 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
         RAJA_TEAM_SHARED decltype(deduce_contract_return_type<1, 0>(A22, B))     A11;
 
         RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
-          int qx = tid % q;
-          int qy = (tid / q) % q;
-          int qz = tid / (q * q);
+          int qx = tid % BLOCK_X;
+          int qy = (tid / BLOCK_X) % BLOCK_Y;
+          int qz = tid / (BLOCK_X * BLOCK_Y);
 
-          if (tid == 0) {
-            // printf("printing B\n");
-            // print(B);
-            // printf("printing G\n");
-            // print(G);
-            // printf("printing flux\n");
-            // print(flux);
-            // printf("printing src\n");
-            // print(source);
-            memset_tensor(A20, 0.0);
-            memset_tensor(A21, 0.0);
-            memset_tensor(A22, 0.0);
-            memset_tensor(A10, 0.0);
-            memset_tensor(A11, 0.0);
-          }
+          memset_tensor(A20, 0.0, qx, qy, qz);
+          memset_tensor(A21, 0.0, qx, qy, qz);
+          memset_tensor(A22, 0.0, qx, qy, qz);
+          memset_tensor(A10, 0.0, qx, qy, qz);
+          memset_tensor(A11, 0.0, qx, qy, qz);
           ctx.teamSync();
+        });
 
+        RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
+          int qx = tid % BLOCK_X;
+          int qy = (tid / BLOCK_X) % BLOCK_Y;
+          int qz = tid / (BLOCK_X * BLOCK_Y);
           contract<2, 0>(source, B, &A20, qx, qy, qz);
           ctx.teamSync();
           contract<2, 0>(flux(0), G, &A20, qx, qy, qz, true);
@@ -409,10 +388,11 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
           contract<2, 0>(flux(2), B, &A22, qx, qy, qz);
           ctx.teamSync();
         });
+
         RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
-          int qx = tid % q;
-          int qy = (tid / q) % q;
-          int qz = tid / (q * q);
+          int qx = tid % BLOCK_X;
+          int qy = (tid / BLOCK_X) % BLOCK_Y;
+          int qz = tid / (BLOCK_X * BLOCK_Y);
           contract<1, 0>(A21, G, &A10, qx, qy, qz);
           ctx.teamSync();
           contract<1, 0>(A20, B, &A10, qx, qy, qz, true);
@@ -420,16 +400,16 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
           contract<1, 0>(A22, B, &A11, qx, qy, qz);
           ctx.teamSync();
         });
+
         RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
-          int qx = tid % q;
-          int qy = (tid / q) % q;
-          int qz = tid / (q * q);
+          int qx = tid % BLOCK_X;
+          int qy = (tid / BLOCK_X) % BLOCK_Y;
+          int qz = tid / (BLOCK_X * BLOCK_Y);
           contract<0, 0>(A10, B, &(element_residual[j * step](i)), qx, qy, qz, true);
           ctx.teamSync();
           contract<0, 0>(A11, G, &(element_residual[j * step](i)), qx, qy, qz, true);
           ctx.teamSync();
         });
-        //#endif
       }
     }
   }

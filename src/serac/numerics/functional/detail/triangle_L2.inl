@@ -42,6 +42,14 @@ struct finite_element<mfem::Geometry::TRIANGLE, L2<p, c>> {
       typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim>>::type;
   using qf_input_type = tuple<value_type, derivative_type>;
 
+  template <typename in_t, int q>
+  struct batch_apply_shape_fn_output {
+    using source_t         = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, 2>{}));
+    using flux_t           = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, 2>{}));
+    static constexpr int Q = q * (q + 1) / 2;
+    using type             = tensor<tuple<source_t, flux_t>, Q>;
+  };
+
   /*
 
     interpolation nodes and their associated numbering:
@@ -252,16 +260,11 @@ struct finite_element<mfem::Geometry::TRIANGLE, L2<p, c>> {
 
   template <typename in_t, int q>
   static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q*(q + 1) / 2> input,
+                                                    typename batch_apply_shape_fn_output<in_t, q>::type* output,
                                                     const TensorProductQuadratureRule<q>&, RAJA::LaunchContext)
   {
-    using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, 2>{}));
-    using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, 2>{}));
-
-    constexpr auto xi = GaussLegendreNodes<q, mfem::Geometry::TRIANGLE>();
-
-    static constexpr int               Q = q * (q + 1) / 2;
-    tensor<tuple<source_t, flux_t>, Q> output;
-
+    constexpr auto       xi = GaussLegendreNodes<q, mfem::Geometry::TRIANGLE>();
+    static constexpr int Q  = q * (q + 1) / 2;
     for (int i = 0; i < Q; i++) {
       double              phi_j      = shape_function(xi[i], j);
       tensor<double, dim> dphi_j_dxi = shape_function_gradient(xi[i], j);
@@ -271,10 +274,8 @@ struct finite_element<mfem::Geometry::TRIANGLE, L2<p, c>> {
       auto& d10 = get<0>(get<1>(input(i)));
       auto& d11 = get<1>(get<1>(input(i)));
 
-      output[i] = {d00 * phi_j + dot(d01, dphi_j_dxi), d10 * phi_j + dot(d11, dphi_j_dxi)};
+      (*output)[i] = {d00 * phi_j + dot(d01, dphi_j_dxi), d10 * phi_j + dot(d11, dphi_j_dxi)};
     }
-
-    return output;
   }
 
   template <int q>

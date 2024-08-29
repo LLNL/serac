@@ -38,6 +38,14 @@ struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
   using residual_type =
       typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
 
+  template <typename in_t, int q>
+  struct batch_apply_shape_fn_output {
+    using source_t = decltype(dot(get<0>(get<0>(in_t{})), tensor<double, 2>{}) + get<1>(get<0>(in_t{})) * double{});
+    using flux_t   = decltype(dot(get<0>(get<1>(in_t{})), tensor<double, 2>{}) + get<1>(get<1>(in_t{})) * double{});
+
+    using type = tensor<tuple<source_t, flux_t>, q * q>;
+  };
+
   // this is how mfem provides the data to us for these elements
   // if, instead, it was stored as simply tensor< double, 2, p + 1, p >,
   // the interpolation/integrate implementation would be considerably shorter
@@ -245,7 +253,8 @@ struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
   }
 
   template <typename in_t, int q>
-  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q> input,
+  static void RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q> input,
+                                                    typename batch_apply_shape_fn_output<in_t, q>::type* output,
                                                     const TensorProductQuadratureRule<q>&, RAJA::LaunchContext)
   {
     constexpr bool                     apply_weights = false;
@@ -263,11 +272,6 @@ struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
       jy = (j % ((p + 1) * p)) / n;
     }
 
-    using source_t = decltype(dot(get<0>(get<0>(in_t{})), tensor<double, 2>{}) + get<1>(get<0>(in_t{})) * double{});
-    using flux_t   = decltype(dot(get<0>(get<1>(in_t{})), tensor<double, 2>{}) + get<1>(get<1>(in_t{})) * double{});
-
-    tensor<tuple<source_t, flux_t>, q * q> output;
-
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
         tensor<double, 2> phi_j{(dir == 0) * B1(qx, jx) * B2(qy, jy), (dir == 1) * B1(qy, jy) * B2(qx, jx)};
@@ -280,11 +284,9 @@ struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
         auto& d10 = get<0>(get<1>(input(Q)));
         auto& d11 = get<1>(get<1>(input(Q)));
 
-        output[Q] = {dot(d00, phi_j) + d01 * curl_phi_j, dot(d10, phi_j) + d11 * curl_phi_j};
+        (*output)[Q] = {dot(d00, phi_j) + d01 * curl_phi_j, dot(d10, phi_j) + d11 * curl_phi_j};
       }
     }
-
-    return output;
   }
 
   template <int q>

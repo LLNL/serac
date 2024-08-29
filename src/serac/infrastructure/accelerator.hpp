@@ -78,6 +78,7 @@ enum class ExecutionSpace
 using threads_x     = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 using teams_e       = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
 using launch_policy = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
+using forall_policy = RAJA::cuda_exec<128>;
 
 #else
 
@@ -87,6 +88,7 @@ using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
 using teams_e = RAJA::LoopPolicy<RAJA::seq_exec>;
 /// @brief Alias for GPU kernel launch policy.
 using launch_policy = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
+using forall_policy = RAJA::seq_exec;
 
 #endif
 
