@@ -21,6 +21,10 @@
 
 #include "mfem.hpp"
 
+#ifdef SERAC_USE_PETSC
+#include "petsc.h"
+#endif
+
 namespace serac {
 
 std::pair<int, int> getMPIInfo(MPI_Comm comm)
