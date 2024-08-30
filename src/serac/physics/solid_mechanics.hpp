@@ -190,6 +190,7 @@ public:
         geom_nonlin_(geom_nonlin),
         use_warm_start_(use_warm_start)
   {
+    SERAC_MARK_FUNCTION;
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension, {0}, and runtime mesh dimension, {1}, mismatch", dim,
                                          mesh_.Dimension()));
@@ -1117,6 +1118,7 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
+          SERAC_MARK_FUNCTION;
           const mfem::Vector res =
               (*residual_)(time_, shape_displacement_, u, acceleration_, *parameters_[parameter_indices].state...);
 
@@ -1129,6 +1131,7 @@ public:
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
+          SERAC_MARK_FUNCTION;
           auto [r, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(u), acceleration_,
                                         *parameters_[parameter_indices].state...);
           J_             = assemble(drdu);
@@ -1239,6 +1242,7 @@ public:
   /// @overload
   void advanceTimestep(double dt) override
   {
+    SERAC_MARK_FUNCTION;
     SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in SolidMechanics.");
 
     // If this is the first call, initialize the previous parameter values as the initial values
@@ -1722,6 +1726,8 @@ protected:
    */
   void warmStartDisplacement(double dt)
   {
+    SERAC_MARK_FUNCTION;
+
     du_ = 0.0;
     for (auto& bc : bcs_.essentials()) {
       // apply the future boundary conditions, but use the most recent Jacobians stiffness.

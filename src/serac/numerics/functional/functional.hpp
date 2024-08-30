@@ -220,6 +220,8 @@ public:
              std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
       : update_qdata_(false), test_space_(test_fes), trial_space_(trial_fes)
   {
+    SERAC_MARK_FUNCTION;
+
     auto mem_type = mfem::Device::GetMemoryType();
 
     for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
@@ -543,6 +545,7 @@ private:
           trial_space_(f.trial_space_[which]),
           df_(f.test_space_->GetTrueVSize())
     {
+      SERAC_MARK_FUNCTION;
     }
 
     /**
