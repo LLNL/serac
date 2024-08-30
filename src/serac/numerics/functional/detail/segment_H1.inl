@@ -29,6 +29,7 @@ struct finite_element<mfem::Geometry::SEGMENT, H1<p, c> > {
   static constexpr int SOURCE = 0, FLUX = 1;
 
   using dof_type = tensor<double, c, n>;
+  using dof_type_if = dof_type;
 
   using value_type      = typename std::conditional<components == 1, double, tensor<double, components> >::type;
   using derivative_type = value_type;

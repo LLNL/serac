@@ -222,7 +222,7 @@ public:
   {
     auto mem_type = mfem::Device::GetMemoryType();
 
-    for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
+    for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements, Domain::Type::InteriorFaces}) {
       input_E_[type].resize(num_trial_spaces);
     }
 
@@ -232,11 +232,15 @@ public:
       input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
 
       // L->E
-      for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
+      for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements, Domain::Type::InteriorFaces}) {
         if (type == Domain::Type::Elements) {
           G_trial_[type][i] = BlockElementRestriction(trial_fes[i]);
-        } else {
+        }
+        if (type == Domain::Type::BoundaryElements) {
           G_trial_[type][i] = BlockElementRestriction(trial_fes[i], FaceType::BOUNDARY);
+        }
+        if (type == Domain::Type::InteriorFaces) {
+          G_trial_[type][i] = BlockElementRestriction(trial_fes[i], FaceType::INTERIOR);
         }
 
         // note: we have to use "Update" here, as mfem::BlockVector's
@@ -246,11 +250,15 @@ public:
       }
     }
 
-    for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
+    for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements, Domain::Type::InteriorFaces}) {
       if (type == Domain::Type::Elements) {
         G_test_[type] = BlockElementRestriction(test_fes);
-      } else {
+      }
+      if (type == Domain::Type::BoundaryElements) {
         G_test_[type] = BlockElementRestriction(test_fes, FaceType::BOUNDARY);
+      }
+      if (type == Domain::Type::InteriorFaces) {
+        G_test_[type] = BlockElementRestriction(test_fes, FaceType::INTERIOR);
       }
 
       output_E_[type].Update(G_test_[type].bOffsets(), mem_type);

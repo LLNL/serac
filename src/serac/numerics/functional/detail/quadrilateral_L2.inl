@@ -32,6 +32,7 @@ struct finite_element<mfem::Geometry::SQUARE, L2<p, c> > {
       typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
 
   using dof_type = tensor<double, c, p + 1, p + 1>;
+  using dof_type_if = tensor<double, c, 2*ndof>;
 
   using value_type = typename std::conditional<components == 1, double, tensor<double, components> >::type;
   using derivative_type =
@@ -238,6 +239,37 @@ struct finite_element<mfem::Geometry::SQUARE, L2<p, c> > {
     }
 
     return output.one_dimensional;
+  }
+
+  // overload for two-sided interior face kernels
+  template <int q>
+  SERAC_HOST_DEVICE static auto interpolate(const dof_type_if& X, const TensorProductQuadratureRule<q>&)
+  {
+    static constexpr bool apply_weights = false;
+    static constexpr auto B             = calculate_B<apply_weights, q>();
+    static constexpr auto G             = calculate_G<apply_weights, q>();
+
+    tensor< tuple< tensor<double, c>, tensor<double, c> >, q * q> output;
+
+#if 0
+    tensor<double, c, q, q> value{};
+
+    // apply the shape functions
+    for (int i = 0; i < c; i++) {
+      auto A0 = contract<1, 1>(X[i], B);
+      value(i) = contract<0, 1>(A0, B);
+    }
+
+    for (int qy = 0; qy < q; qy++) {
+      for (int qx = 0; qx < q; qx++) {
+        for (int i = 0; i < c; i++) {
+          get<VALUE>(output.two_dimensional(qy, qx))[i] = value(i, qy, qx);
+        }
+      }
+    }
+#endif
+
+    return output;
   }
 
   // source can be one of: {zero, double, tensor<double,dim>, tensor<double,dim,dim>}

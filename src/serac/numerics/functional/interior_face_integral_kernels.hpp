@@ -50,27 +50,15 @@ struct QFunctionArgument<H1<p, c>, Dimension<dim>> {
 };
 
 /// @overload
-template <int p>
-struct QFunctionArgument<L2<p, 1>, Dimension<1>> {
+template <int p, int dim >
+struct QFunctionArgument<L2<p, 1>, Dimension<dim> > {
   using type = serac::tuple<double, double>;  ///< what will be passed to the q-function
 };
 
 /// @overload
-template <int p, int dim>
-struct QFunctionArgument<L2<p, 1>, Dimension<dim>> {
-  using type = serac::tuple<double, tensor<double, dim>>;  ///< what will be passed to the q-function
-};
-
-/// @overload
-template <int p, int c>
-struct QFunctionArgument<L2<p, c>, Dimension<1>> {
-  using type = serac::tuple<tensor<double, c>, tensor<double, c>>;  ///< what will be passed to the q-function
-};
-
-/// @overload
-template <int p, int c, int dim>
-struct QFunctionArgument<L2<p, c>, Dimension<dim>> {
-  using type = serac::tuple<tensor<double, c>, tensor<double, c, dim>>;  ///< what will be passed to the q-function
+template <int c, int p, int dim >
+struct QFunctionArgument<L2<p, c>, Dimension<dim> > {
+  using type = serac::tuple< tensor<double, c> , tensor<double,c> >;  ///< what will be passed to the q-function
 };
 
 /// @overload
@@ -105,8 +93,7 @@ template <int i, int dim, typename... trials, typename lambda>
 auto get_derivative_type(lambda qf)
 {
   using qf_arguments = serac::tuple<typename QFunctionArgument<trials, serac::Dimension<dim>>::type...>;
-  return tuple{get_gradient(apply_qf(qf, double{}, tensor<double, dim + 1>{}, make_dual_wrt<i>(qf_arguments{}))),
-               zero{}};
+  return get_gradient(apply_qf(qf, double{}, tensor<double, dim + 1>{}, make_dual_wrt<i>(qf_arguments{})));
 };
 
 template <typename lambda, int n, typename... T>
@@ -116,7 +103,7 @@ SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, 
   constexpr int dim = 2;
   using first_arg_t = serac::tuple<tensor<double, dim>, tensor<double, dim>>;
   using return_type = decltype(qf(double{}, first_arg_t{}, T{}[0]...));
-  tensor<tuple<return_type, zero>, n> outputs{};
+  tensor<return_type, n> outputs{};
   for (int i = 0; i < n; i++) {
     tensor<double, dim> x_q;
     tensor<double, dim> J_q;
@@ -126,7 +113,7 @@ SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, 
     }
     double scale = norm(cross(J_q));
 
-    get<0>(outputs[i]) = qf(t, serac::tuple{x_q, J_q}, inputs[i]...) * scale;
+    outputs[i] = qf(t, serac::tuple{x_q, J_q}, inputs[i]...) * scale;
   }
   return outputs;
 }
@@ -138,7 +125,7 @@ SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, 
   constexpr int dim = 3;
   using first_arg_t = serac::tuple<tensor<double, dim>, tensor<double, dim, dim - 1>>;
   using return_type = decltype(qf(double{}, first_arg_t{}, T{}[0]...));
-  tensor<tuple<return_type, zero>, n> outputs{};
+  tensor<return_type, n> outputs{};
   for (int i = 0; i < n; i++) {
     tensor<double, dim>          x_q;
     tensor<double, dim, dim - 1> J_q;
@@ -150,7 +137,7 @@ SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, 
     }
     double scale = norm(cross(J_q));
 
-    get<0>(outputs[i]) = qf(t, serac::tuple{x_q, J_q}, inputs[i]...) * scale;
+    outputs[i] = qf(t, serac::tuple{x_q, J_q}, inputs[i]...) * scale;
   }
   return outputs;
 }
@@ -169,13 +156,13 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
   constexpr int nqp = num_quadrature_points(geom, Q);
   auto          J   = reinterpret_cast<const tensor<double, dim - 1, dim, nqp>*>(jacobians);
   auto          x   = reinterpret_cast<const tensor<double, dim, nqp>*>(positions);
-  auto          r   = reinterpret_cast<typename test_element::dof_type*>(outputs);
+  auto          r   = reinterpret_cast<typename test_element::dof_type_if*>(outputs);
   static constexpr TensorProductQuadratureRule<Q> rule{};
 
   static constexpr int qpts_per_elem = num_quadrature_points(geom, Q);
 
   [[maybe_unused]] tuple u = {
-      reinterpret_cast<const typename decltype(type<indices>(trial_elements))::dof_type*>(inputs[indices])...};
+      reinterpret_cast<const typename decltype(type<indices>(trial_elements))::dof_type_if*>(inputs[indices])...};
 
   // for each element in the domain
   for (uint32_t e = 0; e < num_elements; e++) {
@@ -301,6 +288,7 @@ template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename
 void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, derivatives_type* qf_derivatives,
                              const int* elements, std::size_t num_elements)
 {
+  #if 0
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
 
@@ -322,6 +310,7 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK, d
       test_element::integrate(source_and_flux, rule, output_ptr + J, trial_element::ndof);
     }
   }
+  #endif
 }
 
 template <uint32_t wrt, int Q, mfem::Geometry::Type geom, typename signature, typename lambda_type,

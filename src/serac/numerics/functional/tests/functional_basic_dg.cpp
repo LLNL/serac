@@ -44,11 +44,28 @@ void L2_test_2D()
   // Construct the new functional object using the specified test and trial spaces
   Functional<test_space(trial_space)> residual(&fespace, {&fespace});
 
+  constexpr int DERIVATIVE = 1;
+
   residual.AddInteriorFaceIntegral(
-      Dimension<dim>{}, DependsOn<0>{},
-      [=](double /*t*/, auto /*x*/, auto velocity) {
-        auto [u_avg, u_diff] = velocity;
-        return u_avg;
+      Dimension<dim-1>{}, DependsOn<0>{},
+      [=](double /*t*/, auto X, auto velocity) {
+
+        // compute the surface normal
+        auto dX_dxi = get<DERIVATIVE>(X);
+        auto n = normalize(cross(dX_dxi));
+
+        // extract the velocity values from each side of the interface
+        // note: the orientation convention is such that the normal 
+        //       computed as above will point from from side 1->2
+        auto [u_1, u_2] = velocity; 
+
+        auto a = dot(u_2 - u_1, n);
+
+        auto s_1 = u_1 * a;
+        auto s_2 = u_2 * a;
+
+        return serac::tuple{s_1, s_2};
+
       },
       *mesh);
 

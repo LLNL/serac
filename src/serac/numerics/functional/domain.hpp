@@ -27,7 +27,7 @@ struct Domain {
     InteriorFaces
   };
 
-  static constexpr int num_types = 2;  ///< the number of entries in the Type enum
+  static constexpr int num_types = 3;  ///< the number of entries in the Type enum
 
   /// @brief the underyling mesh for this domain
   const mfem::Mesh& mesh_;

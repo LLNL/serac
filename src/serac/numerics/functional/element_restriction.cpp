@@ -527,14 +527,14 @@ mfem::Array<int> BlockElementRestriction::bOffsets() const
 
 void BlockElementRestriction::Gather(const mfem::Vector& L_vector, mfem::BlockVector& E_block_vector) const
 {
-  for (auto [geom, restriction] : restrictions) {
+  for (auto & [geom, restriction] : restrictions) {
     restriction.Gather(L_vector, E_block_vector.GetBlock(geom));
   }
 }
 
 void BlockElementRestriction::ScatterAdd(const mfem::BlockVector& E_block_vector, mfem::Vector& L_vector) const
 {
-  for (auto [geom, restriction] : restrictions) {
+  for (auto & [geom, restriction] : restrictions) {
     restriction.ScatterAdd(E_block_vector.GetBlock(geom), L_vector);
   }
 }
