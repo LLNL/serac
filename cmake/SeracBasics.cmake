@@ -59,7 +59,7 @@ endif()
 #------------------------------------------------------------------------------
 # Set ordering configuration
 #------------------------------------------------------------------------------
-option(SERAC_USE_VDIM_ORDERING "Use mfem::Ordering::byVDIM for DOF vectors (experimental, faster for algebraic multigrid)" OFF)
+option(SERAC_USE_VDIM_ORDERING "Use mfem::Ordering::byVDIM for DOF vectors (faster for algebraic multigrid)" ON)
 if (SERAC_USE_VDIM_ORDERING)
   message(STATUS "Using byVDIM degree-of-freedom vector ordering.")
 else()
