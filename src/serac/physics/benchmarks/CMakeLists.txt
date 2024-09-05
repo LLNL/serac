@@ -6,14 +6,19 @@
 
 set(benchmark_depends serac_physics)
 
-blt_add_executable(NAME benchmark_thermal
-                   SOURCES benchmark_thermal.cpp
-                   DEPENDS_ON ${benchmark_depends}
-                   OUTPUT_DIR ${PROJECT_BINARY_DIR}/benchmarks
-                   FOLDER serac/benchmarks)
+set(benchmark_targets
+    benchmark_functional
+    benchmark_solid_nonlinear_solve
+    benchmark_thermal
+    )
 
-blt_add_executable(NAME benchmark_functional
-                   SOURCES benchmark_functional.cpp
-                   DEPENDS_ON ${benchmark_depends}
-                   OUTPUT_DIR ${PROJECT_BINARY_DIR}/benchmarks
-                   FOLDER serac/benchmarks)
+# Create executable for each benchmark
+foreach(benchmark ${benchmark_targets})
+    blt_add_executable(NAME ${benchmark}
+                       SOURCES ${benchmark}.cpp
+                       DEPENDS_ON ${benchmark_depends}
+                       OUTPUT_DIR ${PROJECT_BINARY_DIR}/benchmarks
+                       FOLDER serac/benchmarks
+                       )
+endforeach()
+
