@@ -22,3 +22,14 @@ foreach(benchmark ${benchmark_targets})
                        )
 endforeach()
 
+# Create custom target to run each benchmark sequentially
+add_custom_target(benchmarks DEPENDS ${benchmark_targets})
+
+foreach(benchmark ${benchmark_targets})
+    add_custom_command(TARGET benchmarks
+                       COMMAND benchmarks/${benchmark}
+                       DEPENDS ${benchmark}
+                       WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+                       COMMENT "Running ${benchmark} benchmark"
+                       )
+endforeach()
