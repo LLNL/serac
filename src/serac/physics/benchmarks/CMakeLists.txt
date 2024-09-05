@@ -20,16 +20,12 @@ foreach(benchmark ${benchmark_targets})
                        OUTPUT_DIR ${PROJECT_BINARY_DIR}/benchmarks
                        FOLDER serac/benchmarks
                        )
-endforeach()
 
-# Create custom target to run each benchmark sequentially
-add_custom_target(benchmarks DEPENDS ${benchmark_targets})
-
-foreach(benchmark ${benchmark_targets})
-    add_custom_command(TARGET benchmarks
-                       COMMAND benchmarks/${benchmark}
-                       DEPENDS ${benchmark}
-                       WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
-                       COMMENT "Running ${benchmark} benchmark"
-                       )
+    # Add benchmarks with various task counts
+    foreach(task_count 1 4 16)
+        blt_add_benchmark(NAME ${benchmark}_${task_count}_task_count
+                          COMMAND ${benchmark}
+                          NUM_MPI_TASKS ${task_count}
+                          )
+    endforeach()
 endforeach()
