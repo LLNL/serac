@@ -43,7 +43,7 @@ void hcurl_test_2D()
   U.Randomize();
 
   // Construct the new functional object using the specified test and trial spaces
-  Functional<test_space(trial_space)> residual(&fespace, {&fespace});
+  Functional<test_space(trial_space)> residual(fespace.get(), {fespace.get()});
 
   auto d00 = make_tensor<dim, dim>([](int i, int j) { return i + j * j - 1; });
   auto d01 = make_tensor<dim>([](int i) { return i * i + 3; });
@@ -84,7 +84,7 @@ void hcurl_test_3D()
   using trial_space = Hcurl<p>;
 
   // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space)> residual(&fespace, {&fespace});
+  Functional<test_space(trial_space)> residual(fespace.get(), {fespace.get()});
 
   auto d00 = make_tensor<dim, dim>([](int i, int j) { return i + j * j - 1; });
   auto d01 = make_tensor<dim, dim>([](int i, int j) { return i * i - j + 3; });

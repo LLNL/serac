@@ -349,9 +349,6 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c>> {
                                                     typename batch_apply_shape_fn_output<in_t, q>::type* output,
                                                     const TensorProductQuadratureRule<q>&, RAJA::LaunchContext& ctx)
   {
-    using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, dim>{}));
-    using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, dim>{}));
-
     constexpr auto xi = GaussLegendreNodes<q, mfem::Geometry::TETRAHEDRON>();
 
     auto x_range = RAJA::RangeSegment(0, nqpts(q));

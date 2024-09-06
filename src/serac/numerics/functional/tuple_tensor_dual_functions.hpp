@@ -535,7 +535,7 @@ SERAC_HOST_DEVICE auto get_value(const tensor<dual<T>, n...>& arg)
  * @param[in] arg The tensor of dual numbers
  */
 template <int... n>
-SERAC_HOST_DEVICE /*constexpr*/ auto get_gradient(const tensor<dual<double>, n...>& arg)
+SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<dual<double>, n...>& arg)
 {
   tensor<double, n...> g{};
   for_constexpr<n...>([&](auto... i) { g(i...) = arg(i...).gradient; });
@@ -544,7 +544,7 @@ SERAC_HOST_DEVICE /*constexpr*/ auto get_gradient(const tensor<dual<double>, n..
 
 /// @overload
 template <int... n, int... m>
-SERAC_HOST_DEVICE /*constexpr*/ auto get_gradient(const tensor<dual<tensor<double, m...>>, n...>& arg)
+SERAC_HOST_DEVICE constexpr auto get_gradient(const tensor<dual<tensor<double, m...>>, n...>& arg)
 {
   tensor<double, n..., m...> g{};
   for_constexpr<n...>([&](auto... i) { g(i...) = arg(i...).gradient; });
@@ -831,7 +831,7 @@ SERAC_HOST_DEVICE tensor<int, 3> argsort(const tensor<T, 3>& v)
  * @note based on "A robust algorithm for finding the eigenvalues and
  * eigenvectors of 3x3 symmetric matrices", by Scherzinger & Dohrmann
  */
-inline SERAC_HOST_DEVICE tuple<vec3, mat3> eig_symm(const mat3& A)
+inline tuple<vec3, mat3> eig_symm(const mat3& A)
 {
   // We know of optimizations for this routine. When this becomes the
   // bottleneck, we can revisit. See OptimiSM for details.
@@ -1003,7 +1003,8 @@ auto symmetric_mat3_function(tensor<T, 3, 3> A, const Function& f, const EigvalS
 
   if constexpr (!is_dual_number<T>::value) {
     return f_A;
-  } else {
+  }
+  if constexpr (is_dual_number<T>::value) {
     return symmetric_mat3_function_with_derivative(A, f_A, lambda, Q, g);
   }
 }

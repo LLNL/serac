@@ -910,7 +910,7 @@ public:
   template <typename MaterialType, typename StateType = Empty>
   void setMaterial(const MaterialType& material, std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
   {
-    setMaterial(DependsOn<>{}, std::move(material), qdata);
+    setMaterial(DependsOn<>{}, material, qdata);
   }
 
   /**

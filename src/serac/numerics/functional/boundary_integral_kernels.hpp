@@ -343,21 +343,20 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
   rm.memset(qf_inputs, 0);
 
   // for each element in the domain
-  RAJA::launch<launch_policy>(
-      RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_X, BLOCK_Y, BLOCK_Z)),
-      [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
-        RAJA::loop<teams_e>(ctx, e_range, [&](int e) {
-          // (batch) interpolate each quadrature point's value
-          trial_element::interpolate(du[elements[e]], rule, qf_inputs, ctx);
+  RAJA::launch<launch_policy>(RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_SZ)),
+                              [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
+                                RAJA::loop<teams_e>(ctx, e_range, [&](int e) {
+                                  // (batch) interpolate each quadrature point's value
+                                  trial_element::interpolate(du[elements[e]], rule, qf_inputs, ctx);
 
-          // (batch) evalute the q-function at each quadrature point
-          RAJA_TEAM_SHARED qf_outputs_type qf_outputs;
-          qf_outputs = batch_apply_chain_rule(qf_derivatives + e * nqp, *qf_inputs, ctx);
+                                  // (batch) evalute the q-function at each quadrature point
+                                  RAJA_TEAM_SHARED qf_outputs_type qf_outputs;
+                                  qf_outputs = batch_apply_chain_rule(qf_derivatives + e * nqp, *qf_inputs, ctx);
 
-          // (batch) integrate the material response against the test-space basis functions
-          test_element::integrate(qf_outputs, rule, &dr[elements[e]], ctx);
-        });
-      });
+                                  // (batch) integrate the material response against the test-space basis functions
+                                  test_element::integrate(qf_outputs, rule, &dr[elements[e]], ctx);
+                                });
+                              });
   rm.deallocate(qf_inputs);
 }
 
@@ -415,12 +414,15 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
 
           ctx.teamSync();
 
+          RAJA_TEAM_SHARED
+              typename trial_element::template batch_apply_shape_fn_output<derivatives_type, Q>::type source_and_flux;
           for (int J = 0; J < trial_element::ndof; J++) {
-            RAJA_TEAM_SHARED decltype(trial_element::batch_apply_shape_fn(J, derivatives, rule, ctx)) source_and_flux;
-            source_and_flux = trial_element::batch_apply_shape_fn(J, derivatives, rule, ctx);
+            trial_element::batch_apply_shape_fn(J, derivatives, &source_and_flux, rule, ctx);
+            ctx.teamSync();
+
             test_element::integrate(source_and_flux, rule, output_ptr + J, ctx, trial_element::ndof);
+            ctx.teamSync();
           }
-          ctx.teamSync();
         });
       });
 }

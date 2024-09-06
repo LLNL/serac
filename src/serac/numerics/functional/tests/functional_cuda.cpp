@@ -66,7 +66,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   auto                        fec = mfem::L2_FECollection(p, dim, mfem::BasisType::GaussLobatto);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
-  mfem::ParBilinearForm A(&fespace);
+  mfem::ParBilinearForm A(fespace.get());
 
   // Add the mass term using the standard MFEM method
   mfem::ConstantCoefficient a_coef(a);
@@ -78,7 +78,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   std::unique_ptr<mfem::HypreParMatrix> J(A.ParallelAssemble());
 
   // Create a linear form for the load term using the standard MFEM method
-  mfem::ParLinearForm       f(&fespace);
+  mfem::ParLinearForm       f(fespace.get());
   mfem::FunctionCoefficient load_func([&](const mfem::Vector& coords) { return 100 * coords(0) * coords(1); });
   // FunctionCoefficient load_func([&]([[maybe_unused]] const Vector& coords) { return 1.0; });
 
@@ -88,7 +88,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   std::unique_ptr<mfem::HypreParVector> F(f.ParallelAssemble());
 
   // Set a random state to evaluate the residual
-  mfem::ParGridFunction u_global(&fespace);
+  mfem::ParGridFunction u_global(fespace.get());
   u_global.Randomize();
 
   mfem::Vector U(fespace.TrueVSize());
@@ -101,7 +101,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   using trial_space = decltype(trial);
 
   // Construct the new weak form object using the known test and trial spaces
-  Functional<test_space(trial_space), ExecutionSpace::GPU> residual(&fespace, {&fespace});
+  Functional<test_space(trial_space), ExecutionSpace::GPU> residual(fespace.get(), {fespace.get()});
 
   cudaDeviceSynchronize();
   // Add the total domain residual term to the weak form

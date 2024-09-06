@@ -1422,6 +1422,60 @@ SERAC_HOST_DEVICE constexpr auto deduce_contract_return_type(const zero&, const 
   return zero{};
 }
 
+// TODO(bowen): Figure out using decltype vs helper structs for shared memory buffers
+// template<int i1, int i2, typename... T>
+// class contract_type {
+//
+//};
+
+// template <int i1, int i2, typename S, int m, typename T, int p, int q, int... n>
+// class contract_type<i1, i2, tensor<S, m, n...>,  tensor<T, p, q>> {
+// SERAC_HOST_DEVICE contract_type(const tensor<S, m, n...>&, const tensor<T, p, q>&) {}
+//
+//   static constexpr int Adims[] = {m, n...};
+//   static constexpr int Bdims[] = {p, q};
+//   static_assert(sizeof...(n) < 3);
+//   static_assert(Adims[i1] == Bdims[i2], "error: incompatible tensor dimensions");
+//
+//   // first, we have to figure out the dimensions of the output tensor
+//   static constexpr int new_dim = (i2 == 0) ? q : p;
+//   static constexpr int d1      = (i1 == 0) ? new_dim : Adims[0];
+//   static constexpr int d2      = (i1 == 1) ? new_dim : Adims[1];
+//   static constexpr int d3      = sizeof...(n) == 1 ? 0 : ((i1 == 2) ? new_dim : Adims[2]);
+//   using U               = decltype(S{} * T{});
+//   // if constexpr (d3 == 0) {
+//   //   return serac::tensor<U, d1, d2>{};
+//   // }
+// public:
+//   using type = typename std::conditional<d3 == 0, tensor<U, d1, d2>, tensor<U, d1, d2, d3>>::type;
+// };
+
+// template </*int i1, int i2,*/ typename S, int m, typename T, int p, int q, int... n>
+// contract_type(tensor<S, m, n...>,  tensor<T, p, q>) -> contract_type<1, 1, tensor<S, m, n...>,  tensor<T, p, q>>;
+//
+// template<int i1, int i2, typename S>
+// struct contract_type<i1, i2, zero, S> {
+//   SERAC_HOST_DEVICE contract_type(const zero&, const S&) {}
+//   using type = zero;
+// };
+//
+// template<int i1, int i2, typename S>
+// struct contract_type<i1, i2, S, zero> {
+//   SERAC_HOST_DEVICE contract_type(const S&, const zero&) {}
+//   using type = zero;
+// };
+
+template <typename S, typename T>
+struct is_zero_and {
+private:
+  static constexpr bool is_S_zero = std::is_same_v<S, zero>;
+  static constexpr bool is_T_zero = std::is_same_v<T, zero>;
+  using helper_t                  = typename std::conditional<is_S_zero, T, S>::type;
+
+public:
+  using type = typename std::conditional<is_S_zero && is_T_zero, zero, helper_t>::type;
+};
+
 template <int l1, int l2, typename S, int m, typename T, int p, int q, int n0, int n1, int n2, int... n>
 SERAC_HOST_DEVICE void contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B, tensor<S, n0, n1, n2>* C, int qx,
                                 int qy, int qz, bool accumulate = false)
@@ -1469,6 +1523,20 @@ SERAC_HOST_DEVICE void contract(const tensor<S, m, n...>& A, const tensor<T, p, 
 
 template <int l1, int l2, typename T, int p, int q>
 SERAC_HOST_DEVICE void contract(const zero&, const tensor<T, p, q>&, zero*, int, int, int,
+                                [[maybe_unused]] bool accumulate = false)
+{
+  return;
+}
+
+template <int l1, int l2>
+SERAC_HOST_DEVICE void contract(const zero&, const zero&, zero*, int, int, int,
+                                [[maybe_unused]] bool accumulate = false)
+{
+  return;
+}
+
+template <int l1, int l2, typename T, int... n>
+SERAC_HOST_DEVICE void contract(const tensor<T, n...>&, const zero&, zero*, int, int, int,
                                 [[maybe_unused]] bool accumulate = false)
 {
   return;
@@ -1787,7 +1855,7 @@ SERAC_HOST_DEVICE void print_shape(const tensor<T, m, n...>&)
 }
 
 template <typename T>
-SERAC_HOST_DEVICE void memset_tensor(serac::zero&, T)
+SERAC_HOST_DEVICE void memset_tensor(serac::zero&, T, int, int, int)
 {
 }
 

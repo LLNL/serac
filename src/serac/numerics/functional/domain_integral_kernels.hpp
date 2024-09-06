@@ -66,27 +66,24 @@ struct QFunctionArgument<Hcurl<p>, Dimension<3>> {
   using type = tuple<tensor<double, 3>, tensor<double, 3>>;  ///< what will be passed to the q-function
 };
 
-template <typename lambda, typename state_type, int dim, int n, typename... T>
-struct QFunctionOutputHelper {
-  using position_type  = serac::tuple<tensor<double, dim>, tensor<double, dim, dim>>;
-  using qf_return_type = decltype(lambda{}(double{}, position_type{}, state_type{}, T{}[0]...));
-  using type           = tensor<qf_return_type, n>;
-};
-
-template <typename lambda, int dim, int n, typename... T>
-struct QFunctionOutputHelper<lambda, Nothing, dim, n, T...> {
-  using position_type = serac::tuple<tensor<double, dim>, tensor<double, dim, dim>>;
-  // using t_1 =  typename std::enable_if<std::is_same<state_type, Nothing>::value,
-  //                   >::type;
-  // using t_2 = typename std::enable_if<!std::is_same<state_type, Nothing>::value,
-  //                   decltype(lambda{}(double{}, position_type{}, state_type{}, T{}[0]...))>::type;
-  using qf_return_type = decltype(lambda{}(double{}, position_type{}, T{}[0]...));
-  using type           = tensor<qf_return_type, n>;
-};
-
 template <bool is_QOI, typename derivative_type, int n, typename T>
 struct BatchApplyChainRule {
   using type = tensor<decltype(chain_rule<is_QOI>(derivative_type{}, T{})), n>;
+};
+
+template <typename lambda, typename state_type, int dim, int n, typename... T>
+struct QFunctionOutput {
+  using position_type = serac::tuple<tensor<double, dim>, tensor<double, dim, dim>>;
+  static auto get_type(const lambda& qf)
+  {
+    return tensor<decltype(qf(double{}, position_type{}, state_type{}, T{}[0]...)), n>{};
+  }
+};
+
+template <typename lambda, int dim, int n, typename... T>
+struct QFunctionOutput<lambda, Nothing, dim, n, T...> {
+  using position_type = serac::tuple<tensor<double, dim>, tensor<double, dim, dim>>;
+  static auto get_type(const lambda& qf) { return tensor<decltype(qf(double{}, position_type{}, T{}[0]...)), n>{}; }
 };
 
 /// @brief layer of indirection needed to unpack the entries of the argument tuple
@@ -130,8 +127,9 @@ auto get_derivative_type(const lambda& qf, qpt_data_type qpt_data)
 template <typename lambda, int dim, int n, typename... T>
 SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(
     const lambda& qf, double t, const tensor<double, dim, n> x, const tensor<double, dim, dim, n> J,
-    typename QFunctionOutputHelper<lambda, Nothing, dim, n, T...>::type* qf_output, RAJA::LaunchContext ctx,
-    const T&... inputs)
+    tensor<decltype(qf(double{}, serac::tuple<tensor<double, dim>, tensor<double, dim, dim>>{}, T{}[0]...)), n>*
+                        qf_output,
+    RAJA::LaunchContext ctx, const T&... inputs)
 {
   RAJA::RangeSegment x_range(0, n);
   RAJA::loop<threads_x>(ctx, x_range, [&](int i) {
@@ -150,8 +148,11 @@ SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(
 template <typename lambda, int dim, int n, typename qpt_data_type, typename... T>
 SERAC_HOST_DEVICE auto batch_apply_qf(
     const lambda& qf, double t, const tensor<double, dim, n> x, const tensor<double, dim, dim, n> J,
-    typename QFunctionOutputHelper<lambda, qpt_data_type, dim, n, T...>::type* qf_output, qpt_data_type* qpt_data,
-    bool update_state, RAJA::LaunchContext ctx, const T&... inputs)
+    tensor<decltype(qf(double{}, serac::tuple<tensor<double, dim>, tensor<double, dim, dim>>{}, qpt_data_type{},
+                       T{}[0]...)),
+           n>* qf_output,
+    // typename QFunctionOutput<lambda, qpt_data_type, dim, n, T...>::template type<qf>::t* qf_output,
+    qpt_data_type* qpt_data, bool update_state, RAJA::LaunchContext ctx, const T&... inputs)
 {
   RAJA::RangeSegment x_range(0, n);
   RAJA::loop<threads_x>(ctx, x_range, [&](int i) {
@@ -214,8 +215,8 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
       static_cast<interpolate_out_type*>(allocator.allocate(sizeof(interpolate_out_type) * num_elements));
 
   using qf_outputs_type =
-      typename QFunctionOutputHelper<lambda_type, state_type, dimension<0>(X_Type{}), dimension<1>(X_Type{}),
-                                     decltype(get<indices>(qf_inputs_type{}))...>::type;
+      decltype(QFunctionOutput<lambda_type, state_type, dimension<0>(X_Type{}), dimension<1>(X_Type{}),
+                               decltype(get<indices>(qf_inputs_type{}))...>::get_type(qf));
   qf_outputs_type* qf_outputs =
       static_cast<qf_outputs_type*>(allocator.allocate(sizeof(qf_outputs_type) * num_elements));
 
@@ -303,10 +304,6 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
               ctx.teamSync();
             });
       });
-  RAJA::forall<forall_policy>(RAJA::RangeSegment(0, 1), [=] SERAC_HOST_DEVICE(int) {
-    printf("printing r\n");
-    print(*r);
-  });
 
   allocator.deallocate(qf_inputs);
   allocator.deallocate(interpolate_result);
@@ -336,11 +333,8 @@ SERAC_HOST_DEVICE void batch_apply_chain_rule(derivative_type* qf_derivatives, c
                                               tensor<decltype(chain_rule<is_QOI>(derivative_type{}, T{})), n>& outputs,
                                               const RAJA::LaunchContext&                                       ctx)
 {
-  using return_type = decltype(chain_rule<is_QOI>(derivative_type{}, T{}));
-  // tensor<return_type, n> outputs{};
   RAJA::RangeSegment i_range(0, n);
   RAJA::loop<threads_x>(ctx, i_range, [&](int i) { outputs[i] = chain_rule<is_QOI>(qf_derivatives[i], inputs[i]); });
-  // return tensor<return_type, n> {};
 }
 
 /**
@@ -487,14 +481,12 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
               reinterpret_cast<typename test_element::dof_type*>(&dK(elements[e], 0, 0));
 
           RAJA::RangeSegment x_range(0, nquad);
-          RAJA::loop<threads_x>(ctx, x_range, [&](int /*q*/) {
-            for (int q = 0; q < nquad; ++q) {
-              if constexpr (is_QOI_2) {
-                get<0>(derivatives[e](q)) = qf_derivatives[e * nquad + uint32_t(q)];
-              }
-              if constexpr (!is_QOI_2) {
-                derivatives[e](q) = qf_derivatives[e * nquad + uint32_t(q)];
-              }
+          RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
+            if constexpr (is_QOI_2) {
+              get<0>(derivatives[e](q)) = qf_derivatives[e * nquad + uint32_t(q)];
+            }
+            if constexpr (!is_QOI_2) {
+              derivatives[e](q) = qf_derivatives[e * nquad + uint32_t(q)];
             }
           });
 

@@ -152,9 +152,6 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
     int jy = (j % (n * n)) / n;
     int jz = j / (n * n);
 
-    using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, dim>{}));
-    using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, dim>{}));
-
     auto x_range = RAJA::RangeSegment(0, q * q * q);
     RAJA::loop<threads_x>(ctx, x_range, [&](int Q) {
       int qx = Q % q;
@@ -319,8 +316,24 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
 
     RAJA::RangeSegment x_range(0, BLOCK_SZ);
 
+    constexpr auto B = calculate_B<apply_weights, q>();
+    constexpr auto G = calculate_G<apply_weights, q>();
+
     RAJA_TEAM_SHARED s_buffer_type source;
     RAJA_TEAM_SHARED f_buffer_type flux;
+
+    // The binary is_zero_and type will select which of its binary operands is nonzero, and return it
+    using t1 = decltype(deduce_contract_return_type<2, 0>(source, B));
+    using t2 = decltype(deduce_contract_return_type<2, 0>(flux(0), G));
+
+    RAJA_TEAM_SHARED typename is_zero_and<t1, t2>::type                      A20;
+    RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 0>(flux(1), B)) A21;
+    RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 0>(flux(2), B)) A22;
+
+    using t3 = decltype(deduce_contract_return_type<1, 0>(A20, B));
+    using t4 = decltype(deduce_contract_return_type<1, 0>(A21, G));
+    RAJA_TEAM_SHARED typename is_zero_and<t3, t4>::type                  A10;
+    RAJA_TEAM_SHARED decltype(deduce_contract_return_type<1, 0>(A22, B)) A11;
     for (int j = 0; j < ntrial; j++) {
       for (int i = 0; i < c; i++) {
         ctx.teamSync();
@@ -352,15 +365,6 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>> {
           });
         }
         ctx.teamSync();
-
-        constexpr auto B = calculate_B<apply_weights, q>();
-        constexpr auto G = calculate_G<apply_weights, q>();
-
-        RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 0>(source, B))  A20;
-        RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 0>(flux(1), B)) A21;
-        RAJA_TEAM_SHARED decltype(deduce_contract_return_type<2, 0>(flux(2), B)) A22;
-        RAJA_TEAM_SHARED decltype(deduce_contract_return_type<1, 0>(A20, B))     A10;
-        RAJA_TEAM_SHARED decltype(deduce_contract_return_type<1, 0>(A22, B))     A11;
 
         RAJA::loop<threads_x>(ctx, x_range, [&](int tid) {
           int qx = tid % BLOCK_X;

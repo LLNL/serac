@@ -101,9 +101,9 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
 
   // Construct the new weak form object using the known test and trial spaces
 #ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(&fespace, {&fespace});
+  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(fespace.get(), {fespace.get()});
 #else
-  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(&fespace, {&fespace});
+  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(fespace.get(), {fespace.get()});
 #endif
 
   // Add the total domain residual term to the weak form
