@@ -33,7 +33,7 @@ void L2_test_2D()
 
   std::string meshfile = SERAC_REPO_DIR "/data/meshes/patch2D.mesh";
 
-  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile), 1);
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile), 0);
 
   auto fec = mfem::L2_FECollection(p, dim, mfem::BasisType::GaussLobatto);
   mfem::ParFiniteElementSpace fespace(mesh.get(), &fec);

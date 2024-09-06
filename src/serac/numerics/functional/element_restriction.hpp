@@ -5,6 +5,7 @@
 #include "mfem.hpp"
 #include "axom/core.hpp"
 #include "geometry.hpp"
+#include "domain.hpp"
 
 inline bool isH1(const mfem::FiniteElementSpace& fes)
 {
@@ -209,6 +210,9 @@ struct ElementRestriction {
 struct BlockElementRestriction {
   /// default ctor leaves this object uninitialized
   BlockElementRestriction() {}
+
+  /// create a BlockElementRestriction for the elements in a given domain
+  BlockElementRestriction(const mfem::FiniteElementSpace* fes, const Domain & domain);
 
   /// create a BlockElementRestriction for all domain-elements (geom dim == spatial dim)
   BlockElementRestriction(const mfem::FiniteElementSpace* fes);
