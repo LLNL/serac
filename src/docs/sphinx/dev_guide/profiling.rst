@@ -112,7 +112,7 @@ To view this data with SPOT, open a browser, navigate to the SPOT server (e.g. `
 Benchmarking Serac
 ------------------
 
-To run all of Serac's benchmarks in one command, first make sure you're configured Serac with benchmarking enabled.
+To run all of Serac's benchmarks in one command, first make sure Serac is configured with benchmarking enabled.
 Benchmarking is not enabled by default. Then, run the custom CMake target ``run_benchmarks``.
 
 .. code-block:: bash
@@ -123,4 +123,4 @@ Benchmarking is not enabled by default. Then, run the custom CMake target ``run_
   make run_benchmarks
 
 This will run all of Serac's benchmarks multiple times with varying MPI task counts, and generate a ``.cali`` file for
-each benchmark run. Note that the ``-j`` option will not work.
+each benchmark run.
