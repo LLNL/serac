@@ -51,8 +51,14 @@ void exitGracefully(bool error)
   }
 
 #ifdef SERAC_USE_PETSC
+#ifdef SERAC_USE_SLEPC
+  mfem::MFEMFinalizeSlepc();
+#else
   mfem::MFEMFinalizePetsc();
 #endif
+#endif
+
+  profiling::finalize();
 
   int mpi_initialized = 0;
   MPI_Initialized(&mpi_initialized);
@@ -61,7 +67,6 @@ void exitGracefully(bool error)
   if (mpi_initialized && !mpi_finalized) {
     MPI_Finalize();
   }
-  profiling::finalize();
 
   accelerator::terminateDevice();
 

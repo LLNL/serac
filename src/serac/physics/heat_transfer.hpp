@@ -156,7 +156,7 @@ public:
         residual_with_bcs_(temperature_.space().TrueVSize()),
         nonlin_solver_(std::move(solver)),
         ode_(temperature_.space().TrueVSize(),
-             {.time = ode_time_point_, .u = u_, .dt = dt_, .du_dt = temperature_rate_, .previous_dt = previous_dt_},
+             {.time = time_, .u = u_, .dt = dt_, .du_dt = temperature_rate_, .previous_dt = previous_dt_},
              *nonlin_solver_, bcs_)
   {
     SLIC_ERROR_ROOT_IF(
@@ -275,8 +275,9 @@ public:
    */
   void initializeThermalStates()
   {
-    dt_          = 0.0;
-    previous_dt_ = -1.0;
+    dt_            = 0.0;
+    previous_dt_   = -1.0;
+    time_end_step_ = 0.0;
 
     u_                                              = 0.0;
     temperature_                                    = 0.0;
@@ -335,9 +336,6 @@ public:
     if (is_quasistatic_) {
       time_ += dt;
 
-      // Set the ODE time point for the time-varying loads in quasi-static problems
-      ode_time_point_ = time_;
-
       // Project the essential boundary coefficients
       for (auto& bc : bcs_.essentials()) {
         bc.setDofs(temperature_, time_);
@@ -346,7 +344,15 @@ public:
     } else {
       // Step the time integrator
       // Note that the ODE solver handles the essential boundary condition application itself
-      ode_.Step(temperature_, time_, dt);
+
+      // The current ode interface tracks 2 times, one internally which we have a handle to via time_,
+      // and one here via the step interface.
+      // We are ignoring this one, and just using the internal version for now.
+      // This may need to be revisited when more complex time integrators are required,
+      // but at the moment, the double times creates a lot of confusion, so
+      // we short circuit the extra time here by passing a dummy time and ignoring it.
+      double time_tmp = time_;
+      ode_.Step(temperature_, time_tmp, dt);
     }
 
     cycle_ += 1;
@@ -703,7 +709,7 @@ public:
           temperature_.space().TrueVSize(),
 
           [this](const mfem::Vector& u, mfem::Vector& r) {
-            const mfem::Vector res = (*residual_)(ode_time_point_, shape_displacement_, u, temperature_rate_,
+            const mfem::Vector res = (*residual_)(time_, shape_displacement_, u, temperature_rate_,
                                                   *parameters_[parameter_indices].state...);
 
             // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
@@ -714,7 +720,7 @@ public:
           },
 
           [this](const mfem::Vector& u) -> mfem::Operator& {
-            auto [r, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(u), temperature_rate_,
+            auto [r, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(u), temperature_rate_,
                                           *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
             J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
@@ -726,8 +732,8 @@ public:
 
           [this](const mfem::Vector& du_dt, mfem::Vector& r) {
             add(1.0, u_, dt_, du_dt, u_predicted_);
-            const mfem::Vector res = (*residual_)(ode_time_point_, shape_displacement_, u_predicted_, du_dt,
-                                                  *parameters_[parameter_indices].state...);
+            const mfem::Vector res =
+                (*residual_)(time_, shape_displacement_, u_predicted_, du_dt, *parameters_[parameter_indices].state...);
 
             // TODO this copy is required as the sundials solvers do not allow move assignments because of their memory
             // tracking strategy
@@ -740,15 +746,14 @@ public:
             add(1.0, u_, dt_, du_dt, u_predicted_);
 
             // K := dR/du
-            auto K = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_,
-                                                         differentiate_wrt(u_predicted_), du_dt,
-                                                         *parameters_[parameter_indices].state...));
+            auto K = serac::get<DERIVATIVE>((*residual_)(time_, shape_displacement_, differentiate_wrt(u_predicted_),
+                                                         du_dt, *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
 
             // M := dR/du_dot
-            auto M = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_, u_predicted_,
-                                                         differentiate_wrt(du_dt),
-                                                         *parameters_[parameter_indices].state...));
+            auto M =
+                serac::get<DERIVATIVE>((*residual_)(time_, shape_displacement_, u_predicted_, differentiate_wrt(du_dt),
+                                                    *parameters_[parameter_indices].state...));
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             // J := M + dt K
@@ -841,12 +846,23 @@ public:
     mfem::HypreParVector adjoint_essential(temperature_adjoint_load_);
     adjoint_essential = 0.0;
 
+    SLIC_ERROR_ROOT_IF(cycle_ <= min_cycle_,
+                       "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
+                       "number of forward timesteps");
+
+    cycle_--;  // cycle is now at n \in [0,N-1]
+
+    double dt                = getCheckpointedTimestep(cycle_);
+    auto   end_step_solution = getCheckpointedStates(cycle_ + 1);
+
+    temperature_ = end_step_solution.at("temperature");
+
     if (is_quasistatic_) {
       // We store the previous timestep's temperature as the current temperature for use in the lambdas computing the
       // sensitivities.
 
-      auto [_, drdu] = (*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(temperature_),
-                                    temperature_rate_, *parameters_[parameter_indices].state...);
+      auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(temperature_), temperature_rate_,
+                                    *parameters_[parameter_indices].state...);
       auto jacobian  = assemble(drdu);
       auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
@@ -856,96 +872,52 @@ public:
 
       lin_solver.SetOperator(*J_T);
       lin_solver.Mult(temperature_adjoint_load_, adjoint_temperature_);
-
-      return;
-    }
-
-    SLIC_ERROR_ROOT_IF(ode_.GetTimestepper() != TimestepMethod::BackwardEuler,
-                       "Only backward Euler implemented for transient adjoint heat conduction.");
-
-    SLIC_ERROR_ROOT_IF(cycle_ <= min_cycle_,
-                       "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
-                       "number of forward timesteps");
-
-    // Load the temperature from the previous cycle from disk
-    serac::FiniteElementState temperature_n_minus_1(temperature_);
-
-    {
-      auto previous_states_n         = getCheckpointedStates(cycle_);
-      auto previous_states_n_minus_1 = getCheckpointedStates(cycle_ - 1);
-
-      temperature_          = previous_states_n.at("temperature");
-      temperature_rate_     = previous_states_n.at("temperature_rate");
-      temperature_n_minus_1 = previous_states_n_minus_1.at("temperature");
-    }
-
-    double dt = getCheckpointedTimestep(cycle_ - 1);
-
-    // K := dR/du
-    auto K = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_, differentiate_wrt(temperature_),
-                                                 temperature_rate_, *parameters_[parameter_indices].state...));
-    std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
-
-    // M := dR/du_dot
-    auto M = serac::get<DERIVATIVE>((*residual_)(ode_time_point_, shape_displacement_, temperature_,
-                                                 differentiate_wrt(temperature_rate_),
-                                                 *parameters_[parameter_indices].state...));
-    std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
-
-    J_.reset(mfem::Add(1.0, *m_mat, dt, *k_mat));
-    auto J_T = std::unique_ptr<mfem::HypreParMatrix>(J_->Transpose());
-
-    // recall that temperature_adjoint_load_vector and d_temperature_dt_adjoint_load_vector were already multiplied by
-    // -1 above
-    mfem::HypreParVector modified_RHS(temperature_adjoint_load_);
-    modified_RHS *= dt;
-    modified_RHS.Add(1.0, temperature_rate_adjoint_load_);
-    modified_RHS.Add(-dt, implicit_sensitivity_temperature_start_of_step_);
-
-    for (const auto& bc : bcs_.essentials()) {
-      bc.apply(*J_T, modified_RHS, adjoint_essential);
-    }
-
-    lin_solver.SetOperator(*J_T);
-    lin_solver.Mult(modified_RHS, adjoint_temperature_);
-
-    // This multiply is technically on M transposed.  However, this matrix should be symmetric unless
-    // the thermal capacity is a function of the temperature rate of change, which is thermodynamically
-    // impossible, and fortunately not possible with our material interface.
-    // Not doing the transpose here to avoid doing unnecessary work.
-    m_mat->Mult(adjoint_temperature_, implicit_sensitivity_temperature_start_of_step_);
-    implicit_sensitivity_temperature_start_of_step_ *= -1.0 / dt;
-    implicit_sensitivity_temperature_start_of_step_.Add(1.0 / dt,
-                                                        temperature_rate_adjoint_load_);  // already multiplied by -1
-
-    time_ -= dt;
-    cycle_--;
-  }
-
-  /**
-   * @brief Accessor for getting named finite element state primal solution from the physics modules at a given
-   * checkpointed cycle index
-   *
-   * @param cycle_to_load The previous timestep where the state solution is requested
-   * @return The named primal Finite Element State
-   */
-  std::unordered_map<std::string, FiniteElementState> getCheckpointedStates(int cycle_to_load) const override
-  {
-    std::unordered_map<std::string, FiniteElementState> previous_states;
-
-    if (checkpoint_to_disk_) {
-      previous_states.emplace("temperature", temperature_);
-      previous_states.emplace("temperature_rate", temperature_rate_);
-      StateManager::loadCheckpointedStates(cycle_to_load,
-                                           {previous_states.at("temperature"), previous_states.at("temperature_rate")});
-      return previous_states;
     } else {
-      previous_states.emplace("temperature", checkpoint_states_.at("temperature")[static_cast<size_t>(cycle_to_load)]);
-      previous_states.emplace("temperature_rate",
-                              checkpoint_states_.at("temperature_rate")[static_cast<size_t>(cycle_to_load)]);
+      SLIC_ERROR_ROOT_IF(ode_.GetTimestepper() != TimestepMethod::BackwardEuler,
+                         "Only backward Euler implemented for transient adjoint heat conduction.");
+
+      temperature_rate_ = end_step_solution.at("temperature_rate");
+
+      // K := dR/du
+      auto K = serac::get<DERIVATIVE>((*residual_)(time_, shape_displacement_, differentiate_wrt(temperature_),
+                                                   temperature_rate_, *parameters_[parameter_indices].state...));
+      std::unique_ptr<mfem::HypreParMatrix> k_mat(assemble(K));
+
+      // M := dR/du_dot
+      auto M = serac::get<DERIVATIVE>((*residual_)(time_, shape_displacement_, temperature_,
+                                                   differentiate_wrt(temperature_rate_),
+                                                   *parameters_[parameter_indices].state...));
+      std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
+
+      J_.reset(mfem::Add(1.0, *m_mat, dt, *k_mat));
+      auto J_T = std::unique_ptr<mfem::HypreParMatrix>(J_->Transpose());
+
+      // recall that temperature_adjoint_load_vector and d_temperature_dt_adjoint_load_vector were already multiplied by
+      // -1 above
+      mfem::HypreParVector modified_RHS(temperature_adjoint_load_);
+      modified_RHS *= dt;
+      modified_RHS.Add(1.0, temperature_rate_adjoint_load_);
+      modified_RHS.Add(-dt, implicit_sensitivity_temperature_start_of_step_);
+
+      for (const auto& bc : bcs_.essentials()) {
+        bc.apply(*J_T, modified_RHS, adjoint_essential);
+      }
+
+      lin_solver.SetOperator(*J_T);
+      lin_solver.Mult(modified_RHS, adjoint_temperature_);
+
+      // This multiply is technically on M transposed.  However, this matrix should be symmetric unless
+      // the thermal capacity is a function of the temperature rate of change, which is thermodynamically
+      // impossible, and fortunately not possible with our material interface.
+      // Not doing the transpose here to avoid doing unnecessary work.
+      m_mat->Mult(adjoint_temperature_, implicit_sensitivity_temperature_start_of_step_);
+      implicit_sensitivity_temperature_start_of_step_ *= -1.0 / dt;
+      implicit_sensitivity_temperature_start_of_step_.Add(1.0 / dt,
+                                                          temperature_rate_adjoint_load_);  // already multiplied by -1
     }
 
-    return previous_states;
+    time_end_step_ = time_;
+    time_ -= dt;
   }
 
   /**
@@ -961,7 +933,7 @@ public:
   {
     // TODO: the time is likely not being handled correctly on the reverse pass, but we don't
     //       have tests to confirm.
-    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](ode_time_point_));
+    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](time_end_step_));
     auto drdparam_mat = assemble(drdparam);
 
     drdparam_mat->MultTranspose(adjoint_temperature_, *parameters_[parameter_field].sensitivity);
@@ -980,7 +952,7 @@ public:
   FiniteElementDual& computeTimestepShapeSensitivity() override
   {
     auto drdshape =
-        serac::get<DERIVATIVE>((*residual_)(ode_time_point_, differentiate_wrt(shape_displacement_), temperature_,
+        serac::get<DERIVATIVE>((*residual_)(time_end_step_, differentiate_wrt(shape_displacement_), temperature_,
                                             temperature_rate_, *parameters_[parameter_indices].state...));
 
     auto drdshape_mat = assemble(drdshape);
@@ -1070,6 +1042,10 @@ protected:
 
   /// The previous timestep
   double previous_dt_;
+
+  /// @brief End of step time used in reverse mode so that the time can be decremented on reverse steps
+  /// @note This time is important to save to evaluate various parameter sensitivities after each reverse step
+  double time_end_step_;
 
   /// Predicted temperature true dofs
   mfem::Vector u_;

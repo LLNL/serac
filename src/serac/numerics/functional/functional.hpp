@@ -222,6 +222,8 @@ public:
              std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
       : update_qdata_(false), test_space_(test_fes), trial_space_(trial_fes)
   {
+    SERAC_MARK_FUNCTION;
+
     auto mem_type = mfem::Device::GetMemoryType();
 
     for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
@@ -553,12 +555,12 @@ private:
     Gradient(Functional<test(trials...), exec>& f, uint32_t which = 0)
         : mfem::Operator(f.test_space_->GetTrueVSize(), f.trial_space_[which]->GetTrueVSize()),
           form_(f),
-          lookup_tables(f.G_test_[Domain::Type::Elements], f.G_trial_[Domain::Type::Elements][which]),
           which_argument(which),
           test_space_(f.test_space_),
           trial_space_(f.trial_space_[which]),
           df_(f.test_space_->GetTrueVSize())
     {
+      SERAC_MARK_FUNCTION;
     }
 
     /**
@@ -590,6 +592,11 @@ private:
       constexpr bool sparse_matrix_frees_values_ptr = true;
 
       constexpr bool col_ind_is_sorted = true;
+
+      if (!lookup_tables.initialized) {
+        lookup_tables.init(form_.G_test_[Domain::Type::Elements],
+                           form_.G_trial_[Domain::Type::Elements][which_argument]);
+      }
 
       double* values = new double[lookup_tables.nnz]{};
 

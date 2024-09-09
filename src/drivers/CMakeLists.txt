@@ -10,7 +10,7 @@ blt_add_executable( NAME        serac_driver
                     OUTPUT_NAME serac
                     )
 
-if (ENABLE_TESTS)
+if (SERAC_ENABLE_TESTS)
     set(input_files_dir ${CMAKE_CURRENT_SOURCE_DIR}/../../data/input_files)
 
     # Make sure running serac driver doesn't completely fail
