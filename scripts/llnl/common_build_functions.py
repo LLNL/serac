@@ -677,7 +677,7 @@ def get_shared_libs_dir():
 
 
 def get_shared_spot_dir():
-    return pjoin(get_shared_base_dir(), "spot")
+    return pjoin(get_shared_base_dir(), "califiles")
 
 
 def get_uberenv_path():
@@ -713,4 +713,3 @@ def convertSecondsToReadableTime(seconds):
     m, s = divmod(seconds, 60)
     h, m = divmod(m, 60)
     return "%d:%02d:%02d" % (h, m, s)
-
