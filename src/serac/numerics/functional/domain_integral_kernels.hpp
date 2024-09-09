@@ -224,12 +224,6 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
   rm.memset(qf_outputs, 0);
   rm.memset(interpolate_result, 0);
 
-  if (std::is_same<forall_policy, RAJA::seq_exec>::value) {
-    std::cout << "seq\n";
-  } else {
-    std::cout << "cud\n";
-  }
-
   auto e_range = RAJA::TypedRangeSegment<uint32_t>(0, num_elements);
   // for each element in the domain
   RAJA::launch<launch_policy>(
@@ -241,14 +235,16 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
             // variadic non-type parameter.
             [&ctx, t, J, x, u, trial_elements, qf, qpts_per_elem, rule, r, qf_state, elements, qf_derivatives,
              qf_inputs, qf_outputs, interpolate_result, update_state](uint32_t e) {
-              (void)qf_state;
-              (void)qf_derivatives;
-              (void)update_state;
-              (void)qpts_per_elem;
-              (void)trial_elements;
-              (void)qf_inputs;
-              (void)interpolate_result;
-              (void)u;
+              // (void)qf_state;
+              // (void)qf_derivatives;
+              // (void)update_state;
+              // (void)qpts_per_elem;
+              // (void)trial_elements;
+              // (void)qf_inputs;
+              // (void)interpolate_result;
+              // (void)u;
+              detail::suppress_capture_warnings(qf_state, qf_derivatives, update_state, qpts_per_elem,
+                trial_elements, qf_inputs, interpolate_result, u);
 
               [[maybe_unused]] static constexpr trial_element_tuple_type empty_trial_element{};
               // batch-calculate values / derivatives of each trial space, at each quadrature point
@@ -476,6 +472,7 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
       RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_SZ)),
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(ctx, elements_range, [&](uint32_t e) {
+          detail::suppress_capture_warnings(qf_derivatives);
           static constexpr bool  is_QOI_2 = test::family == Family::QOI;
           [[maybe_unused]] auto* output_ptr =
               reinterpret_cast<typename test_element::dof_type*>(&dK(elements[e], 0, 0));

@@ -72,9 +72,9 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
   // Construct the new functional object using the known test and trial spaces
 
 #ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(trial_fespace.get(), {trial_fespace.get()});
+  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(test_fespace.get(), {trial_fespace.get()});
 #else
-  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(test_fespace.get(), {test_fespace.get()});
+  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(test_fespace.get(), {trial_fespace.get()});
 #endif
 
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, TestThermalModelOne<dim>{}, *mesh);

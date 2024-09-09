@@ -120,6 +120,7 @@ void elasticity_test(std::unique_ptr<mfem::ParMesh>& mesh)
   auto [test_fes, test_col]   = generateParFiniteElementSpace<test_space>(mesh.get());
 
   mfem::Vector U(trial_fes->TrueVSize());
+  U.Randomize();
 
 #ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   U.UseDevice(true);
