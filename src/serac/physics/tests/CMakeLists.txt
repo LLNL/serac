@@ -40,7 +40,7 @@ set(physics_parallel_test_sources
     solid_reaction_adjoint.cpp
     thermal_nonlinear_solve.cpp
     )
-blt_list_append(TO physics_parallel_test_sources ELEMENTS contact_patch.cpp contact_beam.cpp IF TRIBOL_FOUND)
+blt_list_append(TO physics_parallel_test_sources ELEMENTS contact_patch.cpp contact_beam.cpp contact_solid_adjoint.cpp IF TRIBOL_FOUND)
 
 serac_add_tests(SOURCES       ${physics_parallel_test_sources}
                 DEPENDS_ON    ${physics_test_depends}
