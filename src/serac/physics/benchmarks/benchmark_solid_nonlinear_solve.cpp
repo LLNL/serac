@@ -51,38 +51,36 @@ enum class NonlinSolve
 std::string mesh_path = ".";
 // string->value matching for optionally entering options as string in command line
 std::map<std::string, Prec> precMap = {
-  {"jacobi", Prec::JACOBI},
-  {"strumpack", Prec::STRUMPACK},
-  {"choleski", Prec::CHOLESKI},
-  {"lu", Prec::LU},
-  {"multigrid", Prec::MULTIGRID},
-  {"petsc_multigrid", Prec::PETSC_MULTIGRID},
-  {"none", Prec::NONE},
+    {"jacobi", Prec::JACOBI}, {"strumpack", Prec::STRUMPACK}, {"choleski", Prec::CHOLESKI},
+    {"lu", Prec::LU},         {"multigrid", Prec::MULTIGRID}, {"petsc_multigrid", Prec::PETSC_MULTIGRID},
+    {"none", Prec::NONE},
 };
 std::map<std::string, NonlinSolve> nonlinSolveMap = {
-  {"newton", NonlinSolve::NEWTON},
-  {"linesearch", NonlinSolve::LINESEARCH},
-  {"critialpoint", NonlinSolve::CRITICALPOINT},
-  {"trustregion", NonlinSolve::TRUSTREGION},
-  {"none", NonlinSolve::NONE},
+    {"newton", NonlinSolve::NEWTON},
+    {"linesearch", NonlinSolve::LINESEARCH},
+    {"critialpoint", NonlinSolve::CRITICALPOINT},
+    {"trustregion", NonlinSolve::TRUSTREGION},
+    {"none", NonlinSolve::NONE},
 };
 
-const std::string precToString(Prec prec) {
-    for (const auto& p : precMap) {
-        if (p.second == prec) {
-            return p.first;
-        }
+const std::string precToString(Prec prec)
+{
+  for (const auto& p : precMap) {
+    if (p.second == prec) {
+      return p.first;
     }
-    return "unknown";
+  }
+  return "unknown";
 }
 
-const std::string nonlinSolveToString(NonlinSolve nonlinSolve) {
-    for (const auto& n : nonlinSolveMap) {
-        if (n.second == nonlinSolve) {
-            return n.first;
-        }
+const std::string nonlinSolveToString(NonlinSolve nonlinSolve)
+{
+  for (const auto& n : nonlinSolveMap) {
+    if (n.second == nonlinSolve) {
+      return n.first;
     }
-    return "unknown";
+  }
+  return "unknown";
 }
 
 auto get_opts(NonlinSolve nonlinSolve, Prec prec, int max_iters, double abs_tol = 1e-9)
@@ -323,14 +321,14 @@ int main(int argc, char* argv[])
   SERAC_MARK_FUNCTION;
 
   NonlinSolve nonlinSolve = NonlinSolve::NONE;
-  Prec prec = Prec::NONE;
+  Prec        prec        = Prec::NONE;
 
   axom::CLI::App app{"Solid Nonlinear Solve Benchmark"};
-  //app.add_option("-m,--mesh", mesh_path, "Path to mesh files")->check(axom::CLI::ExistingDirectory);
+  // app.add_option("-m,--mesh", mesh_path, "Path to mesh files")->check(axom::CLI::ExistingDirectory);
   app.add_option("-n,--nonlinear-solver", nonlinSolve, "Nonlinear solver")
-    ->transform(axom::CLI::CheckedTransformer(nonlinSolveMap, axom::CLI::ignore_case));
+      ->transform(axom::CLI::CheckedTransformer(nonlinSolveMap, axom::CLI::ignore_case));
   app.add_option("-p,--preconditioner", prec, "Preconditioner")
-    ->transform(axom::CLI::CheckedTransformer(precMap, axom::CLI::ignore_case));
+      ->transform(axom::CLI::CheckedTransformer(precMap, axom::CLI::ignore_case));
 
   // Parse the arguments and check if they are good
   try {
@@ -350,8 +348,7 @@ int main(int argc, char* argv[])
   SERAC_SET_METADATA("test", "solid_nonlinear_solve");
 
   // If you do not specify preconditioner and nonlinear solver, run the following pre-selected options
-  if (nonlinSolve == NonlinSolve::NONE && prec == Prec::NONE)
-  {
+  if (nonlinSolve == NonlinSolve::NONE && prec == Prec::NONE) {
     SERAC_MARK_BEGIN("Jacobi Preconditioner");
     functional_solid_test_nonlinear_buckle(NonlinSolve::NEWTON, Prec::JACOBI, 5e-10);
     SERAC_MARK_END("Jacobi Preconditioner");
@@ -363,9 +360,7 @@ int main(int argc, char* argv[])
     SERAC_MARK_BEGIN("Petsc Multigrid Preconditioner");
     functional_solid_test_nonlinear_buckle(NonlinSolve::NEWTON, Prec::PETSC_MULTIGRID, 5e-10);
     SERAC_MARK_END("Petsc Multigrid Preconditioner");
-  }
-  else
-  {
+  } else {
     SERAC_SET_METADATA("nonlinear solver", nonlinSolveToString(nonlinSolve));
     SERAC_SET_METADATA("preconditioner", precToString(prec));
 
