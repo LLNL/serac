@@ -220,7 +220,7 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
               // caused by the explicit capture above.
               (void)qpts_per_elem;
               detail::suppress_capture_warnings(qf_derivatives, qpts_per_elem, trial_elements, qf_inputs,
-                                                       interpolate_result, u);
+                                                interpolate_result, u);
 
               // batch-calculate values / derivatives of each trial space, at each quadrature point
               (get<indices>(trial_elements)
@@ -414,7 +414,8 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
 
           ctx.teamSync();
 
-          RAJA_TEAM_SHARED typename trial_element::template batch_apply_shape_fn_output<derivatives_type, Q>::type source_and_flux;
+          RAJA_TEAM_SHARED
+          typename trial_element::template batch_apply_shape_fn_output<derivatives_type, Q>::type source_and_flux;
           for (int J = 0; J < trial_element::ndof; J++) {
             trial_element::batch_apply_shape_fn(J, derivatives, &source_and_flux, rule, ctx);
             ctx.teamSync();

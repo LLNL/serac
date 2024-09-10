@@ -243,8 +243,8 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
               // (void)qf_inputs;
               // (void)interpolate_result;
               // (void)u;
-              detail::suppress_capture_warnings(qf_state, qf_derivatives, update_state, qpts_per_elem,
-                trial_elements, qf_inputs, interpolate_result, u);
+              detail::suppress_capture_warnings(qf_state, qf_derivatives, update_state, qpts_per_elem, trial_elements,
+                                                qf_inputs, interpolate_result, u);
 
               [[maybe_unused]] static constexpr trial_element_tuple_type empty_trial_element{};
               // batch-calculate values / derivatives of each trial space, at each quadrature point
@@ -472,13 +472,12 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
       RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_SZ)),
       [=] RAJA_HOST_DEVICE(RAJA::LaunchContext ctx) {
         RAJA::loop<teams_e>(ctx, elements_range, [&](uint32_t e) {
-          detail::suppress_capture_warnings(qf_derivatives);
           static constexpr bool  is_QOI_2 = test::family == Family::QOI;
           [[maybe_unused]] auto* output_ptr =
               reinterpret_cast<typename test_element::dof_type*>(&dK(elements[e], 0, 0));
 
           RAJA::RangeSegment x_range(0, nquad);
-          RAJA::loop<threads_x>(ctx, x_range, [&](int q) {
+          RAJA::loop<threads_x>(ctx, x_range, [&derivatives, qf_derivatives, nquad, e](int q) {
             if constexpr (is_QOI_2) {
               get<0>(derivatives[e](q)) = qf_derivatives[e * nquad + uint32_t(q)];
             }
