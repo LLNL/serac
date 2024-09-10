@@ -1534,8 +1534,6 @@ protected:
   /// sensitivity of qoi with respect to reaction forces
   FiniteElementDual reactions_adjoint_load_;
 
-public:
-
   /// serac::Functional that is used to calculate the residual and its derivatives
   std::unique_ptr<ShapeAwareFunctional<shape_trial, test(trial, trial, parameter_space...)>> residual_;
 
@@ -1545,8 +1543,6 @@ public:
 
   /// the specific methods and tolerances specified to solve the nonlinear residual equations
   std::unique_ptr<EquationSolver> nonlin_solver_;
-
-protected:
 
   /**
    * @brief the ordinary differential equation that describes
@@ -1626,7 +1622,7 @@ protected:
     // By default, use a homogeneous essential boundary condition
     mfem::HypreParVector adjoint_essential(displacement_adjoint_load_);
     adjoint_essential = 0.0;
-    
+
     auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
                                     *parameters_[parameter_indices].state...);
     auto jacobian  = assemble(drdu);
