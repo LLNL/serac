@@ -128,9 +128,8 @@ public:
    * @param parameter_names A vector of the names of the requested parameter fields
    * @param cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param time The simulation time to initialize the physics module to
-   * @param checkpoint_to_disk A flag to save the transient states on disk instead of memory for the transient adjoint
-   * solves
-   * @param use_warm_start A flag to turn on or off the displacement warm start predictor which helps robustness for
+   * @param checkpoint_to_disk Flag to save the transient states on disk instead of memory for transient adjoint solver
+   * @param use_warm_start Flag to turn on or off the displacement warm start predictor which helps robustness for
    * large deformation problems
    *
    * @note On parallel file systems (e.g. lustre), significant slowdowns and occasional errors were observed when
@@ -158,7 +157,7 @@ public:
    * @param parameter_names A vector of the names of the requested parameter fields
    * @param cycle The simulation cycle (i.e. timestep iteration) to intialize the physics module to
    * @param time The simulation time to initialize the physics module to
-   * @param checkpoint_to_disk A flag to save the transient states on disk instead of memory for the transient adjoint
+   * @param checkpoint_to_disk Flag to save the transient states on disk instead of memory for transient adjoint solves
    * @param use_warm_start A flag to turn on or off the displacement warm start predictor which helps robustness for
    * large deformation problems
    *
@@ -191,6 +190,7 @@ public:
         geom_nonlin_(geom_nonlin),
         use_warm_start_(use_warm_start)
   {
+    SERAC_MARK_FUNCTION;
     SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
                        axom::fmt::format("Compile time dimension, {0}, and runtime mesh dimension, {1}, mismatch", dim,
                                          mesh_.Dimension()));
@@ -249,13 +249,12 @@ public:
     if (amg_prec) {
       // ZRA - Iterative refinement tends to be more expensive than it is worth
       // We should add a flag allowing users to enable it
-      if constexpr (serac::ordering == mfem::Ordering::byVDIM) {
-        bool iterative_refinement = false;
-        amg_prec->SetElasticityOptions(&displacement_.space(), iterative_refinement);
-      } else {
-        // SetElasticityOptions only works with byVDIM ordering, instead fallback to SetSystemsOptions
-        amg_prec->SetSystemsOptions(displacement_.space().GetVDim(), serac::ordering == mfem::Ordering::byNODES);
-      }
+
+      // bool iterative_refinement = false;
+      // amg_prec->SetElasticityOptions(&displacement_.space(), iterative_refinement);
+
+      // SetElasticityOptions only works with byVDIM ordering, some evidence that it is not often optimal
+      amg_prec->SetSystemsOptions(displacement_.space().GetVDim(), serac::ordering == mfem::Ordering::byNODES);
     }
 
     int true_size = velocity_.space().TrueVSize();
@@ -421,23 +420,7 @@ public:
   template <typename T>
   qdata_type<T> createQuadratureDataBuffer(T initial_state)
   {
-    constexpr auto Q = order + 1;
-
-    std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> elems = geometry_counts(mesh_);
-    std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> qpts_per_elem{};
-
-    std::vector<mfem::Geometry::Type> geometries;
-    if (dim == 2) {
-      geometries = {mfem::Geometry::TRIANGLE, mfem::Geometry::SQUARE};
-    } else {
-      geometries = {mfem::Geometry::TETRAHEDRON, mfem::Geometry::CUBE};
-    }
-
-    for (auto geom : geometries) {
-      qpts_per_elem[size_t(geom)] = uint32_t(num_quadrature_points(geom, Q));
-    }
-
-    return std::make_shared<QuadratureData<T>>(elems, qpts_per_elem, initial_state);
+    return StateManager::newQuadratureDataBuffer(mesh_tag_, order, dim, initial_state);
   }
 
   /**
@@ -1144,6 +1127,7 @@ public:
 
         // residual function
         [this](const mfem::Vector& u, mfem::Vector& r) {
+          SERAC_MARK_FUNCTION;
           const mfem::Vector res =
               (*residual_)(time_, shape_displacement_, u, acceleration_, *parameters_[parameter_indices].state...);
 
@@ -1156,6 +1140,7 @@ public:
 
         // gradient of residual function
         [this](const mfem::Vector& u) -> mfem::Operator& {
+          SERAC_MARK_FUNCTION;
           auto [r, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(u), acceleration_,
                                         *parameters_[parameter_indices].state...);
           J_             = assemble(drdu);
@@ -1266,6 +1251,7 @@ public:
   /// @overload
   void advanceTimestep(double dt) override
   {
+    SERAC_MARK_FUNCTION;
     SLIC_ERROR_ROOT_IF(!residual_, "completeSetup() must be called prior to advanceTimestep(dt) in SolidMechanics.");
 
     // If this is the first call, initialize the previous parameter values as the initial values
@@ -1749,6 +1735,8 @@ protected:
    */
   void warmStartDisplacement(double dt)
   {
+    SERAC_MARK_FUNCTION;
+
     du_ = 0.0;
     for (auto& bc : bcs_.essentials()) {
       // apply the future boundary conditions, but use the most recent Jacobians stiffness.
