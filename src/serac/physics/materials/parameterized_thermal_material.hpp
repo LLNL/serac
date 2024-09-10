@@ -19,7 +19,11 @@ namespace serac::heat_transfer {
 
 /// Linear isotropic conductor with a parameterized conductivity
 class ParameterizedLinearIsotropicConductor {
-public:
+
+ public:
+
+  using State = Empty;  ///< this material has no internal variables
+
   /**
    * @brief Construct a new Parameterized Linear Isotropic Conductor object
    *
@@ -55,7 +59,7 @@ public:
    * linear isotropic material
    */
   template <typename T1, typename T2, typename T3, typename T4>
-  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& /* temperature */, const T3& temperature_gradient,
+  SERAC_HOST_DEVICE auto operator()(State & /*state*/, const T1& /* x */, const T2& /* temperature */, const T3& temperature_gradient,
                                     const T4& parameter) const
   {
     return serac::tuple{density_ * specific_heat_capacity_,
@@ -82,6 +86,9 @@ private:
 
 /// Nonlinear isotropic heat transfer material model
 struct ParameterizedIsotropicConductorWithLinearConductivityVsTemperature {
+
+  using State = Empty;  ///< this material has no internal variables
+
   /**
    * @brief Construct a Parameterized Isotropic Conductor with Conductivity linear with Temparture object
    *
@@ -120,7 +127,7 @@ struct ParameterizedIsotropicConductorWithLinearConductivityVsTemperature {
    * @return The calculated material response (tuple of volumetric heat capacity and thermal flux)
    */
   template <typename T1, typename T2, typename T3, typename T4>
-  SERAC_HOST_DEVICE auto operator()(const T1& /* x */, const T2& temperature, const T3& temperature_gradient,
+  SERAC_HOST_DEVICE auto operator()(State & /*state*/, const T1& /* x */, const T2& temperature, const T3& temperature_gradient,
                                     const T4& parameter) const
   {
     const auto currentConductivity =

@@ -89,7 +89,10 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("py-ats", when="+devtools")
 
     # MFEM is deprecating the monitoring support with sundials v6.0 and later
-    depends_on("sundials+hypre~monitoring~examples~examples-install",
+    # NOTE: Sundials must be built static to prevent the following runtime error:
+    # "error while loading shared libraries: libsundials_nvecserial.so.6:
+    # cannot open shared object file: No such file or directory"
+    depends_on("sundials+hypre~monitoring~examples~examples-install+static~shared",
                when="+sundials")
     depends_on("sundials+asan", when="+sundials+asan")
 
@@ -100,6 +103,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("mfem+strumpack", when="+strumpack")
     depends_on("mfem+petsc", when="+petsc")
     depends_on("mfem+slepc", when="+slepc")
+    depends_on("mfem+openmp", when="+openmp")
 
     depends_on("netcdf-c@4.7.4")
 
@@ -159,10 +163,19 @@ class Serac(CachedCMakePackage, CudaPackage):
     # CMake packages "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
 
     # Optional (require our variant in "when")
-    for dep in ["raja", "umpire", "sundials", "strumpack"]:
+    for dep in ["raja", "strumpack"]:
         depends_on("{0} build_type=Debug".format(dep), when="+{0} build_type=Debug".format(dep))
         depends_on("{0}+shared".format(dep), when="+{0}+shared".format(dep))
         depends_on("{0}~shared".format(dep), when="+{0}~shared".format(dep))
+    
+    # Umpire needs it's own section due do +shared+cuda conflict
+    depends_on("umpire build_type=Debug".format(dep), when="+umpire build_type=Debug".format(dep))
+    # Only propagate shared if not CUDA
+    depends_on("umpire+shared".format(dep), when="+umpire+shared~cuda".format(dep))
+    depends_on("umpire~shared".format(dep), when="+umpire~shared".format(dep))
+
+    # Don't add propagate shared variant to sundials
+    depends_on("sundials build_type=Debug".format(dep), when="+sundials build_type=Debug".format(dep))
 
     # Optional (require when="+profile")
     for dep in ["adiak", "caliper"]:
@@ -171,10 +184,7 @@ class Serac(CachedCMakePackage, CudaPackage):
         depends_on("{0}~shared".format(dep), when="+profiling~shared")
 
     # Required
-    # NOTE: Don't put HDF5 in this list, for the following reasons:
-    #  "hdf5+shared" causes Axom to not find HDF5
-    #  "hdf5 build_type=Release" causes netcdf-c to not find HDF5 on Ubuntu 20
-    for dep in ["axom", "conduit", "metis", "parmetis", "superlu-dist"]:
+    for dep in ["axom", "conduit", "hdf5", "metis", "parmetis", "superlu-dist"]:
         depends_on("{0} build_type=Debug".format(dep), when="build_type=Debug")
         depends_on("{0}+shared".format(dep), when="+shared")
         depends_on("{0}~shared".format(dep), when="~shared")
@@ -198,9 +208,10 @@ class Serac(CachedCMakePackage, CudaPackage):
         depends_on("{0}+debug".format(dep), when="build_type=Debug")
         depends_on("{0}+shared".format(dep), when="+shared")
         depends_on("{0}~shared".format(dep), when="~shared")
+
     # MFEM has a static variant
-    depends_on("{0}+static".format(dep), when="~shared")
-    depends_on("{0}~static".format(dep), when="+shared")
+    depends_on("{0}+static".format("mfem"), when="~shared")
+    depends_on("{0}~static".format("mfem"), when="+shared")
 
     #
     # Conflicts
@@ -210,6 +221,9 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     conflicts("sundials@:6.0.0", when="+sundials",
               msg="Sundials needs to be greater than 6.0.0")
+
+    conflicts("sundials+shared", when="+sundials",
+              msg="Sundials causes runtime errors if shared!")
 
     # ASan is only supported by GCC and (some) LLVM-derived
     # compilers.
@@ -271,11 +285,17 @@ class Serac(CachedCMakePackage, CudaPackage):
         if "SYS_TYPE" in env:
             # Are we on a LLNL system then strip node number
             hostname = hostname.rstrip("1234567890")
-        return "{0}-{1}-{2}@{3}.cmake".format(
+        special_case = ""
+        if "+cuda" in self.spec:
+            special_case += "_cuda"
+        if "+asan" in self.spec:
+            special_case += "_asan"
+        return "{0}-{1}-{2}@{3}{4}.cmake".format(
             hostname,
             self._get_sys_type(self.spec),
             self.spec.compiler.name,
-            self.spec.compiler.version
+            self.spec.compiler.version,
+            special_case,
         )
 
 
@@ -298,7 +318,7 @@ class Serac(CachedCMakePackage, CudaPackage):
                 # CXX flags will be propagated to the host compiler
                 cxxflags = " ".join(spec.compiler_flags["cxxflags"])
                 cuda_flags = cxxflags
-                cuda_flags += "${CMAKE_CUDA_FLAGS} --expt-extended-lambda --expt-relaxed-constexpr "
+                cuda_flags += " ${CMAKE_CUDA_FLAGS} --expt-extended-lambda --expt-relaxed-constexpr "
                 entries.append(cmake_cache_string("CMAKE_CUDA_FLAGS",
                                                   cuda_flags, force=True))
 

@@ -98,18 +98,24 @@ TEST(FiniteElementVector, SetVectorFieldOver2DDomain)
   u = 0.0;
   u.project(func, essential_boundary);
 
-  EXPECT_NEAR(u[0], 1.0, 1.0e-15);
-  EXPECT_NEAR(u[1], 1.5, 1.0e-15);
-  EXPECT_NEAR(u[2], 2.0, 1.0e-15);
+  auto vdim  = u.space().GetVDim();
+  auto ndofs = u.space().GetTrueVSize() / vdim;
+  auto dof   = [ndofs, vdim](auto node, auto component) {
+    return mfem::Ordering::Map<serac::ordering>(ndofs, vdim, node, component);
+  };
+
+  EXPECT_NEAR(u[dof(0, 0)], 1.0, 1.0e-15);
+  EXPECT_NEAR(u[dof(1, 0)], 1.5, 1.0e-15);
+  EXPECT_NEAR(u[dof(2, 0)], 2.0, 1.0e-15);
   for (int i = 3; i < 9; i++) {
-    EXPECT_NEAR(u[i], 0.0, 1.0e-15);
+    EXPECT_NEAR(u[dof(i, 0)], 0.0, 1.0e-15);
   }
 
-  EXPECT_NEAR(u[9], 2.0, 1.0e-15);
-  EXPECT_NEAR(u[10], 2.5, 1.0e-15);
-  EXPECT_NEAR(u[11], 3.0, 1.0e-15);
+  EXPECT_NEAR(u[dof(0, 1)], 2.0, 1.0e-15);
+  EXPECT_NEAR(u[dof(1, 1)], 2.5, 1.0e-15);
+  EXPECT_NEAR(u[dof(2, 1)], 3.0, 1.0e-15);
   for (int i = 3; i < 9; i++) {
-    EXPECT_NEAR(u[i + 9], 0.0, 1.0e-15);
+    EXPECT_NEAR(u[dof(i, 1)], 0.0, 1.0e-15);
   }
 }
 

@@ -38,10 +38,9 @@ TEST(ErrorHandling, BcOneComponentVectorCoef)
 
   auto mesh = mesh::refineAndDistribute(buildDiskMesh(10), 0, 0);
 
-  mfem::H1_FECollection       coll(1, mesh->Dimension());
-  mfem::ParFiniteElementSpace space(mesh.get(), &coll);
+  auto [space, coll] = serac::generateParFiniteElementSpace<H1<1>>(mesh.get());
 
-  EXPECT_THROW(BoundaryCondition(coef, 0, space, std::set<int>{1}), SlicErrorException);
+  EXPECT_THROW(BoundaryCondition(coef, 0, *space, std::set<int>{1}), SlicErrorException);
 }
 
 TEST(ErrorHandling, BcOneComponentVectorCoefDofs)
@@ -53,21 +52,19 @@ TEST(ErrorHandling, BcOneComponentVectorCoefDofs)
 
   auto mesh = mesh::refineAndDistribute(buildDiskMesh(10), 0, 0);
 
-  mfem::H1_FECollection       coll(1, mesh->Dimension());
-  mfem::ParFiniteElementSpace space(mesh.get(), &coll);
+  auto [space, coll] = serac::generateParFiniteElementSpace<H1<1>>(mesh.get());
 
-  EXPECT_THROW(BoundaryCondition(coef, 0, space, dofs), SlicErrorException);
+  EXPECT_THROW(BoundaryCondition(coef, 0, *space, dofs), SlicErrorException);
 }
 
 TEST(ErrorHandling, BcRetrieveScalarCoef)
 {
   auto mesh = mesh::refineAndDistribute(buildDiskMesh(10), 0, 0);
 
-  mfem::H1_FECollection       coll(1, mesh->Dimension());
-  mfem::ParFiniteElementSpace space(mesh.get(), &coll);
+  auto [space, coll] = serac::generateParFiniteElementSpace<H1<1>>(mesh.get());
 
   auto              coef = std::make_shared<mfem::ConstantCoefficient>(1.0);
-  BoundaryCondition bc(coef, -1, space, std::set<int>{});
+  BoundaryCondition bc(coef, -1, *space, std::set<int>{});
   EXPECT_NO_THROW(bc.scalarCoefficient());
   EXPECT_THROW(bc.vectorCoefficient(), SlicErrorException);
 
@@ -80,12 +77,11 @@ TEST(ErrorHandling, BcRetrieveVecCoef)
 {
   auto mesh = mesh::refineAndDistribute(buildDiskMesh(10), 0, 0);
 
-  mfem::H1_FECollection       coll(1, mesh->Dimension());
-  mfem::ParFiniteElementSpace space(mesh.get(), &coll);
+  auto [space, coll] = serac::generateParFiniteElementSpace<H1<1>>(mesh.get());
 
   mfem::Vector      vec;
   auto              coef = std::make_shared<mfem::VectorConstantCoefficient>(vec);
-  BoundaryCondition bc(coef, {}, space, std::set<int>{});
+  BoundaryCondition bc(coef, {}, *space, std::set<int>{});
   EXPECT_NO_THROW(bc.vectorCoefficient());
   EXPECT_THROW(bc.scalarCoefficient(), SlicErrorException);
 
