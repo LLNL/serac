@@ -246,9 +246,11 @@ public:
    */
   void advanceTimestep(double dt) override
   {
+    std::cout << "Solving mechanical subproblem" << std::endl;
     thermal_.setParameter(0, solid_.displacement());
     thermal_.advanceTimestep(dt);
 
+    std::cout << "Solving thermal subproblem" << std::endl;
     solid_.setParameter(0, thermal_.temperature());
     solid_.advanceTimestep(dt);
 
