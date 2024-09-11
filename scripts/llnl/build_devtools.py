@@ -18,8 +18,6 @@ from common_build_functions import *
 
 from argparse import ArgumentParser
 
-import os
-
 
 def parse_args():
     "Parses args from command line"

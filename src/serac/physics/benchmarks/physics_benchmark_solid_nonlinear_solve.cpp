@@ -7,14 +7,14 @@
 #include "serac/physics/solid_mechanics.hpp"
 #include "serac/physics/solid_mechanics_contact.hpp"
 
-#include <functional>
+#include <algorithm>
 #include <fstream>
+#include <functional>
+#include <ostream>
 #include <set>
 #include <string>
-#include <algorithm>
 
 #include "axom/slic/core/SimpleLogger.hpp"
-#include <gtest/gtest.h>
 #include "mfem.hpp"
 
 #include "serac/physics/materials/liquid_crystal_elastomer.hpp"
@@ -28,30 +28,62 @@
 
 using namespace serac;
 
-std::string mesh_path = ".";
-
-enum Prec
+enum class Prec
 {
   JACOBI,
   STRUMPACK,
   CHOLESKI,
   LU,
   MULTIGRID,
-  PETSC_MULTIGRID
+  PETSC_MULTIGRID,
+  NONE
 };
 
-enum NonlinSolve
+enum class NonlinSolve
 {
   NEWTON,
   LINESEARCH,
   CRITICALPOINT,
-  TRUSTREGION
+  TRUSTREGION,
+  NONE
 };
 
-NonlinSolve nonlinSolve = NonlinSolve::TRUSTREGION;
-Prec        prec        = Prec::JACOBI;
+std::string mesh_path = ".";
+// string->value matching for optionally entering options as string in command line
+std::map<std::string, Prec> precMap = {
+    {"jacobi", Prec::JACOBI}, {"strumpack", Prec::STRUMPACK}, {"choleski", Prec::CHOLESKI},
+    {"lu", Prec::LU},         {"multigrid", Prec::MULTIGRID}, {"petsc_multigrid", Prec::PETSC_MULTIGRID},
+    {"none", Prec::NONE},
+};
+std::map<std::string, NonlinSolve> nonlinSolveMap = {
+    {"newton", NonlinSolve::NEWTON},
+    {"linesearch", NonlinSolve::LINESEARCH},
+    {"critialpoint", NonlinSolve::CRITICALPOINT},
+    {"trustregion", NonlinSolve::TRUSTREGION},
+    {"none", NonlinSolve::NONE},
+};
 
-auto get_opts(int max_iters, double abs_tol = 1e-9)
+const std::string precToString(Prec prec)
+{
+  for (const auto& p : precMap) {
+    if (p.second == prec) {
+      return p.first;
+    }
+  }
+  return "unknown";
+}
+
+const std::string nonlinSolveToString(NonlinSolve nonlinSolve)
+{
+  for (const auto& n : nonlinSolveMap) {
+    if (n.second == nonlinSolve) {
+      return n.first;
+    }
+  }
+  return "unknown";
+}
+
+auto get_opts(NonlinSolve nonlinSolve, Prec prec, int max_iters, double abs_tol = 1e-9)
 {
   serac::NonlinearSolverOptions nonlinear_options{
       .nonlin_solver = NonlinearSolver::TrustRegion,
@@ -108,6 +140,10 @@ auto get_opts(int max_iters, double abs_tol = 1e-9)
       nonlinear_options.nonlin_solver = NonlinearSolver::TrustRegion;
       break;
     }
+    case NonlinSolve::NONE:
+    default: {
+      SLIC_ERROR_ROOT("invalid nonlinear solver specified");
+    }
   }
 
   switch (prec) {
@@ -149,18 +185,16 @@ auto get_opts(int max_iters, double abs_tol = 1e-9)
       linear_options.petsc_preconditioner = PetscPCType::HMG;
       break;
     }
+    case Prec::NONE:
     default: {
-      SLIC_ERROR_ROOT("error, invalid preconditioner specified");
+      SLIC_ERROR_ROOT("invalid preconditioner specified");
     }
   }
 
   return std::make_pair(nonlinear_options, linear_options);
 }
 
-#include <ostream>
-#include <fstream>
-
-void functional_solid_test_euler()
+void functional_solid_test_euler(NonlinSolve nonlinSolve, Prec prec)
 {
   // initialize serac
   axom::sidre::DataStore datastore;
@@ -192,7 +226,7 @@ void functional_solid_test_euler()
   // solid mechanics
   using seracSolidType = serac::SolidMechanics<ORDER, DIM, serac::Parameters<>>;
 
-  auto [nonlinear_options, linear_options] = get_opts(3 * Nx * Ny * Nz, 1e-9);
+  auto [nonlinear_options, linear_options] = get_opts(nonlinSolve, prec, 3 * Nx * Ny * Nz, 1e-9);
 
   auto seracSolid = std::make_unique<seracSolidType>(
       nonlinear_options, linear_options, serac::solid_mechanics::default_quasistatic_options,
@@ -224,7 +258,7 @@ void functional_solid_test_euler()
   }
 }
 
-void functional_solid_test_nonlinear_buckle(double loadMagnitude)
+void functional_solid_test_nonlinear_buckle(NonlinSolve nonlinSolve, Prec prec, double loadMagnitude)
 {
   // initialize serac
   axom::sidre::DataStore datastore;
@@ -258,7 +292,7 @@ void functional_solid_test_nonlinear_buckle(double loadMagnitude)
   // solid mechanics
   using seracSolidType = serac::SolidMechanics<ORDER, DIM, serac::Parameters<>>;
 
-  auto [nonlinear_options, linear_options] = get_opts(3 * Nx * Ny * Nz, 1e-11);
+  auto [nonlinear_options, linear_options] = get_opts(nonlinSolve, prec, 3 * Nx * Ny * Nz, 1e-11);
 
   auto seracSolid = std::make_unique<seracSolidType>(
       nonlinear_options, linear_options, serac::solid_mechanics::default_quasistatic_options,
@@ -280,30 +314,64 @@ void functional_solid_test_nonlinear_buckle(double loadMagnitude)
   seracSolid->outputStateToDisk("paraview_buckle_easy");
 }
 
-TEST(SolidMechanics, nonlinear_solve_buckle_easy) { functional_solid_test_nonlinear_buckle(5e-10); }
-// TEST(SolidMechanics, nonlinear_solve_buckle_medium) { functional_solid_test_nonlinear_buckle(4e-4); }
-// TEST(SolidMechanics, nonlinear_solve_buckle_hard) { functional_solid_test_nonlinear_buckle(3e-2); }
-// TEST(SolidMechanics, nonlinear_solve_euler) { functional_solid_test_euler(); }
-
 int main(int argc, char* argv[])
 {
-  axom::CLI::App app{"Nonlinear problems"};
-  // app.add_option("-p", mesh_path, "Path to mesh files")->check(axom::CLI::ExistingDirectory);
-  app.add_option("--nonlinear-solver", nonlinSolve, "Nonlinear solver", true);
-  app.add_option("--preconditioner", prec, "Preconditioner", true);
-  app.set_help_flag("--help");
-  app.allow_extras()->parse(argc, argv);
-
-  ::testing::InitGoogleTest(&argc, argv);
-
   serac::initialize(argc, argv);
 
+  SERAC_MARK_FUNCTION;
+
+  NonlinSolve nonlinSolve = NonlinSolve::NONE;
+  Prec        prec        = Prec::NONE;
+
+  axom::CLI::App app{"Solid Nonlinear Solve Benchmark"};
+  // app.add_option("-m,--mesh", mesh_path, "Path to mesh files")->check(axom::CLI::ExistingDirectory);
+  app.add_option("-n,--nonlinear-solver", nonlinSolve, "Nonlinear solver")
+      ->transform(axom::CLI::CheckedTransformer(nonlinSolveMap, axom::CLI::ignore_case));
+  app.add_option("-p,--preconditioner", prec, "Preconditioner")
+      ->transform(axom::CLI::CheckedTransformer(precMap, axom::CLI::ignore_case));
+
+  // Parse the arguments and check if they are good
+  try {
+    CLI11_PARSE(app, argc, argv);
+  } catch (const axom::CLI::ParseError& e) {
+    serac::logger::flush();
+    if (e.get_name() == "CallForHelp") {
+      auto msg = app.help();
+      SLIC_INFO_ROOT(msg);
+      serac::exitGracefully();
+    } else {
+      auto err_msg = axom::CLI::FailureMessage::simple(&app, e);
+      SLIC_ERROR_ROOT(err_msg);
+    }
+  }
+
   SERAC_SET_METADATA("test", "solid_nonlinear_solve");
-  SERAC_SET_METADATA("nonlinear solver", std::to_string(nonlinSolve));
-  SERAC_SET_METADATA("preconditioner", std::to_string(prec));
 
-  int result = RUN_ALL_TESTS();
-  serac::exitGracefully(result);
+  // If you do not specify preconditioner and nonlinear solver, run the following pre-selected options
+  if (nonlinSolve == NonlinSolve::NONE && prec == Prec::NONE) {
+    SERAC_MARK_BEGIN("Jacobi Preconditioner");
+    functional_solid_test_nonlinear_buckle(NonlinSolve::NEWTON, Prec::JACOBI, 5e-10);
+    SERAC_MARK_END("Jacobi Preconditioner");
 
-  return result;
+    SERAC_MARK_BEGIN("Multigrid Preconditioner");
+    functional_solid_test_nonlinear_buckle(NonlinSolve::NEWTON, Prec::MULTIGRID, 5e-10);
+    SERAC_MARK_END("Multigrid Preconditioner");
+
+    SERAC_MARK_BEGIN("Petsc Multigrid Preconditioner");
+    functional_solid_test_nonlinear_buckle(NonlinSolve::NEWTON, Prec::PETSC_MULTIGRID, 5e-10);
+    SERAC_MARK_END("Petsc Multigrid Preconditioner");
+  } else {
+    SERAC_SET_METADATA("nonlinear solver", nonlinSolveToString(nonlinSolve));
+    SERAC_SET_METADATA("preconditioner", precToString(prec));
+
+    SERAC_MARK_BEGIN("Custom Preconditioner");
+    functional_solid_test_nonlinear_buckle(nonlinSolve, prec, 5e-10);
+    SERAC_MARK_END("Custom Preconditioner");
+  }
+
+  // functional_solid_test_nonlinear_buckle(4e-4);
+  // functional_solid_test_nonlinear_buckle(3e-2);
+  // functional_solid_test_euler();
+
+  serac::exitGracefully(0);
 }

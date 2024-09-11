@@ -30,8 +30,8 @@ Introduction to SPOT
 LLNL for vizualizing performance data.  SPOT is an external tool and does not need to be
 linked into Serac.
 
-Build Instructions
-------------------
+TPL Build Instructions
+----------------------
 
 To use Adiak and Caliper with Serac, install the ``profiling`` variant of ``serac``
 with Spack, i.e., ``serac+profiling``. Note that these libraries are pre-built as
@@ -109,3 +109,21 @@ of this file, use `cali-query <https://software.llnl.gov/Caliper/tools.html#cali
 
 To view this data with SPOT, open a browser, navigate to the SPOT server (e.g. `LC <https://lc.llnl.gov/spot2>`_), and open the directory containing one or more ``.cali`` files.  For more information, watch this recorded `tutorial <https://www.youtube.com/watch?v=p8gjA6rbpvo>`_.
 
+Benchmarking Serac
+------------------
+
+To run all of Serac's benchmarks in one command, first make sure Serac is configured
+with benchmarking enabled (off by default). Then, run the build target ``run_benchmarks``.
+
+.. code-block:: bash
+
+  ./config-build.py -hc <host config file> -DENABLE_BENCHMARKS=ON
+  cd <serac build location>
+  make -j
+  make run_benchmarks
+  find . -name "*.cali" -print0 | xargs -0 mv -t .
+  pwd
+
+This will run all of Serac's benchmarks multiple times with varying MPI task counts, and generate a Caliper file for
+each benchmark run. The ``find`` command afterwards ensures all Caliper files are moved to the same directory. Now, you
+can visualize the results with SPOT, entering the path printed from ``pwd``.
