@@ -119,7 +119,9 @@ public:
       // See https://github.com/mfem/mfem/issues/3531
       mfem::Vector r_blk(r, 0, displacement_.Size());
       r_blk = res;
-      contact_.residualFunction(u, r);
+      mfem::Vector uPlusShapeDisp = u;
+      uPlusShapeDisp += shape_displacement_;
+      contact_.residualFunction(uPlusShapeDisp, r);
       r_blk.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
     };
     // This if-block below breaks up building the Jacobian operator depending if there is Lagrange multiplier
@@ -137,8 +139,11 @@ public:
                                           *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
 
+            mfem::Vector uPlusShapeDisp = u;
+            uPlusShapeDisp += shape_displacement_;
+
             // create block operator holding jacobian contributions
-            J_constraint_ = contact_.jacobianFunction(u, J_.release());
+            J_constraint_ = contact_.jacobianFunction(uPlusShapeDisp, J_.release());
 
             // take ownership of blocks
             J_constraint_->owns_blocks = false;
@@ -173,8 +178,11 @@ public:
                                           *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
 
+            mfem::Vector uPlusShapeDisp = u;
+            uPlusShapeDisp += shape_displacement_;
+
             // get 11-block holding jacobian contributions
-            auto block_J         = contact_.jacobianFunction(u, J_.release());
+            auto block_J         = contact_.jacobianFunction(uPlusShapeDisp, J_.release());
             block_J->owns_blocks = false;
             J_ = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&block_J->GetBlock(0, 0)));
 
@@ -258,8 +266,6 @@ protected:
   {
     SLIC_ERROR_ROOT_IF(contact_.haveLagrangeMultipliers(), "Lagrange multiplier contact does not currently support sensitivities/adjoints.");
 
-    printf("in adjoint contact solve\n");
-
     // By default, use a homogeneous essential boundary condition
     mfem::HypreParVector adjoint_essential(displacement_adjoint_load_);
     adjoint_essential = 0.0;
@@ -268,11 +274,12 @@ protected:
                                     *parameters_[parameter_indices].state...);
     auto jacobian  = assemble(drdu);
 
-    auto block_J = contact_.jacobianFunction(displacement_, jacobian.release());
+    mfem::Vector uPlusShapeDisp = displacement_;
+    uPlusShapeDisp += shape_displacement_;
+    auto block_J = contact_.jacobianFunction(uPlusShapeDisp, jacobian.release());
     block_J->owns_blocks = false;
     jacobian = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&block_J->GetBlock(0, 0)));
-
-    auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
+    auto J_T = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
     for (const auto& bc : bcs_.essentials()) {
       bc.apply(*J_T, displacement_adjoint_load_, adjoint_essential);
@@ -283,20 +290,21 @@ protected:
     lin_solver.Mult(displacement_adjoint_load_, adjoint_displacement_);
   }
 
-    /// @overload
+  /// @overload
   FiniteElementDual& computeTimestepShapeSensitivity() override
   {
-    printf("printing contact shape sensitivity\n");
     auto drdshape =
         serac::get<DERIVATIVE>((*residual_)(time_end_step_, differentiate_wrt(shape_displacement_), displacement_,
                                             acceleration_, *parameters_[parameter_indices].state...));
 
     auto drdshape_mat = assemble(drdshape);
 
-    auto block_J = contact_.jacobianFunction(displacement_, drdshape_mat.release());
+    mfem::Vector uPlusShapeDisp = displacement_;
+    uPlusShapeDisp += shape_displacement_;
+    auto block_J = contact_.jacobianFunction(uPlusShapeDisp, drdshape_mat.release());
     block_J->owns_blocks = false;
     drdshape_mat = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&block_J->GetBlock(0, 0)));
-
+    
     drdshape_mat->MultTranspose(adjoint_displacement_, *shape_displacement_sensitivity_);
 
     return *shape_displacement_sensitivity_;
