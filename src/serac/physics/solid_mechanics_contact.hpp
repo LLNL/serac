@@ -119,8 +119,10 @@ public:
       // See https://github.com/mfem/mfem/issues/3531
       mfem::Vector r_blk(r, 0, displacement_.Size());
       r_blk                       = res;
-      mfem::Vector uPlusShapeDisp = u;
+      mfem::Vector uPlusShapeDisp(u.Size());
+      uPlusShapeDisp = u;
       uPlusShapeDisp += shape_displacement_;
+
       contact_.residualFunction(uPlusShapeDisp, r);
       r_blk.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
     };
@@ -139,7 +141,8 @@ public:
                                           *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
 
-            mfem::Vector uPlusShapeDisp = u;
+            mfem::Vector uPlusShapeDisp(u.Size());
+            uPlusShapeDisp = u;
             uPlusShapeDisp += shape_displacement_;
 
             // create block operator holding jacobian contributions
@@ -178,7 +181,8 @@ public:
                                           *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
 
-            mfem::Vector uPlusShapeDisp = u;
+            mfem::Vector uPlusShapeDisp(u.Size());
+            uPlusShapeDisp = u;
             uPlusShapeDisp += shape_displacement_;
 
             // get 11-block holding jacobian contributions
@@ -275,8 +279,10 @@ protected:
                                   *parameters_[parameter_indices].state...);
     auto jacobian  = assemble(drdu);
 
-    mfem::Vector uPlusShapeDisp = displacement_;
+    mfem::Vector uPlusShapeDisp(displacement_.Size());
+    uPlusShapeDisp = displacement_;
     uPlusShapeDisp += shape_displacement_;
+
     auto block_J         = contact_.jacobianFunction(uPlusShapeDisp, jacobian.release());
     block_J->owns_blocks = false;
     jacobian = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&block_J->GetBlock(0, 0)));
@@ -300,8 +306,10 @@ protected:
 
     auto drdshape_mat = assemble(drdshape);
 
-    mfem::Vector uPlusShapeDisp = displacement_;
+    mfem::Vector uPlusShapeDisp(displacement_.Size());
+    uPlusShapeDisp = displacement_;
     uPlusShapeDisp += shape_displacement_;
+
     auto block_J         = contact_.jacobianFunction(uPlusShapeDisp, drdshape_mat.release());
     block_J->owns_blocks = false;
     drdshape_mat = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&block_J->GetBlock(0, 0)));
