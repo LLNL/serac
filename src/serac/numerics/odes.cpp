@@ -238,7 +238,6 @@ void SecondOrderODE::Solve(const double time, const double c0, const double c1, 
   // use 0 as our starting guess for unconstrained dofs
   d2u_dt2 = state_.d2u_dt2;
   d2u_dt2.SetSubVector(constrained_dofs, 0.0);
-  // d2U_dt2_.SetSubVectorComplement(constrained_dofs, 0.0);
   d2u_dt2 += d2U_dt2_;
   d2u_dt2.SetSubVectorComplement(constrained_dofs, 0.0);
 
