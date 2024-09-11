@@ -148,6 +148,8 @@ struct ElementRestriction {
   /// default ctor leaves this object uninitialized
   ElementRestriction() {}
 
+  ElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type elem_geom, const std::vector<int> & domain);
+
   /// create an ElementRestriction for all domain-type (geom dim == spatial dim) elements of the specified geometry
   ElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type elem_geom);
 

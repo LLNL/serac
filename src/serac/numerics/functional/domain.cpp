@@ -475,15 +475,19 @@ Domain EntireDomain(const mfem::Mesh& mesh)
     switch (geom) {
       case mfem::Geometry::TRIANGLE:
         output.tri_ids_.push_back(tri_id++);
+        output.mfem_tri_ids_.push_back(i);
         break;
       case mfem::Geometry::SQUARE:
         output.quad_ids_.push_back(quad_id++);
+        output.mfem_quad_ids_.push_back(i);
         break;
       case mfem::Geometry::TETRAHEDRON:
         output.tet_ids_.push_back(tet_id++);
+        output.mfem_tet_ids_.push_back(i);
         break;
       case mfem::Geometry::CUBE:
         output.hex_ids_.push_back(hex_id++);
+        output.mfem_hex_ids_.push_back(i);
         break;
       default:
         SLIC_ERROR("unsupported element type");
@@ -511,12 +515,15 @@ Domain EntireBoundary(const mfem::Mesh& mesh)
     switch (geom) {
       case mfem::Geometry::SEGMENT:
         output.edge_ids_.push_back(edge_id++);
+        output.mfem_edge_ids_.push_back(f);
         break;
       case mfem::Geometry::TRIANGLE:
         output.tri_ids_.push_back(tri_id++);
+        output.mfem_tri_ids_.push_back(f);
         break;
       case mfem::Geometry::SQUARE:
         output.quad_ids_.push_back(quad_id++);
+        output.mfem_quad_ids_.push_back(f);
         break;
       default:
         SLIC_ERROR("unsupported element type");
