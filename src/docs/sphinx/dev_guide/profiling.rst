@@ -121,6 +121,9 @@ with benchmarking enabled (off by default). Then, run the build target ``run_ben
   cd <serac build location>
   make -j
   make run_benchmarks
+  find . -name "*.cali" -print0 | xargs -0 mv -t .
+  pwd
 
 This will run all of Serac's benchmarks multiple times with varying MPI task counts, and generate a Caliper file for
-each benchmark run.
+each benchmark run. The ``find`` command afterwards ensures all Caliper files are moved to the same directory. Now, you
+can visualize the results with SPOT, entering the path printed from ``pwd``.
