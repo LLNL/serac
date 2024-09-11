@@ -235,11 +235,12 @@ void SecondOrderODE::Solve(const double time, const double c0, const double c1, 
   dU_dt_.SetSubVectorComplement(constrained_dofs, 0.0);
   state_.du_dt += dU_dt_;
 
-  // use the previous solution as our starting guess
+  // use 0 as our starting guess for unconstrained dofs
   d2u_dt2 = state_.d2u_dt2;
   d2u_dt2.SetSubVector(constrained_dofs, 0.0);
-  d2U_dt2_.SetSubVectorComplement(constrained_dofs, 0.0);
+  // d2U_dt2_.SetSubVectorComplement(constrained_dofs, 0.0);
   d2u_dt2 += d2U_dt2_;
+  d2u_dt2.SetSubVectorComplement(constrained_dofs, 0.0);
 
   solver_.solve(d2u_dt2);
   SLIC_WARNING_ROOT_IF(!solver_.nonlinearSolver().GetConverged(), "Newton Solver did not converge.");
