@@ -16,45 +16,85 @@ spack:
   - compiler:
       environment: {}
       extra_rpaths: []
-      flags: {}
-      modules:
-      - clang/14.0.6
+      flags:
+        fflags: -Mfreeform
+      modules: []
       operating_system: rhel8
       paths:
-        cc: /usr/tce/packages/clang/clang-14.0.6/bin/clang
-        cxx: /usr/tce/packages/clang/clang-14.0.6/bin/clang++
-        f77: /usr/tce/packages/gcc/gcc-10.3.1/bin/gfortran
-        fc: /usr/tce/packages/gcc/gcc-10.3.1/bin/gfortran
-      spec: clang@14.0.6
+        cc: /opt/rocm-5.2.3/llvm/bin/amdclang
+        cxx: /opt/rocm-5.2.3/llvm/bin/amdclang++
+        f77: /opt/rocm-5.2.3/llvm/bin/amdflang
+        fc: /opt/rocm-5.2.3/llvm/bin/amdflang
+      spec: clang@14.0.0
       target: x86_64
   - compiler:
       environment: {}
       extra_rpaths: []
-      flags: {}
-      modules:
-      - gcc/10.3.1
+      flags:
+        fflags: -Mfreeform
+      modules: []
       operating_system: rhel8
       paths:
-        cc: /usr/tce/packages/gcc/gcc-10.3.1/bin/gcc
-        cxx: /usr/tce/packages/gcc/gcc-10.3.1/bin/g++
-        f77: /usr/tce/packages/gcc/gcc-10.3.1/bin/gfortran
-        fc: /usr/tce/packages/gcc/gcc-10.3.1/bin/gfortran
-      spec: gcc@10.3.1
+        cc: /opt/rocm-5.4.3/llvm/bin/amdclang
+        cxx: /opt/rocm-5.4.3/llvm/bin/amdclang++
+        f77: /opt/rocm-5.4.3/llvm/bin/amdflang
+        fc: /opt/rocm-5.4.3/llvm/bin/amdflang
+      spec: clang@15.0.0
+      target: x86_64
+  - compiler:
+      environment: {}
+      extra_rpaths: []
+      flags:
+        fflags: -Mfreeform
+      modules: []
+      operating_system: rhel8
+      paths:
+        cc: /opt/rocm-5.6.0/llvm/bin/amdclang
+        cxx: /opt/rocm-5.6.0/llvm/bin/amdclang++
+        f77: /opt/rocm-5.6.0/llvm/bin/amdflang
+        fc: /opt/rocm-5.6.0/llvm/bin/amdflang
+      spec: clang@16.0.0
+      target: x86_64
+  - compiler:
+      environment: {}
+      extra_rpaths: []
+      flags:
+        fflags: -Mfreeform
+      modules: []
+      operating_system: rhel8
+      paths:
+        cc: /opt/rocm-5.7.1/llvm/bin/amdclang
+        cxx: /opt/rocm-5.7.1/llvm/bin/amdclang++
+        f77: /opt/rocm-5.7.1/llvm/bin/amdflang
+        fc: /opt/rocm-5.7.1/llvm/bin/amdflang
+      spec: clang@17.0.0
+      target: x86_64
+  - compiler:
+      environment: {}
+      extra_rpaths: []
+      # Flag for lowercase Fortran module names
+      flags:
+        fflags: -ef
+      modules: []
+      operating_system: rhel8
+      paths:
+        cc: /usr/tce/packages/cce-tce/cce-15.0.1/bin/craycc
+        cxx: /usr/tce/packages/cce-tce/cce-15.0.1/bin/crayCC
+        f77: /usr/tce/packages/cce-tce/cce-15.0.1/bin/crayftn
+        fc: /usr/tce/packages/cce-tce/cce-15.0.1/bin/crayftn
+      spec: cce@15.0.1
       target: x86_64
 
   packages:
     all:
-      # This defaults us to machine specific flags of ivybridge which allows
-      # us to run on broadwell as well
-      target: [ivybridge]
       compiler: [gcc, intel, pgi, clang, xl, nag]
       providers:
         blas: [openblas]
         lapack: [netlib-lapack]
-        mpi: [mvapich2]
         gl: [opengl]
         glu: [openglu]
         zlib-api: [zlib]
+        mpi: [cray-mpich]
 
     openblas:
       buildable: false
@@ -72,16 +112,114 @@ spack:
       - spec: openglu@1.3.1
         prefix: /usr
 
+    hip:
+      version: [5.2.3, 5.4.3, 5.6.0, 5.7.1]
+      buildable: false
+      externals:
+      - spec: hip@5.2.3
+        prefix: /opt/rocm-5.2.3/hip
+      - spec: hip@5.4.3
+        prefix: /opt/rocm-5.4.3/hip
+      - spec: hip@5.6.0
+        prefix: /opt/rocm-5.6.0/hip
+      - spec: hip@5.7.1
+        prefix: /opt/rocm-5.7.1/hip
+
+    llvm-amdgpu:
+      version: [5.2.3, 5.4.3, 5.6.0, 5.7.1]
+      buildable: false
+      externals:
+      # llvm-amdgpu@5.2.3 contains clang 14, which is used for clang-format
+      - spec: llvm-amdgpu@5.2.3
+        prefix: /opt/rocm-5.2.3/llvm
+      - spec: llvm-amdgpu@5.4.3
+        prefix: /opt/rocm-5.4.3/llvm
+      - spec: llvm-amdgpu@5.6.0
+        prefix: /opt/rocm-5.6.0/llvm
+      - spec: llvm-amdgpu@5.7.1
+        prefix: /opt/rocm-5.7.1/llvm
+
+    hsa-rocr-dev:
+      version: [5.2.3, 5.4.3, 5.6.0, 5.7.1]
+      buildable: false
+      externals:
+      - spec: hsa-rocr-dev@5.2.3
+        prefix: /opt/rocm-5.2.3/
+      - spec: hsa-rocr-dev@5.4.3
+        prefix: /opt/rocm-5.4.3/
+      - spec: hsa-rocr-dev@5.6.0
+        prefix: /opt/rocm-5.6.0/
+      - spec: hsa-rocr-dev@5.7.1
+        prefix: /opt/rocm-5.7.1/
+
+    rocblas:
+      version: [5.2.3, 5.4.3, 5.6.0, 5.7.1]
+      buildable: false
+      externals:
+      - spec: rocblas@5.2.3
+        prefix: /opt/rocm-5.2.3/
+      - spec: rocblas@5.4.3
+        prefix: /opt/rocm-5.4.3/
+      - spec: rocblas@5.6.0
+        prefix: /opt/rocm-5.6.0/
+      - spec: rocblas@5.7.1
+        prefix: /opt/rocm-5.7.1/
+
+    rocminfo:
+      version: [5.2.3, 5.4.3, 5.6.0, 5.7.1]
+      buildable: false
+      externals:
+      - spec: rocminfo@5.2.3
+        prefix: /opt/rocm-5.2.3/
+      - spec: rocminfo@5.4.3
+        prefix: /opt/rocm-5.4.3/
+      - spec: rocminfo@5.6.0
+        prefix: /opt/rocm-5.6.0/
+      - spec: rocminfo@5.7.1
+        prefix: /opt/rocm-5.7.1
+
+    rocprim:
+      version: [5.2.3, 5.4.3, 5.6.0, 5.7.1]
+      buildable: false
+      externals:
+      - spec: rocprim@5.2.3
+        prefix: /opt/rocm-5.2.3/
+      - spec: rocprim@5.4.3
+        prefix: /opt/rocm-5.4.3/
+      - spec: rocprim@5.6.0
+        prefix: /opt/rocm-5.6.0/
+      - spec: rocprim@5.7.1
+        prefix: /opt/rocm-5.7.1/
+
+    rocm-device-libs:
+      version: [5.2.3, 5.4.3, 5.6.0, 5.7.1]
+      buildable: false
+      externals:
+      - spec: rocm-device-libs@5.2.3
+        prefix: /opt/rocm-5.2.3/
+      - spec: rocm-device-libs@5.4.3
+        prefix: /opt/rocm-5.4.3/
+      - spec: rocm-device-libs@5.6.0
+        prefix: /opt/rocm-5.6.0/
+      - spec: rocm-device-libs@5.7.1
+        prefix: /opt/rocm-5.7.1/
+
     # Lock down which MPI we are using
     mpi:
       buildable: false
-    mvapich2:
+    cray-mpich:
       buildable: false
       externals:
-      - spec: mvapich2@2.3.7%clang@14.0.6~alloca~cuda~debug~hwloc_graphics~hwlocv2+regcache+wrapperrpath build_system=autotools ch3_rank_bits=32 fabrics=mrail file_systems=auto process_managers=slurm threads=multiple
-        prefix: /usr/tce/packages/mvapich2/mvapich2-2.3.7-clang-14.0.6
-      - spec: mvapich2@2.3.7%gcc@10.3.1~alloca~cuda~debug~hwloc_graphics~hwlocv2+regcache+wrapperrpath build_system=autotools ch3_rank_bits=32 fabrics=mrail file_systems=auto process_managers=slurm threads=multiple
-        prefix: /usr/tce/packages/mvapich2/mvapich2-2.3.7-gcc-10.3.1
+      - spec: cray-mpich@8.1.16%clang@14.0.0
+        prefix: /usr/tce/packages/cray-mpich-tce/cray-mpich-8.1.16-rocmcc-5.2.3/
+      - spec: cray-mpich@8.1.25%clang@15.0.0
+        prefix: /usr/tce/packages/cray-mpich-tce/cray-mpich-8.1.25-rocmcc-5.4.3/
+      - spec: cray-mpich@8.1.25%clang@16.0.0
+        prefix: /usr/tce/packages/cray-mpich-tce/cray-mpich-8.1.25-rocmcc-5.6.0/
+      - spec: cray-mpich@8.1.27%clang@17.0.0
+        prefix: /usr/tce/packages/cray-mpich-tce/cray-mpich-8.1.27-rocmcc-5.7.1/
+      - spec: cray-mpich@8.1.25%cce@15.0.1
+        prefix: /usr/tce/packages/cray-mpich-tce/cray-mpich-8.1.25-rocmcc-5.4.3-cce-15.0.1/
 
     netlib-lapack:
       buildable: false
@@ -98,7 +236,7 @@ spack:
     automake:
       buildable: false
       externals:
-      - spec: automake@1.16.1
+      - spec: automake@1.61.1
         prefix: /usr
     binutils:
       buildable: false
@@ -264,31 +402,25 @@ spack:
       buildable: false
       externals:
       - spec: cppcheck@2.9
-        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/cppcheck-2.9
+        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib_cray/latest/cppcheck-2.9
     doxygen:
       version: [1.9.8]
       buildable: false
       externals:
       - spec: doxygen@1.9.8
-        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/doxygen-1.9.8
-    llvm:
-      version: [14.0.6]
-      buildable: false
-      externals:
-      - spec: llvm@14.0.6+clang+python
-        prefix: /usr/tce/packages/clang/clang-14.0.6
+        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib_cray/latest/doxygen-1.9.8
     py-ats:
       version: [7.0.105]
       buildable: false
       externals:
       - spec: py-ats@7.0.105
-        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/python-3.11.7
+        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib_cray/latest/python-3.11.7
     py-sphinx:
       version: [7.2.6]
       buildable: false
       externals:
       - spec: py-sphinx@7.2.6
-        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib/latest/python-3.11.7
+        prefix: /usr/workspace/smithdev/devtools/toss_4_x86_64_ib_cray/latest/python-3.11.7
     python:
       buildable: false
       externals:

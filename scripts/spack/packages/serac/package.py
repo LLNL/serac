@@ -29,12 +29,14 @@ def get_spec_path(spec, package_name, path_replacements={}, use_bin=False):
     return path
 
 
-class Serac(CachedCMakePackage, CudaPackage):
+class Serac(CachedCMakePackage, CudaPackage, ROCmPackage):
     """Serac is a 3D implicit nonlinear thermal-structural simulation code.
        Its primary purpose is to investigate multiphysics abstraction
        strategies and implicit finite element-based algorithm development
        for emerging computing architectures. It also serves as a proxy-app
        for LLNL's Smith code."""
+
+    maintainers("chapman39")
 
     homepage = "https://www.github.com/LLNL/serac"
     git      = "https://github.com/LLNL/serac.git"
@@ -77,6 +79,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     # Basic dependencies
     depends_on("mpi")
     depends_on("cmake@3.14:")
+    depends_on("cmake@3.21:", type="build", when="+rocm")
 
     depends_on("lua")
 
@@ -217,6 +220,11 @@ class Serac(CachedCMakePackage, CudaPackage):
     # Conflicts
     #
 
+    conflicts("+openmp", when="+rocm")
+    conflicts("+cuda", when="+rocm")
+
+    conflicts("%intel", msg="Intel has a bug with C++17 support as of May 2020")
+
     conflicts("~petsc", when="+slepc", msg="PETSc must be built when building with SLEPc!")
 
     conflicts("sundials@:6.0.0", when="+sundials",
@@ -242,7 +250,7 @@ class Serac(CachedCMakePackage, CudaPackage):
         )
 
     #
-    # GPU
+    # CUDA
     #
     conflicts("cuda_arch=none", when="+cuda",
               msg="CUDA architecture is required")
@@ -268,7 +276,23 @@ class Serac(CachedCMakePackage, CudaPackage):
         depends_on("caliper cuda_arch={0}".format(sm_),
                 when="+profiling cuda_arch={0}".format(sm_))
 
-    conflicts("%intel", msg="Intel has a bug with C++17 support as of May 2020")
+
+    #
+    # ROCm
+    #
+
+    with when("+profiling"):
+        depends_on("caliper+rocm", when="+rocm")
+        depends_on("caliper~rocm", when="~rocm")
+
+    for val in ROCmPackage.amdgpu_targets:
+        ext_rocm_dep = f"+rocm amdgpu_target={val}"
+        depends_on(f"raja {ext_rocm_dep}", when=f"+raja {ext_rocm_dep}")
+        depends_on(f"umpire {ext_rocm_dep}", when=f"+umpire {ext_rocm_dep}")
+        depends_on(f"caliper {ext_rocm_dep}", when=f"+profiling {ext_rocm_dep}")
+
+    depends_on("rocprim", when="+rocm")
+
 
 
     def _get_sys_type(self, spec):
@@ -290,6 +314,8 @@ class Serac(CachedCMakePackage, CudaPackage):
             special_case += "_cuda"
         if "+asan" in self.spec:
             special_case += "_asan"
+        if "+rocm" in self.spec:
+            special_case += "_hip"
         return "{0}-{1}-{2}@{3}{4}.cmake".format(
             hostname,
             self._get_sys_type(self.spec),
@@ -298,6 +324,15 @@ class Serac(CachedCMakePackage, CudaPackage):
             special_case,
         )
 
+    def initconfig_compiler_entries(self):
+        spec = self.spec
+        entries = super().initconfig_compiler_entries()
+
+        # Add optimization flag workaround for Debug builds with cray compiler or newer HIP
+        if "+rocm" in spec:
+            entries.append(cmake_cache_string("CMAKE_CXX_FLAGS_DEBUG", "-O1 -g -DNDEBUG"))
+
+        return entries
 
     def initconfig_hardware_entries(self):
         spec = self.spec
@@ -326,6 +361,18 @@ class Serac(CachedCMakePackage, CudaPackage):
                     "# nvcc does not like gtest's 'pthreads' flag\n")
                 entries.append(
                     cmake_cache_option("gtest_disable_pthreads", True))
+
+        if "+rocm" in spec:
+            entries.append(cmake_cache_option("ENABLE_HIP", True))
+
+            hip_root = spec["hip"].prefix
+
+            # Additional libraries for TOSS4
+            hip_link_flags += " -L{0}/../lib64 -Wl,-rpath,{0}/../lib64 ".format(hip_root)
+            hip_link_flags += " -L{0}/../lib -Wl,-rpath,{0}/../lib ".format(hip_root)
+            hip_link_flags += "-lamd_comgr -lhsa-runtime64 "
+
+            entries.append(cmake_cache_string("CMAKE_EXE_LINKER_FLAGS", hip_link_flags))
 
         if spec.satisfies("target=ppc64le:"):
             # Fix for working around CMake adding implicit link directories
