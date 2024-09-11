@@ -122,5 +122,5 @@ with benchmarking enabled (off by default). Then, run the build target ``run_ben
   make -j
   make run_benchmarks
 
-This will run all of Serac's benchmarks multiple times with varying MPI task counts, and generate a ``.cali`` file for
+This will run all of Serac's benchmarks multiple times with varying MPI task counts, and generate a Caliper file for
 each benchmark run.
