@@ -268,7 +268,7 @@ public:
   template <typename T>
   std::shared_ptr<QuadratureData<T>> createQuadratureDataBuffer(T initial_state)
   {
-    return solid_.createQuadratureDataBuffer(initial_state);
+    return StateManager::newQuadratureDataBuffer(mesh_tag_, order, dim, initial_state);
   }
 
   /**
