@@ -5,6 +5,7 @@
 
 using namespace serac;
 
+
 std::string mesh_dir = SERAC_REPO_DIR "/data/meshes/";
 
 constexpr mfem::Geometry::Type face_type(mfem::Geometry::Type geom) {
