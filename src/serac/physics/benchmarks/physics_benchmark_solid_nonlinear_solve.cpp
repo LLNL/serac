@@ -142,7 +142,7 @@ auto get_opts(NonlinSolve nonlinSolve, Prec prec, int max_iters, double abs_tol 
     }
     case NonlinSolve::NONE:
     default: {
-      SLIC_ERROR_ROOT("error, invalid nonlinear solver specified");
+      SLIC_ERROR_ROOT("invalid nonlinear solver specified");
     }
   }
 
@@ -187,7 +187,7 @@ auto get_opts(NonlinSolve nonlinSolve, Prec prec, int max_iters, double abs_tol 
     }
     case Prec::NONE:
     default: {
-      SLIC_ERROR_ROOT("error, invalid preconditioner specified");
+      SLIC_ERROR_ROOT("invalid preconditioner specified");
     }
   }
 
