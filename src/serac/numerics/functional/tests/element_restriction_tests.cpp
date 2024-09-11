@@ -40,6 +40,12 @@ TEST(patch_test_meshes, triangle_domains) {
   {
     BlockElementRestriction H1_BER(H1_fes.get(), whole);
     EXPECT_EQ(H1_BER.ESize(), 4 * 6);
+
+    BlockElementRestriction Hcurl_BER(Hcurl_fes.get(), whole);
+    EXPECT_EQ(Hcurl_BER.ESize(), 4 * 8);
+
+    BlockElementRestriction L2_BER(L2_fes.get(), whole);
+    EXPECT_EQ(L2_BER.ESize(), 4 * 6);
   }
 
   Domain boundary = EntireBoundary(mesh);
@@ -52,6 +58,12 @@ TEST(patch_test_meshes, triangle_domains) {
   {
     BlockElementRestriction H1_BER(H1_fes.get(), boundary);
     EXPECT_EQ(H1_BER.ESize(), 4 * 3);
+
+    BlockElementRestriction Hcurl_BER(Hcurl_fes.get(), boundary);
+    EXPECT_EQ(Hcurl_BER.ESize(), 4 * 2);
+
+    BlockElementRestriction L2_BER(L2_fes.get(), boundary);
+    EXPECT_EQ(L2_BER.ESize(), 4 * 3);
   }
 
   Domain interior = InteriorFaces(mesh);
@@ -64,6 +76,12 @@ TEST(patch_test_meshes, triangle_domains) {
   {
     BlockElementRestriction H1_BER(H1_fes.get(), interior);
     EXPECT_EQ(H1_BER.ESize(), 4 * 3);
+
+    BlockElementRestriction Hcurl_BER(Hcurl_fes.get(), interior);
+    EXPECT_EQ(Hcurl_BER.ESize(), 4 * 2);
+
+    BlockElementRestriction L2_BER(L2_fes.get(), interior);
+    EXPECT_EQ(L2_BER.ESize(), 4 * (3 * 2));
   }
 
 }
@@ -92,6 +110,12 @@ TEST(patch_test_meshes, quadrilateral_domains) {
   {
     BlockElementRestriction H1_BER(H1_fes.get(), whole);
     EXPECT_EQ(H1_BER.ESize(), 5 * 9);
+
+    BlockElementRestriction Hcurl_BER(Hcurl_fes.get(), whole);
+    EXPECT_EQ(Hcurl_BER.ESize(), 5 * 12);
+
+    BlockElementRestriction L2_BER(L2_fes.get(), whole);
+    EXPECT_EQ(L2_BER.ESize(), 5 * 9);
   }
 
   Domain boundary = EntireBoundary(mesh);
@@ -104,6 +128,12 @@ TEST(patch_test_meshes, quadrilateral_domains) {
   {
     BlockElementRestriction H1_BER(H1_fes.get(), boundary);
     EXPECT_EQ(H1_BER.ESize(), 4 * 3);
+
+    BlockElementRestriction Hcurl_BER(Hcurl_fes.get(), boundary);
+    EXPECT_EQ(Hcurl_BER.ESize(), 4 * 2);
+
+    BlockElementRestriction L2_BER(L2_fes.get(), boundary);
+    EXPECT_EQ(L2_BER.ESize(), 4 * 3);
   }
 
   Domain interior = InteriorFaces(mesh);
@@ -116,6 +146,12 @@ TEST(patch_test_meshes, quadrilateral_domains) {
   {
     BlockElementRestriction H1_BER(H1_fes.get(), interior);
     EXPECT_EQ(H1_BER.ESize(), 8 * 3);
+
+    BlockElementRestriction Hcurl_BER(Hcurl_fes.get(), interior);
+    EXPECT_EQ(Hcurl_BER.ESize(), 8 * 2);
+
+    BlockElementRestriction L2_BER(L2_fes.get(), interior);
+    EXPECT_EQ(L2_BER.ESize(), 8 * (3 * 2));
   }
 
 }
@@ -144,6 +180,12 @@ TEST(patch_test_meshes, triangle_and_quadrilateral_domains) {
   {
     BlockElementRestriction H1_BER(H1_fes.get(), whole);
     EXPECT_EQ(H1_BER.ESize(), 2 * 6 + 4 * 9);
+
+    BlockElementRestriction Hcurl_BER(Hcurl_fes.get(), whole);
+    EXPECT_EQ(Hcurl_BER.ESize(), 2 * 8 + 4 * 12);
+
+    BlockElementRestriction L2_BER(L2_fes.get(), whole);
+    EXPECT_EQ(L2_BER.ESize(), 2 * 6 + 4 * 9);
   }
 
   Domain boundary = EntireBoundary(mesh);
@@ -156,6 +198,12 @@ TEST(patch_test_meshes, triangle_and_quadrilateral_domains) {
   {
     BlockElementRestriction H1_BER(H1_fes.get(), boundary);
     EXPECT_EQ(H1_BER.ESize(), 4 * 3);
+
+    BlockElementRestriction Hcurl_BER(Hcurl_fes.get(), boundary);
+    EXPECT_EQ(Hcurl_BER.ESize(), 4 * 2);
+
+    BlockElementRestriction L2_BER(L2_fes.get(), boundary);
+    EXPECT_EQ(L2_BER.ESize(), 4 * 3);
   }
 
   Domain interior = InteriorFaces(mesh);
@@ -168,6 +216,12 @@ TEST(patch_test_meshes, triangle_and_quadrilateral_domains) {
   {
     BlockElementRestriction H1_BER(H1_fes.get(), interior);
     EXPECT_EQ(H1_BER.ESize(), 9 * 3);
+
+    BlockElementRestriction Hcurl_BER(Hcurl_fes.get(), interior);
+    EXPECT_EQ(Hcurl_BER.ESize(), 9 * 2);
+
+    BlockElementRestriction L2_BER(L2_fes.get(), interior);
+    EXPECT_EQ(L2_BER.ESize(), 9 * (3 * 2));
   }
 
 }
@@ -196,6 +250,12 @@ TEST(patch_test_meshes, tetrahedron_domains) {
   {
     BlockElementRestriction H1_BER(H1_fes.get(), whole);
     EXPECT_EQ(H1_BER.ESize(), 12 * 10);
+
+    BlockElementRestriction Hcurl_BER(Hcurl_fes.get(), whole);
+    EXPECT_EQ(Hcurl_BER.ESize(), 12 * 20);
+
+    BlockElementRestriction L2_BER(L2_fes.get(), whole);
+    EXPECT_EQ(L2_BER.ESize(), 12 * 10);
   }
 
   Domain boundary = EntireBoundary(mesh);
@@ -208,6 +268,12 @@ TEST(patch_test_meshes, tetrahedron_domains) {
   {
     BlockElementRestriction H1_BER(H1_fes.get(), boundary);
     EXPECT_EQ(H1_BER.ESize(), 12 * 6);
+
+    BlockElementRestriction Hcurl_BER(Hcurl_fes.get(), boundary);
+    EXPECT_EQ(Hcurl_BER.ESize(), 12 * 8);
+
+    BlockElementRestriction L2_BER(L2_fes.get(), boundary);
+    EXPECT_EQ(L2_BER.ESize(), 12 * 6);
   }
 
   Domain interior = InteriorFaces(mesh);
@@ -220,6 +286,12 @@ TEST(patch_test_meshes, tetrahedron_domains) {
   {
     BlockElementRestriction H1_BER(H1_fes.get(), interior);
     EXPECT_EQ(H1_BER.ESize(), 18 * 6);
+
+    BlockElementRestriction Hcurl_BER(Hcurl_fes.get(), interior);
+    EXPECT_EQ(Hcurl_BER.ESize(), 18 * 8);
+
+    BlockElementRestriction L2_BER(L2_fes.get(), interior);
+    EXPECT_EQ(L2_BER.ESize(), 18 * (6 * 2));
   }
 
 }
@@ -248,6 +320,12 @@ TEST(patch_test_meshes, hexahedron_domains) {
   {
     BlockElementRestriction H1_BER(H1_fes.get(), whole);
     EXPECT_EQ(H1_BER.ESize(), 7 * 27);
+
+    BlockElementRestriction Hcurl_BER(Hcurl_fes.get(), whole);
+    EXPECT_EQ(Hcurl_BER.ESize(), 7 * 54);
+
+    BlockElementRestriction L2_BER(L2_fes.get(), whole);
+    EXPECT_EQ(L2_BER.ESize(), 7 * 27);
   }
 
   Domain boundary = EntireBoundary(mesh);
@@ -260,6 +338,12 @@ TEST(patch_test_meshes, hexahedron_domains) {
   {
     BlockElementRestriction H1_BER(H1_fes.get(), boundary);
     EXPECT_EQ(H1_BER.ESize(), 6 * 9);
+
+    BlockElementRestriction Hcurl_BER(Hcurl_fes.get(), boundary);
+    EXPECT_EQ(Hcurl_BER.ESize(), 6 * 12);
+
+    BlockElementRestriction L2_BER(L2_fes.get(), boundary);
+    EXPECT_EQ(L2_BER.ESize(), 6 * 9);
   }
 
   Domain interior = InteriorFaces(mesh);
@@ -272,6 +356,12 @@ TEST(patch_test_meshes, hexahedron_domains) {
   {
     BlockElementRestriction H1_BER(H1_fes.get(), interior);
     EXPECT_EQ(H1_BER.ESize(), 18 * 9);
+
+    BlockElementRestriction Hcurl_BER(Hcurl_fes.get(), interior);
+    EXPECT_EQ(Hcurl_BER.ESize(), 18 * 12);
+
+    BlockElementRestriction L2_BER(L2_fes.get(), interior);
+    EXPECT_EQ(L2_BER.ESize(), 18 * (9 * 2));
   }
 
 }
