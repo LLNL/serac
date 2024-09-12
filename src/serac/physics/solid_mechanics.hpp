@@ -1163,9 +1163,6 @@ public:
     // Build the dof array lookup tables
     displacement_.space().BuildDofToArrays();
 
-    u_ = displacement_;
-    v_ = velocity_;
-
     if (is_quasistatic_) {
       residual_with_bcs_ = buildQuasistaticOperator();
     } else {
