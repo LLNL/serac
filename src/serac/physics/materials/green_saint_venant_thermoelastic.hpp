@@ -188,7 +188,7 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
 
 
 /// @brief Plasticity model with self-heating from plastic work
-struct J2SmallStrainThermoelastic {
+struct J2SmallStrainThermomechanical {
   static constexpr int dim = 3;
 
   double density;    ///< density

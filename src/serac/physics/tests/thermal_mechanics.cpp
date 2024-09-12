@@ -549,7 +549,7 @@ TEST(Thermomechanics, SelfHeatingJ2)
   double Hi      = E/20.0;
   double sigma_y = 0.001;
 
-  using Material = J2SmallStrainThermoelastic;
+  using Material = J2SmallStrainThermomechanical;
   Material material{rho, E, nu, c, k, Hi, sigma_y};
 
   auto qdata = thermal_solid_solver.createQuadratureDataBuffer(Material::State{});
