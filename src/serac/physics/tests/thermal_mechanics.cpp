@@ -616,7 +616,7 @@ TEST(Thermomechanics, SelfHeatingJ2)
   Thermomechanics<p, dim> thermal_solid_solver(
       heat_transfer::default_nonlinear_options, heat_transfer::default_linear_options,
       heat_transfer::default_timestepping_options, default_nonlinear_options, default_linear_options,
-      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermal_solid_functional", mesh_tag);
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::Off, "thermal_solid_functional", mesh_tag);
 
   double rho     = 1.0;
   double E       = 10.0;

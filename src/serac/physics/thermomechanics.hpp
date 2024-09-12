@@ -246,11 +246,11 @@ public:
    */
   void advanceTimestep(double dt) override
   {
-    std::cout << "Solving mechanical subproblem" << std::endl;
+    std::cout << "Solving thermal subproblem" << std::endl;
     thermal_.setParameter(0, solid_.displacement());
     thermal_.advanceTimestep(dt);
 
-    std::cout << "Solving thermal subproblem" << std::endl;
+    std::cout << "Solving mechanical subproblem" << std::endl;
     solid_.setParameter(0, thermal_.temperature());
     solid_.advanceTimestep(dt);
 
@@ -354,7 +354,6 @@ public:
       auto [u, du_dX] = displacement;
       auto [theta, dtheta_dX] = temperature;
       auto [T, heat_capacity, s0, q0] = mat(state, du_dX, theta, dtheta_dX, parameters...);
-      std::cout << " s0 " << s0 << std::endl;
       return tuple{-s0, zero{}};
     }
   };
