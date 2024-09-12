@@ -410,7 +410,7 @@ struct TestThermoelasticMaterial {
 
 
 /// @brief Material with a fictitous constant heat source for testing
-struct J2ThermoelasticMaterial {
+struct J2SmallStrainThermoelastic {
   static constexpr int dim = 3;
 
   double density;    ///< density
@@ -451,38 +451,35 @@ struct J2ThermoelasticMaterial {
   auto operator()(State& state, const tensor<T1, dim, dim>& du_dX, T2 theta, 
                   const tensor<T3, dim>& dtheta_dX) const
   {
+    // update internal heat source
+    // update is lagged by a time step to be consistent with explicit
+    // operator split of thermal and mechanical
+    auto src = sigma_y*state.delta_eqps;
+
     const double          K     = E / (3.0 * (1.0 - 2.0 * nu));
     const double          G     = 0.5 * E / (1.0 + nu);
     auto el_strain = sym(du_dX) - state.plastic_strain;
-    
     auto s = 2.0 * G * dev(el_strain);
     using std::sqrt;
     auto mises = sqrt(1.5) * norm(s);
-    double Y_n = sigma_y + Hi*state.accumulated_plastic_strain;
+    double yield_strength_old = sigma_y + Hi*state.accumulated_plastic_strain;
 
-    auto delta_eqps = (mises - Y_n)/(3*G + Hi);
-
-    if (mises > Y_n)
+    if (mises > yield_strength_old)
     {
+      auto delta_eqps = (mises - yield_strength_old)/(3*G + Hi);
       auto N = 1.5 * s / mises;
-      s -= 2.0*G*delta_eqps*N;
+      auto plastic_strain_increment = delta_eqps*N;
+      s -= 2.0*G*plastic_strain_increment;
       state.accumulated_plastic_strain += get_value(delta_eqps);
-      state.plastic_strain += get_value(delta_eqps)*get_value(N);
+      state.plastic_strain += get_value(plastic_strain_increment);
+      state.delta_eqps = get_value(delta_eqps);
     }
-    else
-    {
-      delta_eqps = 0;
-    }
+
+    // update stress
     auto sigma = s + K*tr(el_strain)*Identity<3>();
 
-    // internal heat source
-    std::cout << "delta_eqps = " << state.delta_eqps << std::endl;
-    auto src = sigma_y*state.delta_eqps;
-
-    // heat flux
+    // update heat flux
     const auto q0 = -k * dtheta_dX;
-
-    state.delta_eqps = get_value(delta_eqps);
 
     return serac::tuple{sigma, C_v, src, q0};
   }
@@ -629,7 +626,7 @@ TEST(Thermomechanics, SelfHeatingJ2)
   double Hi      = E/20.0;
   double sigma_y = 0.001;
 
-  using Material = J2ThermoelasticMaterial;
+  using Material = J2SmallStrainThermoelastic;
   Material material{rho, E, nu, c, k, Hi, sigma_y};
 
   auto qdata = thermal_solid_solver.createQuadratureDataBuffer(Material::State{});
