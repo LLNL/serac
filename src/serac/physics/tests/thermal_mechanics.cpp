@@ -350,6 +350,330 @@ TEST(Thermomechanics, parameterized)
 }
 
 namespace serac {
+
+/// @brief Material with a fictitous constant heat source for testing
+struct TestThermoelasticMaterial {
+  double density;    ///< density
+  double E;          ///< Young's modulus
+  double nu;         ///< Poisson's ratio
+  double C_v;        ///< volumetric heat capacity
+  double alpha;     ///<  thermal expansion coefficient
+  double theta_ref;  ///< datum temperature for thermal expansion
+  double k;          ///< thermal conductivity
+
+  using State = Empty;  ///< this material has no internal variables
+
+  /**
+   * @brief Evaluate constitutive variables for thermomechanics
+   *
+   * @tparam T1 Type of the displacement gradient components (number-like)
+   * @tparam T2 Type of the temperature (number-like)
+   * @tparam T3 Type of the temperature gradient components (number-like)
+   * @tparam T4 Type of the coefficient of thermal expansion scale factor
+   *
+   * @param[in] grad_u Displacement gradient
+   * @param[in] theta Temperature
+   * @param[in] grad_theta Temperature gradient
+   * @param[in,out] state State variables for this material
+   *
+   * @return[out] tuple of constitutive outputs. Contains the
+   * Cauchy stress, the volumetric heat capacity in the reference
+   * configuration, the heat generated per unit volume during the time
+   * step (units of energy), and the referential heat flux (units of
+   * energy per unit time and per unit area).
+   */
+  template <typename T1, typename T2, typename T3>
+  auto operator()(State&, const tensor<T1, 3, 3>& grad_u, T2 theta, 
+                  const tensor<T3, 3>& grad_theta) const
+  {
+    const double          K     = E / (3.0 * (1.0 - 2.0 * nu));
+    const double          G     = 0.5 * E / (1.0 + nu);
+    static constexpr auto I     = Identity<3>();
+    auto                  F     = grad_u + I;
+    const auto            Eg    = greenStrain(grad_u);
+    const auto            trEg  = tr(Eg);
+
+    // stress
+    const auto S     = 2.0 * G * dev(Eg) + K * (trEg - 3.0 * alpha * (theta - theta_ref)) * I;
+    const auto P     = dot(F, S);
+    const auto sigma = (dot(P, transpose(F))) / det(F);
+
+    // internal heat source
+    const auto s0 = 1.0;
+
+    // heat flux
+    const auto q0 = -k * grad_theta;
+
+    return serac::tuple{sigma, C_v, s0, q0};
+  }
+};
+
+
+/// @brief Material with a fictitous constant heat source for testing
+struct J2ThermoelasticMaterial {
+  static constexpr int dim = 3;
+
+  double density;    ///< density
+  double E;          ///< Young's modulus
+  double nu;         ///< Poisson's ratio
+  double C_v;        ///< volumetric heat capacity
+  double k;          ///< thermal conductivity
+  double Hi; ///< isotropic hardening modulus
+  double sigma_y; ///< yield strength
+
+  /// @brief variables required to characterize the hysteresis response
+  struct State {
+    tensor<double, dim, dim> plastic_strain;              ///< plastic strain
+    double                   accumulated_plastic_strain;  ///< uniaxial equivalent plastic strain
+    double delta_eqps; ///< previous increment of accumulated plastic strain
+  };
+
+  /**
+   * @brief Evaluate constitutive variables for thermomechanics
+   *
+   * @tparam T1 Type of the displacement gradient components (number-like)
+   * @tparam T2 Type of the temperature (number-like)
+   * @tparam T3 Type of the temperature gradient components (number-like)
+   * @tparam T4 Type of the coefficient of thermal expansion scale factor
+   *
+   * @param[in] grad_u Displacement gradient
+   * @param[in] theta Temperature
+   * @param[in] grad_theta Temperature gradient
+   * @param[in,out] state State variables for this material
+   *
+   * @return[out] tuple of constitutive outputs. Contains the
+   * Cauchy stress, the volumetric heat capacity in the reference
+   * configuration, the heat generated per unit volume during the time
+   * step (units of energy), and the referential heat flux (units of
+   * energy per unit time and per unit area).
+   */
+  template <typename T1, typename T2, typename T3>
+  auto operator()(State& state, const tensor<T1, dim, dim>& du_dX, T2 theta, 
+                  const tensor<T3, dim>& dtheta_dX) const
+  {
+    const double          K     = E / (3.0 * (1.0 - 2.0 * nu));
+    const double          G     = 0.5 * E / (1.0 + nu);
+    auto el_strain = sym(du_dX) - state.plastic_strain;
+    
+    auto s = 2.0 * G * dev(el_strain);
+    using std::sqrt;
+    auto mises = sqrt(1.5) * norm(s);
+    double Y_n = sigma_y + Hi*state.accumulated_plastic_strain;
+
+    auto delta_eqps = (mises - Y_n)/(3*G + Hi);
+
+    if (mises > Y_n)
+    {
+      auto N = 1.5 * s / mises;
+      s -= 2.0*G*delta_eqps*N;
+      state.accumulated_plastic_strain += get_value(delta_eqps);
+      state.plastic_strain += get_value(delta_eqps)*get_value(N);
+    }
+    else
+    {
+      delta_eqps = 0;
+    }
+    auto sigma = s + K*tr(el_strain)*Identity<3>();
+
+    // internal heat source
+    std::cout << "delta_eqps = " << state.delta_eqps << std::endl;
+    auto src = sigma_y*state.delta_eqps;
+
+    // heat flux
+    const auto q0 = -k * dtheta_dX;
+
+    state.delta_eqps = get_value(delta_eqps);
+
+    return serac::tuple{sigma, C_v, src, q0};
+  }
+};
+
+TEST(Thermomechanics, SelfHeatingConstant)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  constexpr int dim                 = 3;
+  constexpr int p = 1;
+  int           serial_refinement   = 0;
+  int           parallel_refinement = 0;
+
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore, "doesntmatter");
+
+  // Construct the appropriate dimension mesh and give it to the data store
+  std::string filename = SERAC_REPO_DIR "/data/meshes/onehex.mesh";
+
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
+
+  std::string mesh_tag{"mesh"};
+
+  serac::StateManager::setMesh(std::move(mesh), mesh_tag);
+
+  // Define a boundary attribute set
+  std::set<int> constraint_bdr = {1};
+  std::set<int> temp_bdr       = {1, 2, 3};
+
+  // define the solid solver configurations
+  // no default solver options for solid yet, so make some here
+  const LinearSolverOptions default_linear_options = {.linear_solver  = LinearSolver::GMRES,
+                                                      .preconditioner = Preconditioner::HypreAMG,
+                                                      .relative_tol   = 1.0e-6,
+                                                      .absolute_tol   = 1.0e-10,
+                                                      .max_iterations = 500,
+                                                      .print_level    = 0};
+
+  const NonlinearSolverOptions default_nonlinear_options = {
+      .relative_tol = 1.0e-4, .absolute_tol = 1.0e-8, .max_iterations = 10, .print_level = 1};
+
+  Thermomechanics<p, dim> thermal_solid_solver(
+      heat_transfer::default_nonlinear_options, heat_transfer::default_linear_options,
+      heat_transfer::default_timestepping_options, default_nonlinear_options, default_linear_options,
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermal_solid_functional", mesh_tag);
+
+  double                                       rho       = 1.0;
+  double                                       E         = 0.5;
+  double                                       nu        = 0.25;
+  double                                       c         = 0.1;
+  double                                       alpha     = 1.0;
+  double                                       theta_ref = 100.0;
+  double                                       k         = 1.0;
+  TestThermoelasticMaterial        material{rho, E, nu, c, alpha, theta_ref, k};
+
+  thermal_solid_solver.setMaterial(material);
+
+  // Define the function for the initial temperature
+  double theta_0                   = theta_ref;
+  auto   initial_temperature_field = [theta_0](const mfem::Vector&, double) -> double { return theta_0; };
+
+  auto zero_function = [](const mfem::Vector&, double) -> double { return 0.0; };
+
+  // Set the initial temperature
+  thermal_solid_solver.setTemperature(initial_temperature_field);
+
+  // Define the function for the displacement boundary conditions
+  auto applied_disp = [](const mfem::Vector&) { return 1e-3; };
+
+  // Set boundary conditions
+  thermal_solid_solver.setDisplacementBCs({1}, zero_function, 0);
+  thermal_solid_solver.setDisplacementBCs({2}, zero_function, 1);
+  thermal_solid_solver.setDisplacementBCs({3}, zero_function, 2);
+  thermal_solid_solver.setDisplacementBCs({6}, applied_disp, 0);
+  thermal_solid_solver.setDisplacementBCs({4}, applied_disp, 1);
+  thermal_solid_solver.setDisplacementBCs({5}, applied_disp, 2);
+
+  thermal_solid_solver.setDisplacement([](const mfem::Vector&, mfem::Vector& u) { u = 0.0; });
+
+  // Finalize the data structures
+  thermal_solid_solver.completeSetup();
+
+  std::cout << "Temperatures at time step 0" << std::endl;
+  thermal_solid_solver.temperature().Print();
+
+  thermal_solid_solver.advanceTimestep(1.0);
+
+  std::cout << "Temperatures at time step 1" << std::endl;
+  thermal_solid_solver.temperature().Print();
+  
+  thermal_solid_solver.outputStateToDisk("self_heating");
+}
+
+TEST(Thermomechanics, SelfHeatingJ2)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  constexpr int dim                 = 3;
+  constexpr int p = 1;
+  int           serial_refinement   = 0;
+  int           parallel_refinement = 0;
+
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore, "thermoJ2");
+
+  // Construct the appropriate dimension mesh and give it to the data store
+  std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+
+  auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
+
+  std::string mesh_tag{"mesh"};
+
+  serac::StateManager::setMesh(std::move(mesh), mesh_tag);
+
+  // Define a boundary attribute set
+  std::set<int> constraint_bdr = {1};
+  std::set<int> temp_bdr       = {1, 2, 3};
+
+  // define the solid solver configurations
+  // no default solver options for solid yet, so make some here
+  const LinearSolverOptions default_linear_options = {.linear_solver  = LinearSolver::GMRES,
+                                                      .preconditioner = Preconditioner::HypreAMG,
+                                                      .relative_tol   = 1.0e-6,
+                                                      .absolute_tol   = 1.0e-10,
+                                                      .max_iterations = 500,
+                                                      .print_level    = 0};
+
+  const NonlinearSolverOptions default_nonlinear_options = {
+      .relative_tol = 1.0e-4, .absolute_tol = 1.0e-8, .max_iterations = 10, .print_level = 1};
+
+  Thermomechanics<p, dim> thermal_solid_solver(
+      heat_transfer::default_nonlinear_options, heat_transfer::default_linear_options,
+      heat_transfer::default_timestepping_options, default_nonlinear_options, default_linear_options,
+      solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermal_solid_functional", mesh_tag);
+
+  double rho     = 1.0;
+  double E       = 10.0;
+  double nu      = 0.25;
+  double c       = 0.1;
+  double k       = 1.0;
+  double Hi      = E/20.0;
+  double sigma_y = 0.001;
+
+  using Material = J2ThermoelasticMaterial;
+  Material material{rho, E, nu, c, k, Hi, sigma_y};
+
+  auto qdata = thermal_solid_solver.createQuadratureDataBuffer(Material::State{});
+  
+  thermal_solid_solver.setMaterial(material, qdata);
+
+  // Define the function for the initial temperature
+  double theta_0                   = 100.0;
+  auto   initial_temperature_field = [theta_0](const mfem::Vector&, double) -> double { return theta_0; };
+
+  auto zero_function = [](const mfem::Vector&, double) -> double { return 0.0; };
+
+  // Set the initial temperature
+  thermal_solid_solver.setTemperature(initial_temperature_field);
+
+  // Define the function for the displacement boundary conditions
+  auto applied_disp = [](const mfem::Vector&, double t) { return 1e0*t; };
+
+  // Set boundary conditions
+  thermal_solid_solver.setDisplacementBCs({1}, [](const mfem::Vector&, mfem::Vector& u){ u = 0.0; });
+  thermal_solid_solver.setDisplacementBCs({2}, applied_disp, 0);
+  
+
+  thermal_solid_solver.setDisplacement([](const mfem::Vector&, mfem::Vector& u) { u = 0.0; });
+
+  // Finalize the data structures
+  thermal_solid_solver.completeSetup();
+
+  std::cout << "Temperatures at time step 0" << std::endl;
+  thermal_solid_solver.temperature().Print();
+
+  for (int step = 1; step < 3; step++) {
+    std::cout << "------------------------------------------------" << std::endl;;
+    std::cout << "TIME STEP " << step << std::endl;
+    thermal_solid_solver.advanceTimestep(1.0);
+    std::cout << "Temperatures at time step" << step << std::endl;
+    thermal_solid_solver.temperature().Print();
+    thermal_solid_solver.outputStateToDisk("self_heating");
+  }
+}
+
+} // namespace serac
+
+namespace serac {
 TEST(Thermomechanics, SelfHeating) 
 {
   MPI_Barrier(MPI_COMM_WORLD);
