@@ -298,7 +298,6 @@ public:
      * @tparam param_types the types of user-specified parameters
      *
      * @param state Internal state variables
-     * @param x Position
      * @param temperature the temperature at this quadrature point
      * @param temperature_gradient the gradient w.r.t. physical coordinates of the temperature
      * @param displacement the value and gradient w.r.t. physical coordinates of the displacement
@@ -344,11 +343,8 @@ public:
      * @tparam T4 the type of the displacement gradient values
      * @tparam param_types the types of user-specified parameters
      *
-     * @param t Time
-     * @param position Material point cordinates
      * @param state Internal state variables
      * @param temperature the temperature at this quadrature point
-     * @param temperature_gradient the gradient w.r.t. physical coordinates of the temperature
      * @param displacement the value and gradient w.r.t. physical coordinates of the displacement
      * @param parameters values and derivatives of any additional user-specified parameters
      */

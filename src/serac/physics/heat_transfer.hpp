@@ -414,6 +414,7 @@ public:
    * @brief Set the thermal material model for the physics solver
    *
    * @tparam MaterialType The thermal material type
+   * @tparam StateType the type that contains the internal variables for MaterialType
    * @param material A material containing heat capacity and thermal flux evaluation information
    *
    * @pre material must be a object that can be called with the following arguments:

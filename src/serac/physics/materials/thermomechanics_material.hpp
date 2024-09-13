@@ -212,10 +212,9 @@ struct J2SmallStrain {
    * @tparam T2 Type of the temperature (number-like)
    * @tparam T3 Type of the temperature gradient components (number-like)
    *
-   * @param[in] grad_u Displacement gradient
-   * @param[in] theta Temperature
-   * @param[in] grad_theta Temperature gradient
-   * @param[in,out] state State variables for this material
+   * @param[in,out] state Internal state variables
+   * @param[in] du_dX Displacement gradient
+   * @param[in] dtheta_dX Temperature gradient
    *
    * @return[out] tuple of constitutive outputs. Contains the
    * Cauchy stress, the volumetric heat capacity in the reference
