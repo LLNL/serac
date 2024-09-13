@@ -33,10 +33,10 @@ set(functional_headers
     tuple_tensor_dual_functions.hpp
     )
 
-set(functional_sources 
-    domain.cpp 
-    element_restriction.cpp 
-    geometric_factors.cpp 
+set(functional_sources
+    domain.cpp
+    element_restriction.cpp
+    geometric_factors.cpp
     quadrature_data.cpp)
 
 set(functional_detail_headers
@@ -66,7 +66,7 @@ blt_list_append(TO functional_headers ELEMENTS ${functional_cuda_headers} IF ENA
 
 blt_add_library(
       NAME        serac_functional
-      HEADERS     ${functional_headers} ${functional_detail_headers} 
+      HEADERS     ${functional_headers} ${functional_detail_headers}
       SOURCES     ${functional_sources}
       DEPENDS_ON  ${functional_depends}
       )

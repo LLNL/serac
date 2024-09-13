@@ -235,14 +235,6 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
             // variadic non-type parameter.
             [&ctx, t, J, x, u, trial_elements, qf, qpts_per_elem, rule, r, qf_state, elements, qf_derivatives,
              qf_inputs, qf_outputs, interpolate_result, update_state](uint32_t e) {
-              // (void)qf_state;
-              // (void)qf_derivatives;
-              // (void)update_state;
-              // (void)qpts_per_elem;
-              // (void)trial_elements;
-              // (void)qf_inputs;
-              // (void)interpolate_result;
-              // (void)u;
               detail::suppress_capture_warnings(qf_state, qf_derivatives, update_state, qpts_per_elem, trial_elements,
                                                 qf_inputs, interpolate_result, u);
 
@@ -478,6 +470,8 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
 
           RAJA::RangeSegment x_range(0, nquad);
           RAJA::loop<threads_x>(ctx, x_range, [&derivatives, qf_derivatives, nquad, e](int q) {
+            detail::suppress_capture_warnings(nquad);
+            (void)nquad;
             if constexpr (is_QOI_2) {
               get<0>(derivatives[e](q)) = qf_derivatives[e * nquad + uint32_t(q)];
             }

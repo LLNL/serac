@@ -221,12 +221,8 @@ std::vector<Array2D<int>> geom_local_face_dofs(int p)
   return output;
 }
 
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-axom::Array<DoF, 2, axom::MemorySpace::Device> GetElementRestriction(const mfem::FiniteElementSpace* fes,
-#else
 axom::Array<DoF, 2, axom::MemorySpace::Host> GetElementRestriction(const mfem::FiniteElementSpace* fes,
-#endif
-                                                                     mfem::Geometry::Type geom)
+                                                                   mfem::Geometry::Type            geom)
 {
   std::vector<DoF> elem_dofs{};
   mfem::Mesh*      mesh = fes->GetMesh();
@@ -434,6 +430,16 @@ uint64_t ElementRestriction::ESize() const { return esize; }
 
 uint64_t ElementRestriction::LSize() const { return lsize; }
 
+SERAC_DEVICE DoF ElementRestriction::GetVDofDevice(DoF node, mfem::Ordering::Type ordering_, uint64_t component,
+                                                   uint64_t num_nodes_, uint64_t components_)
+{
+  if (ordering_ == mfem::Ordering::Type::byNODES) {
+    return DoF{component * num_nodes_ + node.index(), (node.sign() == 1) ? 0ull : 1ull, node.orientation()};
+  } else {
+    return DoF{node.index() * components_ + component, (node.sign() == 1) ? 0ull : 1ull, node.orientation()};
+  }
+}
+
 DoF ElementRestriction::GetVDof(DoF node, uint64_t component) const
 {
   if (ordering == mfem::Ordering::Type::byNODES) {
@@ -457,52 +463,6 @@ void ElementRestriction::GetElementVDofs(int i, DoF* vdofs) const
   for (uint64_t c = 0; c < components; c++) {
     for (uint64_t j = 0; j < nodes_per_elem; j++) {
       vdofs[c * nodes_per_elem + j] = GetVDof(dof_info(i, j), c);
-    }
-  }
-}
-
-void ElementRestriction::Gather(const mfem::Vector& L_vector, mfem::Vector& E_vector) const
-{
-  for (uint64_t i = 0; i < num_elements; i++) {
-    for (uint64_t c = 0; c < components; c++) {
-      for (uint64_t j = 0; j < nodes_per_elem; j++) {
-        uint64_t E_id  = (i * components + c) * nodes_per_elem + j;
-        uint64_t L_id  = GetVDof(dof_info(i, j), c).index();
-        auto     l_ptr = L_vector.Read();
-        auto     e_ptr = E_vector.ReadWrite();
-        // std::cout << "l vec space " << (int)(L_vector.GetMemory().GetMemoryType()) << std::endl;
-        // std::cout << "e vec space " << (int)(E_vector.GetMemory().GetMemoryType()) << std::endl;
-        // E_vector[int(E_id)] = L_vector[int(L_id)];
-        if (L_vector.GetMemory().GetMemoryType() != mfem::MemoryType::HOST) {
-          RAJA::forall<RAJA::cuda_exec<128>>(RAJA::RangeSegment(0, 1),
-                                             [=] SERAC_HOST_DEVICE(int idx) { e_ptr[int(E_id)] = l_ptr[int(L_id)]; });
-        } else {
-          E_vector[int(E_id)] = L_vector[int(L_id)];
-        }
-      }
-    }
-  }
-}
-
-void ElementRestriction::ScatterAdd(const mfem::Vector& E_vector, mfem::Vector& L_vector) const
-{
-  for (uint64_t i = 0; i < num_elements; i++) {
-    for (uint64_t c = 0; c < components; c++) {
-      for (uint64_t j = 0; j < nodes_per_elem; j++) {
-        uint64_t E_id = (i * components + c) * nodes_per_elem + j;
-        uint64_t L_id = GetVDof(dof_info(i, j), c).index();
-        // std::cout << E_vector[int(E_id)] << std::endl;
-        auto l_ptr = L_vector.ReadWrite();
-        auto e_ptr = E_vector.Read();
-        // std::cout << "l vec space " << (int)(L_vector.GetMemory().GetMemoryType()) << std::endl;
-        // std::cout << "e vec space " << (int)(E_vector.GetMemory().GetMemoryType()) << std::endl;
-        if (L_vector.GetMemory().GetMemoryType() != mfem::MemoryType::HOST) {
-          RAJA::forall<RAJA::cuda_exec<128>>(RAJA::RangeSegment(0, 1),
-                                             [=] SERAC_HOST_DEVICE(int idx) { l_ptr[int(L_id)] += e_ptr[int(E_id)]; });
-        } else {
-          L_vector[int(L_id)] += E_vector[int(E_id)];
-        }
-      }
     }
   }
 }
@@ -561,19 +521,5 @@ mfem::Array<int> BlockElementRestriction::bOffsets() const
   }
   return offsets;
 };
-
-void BlockElementRestriction::Gather(const mfem::Vector& L_vector, mfem::BlockVector& E_block_vector) const
-{
-  for (auto [geom, restriction] : restrictions) {
-    restriction.Gather(L_vector, E_block_vector.GetBlock(geom));
-  }
-}
-
-void BlockElementRestriction::ScatterAdd(const mfem::BlockVector& E_block_vector, mfem::Vector& L_vector) const
-{
-  for (auto [geom, restriction] : restrictions) {
-    restriction.ScatterAdd(E_block_vector.GetBlock(geom), L_vector);
-  }
-}
 
 }  // namespace serac

@@ -12,7 +12,6 @@
  */
 
 #pragma once
-#include "RAJA/RAJA.hpp"
 #if defined(__CUDACC__)
 #define SERAC_HOST_DEVICE __host__ __device__
 #define SERAC_HOST __host__
@@ -49,7 +48,7 @@
  */
 #define SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 #endif
-
+#include "RAJA/RAJA.hpp"
 #include <memory>
 
 #include "axom/core.hpp"
@@ -72,16 +71,37 @@ enum class ExecutionSpace
   Dynamic  // Corresponds to execution that can "legally" happen on either the host or device
 };
 
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+template <ExecutionSpace exec>
+struct EvaluationSpacePolicy;
 
+template <>
+struct EvaluationSpacePolicy<ExecutionSpace::CPU> {
+  using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
+  /// @brief Alias for number of teams for GPU kernel launches.
+  using teams_e = RAJA::LoopPolicy<RAJA::seq_exec>;
+  /// @brief Alias for GPU kernel launch policy.
+  using launch_policy = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
+  using forall_policy = RAJA::seq_exec;
+};
+
+#if defined(__CUDACC__)
+template <>
+struct EvaluationSpacePolicy<ExecutionSpace::GPU> {
+  using threads_x     = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+  using teams_e       = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
+  using launch_policy = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
+  using forall_policy = RAJA::cuda_exec<128>;
+};
+#endif
+// TODO(cuda): Delete these serac namespace scope type definitions in favor
+// of the above user-configurable execution policies.
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
 /// @brief Alias for parallel threads policy on GPU
 using threads_x     = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
 using teams_e       = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
 using launch_policy = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
 using forall_policy = RAJA::cuda_exec<128>;
-
 #else
-
 /// @brief Alias for parallel threads policy on GPU.
 using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
 /// @brief Alias for number of teams for GPU kernel launches.
@@ -89,7 +109,6 @@ using teams_e = RAJA::LoopPolicy<RAJA::seq_exec>;
 /// @brief Alias for GPU kernel launch policy.
 using launch_policy = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
 using forall_policy = RAJA::seq_exec;
-
 #endif
 
 /**
@@ -115,7 +134,6 @@ SERAC_HOST_DEVICE void suppress_capture_warnings(T...)
 {
 }
 
-#ifdef SERAC_USE_UMPIRE
 /// @overload
 template <>
 struct execution_to_memory<ExecutionSpace::CPU> {
@@ -133,7 +151,6 @@ template <>
 struct execution_to_memory<ExecutionSpace::Dynamic> {
   static constexpr axom::MemorySpace value = axom::MemorySpace::Unified;
 };
-#endif
 
 /// @brief Helper template for @p execution_to_memory trait
 template <ExecutionSpace space>

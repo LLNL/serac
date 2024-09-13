@@ -13,6 +13,7 @@
 
 #pragma once
 
+#include "serac/infrastructure/accelerator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 
 namespace serac {
@@ -267,7 +268,7 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper_with_state(const lambda& qf, 
 }  // namespace detail
 
 /// @cond
-template <typename T1, typename T2, ExecutionSpace exec = serac::default_execution_space>
+template <typename T1, typename T2, ExecutionSpace exec = serac::ExecutionSpace::CPU>
 class ShapeAwareFunctional;
 /// @endcond
 

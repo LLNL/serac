@@ -5,6 +5,7 @@
 #include "mfem.hpp"
 #include "axom/core.hpp"
 #include "geometry.hpp"
+#include "serac/infrastructure/accelerator.hpp"
 
 inline bool isH1(const mfem::FiniteElementSpace& fes)
 {
@@ -55,29 +56,29 @@ struct DoF {
   uint64_t bits;
 
   /// default ctor
-  DoF() : bits{} {}
+  SERAC_HOST_DEVICE DoF() : bits{} {}
 
   /// copy ctor
-  DoF(const DoF& other) : bits{other.bits} {}
+  SERAC_HOST_DEVICE DoF(const DoF& other) : bits{other.bits} {}
 
   /// create a `DoF` from the given index, sign and orientation values
-  DoF(uint64_t index, uint64_t sign = 0, uint64_t orientation = 0)
+  SERAC_HOST_DEVICE DoF(uint64_t index, uint64_t sign = 0, uint64_t orientation = 0)
       : bits((sign & 0x1ULL << sign_shift) + ((orientation & 0x7ULL) << orientation_shift) + index)
   {
   }
 
   /// copy assignment operator
-  void operator=(const DoF& other) { bits = other.bits; }
+  SERAC_HOST_DEVICE void operator=(const DoF& other) { bits = other.bits; }
 
   /// get the sign field of this `DoF`
-  int sign() const { return (bits & sign_mask) ? -1 : 1; }
+  SERAC_HOST_DEVICE int sign() const { return (bits & sign_mask) ? -1 : 1; }
 
   /// get the orientation field of this `DoF`
-  uint64_t orientation() const { return ((bits & orientation_mask) >> orientation_shift); }
+  SERAC_HOST_DEVICE uint64_t orientation() const { return ((bits & orientation_mask) >> orientation_shift); }
 
   /// get the index field of this `DoF`
 
-  uint64_t index() const { return (bits & index_mask); }
+  SERAC_HOST_DEVICE uint64_t index() const { return (bits & index_mask); }
 };
 
 /// a small struct used to enable range-based for loops in `Array2D`
@@ -181,11 +182,68 @@ struct ElementRestriction {
 
   DoF GetVDof(DoF node, uint64_t component) const;
 
+  SERAC_HOST_DEVICE static DoF GetVDofDevice(DoF node, mfem::Ordering::Type ordering_, uint64_t component,
+                                             uint64_t num_nodes_, uint64_t components_);
+
   /// "L->E" in mfem parlance, each element gathers the values that belong to it, and stores them in the "E-vector"
-  void Gather(const mfem::Vector& L_vector, mfem::Vector& E_vector) const;
+  template <ExecutionSpace exec = ExecutionSpace::CPU>
+  void Gather(const mfem::Vector& L_vector, mfem::Vector& E_vector) const
+  {
+    auto l_ptr = L_vector.Read();
+    auto e_ptr = E_vector.ReadWrite();
+
+    uint64_t                           d_components     = components;
+    uint64_t                           d_nodes_per_elem = nodes_per_elem;
+    uint64_t                           d_num_nodes      = num_nodes;
+    auto                               d_ordering       = ordering;
+    constexpr axom::MemorySpace        mem_space        = detail::execution_to_memory<exec>::value;
+    axom::Array<DoF, 2, mem_space>     tmp              = dof_info;
+    axom::ArrayView<DoF, 2, mem_space> d_dof_info       = tmp;
+
+    RAJA::forall<typename EvaluationSpacePolicy<exec>::forall_policy>(
+        RAJA::TypedRangeSegment<uint64_t>(0, num_elements), [d_components, d_nodes_per_elem, d_num_nodes, d_ordering,
+                                                             e_ptr, l_ptr, d_dof_info] SERAC_HOST_DEVICE(uint64_t i) {
+          for (uint64_t c = 0; c < d_components; c++) {
+            for (uint64_t j = 0; j < d_nodes_per_elem; j++) {
+              uint64_t E_id    = (i * d_components + c) * d_nodes_per_elem + j;
+              uint64_t L_id    = GetVDofDevice(d_dof_info(i, j), d_ordering, c, d_num_nodes, d_components).index();
+              e_ptr[int(E_id)] = l_ptr[int(L_id)];
+            }
+          }
+        });
+    std::cout << "exiting\n";
+  }
 
   /// "E->L" in mfem parlance, each element scatter-adds its local vector into the appropriate place in the "L-vector"
-  void ScatterAdd(const mfem::Vector& E_vector, mfem::Vector& L_vector) const;
+  template <ExecutionSpace exec>
+  void ScatterAdd(const mfem::Vector& E_vector, mfem::Vector& L_vector) const
+  {
+    auto l_ptr = L_vector.ReadWrite(true);
+    auto e_ptr = E_vector.Read(true);
+
+    uint64_t                           d_components     = components;
+    uint64_t                           d_nodes_per_elem = nodes_per_elem;
+    uint64_t                           d_num_nodes      = num_nodes;
+    uint64_t                           d_num_elements   = num_elements;
+    auto                               d_ordering       = ordering;
+    constexpr axom::MemorySpace        mem_space        = detail::execution_to_memory<exec>::value;
+    axom::Array<DoF, 2, mem_space>     tmp              = dof_info;
+    axom::ArrayView<DoF, 2, mem_space> d_dof_info       = tmp;
+
+    RAJA::forall<typename EvaluationSpacePolicy<exec>::forall_policy>(
+        RAJA::TypedRangeSegment<uint64_t>(0, 1), [d_components, d_nodes_per_elem, d_num_elements, d_num_nodes,
+                                                  d_ordering, e_ptr, l_ptr, d_dof_info] SERAC_HOST_DEVICE(uint64_t) {
+          for (uint64_t i = 0; i < d_num_elements; ++i) {
+            for (uint64_t c = 0; c < d_components; c++) {
+              for (uint64_t j = 0; j < d_nodes_per_elem; j++) {
+                uint64_t E_id = (i * d_components + c) * d_nodes_per_elem + j;
+                uint64_t L_id = GetVDofDevice(d_dof_info(i, j), d_ordering, c, d_num_nodes, d_components).index();
+                l_ptr[int(L_id)] += e_ptr[int(E_id)];
+              }
+            }
+          }
+        });
+  }
 
   /// the size of the "E-vector"
   uint64_t esize;
@@ -205,12 +263,8 @@ struct ElementRestriction {
   /// the number of nodes in each element
   uint64_t nodes_per_elem;
 
-/// a 2D array (num_elements-by-nodes_per_elem) holding the dof info extracted from the finite element space
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  axom::Array<DoF, 2, axom::MemorySpace::Device> dof_info;
-#else
+  /// a 2D array (num_elements-by-nodes_per_elem) holding the dof info extracted from the finite element space
   axom::Array<DoF, 2, axom::MemorySpace::Host> dof_info;
-#endif
 
   /// whether the underlying dofs are arranged "byNodes" or "byVDim"
   mfem::Ordering::Type ordering;
@@ -221,6 +275,7 @@ struct ElementRestriction {
  * Instead of doing the "E->L" (gather) and "L->E" (scatter) operations for only one element geometry, this
  * class does them with block "E-vectors", where each element geometry is a separate block.
  */
+// template<ExecutionSpace exec = ExecutionSpace::CPU>
 struct BlockElementRestriction {
   /// default ctor leaves this object uninitialized
   BlockElementRestriction() {}
@@ -241,10 +296,22 @@ struct BlockElementRestriction {
   mfem::Array<int> bOffsets() const;
 
   /// "L->E" in mfem parlance, each element gathers the values that belong to it, and stores them in the "E-vector"
-  void Gather(const mfem::Vector& L_vector, mfem::BlockVector& E_block_vector) const;
+  template <ExecutionSpace exec>
+  void Gather(const mfem::Vector& L_vector, mfem::BlockVector& E_block_vector) const
+  {
+    for (auto [geom, restriction] : restrictions) {
+      restriction.Gather<exec>(L_vector, E_block_vector.GetBlock(geom));
+    }
+  }
 
   /// "E->L" in mfem parlance, each element scatter-adds its local vector into the appropriate place in the "L-vector"
-  void ScatterAdd(const mfem::BlockVector& E_block_vector, mfem::Vector& L_vector) const;
+  template <ExecutionSpace exec>
+  void ScatterAdd(const mfem::BlockVector& E_block_vector, mfem::Vector& L_vector) const
+  {
+    for (auto [geom, restriction] : restrictions) {
+      restriction.ScatterAdd<exec>(E_block_vector.GetBlock(geom), L_vector);
+    }
+  }
 
   /// the individual ElementRestriction operators for each element geometry
   std::map<mfem::Geometry::Type, ElementRestriction> restrictions;

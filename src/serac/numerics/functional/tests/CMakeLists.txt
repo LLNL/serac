@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 
 set(functional_test_depends gtest serac_functional ${functional_depends})
+blt_list_append(TO functional_depends ELEMENTS blt::cuda IF ENABLE_CUDA)
 
 # This test is all constexpr-evaluated, so it doesn't
 # actually need to run, if it compiles without error, the tests have passed

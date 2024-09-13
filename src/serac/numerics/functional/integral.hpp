@@ -113,10 +113,10 @@ struct Integral {
  * @param differentiation_index the index of the trial space being differentiated
  */
 #ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  void ComputeElementGradients(std::map<mfem::Geometry::Type, ExecArray<double, 3, ExecutionSpace::GPU> >& K_e,
+  void ComputeElementGradients(std::map<mfem::Geometry::Type, ExecArray<double, 3, ExecutionSpace::GPU>>& K_e,
                                uint32_t differentiation_index) const
 #else
-  void ComputeElementGradients(std::map<mfem::Geometry::Type, ExecArray<double, 3, ExecutionSpace::CPU> >& K_e,
+  void ComputeElementGradients(std::map<mfem::Geometry::Type, ExecArray<double, 3, ExecutionSpace::CPU>>& K_e,
                                uint32_t differentiation_index) const
 #endif
   {
@@ -138,23 +138,23 @@ struct Integral {
   std::map<mfem::Geometry::Type, eval_func> evaluation_;
 
   /// @brief kernels for integral evaluation + derivative w.r.t. specified argument over each type of element
-  std::vector<std::map<mfem::Geometry::Type, eval_func> > evaluation_with_AD_;
+  std::vector<std::map<mfem::Geometry::Type, eval_func>> evaluation_with_AD_;
 
   /// @brief signature of element jvp kernel
   using jacobian_vector_product_func = std::function<void(const double*, double*)>;
 
   /// @brief kernels for jacobian-vector product of integral calculation
-  std::vector<std::map<mfem::Geometry::Type, jacobian_vector_product_func> > jvp_;
+  std::vector<std::map<mfem::Geometry::Type, jacobian_vector_product_func>> jvp_;
 
 /// @brief signature of element gradient kernel
 #ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   using grad_func = std::function<void(ExecArrayView<double, 3, ExecutionSpace::GPU>)>;
 #else
-  using grad_func            = std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)>;
+  using grad_func = std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)>;
 #endif
 
   /// @brief kernels for calculation of element jacobians
-  std::vector<std::map<mfem::Geometry::Type, grad_func> > element_gradient_;
+  std::vector<std::map<mfem::Geometry::Type, grad_func>> element_gradient_;
 
   /// @brief a list of the trial spaces that take part in this integrand
   std::vector<uint32_t> active_trial_spaces_;
@@ -175,8 +175,12 @@ struct Integral {
    */
   std::map<uint32_t, uint32_t> functional_to_integral_index_;
 
-  /// @brief the spatial positions and jacobians (dx_dxi) for each element type and quadrature point
-  std::map<mfem::Geometry::Type, GeometricFactors> geometric_factors_;
+/// @brief the spatial positions and jacobians (dx_dxi) for each element type and quadrature point
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+  std::map<mfem::Geometry::Type, GeometricFactors<ExecutionSpace::GPU>> geometric_factors_;
+#else
+  std::map<mfem::Geometry::Type, GeometricFactors<ExecutionSpace::CPU>> geometric_factors_;
+#endif
 };
 
 /**
@@ -193,13 +197,13 @@ struct Integral {
  * @param qf the quadrature function
  * @param qdata the values of any quadrature point data for the material
  */
-template <mfem::Geometry::Type geom, int Q, typename test, typename... trials, typename lambda_type,
-          typename qpt_data_type>
+template <mfem::Geometry::Type geom, int Q, ExecutionSpace exec, typename test, typename... trials,
+          typename lambda_type, typename qpt_data_type>
 void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, const lambda_type& qf,
-                      std::shared_ptr<QuadratureData<qpt_data_type> > qdata)
+                      std::shared_ptr<QuadratureData<qpt_data_type>> qdata)
 {
-  integral.geometric_factors_[geom] = GeometricFactors(integral.domain_, Q, geom);
-  GeometricFactors& gf              = integral.geometric_factors_[geom];
+  integral.geometric_factors_[geom] = GeometricFactors<exec>(integral.domain_, Q, geom);
+  GeometricFactors<exec>& gf        = integral.geometric_factors_[geom];
   if (gf.num_elements == 0) return;
 
   gf.X.UseDevice(true);
@@ -267,10 +271,10 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
  * @param argument_indices the indices of trial space arguments used in the Integral
  * @return Integral the initialized `Integral` object
  */
-template <typename s, int Q, int dim, typename lambda_type, typename qpt_data_type>
+template <typename s, int Q, int dim, ExecutionSpace exec, typename lambda_type, typename qpt_data_type>
 Integral MakeDomainIntegral(const Domain& domain, const lambda_type& qf,
-                            std::shared_ptr<QuadratureData<qpt_data_type> > qdata,
-                            std::vector<uint32_t>                           argument_indices)
+                            std::shared_ptr<QuadratureData<qpt_data_type>> qdata,
+                            std::vector<uint32_t>                          argument_indices)
 {
   FunctionSignature<s> signature;
 
@@ -279,13 +283,13 @@ Integral MakeDomainIntegral(const Domain& domain, const lambda_type& qf,
   Integral integral(std::move(domain), argument_indices);
 
   if constexpr (dim == 2) {
-    generate_kernels<mfem::Geometry::TRIANGLE, Q>(signature, integral, qf, qdata);
-    generate_kernels<mfem::Geometry::SQUARE, Q>(signature, integral, qf, qdata);
+    generate_kernels<mfem::Geometry::TRIANGLE, Q, exec>(signature, integral, qf, qdata);
+    generate_kernels<mfem::Geometry::SQUARE, Q, exec>(signature, integral, qf, qdata);
   }
 
   if constexpr (dim == 3) {
-    generate_kernels<mfem::Geometry::TETRAHEDRON, Q>(signature, integral, qf, qdata);
-    generate_kernels<mfem::Geometry::CUBE, Q>(signature, integral, qf, qdata);
+    generate_kernels<mfem::Geometry::TETRAHEDRON, Q, exec>(signature, integral, qf, qdata);
+    generate_kernels<mfem::Geometry::CUBE, Q, exec>(signature, integral, qf, qdata);
   }
 
   return integral;
@@ -304,11 +308,12 @@ Integral MakeDomainIntegral(const Domain& domain, const lambda_type& qf,
  * @param integral the Integral object to initialize
  * @param qf the quadrature function
  */
-template <mfem::Geometry::Type geom, int Q, typename test, typename... trials, typename lambda_type>
+template <mfem::Geometry::Type geom, int Q, ExecutionSpace exec, typename test, typename... trials,
+          typename lambda_type>
 void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integral, const lambda_type& qf)
 {
-  integral.geometric_factors_[geom] = GeometricFactors(integral.domain_, Q, geom, FaceType::BOUNDARY);
-  GeometricFactors& gf              = integral.geometric_factors_[geom];
+  integral.geometric_factors_[geom] = GeometricFactors<exec>(integral.domain_, Q, geom, FaceType::BOUNDARY);
+  GeometricFactors<exec>& gf        = integral.geometric_factors_[geom];
   if (gf.num_elements == 0) return;
 
   const double*  positions        = gf.X.Read(true);
@@ -366,7 +371,7 @@ void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integr
  *
  * @note this function is not meant to be called by users
  */
-template <typename s, int Q, int dim, typename lambda_type>
+template <typename s, int Q, int dim, ExecutionSpace exec, typename lambda_type>
 Integral MakeBoundaryIntegral(const Domain& domain, const lambda_type& qf, std::vector<uint32_t> argument_indices)
 {
   FunctionSignature<s> signature;
@@ -377,12 +382,12 @@ Integral MakeBoundaryIntegral(const Domain& domain, const lambda_type& qf, std::
   Integral integral(std::move(domain), argument_indices);
 
   if constexpr (dim == 1) {
-    generate_bdr_kernels<mfem::Geometry::SEGMENT, Q>(signature, integral, qf);
+    generate_bdr_kernels<mfem::Geometry::SEGMENT, Q, exec>(signature, integral, qf);
   }
 
   if constexpr (dim == 2) {
-    generate_bdr_kernels<mfem::Geometry::TRIANGLE, Q>(signature, integral, qf);
-    generate_bdr_kernels<mfem::Geometry::SQUARE, Q>(signature, integral, qf);
+    generate_bdr_kernels<mfem::Geometry::TRIANGLE, Q, exec>(signature, integral, qf);
+    generate_bdr_kernels<mfem::Geometry::SQUARE, Q, exec>(signature, integral, qf);
   }
 
   return integral;
