@@ -481,6 +481,26 @@ public:
   }
 
   /**
+   * @brief Set the displacement boundary conditions on a set of nodes within a spatially-defined area
+   *
+   * @param is_node_constrained A callback function that returns true if displacement nodes at a certain position should
+   * be constrained by this boundary condition
+   * @param disp The vector function containing the prescribed displacement values
+   *
+   * The displacement function takes a spatial position as the first argument and time as the second argument. It
+   * computes the desired displacement and fills the third argument with these displacement values.
+   *
+   * @note This method searches over the entire mesh, not just the boundary nodes.
+   *
+   * @note This method must be called prior to completeSetup()
+   */
+  void setDisplacementBCs(std::function<bool(const mfem::Vector&)>                        is_node_constrained,
+                          std::function<void(const mfem::Vector&, double, mfem::Vector&)> disp)
+  {
+    solid_.setDisplacementBCs(is_node_constrained, disp);
+  }
+
+  /**
    * @brief Set the thermal flux boundary condition
    *
    * @tparam FluxType The type of the thermal flux object
