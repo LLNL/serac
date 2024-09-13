@@ -416,6 +416,7 @@ public:
    * @tparam MaterialType The thermal material type
    * @tparam StateType the type that contains the internal variables for MaterialType
    * @param material A material containing heat capacity and thermal flux evaluation information
+   * @param qdata the buffer of material internal variables at each quadrature point
    *
    * @pre material must be a object that can be called with the following arguments:
    *    1. `tensor<T,dim> x` the spatial position of the material evaluation call
