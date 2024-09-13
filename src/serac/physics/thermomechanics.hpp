@@ -31,7 +31,6 @@ namespace serac {
 template <int order, int dim, typename... parameter_space>
 class Thermomechanics : public BasePhysics {
 public:
-
   /// @brief a container holding quadrature point data of the specified type
   /// @tparam T the type of data to store at each quadrature point
   template <typename T>
@@ -303,8 +302,9 @@ public:
      * @param parameters values and derivatives of any additional user-specified parameters
      */
     template <typename T1, typename T2, typename T3, typename T4, typename... param_types>
-    SERAC_HOST_DEVICE auto operator()(State& state, const T1& /* x */, const T2& temperature, const T3& temperature_gradient,
-                                      const T4& displacement, param_types... parameters) const
+    SERAC_HOST_DEVICE auto operator()(State& state, const T1& /* x */, const T2& temperature,
+                                      const T3& temperature_gradient, const T4& displacement,
+                                      param_types... parameters) const
     {
       auto [u, du_dX]                 = displacement;
       auto [T, heat_capacity, s0, q0] = mat(state, du_dX, temperature, temperature_gradient, parameters...);
@@ -312,7 +312,7 @@ public:
       return serac::tuple{heat_capacity, q0};
     }
   };
-  
+
   template <typename ThermalMechanicalMaterial>
   struct ThermalMaterialSourceInterface {
     using State = typename ThermalMechanicalMaterial::State;  ///< internal variables for the wrapped material model
@@ -339,7 +339,8 @@ public:
      * @param parameters values and derivatives of any additional user-specified parameters
      */
     // template <typename T1, typename T2, typename T3, typename T4, typename... param_types>
-    // SERAC_HOST_DEVICE auto operator()(State& state, const T1& /* x */, const T2& temperature, const T3& temperature_gradient,
+    // SERAC_HOST_DEVICE auto operator()(State& state, const T1& /* x */, const T2& temperature, const T3&
+    // temperature_gradient,
     //                                   const T4& displacement, param_types... parameters) const
     // {
     //   auto [u, du_dX]                 = displacement;
@@ -349,10 +350,11 @@ public:
     // }
     template <typename Position, typename Temperature, typename TempRate, typename Displacement, typename... Parameters>
     SERAC_HOST_DEVICE auto operator()(double /*t*/, const Position& /* position */, State& state,
-      const Temperature& temperature, const TempRate& /*temperature_rate*/, const Displacement& displacement, Parameters... parameters) const
+                                      const Temperature&  temperature, const TempRate& /*temperature_rate*/,
+                                      const Displacement& displacement, Parameters... parameters) const
     {
-      auto [u, du_dX] = displacement;
-      auto [theta, dtheta_dX] = temperature;
+      auto [u, du_dX]                 = displacement;
+      auto [theta, dtheta_dX]         = temperature;
       auto [T, heat_capacity, s0, q0] = mat(state, du_dX, theta, dtheta_dX, parameters...);
       return tuple{-s0, zero{}};
     }
@@ -430,11 +432,12 @@ public:
     // note: these parameter indices are offset by 1 since, internally, this module uses the first parameter
     // to communicate the temperature and displacement field information to the other physics module
     //
-    thermal_.setMaterial(DependsOn<0, active_parameters + 1 ...>{}, ThermalMaterialInterface<MaterialType>{material}, qdata);
+    thermal_.setMaterial(DependsOn<0, active_parameters + 1 ...>{}, ThermalMaterialInterface<MaterialType>{material},
+                         qdata);
     solid_.setMaterial(DependsOn<0, active_parameters + 1 ...>{}, MechanicalMaterialInterface<MaterialType>{material},
-        qdata);
-    thermal_.addCustomDomainIntegral(DependsOn<0, active_parameters + 1 ...>{}, ThermalMaterialSourceInterface<MaterialType>{material},
-      qdata);
+                       qdata);
+    thermal_.addCustomDomainIntegral(DependsOn<0, active_parameters + 1 ...>{},
+                                     ThermalMaterialSourceInterface<MaterialType>{material}, qdata);
   }
 
   /// @overload

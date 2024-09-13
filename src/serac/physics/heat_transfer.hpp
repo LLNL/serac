@@ -435,7 +435,7 @@ public:
    */
   template <int... active_parameters, typename MaterialType, typename StateType = Empty>
   void setMaterial(DependsOn<active_parameters...>, const MaterialType& material,
-    qdata_type<StateType> qdata = EmptyQData)
+                   qdata_type<StateType> qdata = EmptyQData)
   {
     static_assert(std::is_same_v<StateType, Empty> || std::is_same_v<StateType, typename MaterialType::State>,
                   "invalid quadrature data provided in setMaterial()");

@@ -186,24 +186,23 @@ struct ParameterizedGreenSaintVenant {
   }
 };
 
-
 /// @brief Plasticity model with self-heating from plastic work
 struct J2SmallStrain {
   static constexpr int dim = 3;
 
-  double density;    ///< density
-  double E;          ///< Young's modulus
-  double nu;         ///< Poisson's ratio
-  double C_v;        ///< volumetric heat capacity
-  double k;          ///< thermal conductivity
-  double Hi;         ///< isotropic hardening modulus
-  double sigma_y;    ///< yield strength
+  double density;  ///< density
+  double E;        ///< Young's modulus
+  double nu;       ///< Poisson's ratio
+  double C_v;      ///< volumetric heat capacity
+  double k;        ///< thermal conductivity
+  double Hi;       ///< isotropic hardening modulus
+  double sigma_y;  ///< yield strength
 
   /// @brief variables required to characterize the hysteresis response
   struct State {
     tensor<double, dim, dim> plastic_strain;              ///< plastic strain
     double                   accumulated_plastic_strain;  ///< uniaxial equivalent plastic strain
-    double delta_eqps; ///< previous increment of accumulated plastic strain
+    double                   delta_eqps;                  ///< previous increment of accumulated plastic strain
   };
 
   /**
@@ -233,29 +232,28 @@ struct J2SmallStrain {
     // update internal heat source
     // update is lagged by a time step to be consistent with explicit
     // operator split of thermal and mechanical problems
-    auto src = sigma_y*state.delta_eqps;
+    auto src = sigma_y * state.delta_eqps;
 
-    const double K = E / (3.0 * (1.0 - 2.0 * nu));
-    const double G = 0.5 * E / (1.0 + nu);
-    auto el_strain = sym(du_dX) - state.plastic_strain;
-    auto s = 2.0 * G * dev(el_strain);
-    auto mises = sqrt(1.5) * norm(s);
-    double yield_strength_old = sigma_y + Hi*state.accumulated_plastic_strain;
+    const double K                  = E / (3.0 * (1.0 - 2.0 * nu));
+    const double G                  = 0.5 * E / (1.0 + nu);
+    auto         el_strain          = sym(du_dX) - state.plastic_strain;
+    auto         s                  = 2.0 * G * dev(el_strain);
+    auto         mises              = sqrt(1.5) * norm(s);
+    double       yield_strength_old = sigma_y + Hi * state.accumulated_plastic_strain;
 
     // enforce consistency condition
-    if (mises > yield_strength_old)
-    {
-      auto delta_eqps = (mises - yield_strength_old)/(3*G + Hi);
-      auto N = 1.5 * s / mises;
-      auto plastic_strain_increment = delta_eqps*N;
-      s -= 2.0*G*plastic_strain_increment;
+    if (mises > yield_strength_old) {
+      auto delta_eqps               = (mises - yield_strength_old) / (3 * G + Hi);
+      auto N                        = 1.5 * s / mises;
+      auto plastic_strain_increment = delta_eqps * N;
+      s -= 2.0 * G * plastic_strain_increment;
       state.accumulated_plastic_strain += get_value(delta_eqps);
       state.plastic_strain += get_value(plastic_strain_increment);
       state.delta_eqps = get_value(delta_eqps);
     }
 
     // update stress
-    auto sigma = s + K*tr(el_strain)*Identity<3>();
+    auto sigma = s + K * tr(el_strain) * Identity<3>();
 
     // update heat flux
     const auto q0 = -k * dtheta_dX;

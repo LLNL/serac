@@ -71,10 +71,10 @@ void functional_test_static_3D(double expected_norm)
   double k         = 1.0;
 
   using Material = thermomechanics::GreenSaintVenant;
-  
-  Material material{rho, E, nu, c, alpha, theta_ref, k};
+
+  Material        material{rho, E, nu, c, alpha, theta_ref, k};
   Material::State initial_state{};
-  auto qdata = thermal_solid_solver.createQuadratureDataBuffer(initial_state);
+  auto            qdata = thermal_solid_solver.createQuadratureDataBuffer(initial_state);
   thermal_solid_solver.setMaterial(material, qdata);
 
   // Define the function for the initial temperature and boundary condition
@@ -149,17 +149,17 @@ void functional_test_shrinking_3D(double expected_norm)
 
   using Material = thermomechanics::GreenSaintVenant;
 
-  double                                       rho       = 1.0;
-  double                                       E         = 1.0;
-  double                                       nu        = 0.0;
-  double                                       c         = 1.0;
-  double                                       alpha     = 1.0e-3;
-  double                                       theta_ref = 2.0;
-  double                                       k         = 1.0;
-  
-  Material material{rho, E, nu, c, alpha, theta_ref, k};
+  double rho       = 1.0;
+  double E         = 1.0;
+  double nu        = 0.0;
+  double c         = 1.0;
+  double alpha     = 1.0e-3;
+  double theta_ref = 2.0;
+  double k         = 1.0;
+
+  Material        material{rho, E, nu, c, alpha, theta_ref, k};
   Material::State initial_state{};
-  auto qdata = thermal_solid_solver.createQuadratureDataBuffer(initial_state);
+  auto            qdata = thermal_solid_solver.createQuadratureDataBuffer(initial_state);
   thermal_solid_solver.setMaterial(material, qdata);
 
   // Define the function for the initial temperature
@@ -364,7 +364,7 @@ TEST(Thermomechanics, SelfHeatingJ2)
   MPI_Barrier(MPI_COMM_WORLD);
 
   constexpr int dim                 = 3;
-  constexpr int p = 1;
+  constexpr int p                   = 1;
   int           serial_refinement   = 0;
   int           parallel_refinement = 0;
 
@@ -373,8 +373,8 @@ TEST(Thermomechanics, SelfHeatingJ2)
   serac::StateManager::initialize(datastore, "self_heating");
 
   // Construct the appropriate dimension mesh and give it to the data store
-  std::string filename = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
-  constexpr double L = 8.0; // the length of beam-hex.mesh is 8 units
+  std::string      filename = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+  constexpr double L        = 8.0;  // the length of beam-hex.mesh is 8 units
 
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename), serial_refinement, parallel_refinement);
 
@@ -404,20 +404,20 @@ TEST(Thermomechanics, SelfHeatingJ2)
   constexpr double rho     = 1.0;
   constexpr double E       = 10.0;
   constexpr double nu      = 0.25;
-  constexpr double Cv       = 0.1;
+  constexpr double Cv      = 0.1;
   constexpr double k       = 1.0;
-  constexpr double Hi      = E/20.0;
+  constexpr double Hi      = E / 20.0;
   constexpr double sigma_y = 0.001;
 
   Material material{rho, E, nu, Cv, k, Hi, sigma_y};
 
   auto qdata = thermal_solid_solver.createQuadratureDataBuffer(Material::State{});
-  
+
   thermal_solid_solver.setMaterial(material, qdata);
 
   // Define the function for the initial temperature
-  constexpr double theta_0       = 100.0;
-  auto initial_temperature_field = [](const mfem::Vector&, double) -> double { return theta_0; };
+  constexpr double theta_0                   = 100.0;
+  auto             initial_temperature_field = [](const mfem::Vector&, double) -> double { return theta_0; };
 
   // Set the initial conditions
   thermal_solid_solver.setTemperature(initial_temperature_field);
@@ -425,16 +425,15 @@ TEST(Thermomechanics, SelfHeatingJ2)
 
   // Define the functions for the displacement boundary conditions
   constexpr double strain_increment = 0.125;
-  auto applied_disp = [](const mfem::Vector&, double t) { return strain_increment*L*t; };
+  auto             applied_disp     = [](const mfem::Vector&, double t) { return strain_increment * L * t; };
 
   auto zero_function = [](const mfem::Vector&, double) -> double { return 0.0; };
 
   // Set boundary conditions
   // uniaxial tension
   thermal_solid_solver.setDisplacementBCs({1}, zero_function, 0);
-  thermal_solid_solver.setDisplacementBCs(
-    [](const mfem::Vector& X){ return X.Norml2() < 1e-6; },
-    [](const mfem::Vector&, double, mfem::Vector& u){ u = 0.0; });
+  thermal_solid_solver.setDisplacementBCs([](const mfem::Vector& X) { return X.Norml2() < 1e-6; },
+                                          [](const mfem::Vector&, double, mfem::Vector& u) { u = 0.0; });
   thermal_solid_solver.setDisplacementBCs({2}, applied_disp, 0);
   // no thermal essential BCs -> insulated
 
@@ -446,7 +445,8 @@ TEST(Thermomechanics, SelfHeatingJ2)
   // heat generation until the second step.
   constexpr double dt = 1.0;
   for (int step = 1; step < 3; step++) {
-    std::cout << "------------------------------------------------" << std::endl;;
+    std::cout << "------------------------------------------------" << std::endl;
+    ;
     std::cout << "TIME STEP " << step << std::endl;
     thermal_solid_solver.advanceTimestep(dt);
     thermal_solid_solver.outputStateToDisk("self_heating_paraview");
@@ -454,18 +454,17 @@ TEST(Thermomechanics, SelfHeatingJ2)
 
   // Compute temperature rise.
   // This is a uniform deformation, so the temperature should be uniform, too.
-  double theta = thermal_solid_solver.temperature().Sum()/thermal_solid_solver.temperature().Size();
+  double theta                 = thermal_solid_solver.temperature().Sum() / thermal_solid_solver.temperature().Size();
   double temperature_increment = theta - theta_0;
 
   // exact solution
   constexpr double exact_plastic_strain_increment = E / (E + Hi) * strain_increment;
-  constexpr double exact_temperature_increment = exact_plastic_strain_increment * sigma_y / Cv * dt;
+  constexpr double exact_temperature_increment    = exact_plastic_strain_increment * sigma_y / Cv * dt;
 
   EXPECT_NEAR(temperature_increment, exact_temperature_increment, 1e-5);
 }
 
-} // namespace serac
-
+}  // namespace serac
 
 //------------------------------------------------------------------------------
 #include "axom/slic/core/SimpleLogger.hpp"

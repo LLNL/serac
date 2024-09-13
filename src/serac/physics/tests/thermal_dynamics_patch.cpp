@@ -202,7 +202,7 @@ public:
       auto temp_grad = temp_rate_grad * t;
 
       Empty s{};
-      auto flux = serac::get<1>(material(s, X, temp, temp_grad));
+      auto  flux = serac::get<1>(material(s, X, temp, temp_grad));
 
       return dot(flux, n0);
     };

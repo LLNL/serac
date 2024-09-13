@@ -50,7 +50,7 @@ struct LinearIsotropicConductor {
    * isotropic material
    */
   template <typename T1, typename T2, typename T3>
-  SERAC_HOST_DEVICE auto operator()(State & /*state*/, const T1& /* x */, const T2& /* temperature */,
+  SERAC_HOST_DEVICE auto operator()(State& /*state*/, const T1& /* x */, const T2& /* temperature */,
                                     const T3& temperature_gradient) const
   {
     return serac::tuple{density_ * specific_heat_capacity_, -1.0 * conductivity_ * temperature_gradient};
@@ -69,7 +69,6 @@ private:
 
 /// Nonlinear isotropic heat transfer material model
 struct IsotropicConductorWithLinearConductivityVsTemperature {
-
   using State = Empty;  ///< this material has no internal variables
 
   /**
@@ -104,7 +103,8 @@ struct IsotropicConductorWithLinearConductivityVsTemperature {
    * @return The calculated material response (tuple of volumetric heat capacity and thermal flux)
    */
   template <typename T1, typename T2, typename T3>
-  SERAC_HOST_DEVICE auto operator()(State & /*state*/, const T1& /* x */, const T2& temperature, const T3& temperature_gradient) const
+  SERAC_HOST_DEVICE auto operator()(State& /*state*/, const T1& /* x */, const T2& temperature,
+                                    const T3& temperature_gradient) const
   {
     const auto currentConductivity = reference_conductivity_ + d_conductivity_d_temperature_ * temperature;
     SLIC_ERROR_ROOT_IF(
@@ -134,7 +134,6 @@ private:
  */
 template <int dim>
 struct LinearConductor {
-
   using State = Empty;  ///< this material has no internal variables
 
   /**
@@ -168,7 +167,7 @@ struct LinearConductor {
    * anisotropic material
    */
   template <typename T1, typename T2, typename T3>
-  SERAC_HOST_DEVICE auto operator()(State & /*state*/, const T1& /* x */, const T2& /* temperature */,
+  SERAC_HOST_DEVICE auto operator()(State& /*state*/, const T1& /* x */, const T2& /* temperature */,
                                     const T3& temperature_gradient) const
   {
     return serac::tuple{density_ * specific_heat_capacity_, -1.0 * conductivity_ * temperature_gradient};
