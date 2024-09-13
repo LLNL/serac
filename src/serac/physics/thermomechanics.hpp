@@ -481,7 +481,7 @@ public:
   void setDisplacementBCs(const std::set<int>&                         displacement_attributes,
                           std::function<double(const mfem::Vector& x)> prescribed_value, int component)
   {
-    solid_.setDisplacementBCs(disp_bdr, disp, component);
+    solid_.setDisplacementBCs(displacement_attributes, prescribed_value, component);
   }
 
   /**
@@ -494,7 +494,7 @@ public:
   void setDisplacementBCs(const std::set<int>&                                   displacement_attributes,
                           std::function<double(const mfem::Vector& x, double t)> prescribed_value, int component)
   {
-    solid_.setDisplacementBCs(disp_bdr, disp, component);
+    solid_.setDisplacementBCs(displacement_attributes, prescribed_value, component);
   }
 
   /**
