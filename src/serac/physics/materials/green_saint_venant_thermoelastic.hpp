@@ -19,7 +19,7 @@ auto greenStrain(const tensor<T, 3, 3>& grad_u)
 }
 
 /// @brief Green-Saint Venant isotropic thermoelastic model
-struct GreenSaintVenantThermoelasticMaterial {
+struct GreenSaintVenant {
   double density;    ///< density
   double E;          ///< Young's modulus
   double nu;         ///< Poisson's ratio
@@ -99,7 +99,7 @@ struct GreenSaintVenantThermoelasticMaterial {
 };
 
 /// @brief Green-Saint Venant isotropic thermoelastic model
-struct ParameterizedGreenSaintVenantThermoelasticMaterial {
+struct ParameterizedGreenSaintVenant {
   double density;    ///< density
   double E;          ///< Young's modulus
   double nu;         ///< Poisson's ratio
@@ -188,7 +188,7 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
 
 
 /// @brief Plasticity model with self-heating from plastic work
-struct J2SmallStrainThermomechanical {
+struct J2SmallStrain {
   static constexpr int dim = 3;
 
   double density;    ///< density
