@@ -315,8 +315,16 @@ template <int Q, mfem::Geometry::Type geom, typename test, typename trial, typen
 void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* qf_derivatives, const int* elements,
                                std::size_t num_elements)
 {
-  using test_element  = finite_element<geom, test>;
-  using trial_element = finite_element<geom, trial>;
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+  std::string    device_name = "DEVICE";
+  constexpr auto exec        = ExecutionSpace::GPU;
+#else
+  std::string    device_name = "HOST";
+  constexpr auto exec        = ExecutionSpace::CPU;
+#endif
+
+  using test_element  = finite_element<geom, test, exec>;
+  using trial_element = finite_element<geom, trial, exec>;
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
@@ -328,12 +336,6 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
   auto e_range = RAJA::TypedRangeSegment<std::size_t>(0, num_elements);
 
   using qf_inputs_type = decltype(trial_element::template interpolate_output_helper<Q>());
-
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  std::string device_name = "DEVICE";
-#else
-  std::string device_name = "HOST";
-#endif
 
   auto&           rm        = umpire::ResourceManager::getInstance();
   auto            allocator = rm.getAllocator(device_name);
@@ -389,8 +391,13 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
 #endif
                              derivatives_type* qf_derivatives, const int* elements, std::size_t num_elements)
 {
-  using test_element  = finite_element<g, test>;
-  using trial_element = finite_element<g, trial>;
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+  constexpr auto exec = ExecutionSpace::GPU;
+#else
+  constexpr auto exec = ExecutionSpace::CPU;
+#endif
+  using test_element  = finite_element<g, test, exec>;
+  using trial_element = finite_element<g, trial, exec>;
 
   constexpr bool is_QOI = test::family == Family::QOI;
   using padded_derivative_type [[maybe_unused]] =
@@ -432,8 +439,13 @@ template <uint32_t wrt, int Q, mfem::Geometry::Type geom, typename signature, ty
 auto evaluation_kernel(signature s, lambda_type qf, const double* positions, const double* jacobians,
                        std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {
-  auto trial_elements = trial_elements_tuple<geom>(s);
-  auto test_element   = get_test_element<geom>(s);
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+  constexpr auto exec = ExecutionSpace::GPU;
+#else
+  constexpr auto exec = ExecutionSpace::CPU;
+#endif
+  auto trial_elements = trial_elements_tuple<geom, exec>(s);
+  auto test_element   = get_test_element<geom, exec>(s);
   return [=](double time, const std::vector<const double*>& inputs, double* outputs, bool /* update state */) {
     evaluation_kernel_impl<wrt, Q, geom>(trial_elements, test_element, time, inputs, outputs, positions, jacobians, qf,
                                          qf_derivatives.get(), elements, num_elements, s.index_seq);

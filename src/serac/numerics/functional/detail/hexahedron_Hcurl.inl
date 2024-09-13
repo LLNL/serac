@@ -21,8 +21,8 @@
 //         see quadrilateral_hcurl.inl for more information
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
-template <int p>
-struct finite_element<mfem::Geometry::CUBE, Hcurl<p>> {
+template <int p, serac::ExecutionSpace exec>
+struct finite_element<mfem::Geometry::CUBE, Hcurl<p>, exec> {
   static constexpr auto geometry   = mfem::Geometry::CUBE;
   static constexpr auto family     = Family::HCURL;
   static constexpr int  dim        = 3;

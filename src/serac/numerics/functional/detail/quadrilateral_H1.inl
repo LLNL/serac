@@ -19,8 +19,8 @@
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
 
-template <int p, int c>
-struct finite_element<mfem::Geometry::SQUARE, H1<p, c>> {
+template <int p, int c, serac::ExecutionSpace exec>
+struct finite_element<mfem::Geometry::SQUARE, H1<p, c>, exec> {
   static constexpr auto geometry   = mfem::Geometry::SQUARE;
   static constexpr auto family     = Family::H1;
   static constexpr int  components = c;

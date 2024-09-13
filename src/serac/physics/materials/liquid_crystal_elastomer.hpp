@@ -255,7 +255,7 @@ struct LiquidCrystalElastomerBertoldi {
    * @return The calculated material response (Cauchy stress) for the material
    */
   template <typename DispGradType, typename OrderParamType, typename GammaAngleType, typename EtaAngleType>
-  SERAC_HOST_DEVICE auto operator()(const State& /*state*/, const tensor<DispGradType, dim, dim>& displacement_grad,
+  SERAC_HOST_DEVICE auto operator()(State& /*state*/, const tensor<DispGradType, dim, dim>& displacement_grad,
                                     OrderParamType inst_order_param_tuple, GammaAngleType gamma_tuple,
                                     EtaAngleType eta_tuple) const
   {

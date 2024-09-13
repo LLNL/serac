@@ -20,8 +20,8 @@
 //
 // for exact positions of nodes for different polynomial orders, see simplex_basis_function_unit_tests.cpp
 /// @cond
-template <int p, int c>
-struct finite_element<mfem::Geometry::TRIANGLE, L2<p, c>> {
+template <int p, int c, ExecutionSpace exec>
+struct finite_element<mfem::Geometry::TRIANGLE, L2<p, c>, exec> {
   static constexpr auto geometry   = mfem::Geometry::TRIANGLE;
   static constexpr auto family     = Family::L2;
   static constexpr int  components = c;

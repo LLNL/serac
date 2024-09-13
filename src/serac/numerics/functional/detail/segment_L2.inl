@@ -18,8 +18,8 @@
 // note: mfem assumes the parent element domain is [0,1]
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
-template <int p, int c>
-struct finite_element<mfem::Geometry::SEGMENT, L2<p, c> > {
+template <int p, int c, ExecutionSpace exec>
+struct finite_element<mfem::Geometry::SEGMENT, L2<p, c>, exec> {
   static constexpr auto geometry   = mfem::Geometry::SEGMENT;
   static constexpr auto family     = Family::L2;
   static constexpr int  components = c;

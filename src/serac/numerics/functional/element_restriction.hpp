@@ -211,7 +211,6 @@ struct ElementRestriction {
             }
           }
         });
-    std::cout << "exiting\n";
   }
 
   /// "E->L" in mfem parlance, each element scatter-adds its local vector into the appropriate place in the "L-vector"
@@ -300,7 +299,7 @@ struct BlockElementRestriction {
   void Gather(const mfem::Vector& L_vector, mfem::BlockVector& E_block_vector) const
   {
     for (auto [geom, restriction] : restrictions) {
-      restriction.Gather<exec>(L_vector, E_block_vector.GetBlock(geom));
+      restriction.template Gather<exec>(L_vector, E_block_vector.GetBlock(geom));
     }
   }
 
@@ -309,7 +308,7 @@ struct BlockElementRestriction {
   void ScatterAdd(const mfem::BlockVector& E_block_vector, mfem::Vector& L_vector) const
   {
     for (auto [geom, restriction] : restrictions) {
-      restriction.ScatterAdd<exec>(E_block_vector.GetBlock(geom), L_vector);
+      restriction.template ScatterAdd<exec>(E_block_vector.GetBlock(geom), L_vector);
     }
   }
 

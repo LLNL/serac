@@ -23,8 +23,8 @@
 //         rather than 3D vector along the z-direction.
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
-template <int p>
-struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
+template <int p, ExecutionSpace exec>
+struct finite_element<mfem::Geometry::SQUARE, Hcurl<p>, exec> {
   static constexpr auto geometry   = mfem::Geometry::SQUARE;
   static constexpr auto family     = Family::HCURL;
   static constexpr int  dim        = 2;

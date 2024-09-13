@@ -12,6 +12,7 @@
  */
 #pragma once
 
+#include "serac/infrastructure/accelerator.hpp"
 #include "serac/serac_config.hpp"
 #include "tuple.hpp"
 #include "tensor.hpp"
@@ -40,10 +41,6 @@ struct TensorProductQuadratureRule {
   {
     return weights1D[ix] * weights1D[iy] * weights1D[iz];
   }
-};
-
-template <auto val>
-struct CompileTimeValue {
 };
 
 /**
@@ -365,7 +362,7 @@ SERAC_HOST_DEVICE void physical_to_parent(tensor<T, q>& qf_output, const tensor<
  * };
  *
  */
-template <mfem::Geometry::Type g, typename family>
+template <mfem::Geometry::Type g, typename family, serac::ExecutionSpace exec>
 struct finite_element;
 
 #include "detail/segment_H1.inl"

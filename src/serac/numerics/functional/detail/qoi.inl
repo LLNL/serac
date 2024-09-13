@@ -11,10 +11,11 @@
  */
 
 #include "RAJA/RAJA.hpp"
+#include "serac/infrastructure/accelerator.hpp"
 
 /// @cond
-template <mfem::Geometry::Type g>
-struct finite_element<g, QOI> {
+template <mfem::Geometry::Type g, serac::ExecutionSpace exec>
+struct finite_element<g, QOI, exec> {
   static constexpr auto geometry   = g;
   static constexpr auto family     = Family::QOI;
   static constexpr int  components = 1;

@@ -36,7 +36,6 @@ set(functional_headers
 set(functional_sources
     domain.cpp
     element_restriction.cpp
-    geometric_factors.cpp
     quadrature_data.cpp)
 
 set(functional_detail_headers
