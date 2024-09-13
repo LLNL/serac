@@ -7,7 +7,7 @@
 #include "serac/physics/thermomechanics.hpp"
 #include "serac/physics/materials/thermal_material.hpp"
 #include "serac/physics/materials/solid_material.hpp"
-#include "serac/physics/materials/green_saint_venant_thermoelastic.hpp"
+#include "serac/physics/materials/thermomechanics_material.hpp"
 
 #include <fstream>
 
