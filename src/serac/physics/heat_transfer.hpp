@@ -654,6 +654,34 @@ public:
     }
   }
 
+  /**
+   * @brief register a custom domain integral calculation as part of the residual
+   *
+   * @tparam active_parameters a list of indices, describing which parameters to pass to the q-function
+   * @tparam StateType the type that contains the internal variables (if any) for q-function
+   * @param qfunction a callable that returns a tuple of body-force and stress
+   * @param qdata the buffer of material internal variables at each quadrature point
+   *
+   * ~~~ {.cpp}
+   *
+   *  double k = 500.0;
+   *  double c = 10.0;
+   *  solid_mechanics.addCustomDomainIntegral(DependsOn<>{}, [=](auto x, auto temperature,
+   *    auto temperature_rate, auto shape_displacement){
+   *
+   *    auto dT_dx = serac::get<1>(displacement);
+   *    auto flux = -k * dT_dx;
+   *
+   *    auto dT_dt = serac::get<0>(temperature_rate);
+   *    double c = 1.0 + x[0]; // spatially-varying heat capacity
+   *
+   *    return serac::tuple{c * dT_dt, flux};
+   *  });
+   *
+   * ~~~
+   *
+   * @note This method must be called prior to completeSetup()
+   */
   template <int... active_parameters, typename callable, typename StateType = Nothing>
   void addCustomDomainIntegral(DependsOn<active_parameters...>, callable qfunction,
                                qdata_type<StateType> qdata = NoQData)

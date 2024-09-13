@@ -296,6 +296,9 @@ public:
      * @tparam T3 the type of the temperature gradient values
      * @tparam T4 the type of the displacement gradient values
      * @tparam param_types the types of user-specified parameters
+     *
+     * @param state Internal state variables
+     * @param x Position
      * @param temperature the temperature at this quadrature point
      * @param temperature_gradient the gradient w.r.t. physical coordinates of the temperature
      * @param displacement the value and gradient w.r.t. physical coordinates of the displacement
@@ -313,6 +316,13 @@ public:
     }
   };
 
+  /**
+   * @brief This is an adaptor class that extracts the coupling between the
+   * mechanical problem and the thermal problem that occurs though internal
+   * heat generation.
+   *
+   * @tparam ThermalMechanicalMaterial the coupled material model being wrapped
+   */
   template <typename ThermalMechanicalMaterial>
   struct ThermalMaterialSourceInterface {
     using State = typename ThermalMechanicalMaterial::State;  ///< internal variables for the wrapped material model
@@ -326,28 +336,22 @@ public:
     }
 
     /**
-     * @brief glue code to evaluate a thermomechanical material and extract the thermal outputs
+     * @brief glue code to evaluate a thermomechanical material and extract the internal heat source
      *
      * @tparam T1 the type of the spatial coordinate values
      * @tparam T2 the type of the temperature value
      * @tparam T3 the type of the temperature gradient values
      * @tparam T4 the type of the displacement gradient values
      * @tparam param_types the types of user-specified parameters
+     *
+     * @param t Time
+     * @param position Material point cordinates
+     * @param state Internal state variables
      * @param temperature the temperature at this quadrature point
      * @param temperature_gradient the gradient w.r.t. physical coordinates of the temperature
      * @param displacement the value and gradient w.r.t. physical coordinates of the displacement
      * @param parameters values and derivatives of any additional user-specified parameters
      */
-    // template <typename T1, typename T2, typename T3, typename T4, typename... param_types>
-    // SERAC_HOST_DEVICE auto operator()(State& state, const T1& /* x */, const T2& temperature, const T3&
-    // temperature_gradient,
-    //                                   const T4& displacement, param_types... parameters) const
-    // {
-    //   auto [u, du_dX]                 = displacement;
-    //   auto [T, heat_capacity, s0, q0] = mat(state, du_dX, temperature, temperature_gradient, parameters...);
-
-    //   return tuple{s0, zero{}};
-    // }
     template <typename Position, typename Temperature, typename TempRate, typename Displacement, typename... Parameters>
     SERAC_HOST_DEVICE auto operator()(double /*t*/, const Position& /* position */, State& state,
                                       const Temperature&  temperature, const TempRate& /*temperature_rate*/,
@@ -471,14 +475,28 @@ public:
     solid_.setDisplacementBCs(displacement_attributes, prescribed_value);
   }
 
-  void setDisplacementBCs(const std::set<int>& disp_bdr, std::function<double(const mfem::Vector& x)> disp,
-                          int component)
+  /**
+   * @brief Set essential displacement boundary conditions for one component
+   *
+   * @param[in] displacement_attributes The boundary attributes on which to enforce a displacement
+   * @param[in] prescribed_value The prescribed boundary displacement function
+   * @param[in] component Integer indicating which component of the displacement vector is to be prescribed
+   */
+  void setDisplacementBCs(const std::set<int>&                         displacement_attributes,
+                          std::function<double(const mfem::Vector& x)> prescribed_value, int component)
   {
     solid_.setDisplacementBCs(disp_bdr, disp, component);
   }
 
-  void setDisplacementBCs(const std::set<int>& disp_bdr, std::function<double(const mfem::Vector& x, double t)> disp,
-                          int component)
+  /**
+   * @brief Set essential displacement boundary conditions for one component that are time-dependent
+   *
+   * @param[in] displacement_attributes The boundary attributes on which to enforce a displacement
+   * @param[in] prescribed_value The prescribed boundary displacement function
+   * @param[in] component Integer indicating which component of the displacement vector is to be prescribed
+   */
+  void setDisplacementBCs(const std::set<int>&                                   displacement_attributes,
+                          std::function<double(const mfem::Vector& x, double t)> prescribed_value, int component)
   {
     solid_.setDisplacementBCs(disp_bdr, disp, component);
   }
