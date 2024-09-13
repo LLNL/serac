@@ -225,7 +225,7 @@ struct J2SmallStrainThermomechanical {
    * energy per unit time and per unit area).
    */
   template <typename T1, typename T2, typename T3>
-  auto operator()(State& state, const tensor<T1, dim, dim>& du_dX, T2 theta, 
+  auto operator()(State& state, const tensor<T1, dim, dim>& du_dX, T2 /* theta */,
                   const tensor<T3, dim>& dtheta_dX) const
   {
     using std::sqrt;
