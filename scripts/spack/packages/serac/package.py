@@ -187,10 +187,13 @@ class Serac(CachedCMakePackage, CudaPackage, ROCmPackage):
         depends_on("{0}~shared".format(dep), when="+profiling~shared")
 
     # Required
-    for dep in ["axom", "conduit", "hdf5", "metis", "parmetis", "superlu-dist"]:
+    for dep in ["axom", "hdf5", "metis", "parmetis", "superlu-dist"]:
         depends_on("{0} build_type=Debug".format(dep), when="build_type=Debug")
         depends_on("{0}+shared".format(dep), when="+shared")
         depends_on("{0}~shared".format(dep), when="~shared")
+
+    # Don't propagate shared to conduit, since it doesn't concretize in rocm builds
+    depends_on("conduit build_type=Debug".format(dep), when="build_type=Debug")
 
     # Optional packages that are controlled by variants
     for dep in ["petsc"]:
@@ -287,9 +290,19 @@ class Serac(CachedCMakePackage, CudaPackage, ROCmPackage):
 
     for val in ROCmPackage.amdgpu_targets:
         ext_rocm_dep = f"+rocm amdgpu_target={val}"
-        depends_on(f"raja {ext_rocm_dep}", when=f"+raja {ext_rocm_dep}")
-        depends_on(f"umpire {ext_rocm_dep}", when=f"+umpire {ext_rocm_dep}")
+
+        # required
+        depends_on(f"axom {ext_rocm_dep}", when=f"{ext_rocm_dep}")
+        depends_on(f"mfem {ext_rocm_dep}", when=f"{ext_rocm_dep}")
+
+        # optional
         depends_on(f"caliper {ext_rocm_dep}", when=f"+profiling {ext_rocm_dep}")
+        depends_on(f"petsc {ext_rocm_dep}", when=f"+petsc {ext_rocm_dep}")
+        depends_on(f"raja {ext_rocm_dep}", when=f"+raja {ext_rocm_dep}")
+        depends_on(f"slepc {ext_rocm_dep}", when=f"+slepc {ext_rocm_dep}")
+        depends_on(f"sundials {ext_rocm_dep}", when=f"+sundials {ext_rocm_dep}")
+        depends_on(f"tribol {ext_rocm_dep}", when=f"+tribol {ext_rocm_dep}")
+        depends_on(f"umpire {ext_rocm_dep}", when=f"+umpire {ext_rocm_dep}")
 
     depends_on("rocprim", when="+rocm")
 
