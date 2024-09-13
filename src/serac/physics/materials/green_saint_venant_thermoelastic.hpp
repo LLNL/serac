@@ -7,7 +7,7 @@
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/tuple.hpp"
 
-namespace serac {
+namespace serac::thermomechanics {
 
 /**
  * @brief Compute Green's strain from the displacement gradient
@@ -264,4 +264,4 @@ struct J2SmallStrainThermomechanical {
   }
 };
 
-}  // namespace serac
+}  // namespace serac::thermomechanics

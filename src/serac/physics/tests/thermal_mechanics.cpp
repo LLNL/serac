@@ -70,7 +70,7 @@ void functional_test_static_3D(double expected_norm)
   double theta_ref = 1.0;
   double k         = 1.0;
 
-  using Material = GreenSaintVenantThermoelasticMaterial;
+  using Material = thermomechanics::GreenSaintVenantThermoelasticMaterial;
   
   Material material{rho, E, nu, c, alpha, theta_ref, k};
   Material::State initial_state{};
@@ -147,6 +147,8 @@ void functional_test_shrinking_3D(double expected_norm)
       heat_transfer::default_static_options, default_nonlinear_options, default_linear_options,
       solid_mechanics::default_quasistatic_options, GeometricNonlinearities::On, "thermal_solid_functional", mesh_tag);
 
+  using Material = thermomechanics::GreenSaintVenantThermoelasticMaterial;
+
   double                                       rho       = 1.0;
   double                                       E         = 1.0;
   double                                       nu        = 0.0;
@@ -154,9 +156,10 @@ void functional_test_shrinking_3D(double expected_norm)
   double                                       alpha     = 1.0e-3;
   double                                       theta_ref = 2.0;
   double                                       k         = 1.0;
-  GreenSaintVenantThermoelasticMaterial        material{rho, E, nu, c, alpha, theta_ref, k};
-  GreenSaintVenantThermoelasticMaterial::State initial_state{};
-  auto                                         qdata = thermal_solid_solver.createQuadratureDataBuffer(initial_state);
+  
+  Material material{rho, E, nu, c, alpha, theta_ref, k};
+  Material::State initial_state{};
+  auto qdata = thermal_solid_solver.createQuadratureDataBuffer(initial_state);
   thermal_solid_solver.setMaterial(material, qdata);
 
   // Define the function for the initial temperature
@@ -249,8 +252,8 @@ void parameterized()
   double theta_ref = 2.0;
   double k         = 1.0;
 
-  ParameterizedGreenSaintVenantThermoelasticMaterial        material{rho, E, nu, c, alpha0, theta_ref, k};
-  ParameterizedGreenSaintVenantThermoelasticMaterial::State initial_state{};
+  thermomechanics::ParameterizedGreenSaintVenantThermoelasticMaterial        material{rho, E, nu, c, alpha0, theta_ref, k};
+  thermomechanics::ParameterizedGreenSaintVenantThermoelasticMaterial::State initial_state{};
   auto qdata = thermal_solid_solver.createQuadratureDataBuffer(initial_state);
   thermal_solid_solver.setMaterial(material, qdata);
 
@@ -396,7 +399,7 @@ TEST(Thermomechanics, SelfHeatingJ2)
       heat_transfer::default_timestepping_options, default_nonlinear_options, default_linear_options,
       solid_mechanics::default_quasistatic_options, GeometricNonlinearities::Off, "thermal_solid_functional", mesh_tag);
 
-  using Material = J2SmallStrainThermomechanical;
+  using Material = thermomechanics::J2SmallStrainThermomechanical;
 
   constexpr double rho     = 1.0;
   constexpr double E       = 10.0;
