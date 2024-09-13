@@ -665,6 +665,17 @@ private:
 
       }
 
+      for (int i = 0; i < lookup_tables.col_ind.size(); i++) {
+        std::cout << lookup_tables.col_ind[i] << " ";
+      }
+      std::cout << std::endl;
+
+      for (int i = 0; i < lookup_tables.row_ptr.size(); i++) {
+        std::cout << lookup_tables.row_ptr[i] << " ";
+      }
+      std::cout << std::endl;
+
+
       // Copy the column indices to an auxilliary array as MFEM can mutate these during HypreParMatrix construction
       col_ind_copy_ = lookup_tables.col_ind;
 
@@ -672,6 +683,10 @@ private:
           mfem::SparseMatrix(lookup_tables.row_ptr.data(), col_ind_copy_.data(), values, form_.output_L_.Size(),
                              form_.input_L_[which_argument].Size(), sparse_matrix_frees_graph_ptrs,
                              sparse_matrix_frees_values_ptr, col_ind_is_sorted);
+
+      std::ofstream outfile("K_old.mtx");
+      J_local.PrintMM(outfile);
+      outfile.close();
 
       auto* R = form_.test_space_->Dof_TrueDof_Matrix();
 
@@ -688,9 +703,87 @@ private:
       return K;
     };
 
-    void initialize_sparsity(mfem::SparseMatrix & A_local) {
+    void initialize_sparsity_pattern(mfem::SparseMatrix & A_local) {
 
-      // TODO
+      using row_col = std::tuple<int,int>;
+      
+      std::set< row_col > nonzero_entries;
+
+      for (auto& integral : form_.integrals_) {
+        auto& test_restrictions  = form_.G_test_[integral.domain_.type_].restrictions;
+        auto& trial_restrictions = form_.G_trial_[integral.domain_.type_][which_argument].restrictions;
+
+        for (auto& [geom, test_restriction] : test_restrictions) {
+          auto& trial_restriction = trial_restrictions[geom];
+
+          // the degrees of freedom associated with the rows/columns of the e^th element stiffness matrix
+          std::vector<int> test_vdofs(test_restriction.nodes_per_elem * test_restriction.components);
+          std::vector<int> trial_vdofs(trial_restriction.nodes_per_elem * trial_restriction.components);
+
+          auto num_elements = static_cast<uint32_t>(test_restriction.num_elements);
+          for (uint32_t e = 0; e < num_elements; e++) {
+
+            for (uint32_t i = 0; i < test_restriction.nodes_per_elem; i++) {
+              auto test_dof = test_restriction.dof_info(e, i);
+              for (uint32_t j = 0; j < test_restriction.components; j++) {
+                test_vdofs[i * test_restriction.components + j] = test_restriction.GetVDof(test_dof, j).index();
+                std::cout << test_restriction.GetVDof(test_dof, j).index() << " ";
+              }
+            }
+            std::cout << std::endl;
+
+            for (uint32_t i = 0; i < trial_restriction.nodes_per_elem; i++) {
+              auto trial_dof = trial_restriction.dof_info(e, i);
+              for (uint32_t j = 0; j < trial_restriction.components; j++) {
+                trial_vdofs[i * trial_restriction.components + j] = trial_restriction.GetVDof(trial_dof, j).index();
+                std::cout << trial_restriction.GetVDof(trial_dof, j).index() << " ";
+              }
+            }
+            std::cout << std::endl;
+            std::cout << std::endl;
+
+            for (int row : test_vdofs) {
+              for (int col : trial_vdofs) {
+                nonzero_entries.insert({row, col});
+              }
+            }
+          }
+        }
+      }
+
+      int nnz = nonzero_entries.size();
+      int nrows = form_.output_L_.Size();
+      int ncols = form_.input_L_[which_argument].Size();
+
+      int * row_ptr = new int[nrows + 1];
+      int * col_ind = new int[nnz];
+      double * values = new double[nnz];
+
+      int nz = 0;
+      int last_row = -1;
+      for (auto [row, col] : nonzero_entries) {
+        col_ind[nz] = col;
+        values[nz] = 0;
+        for (int i = last_row+1; i <= row; i++) { row_ptr[i] = nz; }
+        last_row = row;
+        nz++;
+      }
+      for (int i = last_row+1; i <= nrows; i++) { row_ptr[i] = nz; }
+
+      for (int i = 0; i < nnz; i++) {
+        std::cout << col_ind[i] << " ";
+      }
+      std::cout << std::endl;
+
+      for (int i = 0; i <= nrows; i++) {
+        std::cout << row_ptr[i] << " ";
+      }
+      std::cout << std::endl;
+
+      constexpr bool sparse_matrix_frees_graph_ptrs = true;
+      constexpr bool sparse_matrix_frees_values_ptr = true;
+      constexpr bool col_ind_is_sorted = true;
+      A_local = mfem::SparseMatrix(row_ptr, col_ind, values, nrows, ncols, sparse_matrix_frees_graph_ptrs, sparse_matrix_frees_values_ptr, col_ind_is_sorted);
 
     };
 
@@ -707,7 +800,7 @@ private:
       mfem::SparseMatrix A_local;
 
       // if A is an uninitialized HypreParMatrix
-      if (A.NNZ() == 0) {
+      if (A.Height() == 0) {
 
         // then, we need to figure out which entries of the matrix could be nonzero
         initialize_sparsity_pattern(A_local);
@@ -725,38 +818,83 @@ private:
 
       }
 
-#if 0
-    nd::array<uint32_t> test_ids({nodes_per_test_element});
-    test_el.indices(test_offsets, connectivity(elements(e)).data(), test_ids.data());
+      std::map<mfem::Geometry::Type, ExecArray<double, 3, exec>> element_gradients[Domain::num_types];
 
-    nd::array<uint32_t> trial_ids({nodes_per_trial_element});
-    trial_el.indices(trial_offsets, connectivity(elements(e)).data(), trial_ids.data());
-
-    for (uint32_t I = 0; I < nodes_per_test_element; I++) {
-      for (uint32_t i = 0; i < test_space.components; i++) {
-        int row_id = test_ids[I] * test_components + i;
-
-        int which = row_id % nmutex;
-        int row_start = row_ptr[row_id];
-        int row_end = row_ptr[row_id+1];
-        for (uint32_t J = 0; J < nodes_per_trial_element; J++) {
-          for (uint32_t j = 0; j < trial_space.components; j++) {
-            int col_id = trial_ids[J] * trial_components + j;
-
-            // find the position of the nonzero entry of this row with the right column
-            int position = std::lower_bound(&col_ind[row_start], &col_ind[row_end], col_id) - &col_ind[0];
-
-            values[position] += K_e(J, j, I, i);
-          }
-        }
-      }
-    }
-#endif
-
-      // now that we have a  
       for (auto & integral : form_.integrals_) {
 
+        auto& K_elem             = element_gradients[integral.domain_.type_];
+        auto& test_restrictions  = form_.G_test_[integral.domain_.type_].restrictions;
+        auto& trial_restrictions = form_.G_trial_[integral.domain_.type_][which_argument].restrictions;
+
+        if (K_elem.empty()) {
+          for (auto& [geom, test_restriction] : test_restrictions) {
+            auto& trial_restriction = trial_restrictions[geom];
+
+            K_elem[geom] = ExecArray<double, 3, exec>(test_restriction.num_elements,
+                                                      trial_restriction.nodes_per_elem * trial_restriction.components,
+                                                      test_restriction.nodes_per_elem * test_restriction.components);
+
+            detail::zero_out(K_elem[geom]);
+          }
+        }
+
+        integral.ComputeElementGradients(K_elem, which_argument);
+
       }
+
+      int * row_ptr = A_local.GetI();
+      int * col_ind = A_local.GetJ();
+      double * values = A_local.GetData();
+
+      for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
+        auto& K_elem             = element_gradients[type];
+        auto& test_restrictions  = form_.G_test_[type].restrictions;
+        auto& trial_restrictions = form_.G_trial_[type][which_argument].restrictions;
+
+        if (!K_elem.empty()) {
+          for (auto [geom, elem_matrices] : K_elem) {
+            std::vector<DoF> test_vdofs(test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components);
+            std::vector<DoF> trial_vdofs(trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components);
+
+            for (axom::IndexType e = 0; e < elem_matrices.shape()[0]; e++) {
+              test_restrictions[geom].GetElementVDofs(e, test_vdofs);
+              trial_restrictions[geom].GetElementVDofs(e, trial_vdofs);
+
+              for (uint32_t i = 0; i < uint32_t(elem_matrices.shape()[1]); i++) {
+                int col = int(trial_vdofs[i].index());
+
+                for (uint32_t j = 0; j < uint32_t(elem_matrices.shape()[2]); j++) {
+                  int row = int(test_vdofs[j].index());
+
+                  for (int nz = row_ptr[row]; nz < row_ptr[row+1]; nz++) {
+                    // TODO: replace linear search with binary search
+                    if (col_ind[nz] == col) {
+                      values[nz] += elem_matrices(e, i, j);
+                    }
+                  }
+
+                }
+              }
+            }
+          }
+        }
+
+      }
+
+      std::ofstream outfile("K_new.mtx");
+      A_local.PrintMM(outfile);
+      outfile.close();
+
+      auto* R = form_.test_space_->Dof_TrueDof_Matrix();
+
+      auto* tmp = new mfem::HypreParMatrix(test_space_->GetComm(), test_space_->GlobalVSize(), trial_space_->GlobalVSize(),
+                                           test_space_->GetDofOffsets(), trial_space_->GetDofOffsets(), &A_local);
+
+      auto* P = trial_space_->Dof_TrueDof_Matrix();
+
+      A = *mfem::RAP(R, tmp, P);
+
+      delete tmp;
 
       #if 0
 
