@@ -43,6 +43,7 @@ struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
     tensor<double, p + 1, p> x;
     tensor<double, p, p + 1> y;
   };
+  using dof_type_if = dof_type;
 
   template <int q>
   using cpu_batched_values_type = tensor<tensor<double, 2>, q, q>;

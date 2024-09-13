@@ -18,6 +18,8 @@ blt_add_executable(NAME        tensor_unit_tests
 set(functional_serial_test_sources
     functional_shape_derivatives.cpp
     simplex_basis_function_unit_tests.cpp
+    element_restriction_tests.cpp
+    dg_restriction_operators.cpp
     bug_boundary_qoi.cpp
     domain_tests.cpp
     geometric_factors_tests.cpp
@@ -38,6 +40,7 @@ set(functional_parallel_test_sources
     functional_with_domain.cpp
     functional_basic_h1_scalar.cpp
     functional_basic_h1_vector.cpp
+    functional_basic_dg.cpp
     functional_multiphysics.cpp
     functional_qoi.cpp
     functional_nonlinear.cpp

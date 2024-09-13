@@ -26,6 +26,9 @@ struct finite_element<mfem::Geometry::SEGMENT, Hcurl<p, c> > {
   static constexpr int  dim        = 1;
   static constexpr int  ndof       = (p + 1);
 
+  using dof_type = tensor<double, c, ndof>;
+  using dof_type_if = dof_type;
+
   SERAC_HOST_DEVICE static constexpr tensor<double, ndof> shape_functions(double xi)
   {
     return GaussLegendreInterpolation<ndof>(xi);

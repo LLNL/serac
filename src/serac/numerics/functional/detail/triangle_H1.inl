@@ -36,6 +36,7 @@ struct finite_element<mfem::Geometry::TRIANGLE, H1<p, c> > {
       typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
 
   using dof_type = tensor<double, c, ndof>;
+  using dof_type_if = dof_type;
 
   using value_type = typename std::conditional<components == 1, double, tensor<double, components> >::type;
   using derivative_type =

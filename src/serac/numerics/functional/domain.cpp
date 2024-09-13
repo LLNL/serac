@@ -475,15 +475,19 @@ Domain EntireDomain(const mfem::Mesh& mesh)
     switch (geom) {
       case mfem::Geometry::TRIANGLE:
         output.tri_ids_.push_back(tri_id++);
+        output.mfem_tri_ids_.push_back(i);
         break;
       case mfem::Geometry::SQUARE:
         output.quad_ids_.push_back(quad_id++);
+        output.mfem_quad_ids_.push_back(i);
         break;
       case mfem::Geometry::TETRAHEDRON:
         output.tet_ids_.push_back(tet_id++);
+        output.mfem_tet_ids_.push_back(i);
         break;
       case mfem::Geometry::CUBE:
         output.hex_ids_.push_back(hex_id++);
+        output.mfem_hex_ids_.push_back(i);
         break;
       default:
         SLIC_ERROR("unsupported element type");
@@ -511,12 +515,15 @@ Domain EntireBoundary(const mfem::Mesh& mesh)
     switch (geom) {
       case mfem::Geometry::SEGMENT:
         output.edge_ids_.push_back(edge_id++);
+        output.mfem_edge_ids_.push_back(f);
         break;
       case mfem::Geometry::TRIANGLE:
         output.tri_ids_.push_back(tri_id++);
+        output.mfem_tri_ids_.push_back(f);
         break;
       case mfem::Geometry::SQUARE:
         output.quad_ids_.push_back(quad_id++);
+        output.mfem_quad_ids_.push_back(f);
         break;
       default:
         SLIC_ERROR("unsupported element type");
@@ -526,6 +533,50 @@ Domain EntireBoundary(const mfem::Mesh& mesh)
 
   return output;
 }
+
+/// @brief constructs a domain from all the interior face elements in a mesh
+Domain InteriorFaces(const mfem::Mesh& mesh) {
+
+  Domain output{mesh, mesh.SpaceDimension() - 1, Domain::Type::InteriorFaces};
+
+  int edge_id = 0;
+  int tri_id  = 0;
+  int quad_id = 0;
+
+  for (int f = 0; f < mesh.GetNumFaces(); f++) {
+
+    // discard faces with the wrong type
+    if (!mesh.GetFaceInformation(f).IsInterior()) continue;
+
+    auto geom = mesh.GetFaceGeometry(f);
+
+    switch (geom) {
+      case mfem::Geometry::SEGMENT:
+        output.edge_ids_.push_back(edge_id++);
+        output.mfem_edge_ids_.push_back(f);
+        break;
+      case mfem::Geometry::TRIANGLE:
+        output.tri_ids_.push_back(tri_id++);
+        output.mfem_tri_ids_.push_back(f);
+        break;
+      case mfem::Geometry::SQUARE:
+        output.quad_ids_.push_back(quad_id++);
+        output.mfem_quad_ids_.push_back(f);
+        break;
+      default:
+        SLIC_ERROR("unsupported element type");
+        break;
+    }
+  }
+
+  return output;
+
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
 
 /// @cond
 using c_iter = std::vector<int>::const_iterator;

@@ -34,6 +34,7 @@ struct finite_element<mfem::Geometry::TRIANGLE, L2<p, c> > {
       typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
 
   using dof_type = tensor<double, c, ndof>;
+  using dof_type_if = tensor<double, c, 2*ndof>;
 
   using value_type = typename std::conditional<components == 1, double, tensor<double, components> >::type;
   using derivative_type =
@@ -296,6 +297,37 @@ struct finite_element<mfem::Geometry::TRIANGLE, L2<p, c> > {
     }
 
     return output.flattened;
+  }
+
+  // overload for two-sided interior face kernels
+  template <int q>
+  SERAC_HOST_DEVICE static auto interpolate(const tensor<double, c, 2*ndof>& X, const TensorProductQuadratureRule<q>&)
+  {
+    constexpr auto       xi                    = GaussLegendreNodes<q, mfem::Geometry::TRIANGLE>();
+    static constexpr int num_quadrature_points = q * (q + 1) / 2;
+
+    tensor< tuple< tensor<double, dim>, tensor<double,dim> >, num_quadrature_points> output;
+
+#if 0
+    // transpose the quadrature data into a flat tensor of tuples
+    union {
+      tensor<tuple<tensor<double, c>, tensor<double, c, dim> >, num_quadrature_points> unflattened;
+      tensor<qf_input_type, num_quadrature_points>                                     flattened;
+    } output{};
+
+    for (int i = 0; i < c; i++) {
+      for (int j = 0; j < num_quadrature_points; j++) {
+        for (int k = 0; k < ndof; k++) {
+          get<VALUE>(output.unflattened[j])[i] += X(i, k) * shape_function(xi[j], k);
+          get<GRADIENT>(output.unflattened[j])[i] += X(i, k) * shape_function_gradient(xi[j], k);
+        }
+      }
+    }
+
+    return output.flattened;
+#endif
+    return output;
+
   }
 
   template <typename source_type, typename flux_type, int q>

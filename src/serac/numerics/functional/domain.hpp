@@ -23,10 +23,11 @@ struct Domain {
   enum Type
   {
     Elements,
-    BoundaryElements
+    BoundaryElements,
+    InteriorFaces
   };
 
-  static constexpr int num_types = 2;  ///< the number of entries in the Type enum
+  static constexpr int num_types = 3;  ///< the number of entries in the Type enum
 
   /// @brief the underyling mesh for this domain
   const mfem::Mesh& mesh_;
@@ -139,6 +140,9 @@ Domain EntireDomain(const mfem::Mesh& mesh);
 
 /// @brief constructs a domain from all the boundary elements in a mesh
 Domain EntireBoundary(const mfem::Mesh& mesh);
+
+/// @brief constructs a domain from all the interior face elements in a mesh
+Domain InteriorFaces(const mfem::Mesh& mesh);
 
 /// @brief create a new domain that is the union of `a` and `b`
 Domain operator|(const Domain& a, const Domain& b);
