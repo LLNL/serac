@@ -72,7 +72,7 @@ Requirements:
 
    ATS also outputs both a ``.log`` and ``.log.err`` for each test and checker that is run.
 
-#. **Rebaselining tests (as needed).**
+#. **Rebaseline tests (as needed).**
    If tolerances to tests need to be updated, first ensure you've generated new tolerances by running the integration
    tests like mentioned above. Then, use the ``-b`` option::
 
