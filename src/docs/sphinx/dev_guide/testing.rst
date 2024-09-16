@@ -73,20 +73,20 @@ Requirements:
    ATS also outputs both a ``.log`` and ``.log.err`` for each test and checker that is run.
 
 #. **Rebaselining tests (as needed).**
-    If tolerances to tests need to be updated, first ensure you've generated new tolerances by running the integration
-    tests like mentioned above. Then, use the ``-b`` option.
+   If tolerances to tests need to be updated, first ensure you've generated new tolerances by running the integration
+   tests like mentioned above. Then, use the ``-b`` option::
 
-    # Single baseline
-    $ ./ats.sh -b dyn_solve_serial
+     # Single baseline
+     $ ./ats.sh -b dyn_solve_serial
 
-    # Comma-separated baselines
-    $ ./ats.sh -b dyn_solve_serial,dyn_solve_parallel
+     # Comma-separated baselines
+     $ ./ats.sh -b dyn_solve_serial,dyn_solve_parallel
 
-    # All baselines
-    $ ./ats.sh -b all
+     # All baselines
+     $ ./ats.sh -b all
 
-    This will update the json files located in the `serac_tests <https://github.com/LLNL/serac_tests>`_ submodule. To
-    avoid Caliper files from additionally being generated, configure with ``-DENABLE_BENCHMARKS=OFF``.
+   This will update the json files located in the `serac_tests <https://github.com/LLNL/serac_tests>`_ submodule. To
+   avoid Caliper files from additionally being generated, configure with ``-DENABLE_BENCHMARKS=OFF``.
 
 
 Installing ATS
