@@ -18,8 +18,5 @@
       "clang@14.0.6+devtools+profiling" ],
 
     "blueos_3_ppc64le_ib_p9":
-    [ "clang@10.0.1+devtools+cuda+raja+umpire+profiling~strumpack cuda_arch=70" ],
-
-    "darwin-x86_64":
-    [ "clang@9.0.0+devtools" ]
+    [ "clang@10.0.1+devtools+cuda+raja+umpire+profiling~strumpack cuda_arch=70" ]
 }
