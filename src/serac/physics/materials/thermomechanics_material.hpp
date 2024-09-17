@@ -188,7 +188,7 @@ struct ParameterizedGreenSaintVenant {
 
 /// @brief Plasticity model with self-heating from plastic work
 struct J2SmallStrain {
-  static constexpr int dim = 3; ///< dimensionality of space
+  static constexpr int dim = 3;  ///< dimensionality of space
 
   double density;  ///< density
   double E;        ///< Young's modulus
