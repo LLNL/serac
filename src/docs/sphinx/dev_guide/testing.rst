@@ -11,7 +11,7 @@ Testing
 
 Serac has two levels of tests, unit and integration. Unit tests are used to test
 individual components of code, such as a class or function.  While integration tests
-are for testing the code as a whole. For example, testing the `serac` driver with
+are for testing the code as a whole. For example, testing the ``serac`` driver with
 an input file against blessed answers.
 
 Unit Tests
@@ -41,7 +41,7 @@ Requirements:
       >>> socket.gethostname().rstrip('1234567890')
       >>> exit()
 
-  Currently, there are configuration json files for Toss3 and BlueOS which can be
+  Currently, there are configuration json files for TOSS4 and BlueOS which can be
   used as reference.
 
 #. **Build the code.**
@@ -54,7 +54,7 @@ Requirements:
      # BlueOS
      $ lalloc 2 ./ats.sh
      
-     # Toss3
+     # TOSS4
      $ salloc -N2 ./ats.sh
      
      # Personal Machine (currently runs subset of tests)
@@ -71,6 +71,22 @@ Requirements:
    * ``atsr.xml`` - JUnit test summary
 
    ATS also outputs both a ``.log`` and ``.log.err`` for each test and checker that is run.
+
+#. **Rebaseline tests (as needed).**
+   If tolerances to tests need to be updated, first ensure you've generated new tolerances by running the integration
+   tests like mentioned above. Then, use the ``-b`` option::
+
+     # Single baseline
+     $ ./ats.sh -b dyn_solve_serial
+
+     # Comma-separated baselines
+     $ ./ats.sh -b dyn_solve_serial,dyn_solve_parallel
+
+     # All baselines
+     $ ./ats.sh -b all
+
+   This will update the json files located in the `serac_tests <https://github.com/LLNL/serac_tests>`_ submodule. To
+   avoid Caliper files from additionally being generated, configure with ``-DENABLE_BENCHMARKS=OFF``.
 
 
 Installing ATS

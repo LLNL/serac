@@ -86,6 +86,9 @@ int main(int argc, char* argv[])
   // Initialize profiling
   serac::profiling::initialize();
 
+  // Add metadata
+  SERAC_SET_METADATA("test", "functional");
+
   SERAC_MARK_BEGIN("scalar H1");
 
   SERAC_MARK_BEGIN("dimension 2, order 1");

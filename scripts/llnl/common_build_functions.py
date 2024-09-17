@@ -676,6 +676,10 @@ def get_shared_libs_dir():
     return pjoin(get_shared_base_dir(), "libs", get_project_name())
 
 
+def get_shared_spot_dir():
+    return pjoin(get_shared_base_dir(), "califiles")
+
+
 def get_uberenv_path():
     return pjoin(get_script_dir(), "../uberenv/uberenv.py")
 
