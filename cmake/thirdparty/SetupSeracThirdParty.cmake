@@ -23,7 +23,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         # Manually set includes as system includes
         foreach(_target cuda_runtime cuda)
             get_target_property(_dirs ${_target} INTERFACE_INCLUDE_DIRECTORIES)
-            set_property(TARGET ${_target}
+            set_property(TARGET ${_target} 
                          APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
                          "${_dirs}")
         endforeach()
@@ -114,7 +114,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
 
     # Manually set includes as system includes
     get_target_property(_dirs conduit::conduit INTERFACE_INCLUDE_DIRECTORIES)
-    set_property(TARGET conduit::conduit
+    set_property(TARGET conduit::conduit 
                  APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
                  "${_dirs}")
 
@@ -125,7 +125,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         # Note: Sundials is currently only used via MFEM and MFEM's target contains it's information
         serac_assert_is_directory(DIR_VARIABLE SUNDIALS_DIR)
         set(SERAC_USE_SUNDIALS ON CACHE BOOL "")
-
+        
         # Note: MFEM sets SUNDIALS_FOUND itself
         if (NOT SERAC_ENABLE_CODEVELOP)
             set(SUNDIALS_FOUND TRUE)
@@ -143,7 +143,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         serac_assert_is_directory(DIR_VARIABLE PETSC_DIR)
         # NOTE: PETSc is built and used through MFEM
         set(SERAC_USE_PETSC ON CACHE BOOL "")
-
+        
         # Note: MFEM *does not* set PETSC_FOUND itself, likely because we skip petsc build tests
         set(PETSC_FOUND TRUE)
     else()
@@ -159,7 +159,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         serac_assert_is_directory(DIR_VARIABLE SLEPC_DIR)
         # NOTE: SLEPc is built and used through MFEM
         set(SERAC_USE_SLEPC ON CACHE BOOL "")
-
+        
         # Note: MFEM sets SLEPC_FOUND itself
         if (NOT SERAC_ENABLE_CODEVELOP)
             set(SLEPC_FOUND TRUE)
@@ -196,7 +196,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
 
         #### Store Data that MFEM clears
         set(tpls_to_save ADIAK AMGX AXOM CALIPER CAMP CONDUIT HDF5
-                         HYPRE LUA METIS MFEM NETCDF PARMETIS PETSC RAJA
+                         HYPRE LUA METIS MFEM NETCDF PARMETIS PETSC RAJA 
                          SLEPC SUPERLU_DIST STRUMPACK SUNDIALS TRIBOL
                          UMPIRE)
         foreach(_tpl ${tpls_to_save})
@@ -319,7 +319,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
 
         # Restore previous runtime output directory
         set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${tmp_cmake_runtime_output_directory} CACHE PATH "" FORCE)
-
+ 
         set(MFEM_FOUND TRUE CACHE BOOL "" FORCE)
 
         # Patch the mfem target with the correct include directories
@@ -455,7 +455,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         else()
             set(TRIBOL_FOUND OFF)
         endif()
-
+        
         message(STATUS "Tribol support is " ${TRIBOL_FOUND})
     else()
         set(ENABLE_FORTRAN OFF CACHE BOOL "" FORCE)
@@ -474,7 +474,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
 
         add_subdirectory(${tribol_repo_dir}  ${CMAKE_BINARY_DIR}/tribol)
-
+        
         target_include_directories(redecomp PUBLIC
             $<BUILD_INTERFACE:${tribol_repo_dir}/src>
         )
@@ -483,7 +483,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/tribol/include>
             $<INSTALL_INTERFACE:include>
         )
-
+        
         set(TRIBOL_FOUND TRUE CACHE BOOL "" FORCE)
         set(ENABLE_FORTRAN ON CACHE BOOL "" FORCE)
     endif()
@@ -533,7 +533,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     if(STRUMPACK_DIR)
         list(GET MPI_C_LIBRARIES 0 _first_mpi_lib)
         get_filename_component(_mpi_lib_dir ${_first_mpi_lib} DIRECTORY)
-
+    
         foreach(_target ${_mfem_targets})
             if(TARGET ${_target})
                 message(STATUS "Adding MPI link directory to target [${_target}]")
@@ -599,7 +599,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
                 message(FATAL_ERROR "Serac+Caliper+CUDA requires CMake > 3.17.")
             else()
                 find_package(CUDAToolkit REQUIRED)
-            endif()
+            endif() 
         endif()
 
         find_dependency(caliper REQUIRED PATHS "${CALIPER_DIR}")

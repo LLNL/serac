@@ -6,7 +6,7 @@
 """
  file: common_build_functions.py
 
- description:
+ description: 
   helpers for installing src and tpls on llnl lc systems.
 
 """
@@ -374,7 +374,7 @@ def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, r
 
     test_root =  get_build_and_test_root(prefix, timestamp)
     os.mkdir(test_root)
-    write_build_info(pjoin(test_root,"info.json"))
+    write_build_info(pjoin(test_root,"info.json")) 
     ok  = []
     bad = []
     for host_config in host_configs:
@@ -417,7 +417,7 @@ def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, r
 def set_group_and_perms(directory):
     """
     Sets the proper group and access permissions of given input
-    directory.
+    directory. 
     """
 
     skip = True

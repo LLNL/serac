@@ -25,7 +25,7 @@ if (NOT SERAC_STYLE_CI_ONLY)
     set(ENABLE_MPI ON CACHE BOOL "")
 
     if (NOT MPI_C_COMPILER OR NOT MPI_CXX_COMPILER)
-        message(FATAL_ERROR
+        message(FATAL_ERROR 
                 "Serac requires MPI.  It is required to provide the MPI C/C++ "
                 "compiler wrappers via the CMake variables, "
                 "MPI_C_COMPILER and MPI_CXX_COMPILER.")
@@ -146,7 +146,7 @@ endif()
 if (SERAC_STYLE_CI_ONLY)
     # Exit processing the rest of the build in style only build to avoid any possible
     # CMake configuration issues outside of just enabling `make style`. This build,
-    # is not capable of building Serac and should not be advertised. It is for CI
+    # is not capable of building Serac and should not be advertised. It is for CI 
     # purposes only.
     return()
 endif()
@@ -212,7 +212,7 @@ if (SERAC_ENABLE_CODEVELOP)
             )
 endif()
 
-install(EXPORT serac-targets
+install(EXPORT serac-targets 
         NAMESPACE serac::
         DESTINATION lib/cmake
         )
