@@ -11,6 +11,7 @@
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
+#include "serac/infrastructure/accelerator.hpp"
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils_base.hpp"
 #include "serac/numerics/functional/functional.hpp"
@@ -601,7 +602,7 @@ TEST(Variadic, 2DLinear   ) { qoi_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}
 TEST(Variadic, 2DQuadratic) { qoi_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
 TEST(Variadic, 3DLinear   ) { qoi_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
 TEST(Variadic, 3DQuadratic) { qoi_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
-// clang-format on
+//  clang-format on
 
 // TODO Functional currently doesn't support HCurl. When it does, this test should work without other changes as
 // shape-aware functional already contains the appropriate Hcurl transformations
