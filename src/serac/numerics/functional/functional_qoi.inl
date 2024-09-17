@@ -428,8 +428,7 @@ private:
 
       gradient_L_ = 0.0;
 
-      std::map<mfem::Geometry::Type, ExecArray<double, 3, serac::ExecutionSpace::CPU>>
-          element_gradients[Domain::num_types];
+      std::map<mfem::Geometry::Type, ExecArray<double, 3, exec>> element_gradients[Domain::num_types];
 
       for (auto& integral : form_.integrals_) {
         auto& K_elem             = element_gradients[integral.domain_.type_];
@@ -437,8 +436,8 @@ private:
 
         if (K_elem.empty()) {
           for (auto& [geom, trial_restriction] : trial_restrictions) {
-            K_elem[geom] = ExecArray<double, 3, serac::ExecutionSpace::CPU>(
-                trial_restriction.num_elements, 1, trial_restriction.nodes_per_elem * trial_restriction.components);
+            K_elem[geom] = ExecArray<double, 3, exec>(trial_restriction.num_elements, 1,
+                                                      trial_restriction.nodes_per_elem * trial_restriction.components);
 
             detail::zero_out(K_elem[geom]);
           }

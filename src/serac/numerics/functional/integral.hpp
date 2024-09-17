@@ -280,7 +280,7 @@ Integral MakeDomainIntegral(const Domain& domain, const lambda_type& qf,
 
   SLIC_ERROR_IF(domain.type_ != Domain::Type::Elements, "Error: trying to evaluate a domain integral over a boundary");
 
-  Integral integral(std::move(domain), argument_indices);
+  Integral integral(domain, argument_indices);
 
   if constexpr (dim == 2) {
     generate_kernels<mfem::Geometry::TRIANGLE, Q, exec>(signature, integral, qf, qdata);
@@ -379,7 +379,7 @@ Integral MakeBoundaryIntegral(const Domain& domain, const lambda_type& qf, std::
   SLIC_ERROR_IF(domain.type_ != Domain::Type::BoundaryElements,
                 "Error: trying to evaluate a boundary integral over a non-boundary domain of integration");
 
-  Integral integral(std::move(domain), argument_indices);
+  Integral integral(domain, argument_indices);
 
   if constexpr (dim == 1) {
     generate_bdr_kernels<mfem::Geometry::SEGMENT, Q, exec>(signature, integral, qf);

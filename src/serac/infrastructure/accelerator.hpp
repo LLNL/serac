@@ -165,7 +165,7 @@ void zero_out(axom::Array<T, dim, space>& arr)
 #ifdef __CUDACC__
 /// @overload
 template <typename T, int dim>
-void zero_out(axom::Array<T, dim, execution_to_memory_v<ExecutionSpace::GPU>>& arr)
+void zero_out(axom::Array<T, dim, axom::MemorySpace::Device>& arr)
 {
   cudaMemset(arr.data(), 0, static_cast<std::size_t>(arr.size()) * sizeof(T));
 }

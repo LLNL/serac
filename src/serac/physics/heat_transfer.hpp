@@ -439,7 +439,7 @@ public:
   template <typename MaterialType>
   void setMaterial(const MaterialType& material)
   {
-    setMaterial(DependsOn<>{}, std::move(material));
+    setMaterial(DependsOn<>{}, material);
   }
 
   /**
