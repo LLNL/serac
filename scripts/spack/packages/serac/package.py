@@ -36,7 +36,7 @@ class Serac(CachedCMakePackage, CudaPackage, ROCmPackage):
        for emerging computing architectures. It also serves as a proxy-app
        for LLNL's Smith code."""
 
-    maintainers("chapman39")
+    maintainers("chapman39", "white238")
 
     homepage = "https://www.github.com/LLNL/serac"
     git      = "https://github.com/LLNL/serac.git"
