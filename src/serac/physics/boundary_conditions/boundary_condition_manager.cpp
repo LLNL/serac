@@ -13,13 +13,6 @@
 
 namespace serac {
 
-void BoundaryConditionManager::addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
-                                          mfem::ParFiniteElementSpace& space, const std::optional<int> component)
-{
-  nat_bdr_.emplace_back(nat_bdr_coef, component, space, nat_bdr);
-  all_dofs_valid_ = false;
-}
-
 void BoundaryConditionManager::addEssential(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef,
                                             mfem::ParFiniteElementSpace& space, const std::optional<int> component)
 {
