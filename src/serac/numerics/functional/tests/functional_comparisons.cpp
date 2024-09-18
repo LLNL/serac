@@ -32,6 +32,12 @@ std::unique_ptr<mfem::ParMesh> mesh3D;
 static constexpr double a = 1.7;
 static constexpr double b = 2.1;
 
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+constexpr auto exec_space = serac::ExecutionSpace::GPU;
+#else
+constexpr auto exec_space = serac::ExecutionSpace::CPU;
+#endif
+
 template <int dim>
 struct hcurl_qfunction {
   template <typename x_t, typename vector_potential_t>
@@ -134,12 +140,8 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   using test_space  = decltype(test);
   using trial_space = decltype(trial);
 
-// Construct the new functional object using the known test and trial spaces
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(fespace.get(), {fespace.get()});
-#else
-  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(fespace.get(), {fespace.get()});
-#endif
+  // Construct the new functional object using the known test and trial spaces
+  Functional<test_space(trial_space), exec_space> residual(fespace.get(), {fespace.get()});
 
   // Add the total domain residual term to the functional
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, SourceFluxFunctor{}, mesh);
@@ -262,11 +264,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   using trial_space                        = decltype(trial);
   [[maybe_unused]] static constexpr auto I = DenseIdentity<dim>();
 
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(fespace.get(), {fespace.get()});
-#else
-  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(fespace.get(), {fespace.get()});
-#endif
+  Functional<test_space(trial_space), exec_space> residual(fespace.get(), {fespace.get()});
 
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, StressFunctor<dim>{}, mesh);
 
@@ -383,11 +381,7 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   using test_space  = decltype(test);
   using trial_space = decltype(trial);
 
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(fespace.get(), {fespace.get()});
-#else
-  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(fespace.get(), {fespace.get()});
-#endif
+  Functional<test_space(trial_space), exec_space> residual(fespace.get(), {fespace.get()});
 
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, hcurl_qfunction<dim>{}, mesh);
 
@@ -470,9 +464,7 @@ TEST(Elasticity, 3DCubic) { functional_test(*mesh3D, H1<3, 3>{}, H1<3, 3>{}, Dim
 
 int main(int argc, char* argv[])
 {
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   serac::accelerator::initializeDevice();
-#endif
   ::testing::InitGoogleTest(&argc, argv);
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
@@ -511,8 +503,6 @@ int main(int argc, char* argv[])
   int result = RUN_ALL_TESTS();
   MPI_Finalize();
 
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   serac::accelerator::terminateDevice();
-#endif
   return result;
 }

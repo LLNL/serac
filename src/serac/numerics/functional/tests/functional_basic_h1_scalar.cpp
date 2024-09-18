@@ -23,6 +23,12 @@
 using namespace serac;
 using namespace serac::profiling;
 
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+constexpr auto exec_space = serac::ExecutionSpace::GPU;
+#else
+constexpr auto exec_space = serac::ExecutionSpace::CPU;
+#endif
+
 template <int dim>
 struct TestThermalModelOne {
   template <typename P, typename Temp>
@@ -70,12 +76,7 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
   U_gf.GetTrueDofs(U);
 
   // Construct the new functional object using the known test and trial spaces
-
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(test_fespace.get(), {trial_fespace.get()});
-#else
-  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(test_fespace.get(), {trial_fespace.get()});
-#endif
+  Functional<test_space(trial_space), exec_space> residual(test_fespace.get(), {trial_fespace.get()});
 
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, TestThermalModelOne<dim>{}, *mesh);
 
@@ -114,9 +115,7 @@ TEST(mixed, thermal_tets_and_hexes) { thermal_test<2, 1>("/data/meshes/patch3D_t
 
 int main(int argc, char* argv[])
 {
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   serac::accelerator::initializeDevice();
-#endif
   ::testing::InitGoogleTest(&argc, argv);
 
   int num_procs, myid;
@@ -129,8 +128,7 @@ int main(int argc, char* argv[])
   int result = RUN_ALL_TESTS();
 
   MPI_Finalize();
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   serac::accelerator::terminateDevice();
-#endif
+
   return result;
 }
