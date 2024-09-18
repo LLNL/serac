@@ -47,6 +47,8 @@ TEST(Profiling, MeshRefinement)
     pmesh->UniformRefinement();
   }
 
+  // Add metadata
+  SERAC_SET_METADATA("test", "profiling");
   SERAC_SET_METADATA("mesh_file", mesh_file.c_str());
   SERAC_SET_METADATA("number_mesh_elements", pmesh->GetNE());
 
