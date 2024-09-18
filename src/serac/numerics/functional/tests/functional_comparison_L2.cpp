@@ -25,6 +25,12 @@ constexpr bool                 verbose = true;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+constexpr auto exec_space = serac::ExecutionSpace::GPU;
+#else
+constexpr auto exec_space = serac::ExecutionSpace::CPU;
+#endif
+
 template <int dim>
 struct hcurl_qfunction {
   template <typename UnusedType1, typename UnusedType2, typename Position>
@@ -100,11 +106,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   // Set up the same problem using weak form
 
   // Construct the new weak form object using the known test and trial spaces
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(fespace.get(), {fespace.get()});
-#else
-  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(fespace.get(), {fespace.get()});
-#endif
+  Functional<test_space(trial_space), exec_space> residual(fespace.get(), {fespace.get()});
 
   // Add the total domain residual term to the weak form
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, test_qfunction{}, mesh);

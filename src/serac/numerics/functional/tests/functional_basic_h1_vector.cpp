@@ -24,6 +24,12 @@
 using namespace serac;
 using namespace serac::profiling;
 
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+constexpr auto exec_space = serac::ExecutionSpace::GPU;
+#else
+constexpr auto exec_space = serac::ExecutionSpace::CPU;
+#endif
+
 template <int dim>
 struct MixedModelOne {
   template <typename unused_type, typename displacement_type>
@@ -90,12 +96,7 @@ void weird_mixed_test(std::unique_ptr<mfem::ParMesh>& mesh)
 
   mfem::Vector U(trial_fes->TrueVSize());
 
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  U.UseDevice(true);
-  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(test_fes.get(), {trial_fes.get()});
-#else
-  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(test_fes.get(), {trial_fes.get()});
-#endif
+  Functional<test_space(trial_space), exec_space> residual(test_fes.get(), {trial_fes.get()});
   U.Randomize();
 
   // note: this is not really an elasticity problem, it's testing source and flux
@@ -122,12 +123,7 @@ void elasticity_test(std::unique_ptr<mfem::ParMesh>& mesh)
   mfem::Vector U(trial_fes->TrueVSize());
   U.Randomize();
 
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  U.UseDevice(true);
-  Functional<test_space(trial_space), serac::ExecutionSpace::GPU> residual(test_fes.get(), {trial_fes.get()});
-#else
-  Functional<test_space(trial_space), serac::ExecutionSpace::CPU> residual(test_fes.get(), {trial_fes.get()});
-#endif
+  Functional<test_space(trial_space), exec_space> residual(test_fes.get(), {trial_fes.get()});
 
   // note: this is not really an elasticity problem, it's testing source and flux
   // terms that have the appropriate shapes to ensure that all the differentiation
@@ -175,10 +171,7 @@ int main(int argc, char* argv[])
   int num_procs, myid;
 
   ::testing::InitGoogleTest(&argc, argv);
-
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
   serac::accelerator::initializeDevice();
-#endif
 
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
@@ -189,6 +182,6 @@ int main(int argc, char* argv[])
   int result = RUN_ALL_TESTS();
 
   MPI_Finalize();
-
+  serac::accelerator::terminateDevice();
   return result;
 }

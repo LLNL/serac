@@ -159,8 +159,6 @@ void whole_mesh_comparison_test(std::string meshfile)
   }
 }
 
-TEST(basic, whole_mesh_comparison_hexes) { whole_mesh_comparison_test<1, 1>("/data/meshes/patch3D_hexes.mesh"); }
-#ifndef SERAC_USE_CUDA_KERNEL_EVALUATION
 TEST(basic, whole_mesh_comparison_tris) { whole_mesh_comparison_test<1, 1>("/data/meshes/patch2D_tris.mesh"); }
 TEST(basic, whole_mesh_comparison_quads) { whole_mesh_comparison_test<1, 1>("/data/meshes/patch2D_quads.mesh"); }
 TEST(basic, whole_mesh_comparison_tris_and_quads)
@@ -169,6 +167,7 @@ TEST(basic, whole_mesh_comparison_tris_and_quads)
 }
 
 TEST(basic, whole_mesh_comparison_tets) { whole_mesh_comparison_test<1, 1>("/data/meshes/patch3D_tets.mesh"); }
+TEST(basic, whole_mesh_comparison_hexes) { whole_mesh_comparison_test<1, 1>("/data/meshes/patch3D_hexes.mesh"); }
 TEST(basic, whole_mesh_comparison_tets_and_hexes)
 {
   whole_mesh_comparison_test<1, 1>("/data/meshes/patch3D_tets_and_hexes.mesh");
@@ -317,14 +316,11 @@ TEST(qoi, partial_domain)
 
   EXPECT_NEAR(volume, 4.0, 1.0e-14);
 }
-#endif
 
 int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  serac::accelerator::initializeDevice();
-#endif
+
   int num_procs, myid;
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
@@ -335,8 +331,6 @@ int main(int argc, char* argv[])
   int result = RUN_ALL_TESTS();
 
   MPI_Finalize();
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  serac::accelerator::terminateDevice();
-#endif
+
   return result;
 }
