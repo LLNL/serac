@@ -6,6 +6,7 @@
 variables:
   #TODO: uncomment this when everyone has service user access across all the machines
   #LLNL_SERVICE_USER: asmith
+  GIT_STRATEGY: clone
   GIT_SUBMODULE_STRATEGY: recursive
   PROJECT_ALLOC_NAME: ${CI_PROJECT_NAME}_ci_${CI_PIPELINE_ID}
   BUILD_ROOT: ${CI_PROJECT_DIR}
