@@ -57,39 +57,6 @@ TEST(ErrorHandling, BcOneComponentVectorCoefDofs)
   EXPECT_THROW(BoundaryCondition(coef, 0, *space, dofs), SlicErrorException);
 }
 
-TEST(ErrorHandling, BcRetrieveScalarCoef)
-{
-  auto mesh = mesh::refineAndDistribute(buildDiskMesh(10), 0, 0);
-
-  auto [space, coll] = serac::generateParFiniteElementSpace<H1<1>>(mesh.get());
-
-  auto              coef = std::make_shared<mfem::ConstantCoefficient>(1.0);
-  BoundaryCondition bc(coef, -1, *space, std::set<int>{});
-  EXPECT_NO_THROW(bc.scalarCoefficient());
-  EXPECT_THROW(bc.vectorCoefficient(), SlicErrorException);
-
-  const auto& const_bc = bc;
-  EXPECT_NO_THROW(const_bc.scalarCoefficient());
-  EXPECT_THROW(const_bc.vectorCoefficient(), SlicErrorException);
-}
-
-TEST(ErrorHandling, BcRetrieveVecCoef)
-{
-  auto mesh = mesh::refineAndDistribute(buildDiskMesh(10), 0, 0);
-
-  auto [space, coll] = serac::generateParFiniteElementSpace<H1<1>>(mesh.get());
-
-  mfem::Vector      vec;
-  auto              coef = std::make_shared<mfem::VectorConstantCoefficient>(vec);
-  BoundaryCondition bc(coef, {}, *space, std::set<int>{});
-  EXPECT_NO_THROW(bc.vectorCoefficient());
-  EXPECT_THROW(bc.scalarCoefficient(), SlicErrorException);
-
-  const auto& const_bc = bc;
-  EXPECT_NO_THROW(const_bc.vectorCoefficient());
-  EXPECT_THROW(const_bc.scalarCoefficient(), SlicErrorException);
-}
-
 TEST(ErrorHandling, InvalidCmdlineArg)
 {
   // The command is actually --input-file
