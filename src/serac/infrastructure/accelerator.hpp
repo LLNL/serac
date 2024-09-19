@@ -235,12 +235,12 @@ namespace accelerator {
  *
  * @note This function should only be called once
  */
-void initializeDevice();
+void initializeDevice(ExecutionSpace exec = ExecutionSpace::CPU);
 
 /**
  * @brief Cleans up the device, if applicable
  */
-void terminateDevice();
+void terminateDevice(ExecutionSpace exec = ExecutionSpace::CPU);
 
 #if defined(__CUDACC__)
 

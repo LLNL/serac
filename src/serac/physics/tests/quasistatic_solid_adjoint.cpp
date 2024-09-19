@@ -22,7 +22,7 @@ struct ParameterizedLinearIsotropicSolid {
   using State = ::serac::Empty;  ///< this material has no internal variables
 
   template <int dim, typename T1, typename T2, typename T3>
-  SERAC_HOST_DEVICE auto operator()(State&, const ::serac::tensor<T1, dim, dim>& u_grad, const T2& E_tuple,
+  SERAC_HOST_DEVICE auto operator()(const State&, const ::serac::tensor<T1, dim, dim>& u_grad, const T2& E_tuple,
                                     const T3& v_tuple) const
   {
     auto       E      = ::serac::get<0>(E_tuple);                 // Young's modulus VALUE
@@ -40,7 +40,7 @@ struct ParameterizedNeoHookeanSolid {
   using State = ::serac::Empty;  // this material has no internal variables
 
   template <int dim, typename T1, typename T2, typename T3>
-  SERAC_HOST_DEVICE auto operator()(State&, const ::serac::tensor<T1, dim, dim>& du_dX, const T2& E_tuple,
+  SERAC_HOST_DEVICE auto operator()(const State&, const ::serac::tensor<T1, dim, dim>& du_dX, const T2& E_tuple,
                                     const T3& v_tuple) const
   {
     using std::log1p;

@@ -8,8 +8,6 @@
 
 #include <memory>
 
-#include "mfem.hpp"
-
 #include "serac/infrastructure/logger.hpp"
 
 namespace serac {
@@ -21,19 +19,23 @@ namespace {
 std::unique_ptr<mfem::Device> device;
 }  // namespace
 
-void initializeDevice()
+void initializeDevice(ExecutionSpace exec)
 {
   SLIC_ERROR_ROOT_IF(device, "serac::accelerator::initializeDevice cannot be called more than once");
   device = std::make_unique<mfem::Device>();
-#if defined(MFEM_USE_CUDA) && defined(SERAC_USE_CUDA_KERNEL_EVALUATION)
-  device->Configure("cuda");
+  if (exec == ExecutionSpace::GPU) {
+#if defined(MFEM_USE_CUDA)
+    device->Configure("cuda");
 #endif
+  }
 }
 
-void terminateDevice()
+void terminateDevice(ExecutionSpace exec)
 {
   // Idempotent, no adverse affects if called multiple times
-  device.reset();
+  if (exec == ExecutionSpace::GPU) {
+    device.reset();
+  }
 }
 
 }  // namespace accelerator

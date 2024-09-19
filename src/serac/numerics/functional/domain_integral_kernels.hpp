@@ -76,7 +76,7 @@ struct QFunctionOutput {
   using position_type = serac::tuple<tensor<double, dim>, tensor<double, dim, dim>>;
   static auto get_type(const lambda& qf)
   {
-    state_type state_l_value {};
+    state_type state_l_value{};
     return tensor<decltype(qf(double{}, position_type{}, state_l_value, T{}[0]...)), n>{};
   }
 };
@@ -128,8 +128,8 @@ auto get_derivative_type(const lambda& qf, qpt_data_type qpt_data)
 template <typename lambda, int dim, int n, typename... T>
 SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(
     const lambda& qf, double t, const tensor<double, dim, n> x, const tensor<double, dim, dim, n> J,
-    decltype(QFunctionOutput<lambda, Nothing, dim, n, T...>::get_type(qf))* qf_output,
-    RAJA::LaunchContext ctx, const T&... inputs)
+    decltype(QFunctionOutput<lambda, Nothing, dim, n, T...>::get_type(qf))* qf_output, RAJA::LaunchContext ctx,
+    const T&... inputs)
 {
   RAJA::RangeSegment x_range(0, n);
   RAJA::loop<threads_x>(ctx, x_range, [&](int i) {
@@ -148,8 +148,8 @@ SERAC_HOST_DEVICE auto batch_apply_qf_no_qdata(
 template <typename lambda, int dim, int n, typename qpt_data_type, typename... T>
 SERAC_HOST_DEVICE auto batch_apply_qf(
     const lambda& qf, double t, const tensor<double, dim, n> x, const tensor<double, dim, dim, n> J,
-    decltype(QFunctionOutput<lambda, qpt_data_type, dim, n, T...>::get_type(qf))* qf_output,
-    qpt_data_type* qpt_data, bool update_state, RAJA::LaunchContext ctx, const T&... inputs)
+    decltype(QFunctionOutput<lambda, qpt_data_type, dim, n, T...>::get_type(qf))* qf_output, qpt_data_type* qpt_data,
+    bool update_state, RAJA::LaunchContext ctx, const T&... inputs)
 {
   RAJA::RangeSegment x_range(0, n);
   RAJA::loop<threads_x>(ctx, x_range, [&](int i) {
@@ -212,9 +212,10 @@ void evaluation_kernel_impl(trial_element_tuple_type trial_elements, test_elemen
       static_cast<interpolate_out_type*>(allocator.allocate(sizeof(interpolate_out_type) * num_elements));
 
   constexpr int dim = dimension<0>(X_Type{});
-  constexpr int n = dimension<1>(X_Type{});
-  using qf_outputs_type = decltype(QFunctionOutput<lambda_type, state_type, dim, n,
-                               decltype(get<indices>(qf_inputs_type{}))...>::get_type(qf));
+  constexpr int n   = dimension<1>(X_Type{});
+  using qf_outputs_type =
+      decltype(QFunctionOutput<lambda_type, state_type, dim, n, decltype(get<indices>(qf_inputs_type{}))...>::get_type(
+          qf));
   qf_outputs_type* qf_outputs =
       static_cast<qf_outputs_type*>(allocator.allocate(sizeof(qf_outputs_type) * num_elements));
 

@@ -464,7 +464,7 @@ TEST(Elasticity, 3DCubic) { functional_test(*mesh3D, H1<3, 3>{}, H1<3, 3>{}, Dim
 
 int main(int argc, char* argv[])
 {
-  serac::accelerator::initializeDevice();
+  serac::accelerator::initializeDevice(exec_space);
   ::testing::InitGoogleTest(&argc, argv);
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
@@ -503,6 +503,6 @@ int main(int argc, char* argv[])
   int result = RUN_ALL_TESTS();
   MPI_Finalize();
 
-  serac::accelerator::terminateDevice();
+  serac::accelerator::terminateDevice(exec_space);
   return result;
 }

@@ -69,7 +69,7 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
   auto [trial_fespace, trial_fec] = serac::generateParFiniteElementSpace<trial_space>(mesh.get());
 
   mfem::Vector U(trial_fespace->TrueVSize());
-
+  U.UseDevice(true);
   mfem::ParGridFunction     U_gf(trial_fespace.get());
   mfem::FunctionCoefficient x_squared([](mfem::Vector x) { return x[0] * x[0]; });
   U_gf.ProjectCoefficient(x_squared);
@@ -115,7 +115,7 @@ TEST(mixed, thermal_tets_and_hexes) { thermal_test<2, 1>("/data/meshes/patch3D_t
 
 int main(int argc, char* argv[])
 {
-  serac::accelerator::initializeDevice();
+  serac::accelerator::initializeDevice(exec_space);
   ::testing::InitGoogleTest(&argc, argv);
 
   int num_procs, myid;
@@ -128,7 +128,7 @@ int main(int argc, char* argv[])
   int result = RUN_ALL_TESTS();
 
   MPI_Finalize();
-  serac::accelerator::terminateDevice();
+  serac::accelerator::terminateDevice(exec_space);
 
   return result;
 }

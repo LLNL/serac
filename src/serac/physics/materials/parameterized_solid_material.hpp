@@ -81,7 +81,7 @@ struct ParameterizedNeoHookeanSolid {
    * @return The calculated material response (Cauchy stress) for the material
    */
   template <int dim, typename DispGradType, typename BulkType, typename ShearType>
-  SERAC_HOST_DEVICE auto operator()(State& /*state*/, const serac::tensor<DispGradType, dim, dim>& du_dX,
+  SERAC_HOST_DEVICE auto operator()(const State& /*state*/, const serac::tensor<DispGradType, dim, dim>& du_dX,
                                     const BulkType& DeltaK, const ShearType& DeltaG) const
   {
     using std::log1p;
