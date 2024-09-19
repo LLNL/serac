@@ -13,6 +13,7 @@
 
 #pragma once
 
+#include "serac/infrastructure/accelerator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 
 namespace serac {
@@ -41,7 +42,7 @@ public:
    *
    * @param p The current shape displacement field at the underlying quadrature point
    */
-  ShapeCorrection(Dimension<dim>, shape_type p)
+  SERAC_HOST_DEVICE ShapeCorrection(Dimension<dim>, shape_type p)
       : J_(Identity<dim>() + get<DERIVATIVE>(p)), detJ_(det(J_)), inv_J_(inv(J_)), inv_JT_(transpose(inv_J_))
   {
   }
@@ -267,7 +268,7 @@ SERAC_HOST_DEVICE auto apply_shape_aware_qf_helper_with_state(const lambda& qf, 
 }  // namespace detail
 
 /// @cond
-template <typename T1, typename T2, ExecutionSpace exec = serac::default_execution_space>
+template <typename T1, typename T2, ExecutionSpace exec = serac::ExecutionSpace::CPU>
 class ShapeAwareFunctional;
 /// @endcond
 
@@ -357,6 +358,86 @@ public:
   }
 
   /**
+   * @brief Functor representing a shape-aware integrand.  Used instead of an extended generic
+   * lambda for compatibility with NVCC.
+   */
+  template <typename Integrand, int dim, int... args>
+  struct ShapeAwareIntegrandWrapper {
+    /// @brief Constructor for functor
+    ShapeAwareIntegrandWrapper(Integrand integrand) : integrand_(integrand) {}
+    /// @brief Integrand
+    Integrand integrand_;
+    /**
+     * @brief integrand call
+     *
+     * @tparam PositionType position type
+     * @tparam ShapeValueType shape value type
+     * @tparam QFuncArgs type of variadic pack to forward to qfunc
+     * @param[in] time time
+     * @param[in] x position
+     * @param[in] shape_val shape
+     * @param[in] qfunc_args qfunc parameter pack
+     * @return Shape aware qf value
+     */
+    template <typename PositionType, typename ShapeValueType, typename... QFuncArgs>
+    SERAC_HOST_DEVICE auto operator()(double time, PositionType x, ShapeValueType shape_val,
+                                      QFuncArgs... qfunc_args) const
+    {
+      auto qfunc_tuple               = make_tuple(qfunc_args...);
+      auto reduced_trial_space_tuple = make_tuple(get<args>(trial_spaces)...);
+
+      detail::ShapeCorrection shape_correction(Dimension<dim>{}, shape_val);
+      // TODO(CUDA): When this is compiled to device code, the below make_integer_sequence will
+      // need to change to a camp integer sequence.
+      auto unmodified_qf_return = detail::apply_shape_aware_qf_helper(
+          integrand_, time, x, shape_val, reduced_trial_space_tuple, qfunc_tuple, shape_correction,
+          std::make_integer_sequence<int, sizeof...(qfunc_args)>{});
+      return shape_correction.modify_shape_aware_qf_return(test_space, unmodified_qf_return);
+    }
+  };
+
+  /**
+   * @brief Functor representing a shape-aware integrand with state.  Used instead of an extended generic
+   * lambda for compatibility with NVCC.
+   */
+  template <typename Integrand, int dim, int... args>
+  struct ShapeAwareIntegrandWrapperWithState {
+    /// @brief Constructor for functor
+    ShapeAwareIntegrandWrapperWithState(Integrand integrand) : integrand_(integrand) {}
+    /// @brief integrand
+    Integrand integrand_;
+    /**
+     * @brief integrand call
+     *
+     * @tparam PositionType position type
+     * @tparam StateType state type
+     * @tparam ShapeValueType shape value type
+     * @tparam QFuncArgs type of variadic pack to forward to qfunc
+     * @param[in] time time
+     * @param[in] x position
+     * @param[in] state reference to state
+     * @param[in] shape_val shape
+     * @param[in] qfunc_args qfunc parameter pack
+     * @return shape aware integrand value
+     */
+    template <typename PositionType, typename StateType, typename ShapeValueType, typename... QFuncArgs>
+    SERAC_HOST_DEVICE auto operator()(double time, PositionType x, StateType& state, ShapeValueType shape_val,
+                                      QFuncArgs... qfunc_args) const
+    {
+      auto qfunc_tuple               = make_tuple(qfunc_args...);
+      auto reduced_trial_space_tuple = make_tuple(get<args>(trial_spaces)...);
+
+      detail::ShapeCorrection shape_correction(Dimension<dim>{}, shape_val);
+      // TODO(CUDA): When this is compiled to device code, the below make_integer_sequence will
+      // need to change to a camp integer sequence.
+      auto unmodified_qf_return = detail::apply_shape_aware_qf_helper_with_state(
+          integrand_, time, x, state, shape_val, reduced_trial_space_tuple, qfunc_tuple, shape_correction,
+          std::make_integer_sequence<int, sizeof...(qfunc_args)>{});
+      return shape_correction.modify_shape_aware_qf_return(test_space, unmodified_qf_return);
+    }
+  };
+
+  /**
    * @brief Adds a domain integral term to the weak formulation of the PDE
    *
    * @tparam dim The dimension of the element (2 for quad, 3 for hex, etc)
@@ -377,40 +458,48 @@ public:
                          std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
   {
     if constexpr (std::is_same_v<qpt_data_type, Nothing>) {
-      functional_->AddDomainIntegral(
-          Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
-          [integrand](double time, auto x, auto shape_val, auto... qfunc_args) {
-            auto qfunc_tuple               = make_tuple(qfunc_args...);
-            auto reduced_trial_space_tuple = make_tuple(get<args>(trial_spaces)...);
-
-            detail::ShapeCorrection shape_correction(Dimension<dim>{}, shape_val);
-
-            auto unmodified_qf_return = detail::apply_shape_aware_qf_helper(
-                integrand, time, x, shape_val, reduced_trial_space_tuple, qfunc_tuple, shape_correction,
-                std::make_integer_sequence<int, sizeof...(qfunc_args)>{});
-            return shape_correction.modify_shape_aware_qf_return(test_space, unmodified_qf_return);
-          },
-          domain, qdata);
+      functional_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
+                                     ShapeAwareIntegrandWrapper<lambda, dim, args...>(integrand), domain, qdata);
     } else {
-      functional_->AddDomainIntegral(
-          Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
-          [integrand](double time, auto x, auto& state, auto shape_val, auto... qfunc_args) {
-            auto qfunc_tuple               = make_tuple(qfunc_args...);
-            auto reduced_trial_space_tuple = make_tuple(get<args>(trial_spaces)...);
-
-            detail::ShapeCorrection shape_correction(Dimension<dim>{}, shape_val);
-
-            auto unmodified_qf_return = detail::apply_shape_aware_qf_helper_with_state(
-                integrand, time, x, state, shape_val, reduced_trial_space_tuple, qfunc_tuple, shape_correction,
-                std::make_integer_sequence<int, sizeof...(qfunc_args)>{});
-            return shape_correction.modify_shape_aware_qf_return(test_space, unmodified_qf_return);
-          },
-          domain, qdata);
+      functional_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
+                                     ShapeAwareIntegrandWrapperWithState<lambda, dim, args...>(integrand), domain,
+                                     qdata);
     }
   }
 
   /**
-   * @brief Adds a boundary integral term to the weak formulation of the PDE
+   * @brief Functor representing a shape-aware integrand.  Used instead of an extended generic
+   * lambda for compatibility with NVCC.
+   */
+  template <typename Integrand, int dim, int... args>
+  struct ShapeAwareBoundaryIntegrandWrapper {
+    /// @brief Constructor for functor
+    ShapeAwareBoundaryIntegrandWrapper(Integrand integrand) : integrand_(integrand) {}
+    /// @brief integrand
+    Integrand integrand_;
+    /**
+     * @brief integrand call
+     *
+     * @tparam PositionType position type
+     * @tparam ShapeValueType shape value type
+     * @tparam QFuncArgs type of variadic pack to forward to qfunc
+     * @param[in] time time
+     * @param[in] x position
+     * @param[in] shape_val shape
+     * @param[in] qfunc_args qfunc parameter pack
+     * @return qf function corrected for boundary area
+     */
+    template <typename PositionType, typename ShapeValueType, typename... QFuncArgs>
+    SERAC_HOST_DEVICE auto operator()(double time, PositionType x, ShapeValueType shape_val,
+                                      QFuncArgs... qfunc_args) const
+    {
+      auto unmodified_qf_return = integrand_(time, x + shape_val, qfunc_args...);
+      return unmodified_qf_return * detail::compute_boundary_area_correction(x, shape_val);
+    }
+  };
+
+  /**
+   * @brief Adds a boundary integral term to the weak formulationx of the PDE
    *
    * @tparam dim The dimension of the element (2 for quad, 3 for hex, etc)
    * @tparam args The type of the trial function input arguments
@@ -426,14 +515,8 @@ public:
   template <int dim, int... args, typename lambda, typename domain_type>
   void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, const lambda& integrand, domain_type& domain)
   {
-    functional_->AddBoundaryIntegral(
-        Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
-        [integrand](double time, auto x, auto shape_val, auto... qfunc_args) {
-          auto unmodified_qf_return = integrand(time, x + shape_val, qfunc_args...);
-
-          return unmodified_qf_return * detail::compute_boundary_area_correction(x, shape_val);
-        },
-        domain);
+    functional_->AddBoundaryIntegral(Dimension<dim>{}, DependsOn<0, (args + 1)...>{},
+                                     ShapeAwareBoundaryIntegrandWrapper<lambda, dim, args...>(integrand), domain);
   }
 
   /**
