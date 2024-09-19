@@ -36,7 +36,7 @@ struct LinearIsotropic {
    * @return The Cauchy stress
    */
   template <typename T, int dim>
-  SERAC_HOST_DEVICE auto operator()(State& /* state */, const tensor<T, dim, dim>& du_dX) const
+  SERAC_HOST_DEVICE auto operator()( State& /* state */, const tensor<T, dim, dim>& du_dX) const
   {
     auto I       = Identity<dim>();
     auto lambda  = K - (2.0 / 3.0) * G;
@@ -110,7 +110,7 @@ struct NeoHookean {
    * @return The Cauchy stress
    */
   template <typename T, int dim>
-  SERAC_HOST_DEVICE auto operator()(State& /* state */, const tensor<T, dim, dim>& du_dX) const
+  SERAC_HOST_DEVICE auto operator()( State& /* state */, const tensor<T, dim, dim>& du_dX) const
   {
     using std::log1p;
     constexpr auto I         = Identity<dim>();
