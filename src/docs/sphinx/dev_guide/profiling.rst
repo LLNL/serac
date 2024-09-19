@@ -133,8 +133,8 @@ Visualizing Benchmarks using SPOT
 If you have access to LC, you can go to the following website and enter a directory in CZ/ RZ that contains Caliper
 files:
 
-- [SPOT CZ](https://lc.llnl.gov/spot2)
-- [SPOT RZ](https://rzlc.llnl.gov/spot2)
+- `SPOT CZ <https://lc.llnl.gov/spot2>`_
+- `SPOT RZ <https://rzlc.llnl.gov/spot2>`_
 
 .. note::
   There is a bug in SPOT where if you remove Caliper files from a directory, they still show up on SPOT - if you've
