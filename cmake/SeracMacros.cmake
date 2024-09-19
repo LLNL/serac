@@ -8,7 +8,7 @@
 #------------------------------------------------------------------------------
 # Adds code checks for all cpp/hpp files recursively under the current directory
 # that regex match INCLUDES and excludes any files that regex match EXCLUDES
-#
+# 
 # This creates the following parent build targets:
 #  check - Runs a non file changing style check and CppCheck
 #  style - In-place code formatting
@@ -71,7 +71,7 @@ macro(serac_add_code_checks)
     blt_add_clang_tidy_target(NAME              ${arg_PREFIX}_guidelines_check_tests
                               CHECKS            "clang-analyzer-*,clang-analyzer-cplusplus*,cppcoreguidelines-*,-cppcoreguidelines-avoid-magic-numbers"
                               SRC_FILES         ${_test_sources})
-
+                                  
     if (ENABLE_COVERAGE)
         blt_add_code_coverage_target(NAME   ${arg_PREFIX}_coverage
                                      RUNNER ${CMAKE_MAKE_PROGRAM} test
