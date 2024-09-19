@@ -11,6 +11,7 @@
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
+#include "serac/infrastructure/accelerator.hpp"
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils_base.hpp"
 #include "serac/numerics/functional/functional.hpp"

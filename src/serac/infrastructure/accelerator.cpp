@@ -25,7 +25,7 @@ void initializeDevice()
 {
   SLIC_ERROR_ROOT_IF(device, "serac::accelerator::initializeDevice cannot be called more than once");
   device = std::make_unique<mfem::Device>();
-#ifdef MFEM_USE_CUDA
+#if defined(MFEM_USE_CUDA) && defined(SERAC_USE_CUDA_KERNEL_EVALUATION)
   device->Configure("cuda");
 #endif
 }

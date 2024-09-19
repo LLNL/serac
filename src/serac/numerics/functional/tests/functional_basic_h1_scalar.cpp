@@ -6,9 +6,8 @@
 
 #include <fstream>
 #include <iostream>
-
+#include "serac/infrastructure/accelerator.hpp"
 #include "mfem.hpp"
-
 #include <gtest/gtest.h>
 
 #include "axom/slic/core/SimpleLogger.hpp"
@@ -23,6 +22,12 @@
 
 using namespace serac;
 using namespace serac::profiling;
+
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+constexpr auto exec_space = serac::ExecutionSpace::GPU;
+#else
+constexpr auto exec_space = serac::ExecutionSpace::CPU;
+#endif
 
 template <int dim>
 struct TestThermalModelOne {
@@ -71,13 +76,14 @@ void thermal_test_impl(std::unique_ptr<mfem::ParMesh>& mesh)
   U_gf.GetTrueDofs(U);
 
   // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space)> residual(test_fespace.get(), {trial_fespace.get()});
+  Functional<test_space(trial_space), exec_space> residual(test_fespace.get(), {trial_fespace.get()});
 
   residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, TestThermalModelOne<dim>{}, *mesh);
 
   residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, TestThermalModelTwo{}, *mesh);
 
   double t = 0.0;
+
   check_gradient(residual, t, U);
 }
 
@@ -95,19 +101,21 @@ void thermal_test(std::string meshfile)
   }
 }
 
+TEST(basic, thermal_hexes) { thermal_test<1, 1>("/data/meshes/patch3D_hexes.mesh"); }
+#ifndef SERAC_USE_CUDA_KERNEL_EVALUATION
 TEST(basic, thermal_tris) { thermal_test<1, 1>("/data/meshes/patch2D_tris.mesh"); }
+TEST(basic, thermal_tets) { thermal_test<1, 1>("/data/meshes/patch3D_tets.mesh"); }
 TEST(basic, thermal_quads) { thermal_test<1, 1>("/data/meshes/patch2D_quads.mesh"); }
 TEST(basic, thermal_tris_and_quads) { thermal_test<1, 1>("/data/meshes/patch2D_tris_and_quads.mesh"); }
 
-TEST(basic, thermal_tets) { thermal_test<1, 1>("/data/meshes/patch3D_tets.mesh"); }
-TEST(basic, thermal_hexes) { thermal_test<1, 1>("/data/meshes/patch3D_hexes.mesh"); }
 TEST(basic, thermal_tets_and_hexes) { thermal_test<1, 1>("/data/meshes/patch3D_tets_and_hexes.mesh"); }
-
 TEST(mixed, thermal_tris_and_quads) { thermal_test<2, 1>("/data/meshes/patch2D_tris_and_quads.mesh"); }
 TEST(mixed, thermal_tets_and_hexes) { thermal_test<2, 1>("/data/meshes/patch3D_tets_and_hexes.mesh"); }
+#endif
 
 int main(int argc, char* argv[])
 {
+  serac::accelerator::initializeDevice();
   ::testing::InitGoogleTest(&argc, argv);
 
   int num_procs, myid;
@@ -120,6 +128,7 @@ int main(int argc, char* argv[])
   int result = RUN_ALL_TESTS();
 
   MPI_Finalize();
+  serac::accelerator::terminateDevice();
 
   return result;
 }

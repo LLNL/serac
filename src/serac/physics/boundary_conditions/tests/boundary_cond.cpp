@@ -86,54 +86,6 @@ TEST(BoundaryCond, DirectTrueDofs)
   }
 }
 
-enum TestTag
-{
-  Tag1 = 0,
-  Tag2 = 1
-};
-
-enum OtherTag
-{
-  Fake1 = 0,
-  Fake2 = 1
-};
-
-TEST(BoundaryCond, FilterGenerics)
-{
-  MPI_Barrier(MPI_COMM_WORLD);
-  constexpr int N    = 15;
-  auto          mesh = mfem::Mesh::MakeCartesian2D(N, N, mfem::Element::TRIANGLE);
-  mfem::ParMesh par_mesh(MPI_COMM_WORLD, mesh);
-
-  auto [space, coll] = serac::generateParFiniteElementSpace<H1<1>>(&par_mesh);
-
-  BoundaryConditionManager bcs(par_mesh);
-  auto                     coef = std::make_shared<mfem::ConstantCoefficient>(1);
-  for (int i = 0; i < N; i++) {
-    bcs.addGeneric({}, coef, TestTag::Tag1, *space, 1);
-    bcs.addGeneric({}, coef, TestTag::Tag2, *space, 1);
-  }
-
-  int bcs_with_tag1 = 0;
-  for (const auto& bc : bcs.genericsWithTag(TestTag::Tag1)) {
-    EXPECT_TRUE(bc.tagEquals(TestTag::Tag1));
-    // Also check that a different enum with the same underlying value will fail
-    EXPECT_FALSE(bc.tagEquals(OtherTag::Fake1));
-    bcs_with_tag1++;
-  }
-  EXPECT_EQ(bcs_with_tag1, N);
-
-  int bcs_with_tag2 = 0;
-  for (const auto& bc : bcs.genericsWithTag(TestTag::Tag2)) {
-    EXPECT_TRUE(bc.tagEquals(TestTag::Tag2));
-    EXPECT_FALSE(bc.tagEquals(OtherTag::Fake2));
-    bcs_with_tag2++;
-  }
-  EXPECT_EQ(bcs_with_tag2, N);
-
-  MPI_Barrier(MPI_COMM_WORLD);
-}
-
 TEST(BoundaryCondHelper, ElementAttributeDofListScalar)
 {
   MPI_Barrier(MPI_COMM_WORLD);

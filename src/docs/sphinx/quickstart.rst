@@ -78,7 +78,7 @@ For example on **Ubuntu 20.04**:
    python3 scripts/uberenv/uberenv.py --project-json=scripts/spack/devtools.json --spack-env-file=scripts/spack/configs/linux_ubuntu_20/spack.yaml --prefix=../path/to/install
 
 Unlike Serac's library dependencies, our developer tools can be built with any compiler because
-they are not linked into the serac executable.  We recommend GCC 8 because we have tested that they all
+they are not linked into the serac executable.  We recommend GCC 10 because we have tested that they all
 build with that compiler.
 
 Building Serac's Dependencies via Spack/uberenv
@@ -97,7 +97,7 @@ This has been encapsulated using `Uberenv <https://github.com/LLNL/uberenv>`_. U
 doing the following:
 
 * Pulls a blessed version of Spack locally
-* If you are on a known operating system (like TOSS3), we have defined Spack configuration files
+* If you are on a known operating system (like TOSS4), we have defined Spack configuration files
   to keep Spack from building the world
 * Installs our Spack packages into the local Spack
 * Simplifies whole dependency build into one command
@@ -120,18 +120,18 @@ Serac.
 
 .. note::
   On LC machines, it is good practice to do the build step in parallel on a compute node.
-  Here is an example command: ``salloc -ppdebug -N1-1 python3 scripts/uberenv/uberenv.py``
+  Here is an example command: ``salloc -ppdebug -N1 python3 scripts/uberenv/uberenv.py``
 
 Unless otherwise specified Spack will default to a compiler.  This is generally not a good idea when
 developing large codes. To specify which compiler to use add the compiler specification to the ``--spec`` Uberenv
-command line option. On TOSS3, we recommend and have tested ``--spec=%clang@10.0.0``.  More compiler specs
+command line option. On TOSS4, we recommend and have tested ``--spec=%clang@14.0.6``.  More compiler specs
 can be found in the Spack compiler files in our repository:
 ``scripts/spack/configs/<platform>/spack.yaml``.
 
 We currently regularly test the following Spack configuration files:
 
-* Linux Ubuntu 20.04 (via Windows WSL 2)
-* TOSS 3 (On Ruby at LC)
+* Linux Ubuntu 22.04 (via Azure)
+* TOSS4 (On Ruby at LC)
 * BlueOS (On Lassen at LC)
 
 To install Serac on a new platform, it is a good idea to start with a known Spack environments file, or ``spack.yaml`` file,
@@ -144,7 +144,7 @@ in the `Spack docs <https://spack.readthedocs.io/en/latest/configuration.html>`_
    If you do not have a ``spack.yaml`` already, you can leave off that command line option from ``uberenv`` and
    Spack will generate a new one for you. Uberenv will copy it where you ran your uberenv command for future use.
 .. note::
-   A newer vesion of cmake (>=3.20) and llvm (>=14) may be required.
+   A newer version of cmake (>=3.20) and llvm (>=14) may be required.
 
 
 Some helpful uberenv options include :
@@ -152,11 +152,11 @@ Some helpful uberenv options include :
 * ``--spec=" build_type=Debug"`` (build the MFEM and Hypre libraries with debug symbols)
 * ``--spec=+profiling`` (build the Adiak and Caliper libraries)
 * ``--spec=+devtools`` (also build the devtools with one command)
-* ``--spec=%clang@10.0.0`` (build with a specific compiler as defined in the ``spack.yaml`` file)
+* ``--spec=%clang@14.0.6`` (build with a specific compiler as defined in the ``spack.yaml`` file)
 * ``--spack-env-file=<Path to Spack environment file>`` (use specific Spack environment configuration file)
 * ``--prefix=<Path>`` (required, build and install the dependencies in a particular location) - this *must be outside* of your local Serac repository
 
-The modifiers to the Spack specification ``spec`` can be chained together, e.g. ``--spec='%clang@10.0.0+devtools build_type=Debug'``.
+The modifiers to the Spack specification ``spec`` can be chained together, e.g. ``--spec='%clang@14.0.6+devtools build_type=Debug'``.
 
 If you already have a Spack instance from another project that you would like to reuse,
 you can do so by changing the uberenv command as follows:
@@ -169,7 +169,7 @@ Building Serac's Dependencies by Hand
 -------------------------------------
 
 To build Serac's dependencies by hand, use of a ``host-config`` CMake configuration file is
-stongly encouraged. A good place to start is by copying an existing host config in the
+strongly encouraged. A good place to start is by copying an existing host config in the
 ``host-config`` directory and modifying it according to your system setup.
 
 .. _build-label:

@@ -24,6 +24,14 @@ using namespace serac::profiling;
 
 double t = 0.0;
 
+struct IdentityFunctor {
+  template <typename Arg1, typename Arg2>
+  SERAC_HOST_DEVICE auto operator()(Arg1, Arg2) const
+  {
+    return 1.0;
+  }
+};
+
 int num_procs, my_rank;
 
 TEST(BoundaryIntegralQOI, AttrBug)
@@ -41,8 +49,7 @@ TEST(BoundaryIntegralQOI, AttrBug)
   auto [shape_fes, shape_fec] = serac::generateParFiniteElementSpace<shapeFES>(pmesh.get());
 
   serac::ShapeAwareFunctional<shapeFES, double()> totalSurfArea(shape_fes.get(), {});
-  totalSurfArea.AddBoundaryIntegral(
-      serac::Dimension<2 - 1>{}, serac::DependsOn<>{}, [](auto, auto) { return 1.0; }, *pmesh);
+  totalSurfArea.AddBoundaryIntegral(serac::Dimension<2 - 1>{}, serac::DependsOn<>{}, IdentityFunctor{}, *pmesh);
   serac::FiniteElementState shape(*shape_fes);
   double                    totalSurfaceArea = totalSurfArea(0.0, shape);
 
@@ -50,8 +57,7 @@ TEST(BoundaryIntegralQOI, AttrBug)
 
   serac::Domain attr1 = serac::Domain::ofBoundaryElements(*pmesh, serac::by_attr<2>(1));
   serac::ShapeAwareFunctional<shapeFES, double()> attr1SurfArea(shape_fes.get(), {});
-  attr1SurfArea.AddBoundaryIntegral(
-      serac::Dimension<2 - 1>{}, serac::DependsOn<>{}, [](auto, auto) { return 1.0; }, attr1);
+  attr1SurfArea.AddBoundaryIntegral(serac::Dimension<2 - 1>{}, serac::DependsOn<>{}, IdentityFunctor{}, attr1);
   double attr1SurfaceArea = attr1SurfArea(0.0, shape);
 
   EXPECT_NEAR(attr1SurfaceArea, 1.0, 1.0e-14);
