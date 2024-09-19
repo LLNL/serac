@@ -26,6 +26,7 @@ foreach(physics_benchmark ${physics_benchmark_targets})
         blt_add_benchmark(NAME ${physics_benchmark}_${task_count}_task_count
                           COMMAND ${physics_benchmark}
                           NUM_MPI_TASKS ${task_count}
+                          WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
                           )
     endforeach()
 endforeach()
