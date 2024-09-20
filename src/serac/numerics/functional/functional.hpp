@@ -746,7 +746,7 @@ private:
 
   mutable std::vector<mfem::BlockVector> input_E_[Domain::num_types];
 
-  std::vector<Integral> integrals_;
+  std::vector<Integral<exec>> integrals_;
 
   mutable mfem::BlockVector output_E_[Domain::num_types];
 

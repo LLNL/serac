@@ -175,7 +175,6 @@ struct ElementRestriction {
    * @param i the index of the element
    * @param vdofs (output) the DoFs associated with element `i`
    */
-
   void GetElementVDofs(int i, DoF* vdofs) const;
 
   /// get the dof information for a given node / component
@@ -200,7 +199,7 @@ struct ElementRestriction {
     axom::Array<DoF, 2, mem_space>     tmp              = dof_info;
     axom::ArrayView<DoF, 2, mem_space> d_dof_info       = tmp;
 
-    RAJA::forall<typename EvaluationSpacePolicy<exec>::forall_policy>(
+    RAJA::forall<typename EvaluationSpacePolicy<exec>::forall_t>(
         RAJA::TypedRangeSegment<uint64_t>(0, num_elements), [d_components, d_nodes_per_elem, d_num_nodes, d_ordering,
                                                              e_ptr, l_ptr, d_dof_info] SERAC_HOST_DEVICE(uint64_t i) {
           for (uint64_t c = 0; c < d_components; c++) {
@@ -229,7 +228,7 @@ struct ElementRestriction {
     axom::Array<DoF, 2, mem_space>     tmp              = dof_info;
     axom::ArrayView<DoF, 2, mem_space> d_dof_info       = tmp;
 
-    RAJA::forall<typename EvaluationSpacePolicy<exec>::forall_policy>(
+    RAJA::forall<typename EvaluationSpacePolicy<exec>::forall_t>(
         RAJA::TypedRangeSegment<uint64_t>(0, 1), [d_components, d_nodes_per_elem, d_num_elements, d_num_nodes,
                                                   d_ordering, e_ptr, l_ptr, d_dof_info] SERAC_HOST_DEVICE(uint64_t) {
           for (uint64_t i = 0; i < d_num_elements; ++i) {

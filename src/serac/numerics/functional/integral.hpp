@@ -22,6 +22,7 @@
 namespace serac {
 
 /// @brief a class for representing a Integral calculations and their derivatives
+template <ExecutionSpace exec>
 struct Integral {
   /// @brief the number of different kinds of integration domains
   static constexpr std::size_t num_types = 2;
@@ -105,20 +106,15 @@ struct Integral {
     }
   }
 
-/**
- * @brief evaluate the jacobian (with respect to some trial space) of this integral
- *
- * @param K_e a collection (one for each element type) of element jacobians (num_elements x trial_dofs_per_elem x
- * test_dofs_per_elem)
- * @param differentiation_index the index of the trial space being differentiated
- */
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  void ComputeElementGradients(std::map<mfem::Geometry::Type, ExecArray<double, 3, ExecutionSpace::GPU>>& K_e,
-                               uint32_t differentiation_index) const
-#else
-  void ComputeElementGradients(std::map<mfem::Geometry::Type, ExecArray<double, 3, ExecutionSpace::CPU>>& K_e,
-                               uint32_t differentiation_index) const
-#endif
+  /**
+   * @brief evaluate the jacobian (with respect to some trial space) of this integral
+   *
+   * @param K_e a collection (one for each element type) of element jacobians (num_elements x trial_dofs_per_elem x
+   * test_dofs_per_elem)
+   * @param differentiation_index the index of the trial space being differentiated
+   */
+  void ComputeElementGradients(std::map<mfem::Geometry::Type, ExecArray<double, 3, exec>>& K_e,
+                               uint32_t                                                    differentiation_index) const
   {
     // if this integral actually depends on the specified variable
     if (functional_to_integral_index_.count(differentiation_index) > 0) {
@@ -146,12 +142,8 @@ struct Integral {
   /// @brief kernels for jacobian-vector product of integral calculation
   std::vector<std::map<mfem::Geometry::Type, jacobian_vector_product_func>> jvp_;
 
-/// @brief signature of element gradient kernel
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  using grad_func = std::function<void(ExecArrayView<double, 3, ExecutionSpace::GPU>)>;
-#else
-  using grad_func = std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)>;
-#endif
+  /// @brief signature of element gradient kernel
+  using grad_func = std::function<void(ExecArrayView<double, 3, exec>)>;
 
   /// @brief kernels for calculation of element jacobians
   std::vector<std::map<mfem::Geometry::Type, grad_func>> element_gradient_;
@@ -175,12 +167,8 @@ struct Integral {
    */
   std::map<uint32_t, uint32_t> functional_to_integral_index_;
 
-/// @brief the spatial positions and jacobians (dx_dxi) for each element type and quadrature point
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  std::map<mfem::Geometry::Type, GeometricFactors<ExecutionSpace::GPU>> geometric_factors_;
-#else
-  std::map<mfem::Geometry::Type, GeometricFactors<ExecutionSpace::CPU>> geometric_factors_;
-#endif
+  /// @brief the spatial positions and jacobians (dx_dxi) for each element type and quadrature point
+  std::map<mfem::Geometry::Type, GeometricFactors<exec>> geometric_factors_;
 };
 
 /**
@@ -199,7 +187,7 @@ struct Integral {
  */
 template <mfem::Geometry::Type geom, int Q, ExecutionSpace exec, typename test, typename... trials,
           typename lambda_type, typename qpt_data_type>
-void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, const lambda_type& qf,
+void generate_kernels(FunctionSignature<test(trials...)> s, Integral<exec>& integral, const lambda_type& qf,
                       std::shared_ptr<QuadratureData<qpt_data_type>> qdata)
 {
   integral.geometric_factors_[geom] = GeometricFactors<exec>(integral.domain_, Q, geom);
@@ -210,21 +198,20 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
   gf.J.UseDevice(true);
   const double*  positions        = gf.X.Read(true);
   const double*  jacobians        = gf.J.Read(true);
-  const int*     elements         = integral.domain_.get(geom).data();
   const uint32_t num_elements     = uint32_t(gf.num_elements);
   const uint32_t qpts_per_element = num_quadrature_points(geom, Q);
 
   std::shared_ptr<zero> dummy_derivatives;
-// Copy elements to device if using CUDA
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  int* device_elements =
-      copy_data(const_cast<int*>(elements), sizeof(int) * integral.domain_.get(geom).size(), "DEVICE");
-  integral.evaluation_[geom] = domain_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom>(
-      s, qf, positions, jacobians, qdata, dummy_derivatives, device_elements, num_elements);
-#else
-  integral.evaluation_[geom] = domain_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom>(
+  // Copy elements to device if using CUDA
+  const int* elements = nullptr;
+  if constexpr (exec == ExecutionSpace::GPU) {
+    elements = copy_data(const_cast<int*>(integral.domain_.get(geom).data()),
+                         sizeof(int) * integral.domain_.get(geom).size(), "DEVICE");
+  } else {
+    elements = integral.domain_.get(geom).data();
+  }
+  integral.evaluation_[geom] = domain_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom, exec>(
       s, qf, positions, jacobians, qdata, dummy_derivatives, elements, num_elements);
-#endif
 
   constexpr std::size_t                 num_args = s.num_args;
   [[maybe_unused]] static constexpr int dim      = dimension_of(geom);
@@ -235,25 +222,16 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
     // action_of_gradient functor below to augment the reference count, and extend its lifetime to match
     // that of the DomainIntegral that allocated it.
     using derivative_type = decltype(domain_integral::get_derivative_type<index, dim, trials...>(qf, qpt_data_type{}));
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-    auto ptr = accelerator::make_shared_array<ExecutionSpace::GPU, derivative_type>(num_elements * qpts_per_element);
-    integral.evaluation_with_AD_[index][geom] = domain_integral::evaluation_kernel<index, Q, geom>(
-        s, qf, positions, jacobians, qdata, ptr, device_elements, num_elements);
 
-    integral.jvp_[index][geom] =
-        domain_integral::jacobian_vector_product_kernel<index, Q, geom>(s, ptr, device_elements, num_elements);
-    integral.element_gradient_[index][geom] =
-        domain_integral::element_gradient_kernel<index, Q, geom>(s, ptr, device_elements, num_elements);
-#else
-    auto ptr = accelerator::make_shared_array<ExecutionSpace::CPU, derivative_type>(num_elements * qpts_per_element);
-    integral.evaluation_with_AD_[index][geom] = domain_integral::evaluation_kernel<index, Q, geom>(
+    auto ptr = accelerator::make_shared_array<exec, derivative_type>(num_elements * qpts_per_element);
+
+    integral.evaluation_with_AD_[index][geom] = domain_integral::evaluation_kernel<index, Q, geom, exec>(
         s, qf, positions, jacobians, qdata, ptr, elements, num_elements);
 
     integral.jvp_[index][geom] =
-        domain_integral::jacobian_vector_product_kernel<index, Q, geom>(s, ptr, elements, num_elements);
+        domain_integral::jacobian_vector_product_kernel<index, Q, geom, exec>(s, ptr, elements, num_elements);
     integral.element_gradient_[index][geom] =
-        domain_integral::element_gradient_kernel<index, Q, geom>(s, ptr, elements, num_elements);
-#endif
+        domain_integral::element_gradient_kernel<index, Q, geom, exec>(s, ptr, elements, num_elements);
   });
 }
 
@@ -272,15 +250,15 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
  * @return Integral the initialized `Integral` object
  */
 template <typename s, int Q, int dim, ExecutionSpace exec, typename lambda_type, typename qpt_data_type>
-Integral MakeDomainIntegral(const Domain& domain, const lambda_type& qf,
-                            std::shared_ptr<QuadratureData<qpt_data_type>> qdata,
-                            std::vector<uint32_t>                          argument_indices)
+Integral<exec> MakeDomainIntegral(const Domain& domain, const lambda_type& qf,
+                                  std::shared_ptr<QuadratureData<qpt_data_type>> qdata,
+                                  std::vector<uint32_t>                          argument_indices)
 {
   FunctionSignature<s> signature;
 
   SLIC_ERROR_IF(domain.type_ != Domain::Type::Elements, "Error: trying to evaluate a domain integral over a boundary");
 
-  Integral integral(domain, argument_indices);
+  Integral<exec> integral(domain, argument_indices);
 
   if constexpr (dim == 2) {
     generate_kernels<mfem::Geometry::TRIANGLE, Q, exec>(signature, integral, qf, qdata);
@@ -310,7 +288,7 @@ Integral MakeDomainIntegral(const Domain& domain, const lambda_type& qf,
  */
 template <mfem::Geometry::Type geom, int Q, ExecutionSpace exec, typename test, typename... trials,
           typename lambda_type>
-void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integral, const lambda_type& qf)
+void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral<exec>& integral, const lambda_type& qf)
 {
   integral.geometric_factors_[geom] = GeometricFactors<exec>(integral.domain_, Q, geom, FaceType::BOUNDARY);
   GeometricFactors<exec>& gf        = integral.geometric_factors_[geom];
@@ -321,15 +299,15 @@ void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integr
   const uint32_t num_elements     = uint32_t(gf.num_elements);
   const uint32_t qpts_per_element = num_quadrature_points(geom, Q);
 
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  int* elements =
-      copy_data(const_cast<int*>(&gf.elements[0]), sizeof(int) * integral.domain_.get(geom).size(), "DEVICE");
-#else
-  const int* elements = &gf.elements[0];
-#endif
+  int* elements = nullptr;
+  if constexpr (exec == ExecutionSpace::GPU) {
+    elements = copy_data(const_cast<int*>(&gf.elements[0]), sizeof(int) * integral.domain_.get(geom).size(), "DEVICE");
+  } else {
+    elements = &gf.elements[0];
+  }
 
   std::shared_ptr<zero> dummy_derivatives;
-  integral.evaluation_[geom] = boundary_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom>(
+  integral.evaluation_[geom] = boundary_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom, exec>(
       s, qf, positions, jacobians, dummy_derivatives, elements, num_elements);
 
   constexpr std::size_t                 num_args = s.num_args;
@@ -341,19 +319,15 @@ void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integr
     // action_of_gradient functor below to augment the reference count, and extend its lifetime to match
     // that of the boundaryIntegral that allocated it.
     using derivative_type = decltype(boundary_integral::get_derivative_type<index, dim, trials...>(qf));
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-    auto ptr = accelerator::make_shared_array<ExecutionSpace::GPU, derivative_type>(num_elements * qpts_per_element);
-#else
-    auto ptr = accelerator::make_shared_array<ExecutionSpace::CPU, derivative_type>(num_elements * qpts_per_element);
-#endif
+    auto ptr              = accelerator::make_shared_array<exec, derivative_type>(num_elements * qpts_per_element);
 
-    integral.evaluation_with_AD_[index][geom] =
-        boundary_integral::evaluation_kernel<index, Q, geom>(s, qf, positions, jacobians, ptr, elements, num_elements);
+    integral.evaluation_with_AD_[index][geom] = boundary_integral::evaluation_kernel<index, Q, geom, exec>(
+        s, qf, positions, jacobians, ptr, elements, num_elements);
 
     integral.jvp_[index][geom] =
-        boundary_integral::jacobian_vector_product_kernel<index, Q, geom>(s, ptr, elements, num_elements);
+        boundary_integral::jacobian_vector_product_kernel<index, Q, geom, exec>(s, ptr, elements, num_elements);
     integral.element_gradient_[index][geom] =
-        boundary_integral::element_gradient_kernel<index, Q, geom>(s, ptr, elements, num_elements);
+        boundary_integral::element_gradient_kernel<index, Q, geom, exec>(s, ptr, elements, num_elements);
   });
 }
 
@@ -372,14 +346,14 @@ void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integr
  * @note this function is not meant to be called by users
  */
 template <typename s, int Q, int dim, ExecutionSpace exec, typename lambda_type>
-Integral MakeBoundaryIntegral(const Domain& domain, const lambda_type& qf, std::vector<uint32_t> argument_indices)
+Integral<exec> MakeBoundaryIntegral(const Domain& domain, const lambda_type& qf, std::vector<uint32_t> argument_indices)
 {
   FunctionSignature<s> signature;
 
   SLIC_ERROR_IF(domain.type_ != Domain::Type::BoundaryElements,
                 "Error: trying to evaluate a boundary integral over a non-boundary domain of integration");
 
-  Integral integral(domain, argument_indices);
+  Integral<exec> integral(domain, argument_indices);
 
   if constexpr (dim == 1) {
     generate_bdr_kernels<mfem::Geometry::SEGMENT, Q, exec>(signature, integral, qf);

@@ -154,7 +154,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>, exec> {
     int jz = j / (n * n);
 
     auto x_range = RAJA::RangeSegment(0, q * q * q);
-    RAJA::loop<threads_x>(ctx, x_range, [&](int Q) {
+    RAJA::loop<typename EvaluationSpacePolicy<exec>::threads_t>(ctx, x_range, [&](int Q) {
       int qx = Q % q;
       int qy = (Q / q) % q;
       int qz = (Q / (q * q));
@@ -197,7 +197,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>, exec> {
     // A1(dz, dy, qx)  := B(qx, dx) * X_e(dz, dy, dx)
     // A2(dz, qy, qx)  := B(qy, dy) * A1(dz, dy, qx)
     // X_q(qz, qy, qx) := B(qz, dz) * A2(dz, qy, qx)
-    using t_x                           = typename EvaluationSpacePolicy<exec>::threads_x;
+    using threads_t                     = typename EvaluationSpacePolicy<exec>::EvaluationSpacePolicy<exec>::threads_t;
     static constexpr bool apply_weights = false;
 
     RAJA::RangeSegment x_range(0, BLOCK_SZ);
@@ -205,7 +205,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>, exec> {
     RAJA_TEAM_SHARED tensor<double, c, dim, q, q, q> gradient;
     constexpr auto                                   B = calculate_B<apply_weights, q>();
     constexpr auto                                   G = calculate_G<apply_weights, q>();
-    RAJA::loop<t_x>(ctx, x_range, [&](int tid) {
+    RAJA::loop<threads_t>(ctx, x_range, [&](int tid) {
       int qx = tid % BLOCK_X;
       int qy = (tid / BLOCK_X) % BLOCK_Y;
       int qz = tid / (BLOCK_X * BLOCK_Y);
@@ -221,7 +221,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>, exec> {
       RAJA_TEAM_SHARED decltype(deduce_contract_return_type<1, 1>(A11, B))  A21;
       RAJA_TEAM_SHARED decltype(deduce_contract_return_type<1, 1>(A10, G))  A22;
 
-      RAJA::loop<t_x>(ctx, x_range, [&](int tid) {
+      RAJA::loop<threads_t>(ctx, x_range, [&](int tid) {
         int qx = tid % BLOCK_X;
         int qy = (tid / BLOCK_X) % BLOCK_Y;
         int qz = tid / (BLOCK_X * BLOCK_Y);
@@ -232,7 +232,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>, exec> {
         memset_tensor(A11, 0.0, qx, qy, qz);
         ctx.teamSync();
       });
-      RAJA::loop<t_x>(ctx, x_range, [&](int tid) {
+      RAJA::loop<threads_t>(ctx, x_range, [&](int tid) {
         int qx = tid % BLOCK_X;
         int qy = (tid / BLOCK_X) % BLOCK_Y;
         int qz = tid / (BLOCK_X * BLOCK_Y);
@@ -242,7 +242,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>, exec> {
         ctx.teamSync();
       });
 
-      RAJA::loop<t_x>(ctx, x_range, [&](int tid) {
+      RAJA::loop<threads_t>(ctx, x_range, [&](int tid) {
         int qx = tid % BLOCK_X;
         int qy = (tid / BLOCK_X) % BLOCK_Y;
         int qz = tid / (BLOCK_X * BLOCK_Y);
@@ -253,7 +253,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>, exec> {
         ctx.teamSync();
       });
 
-      RAJA::loop<t_x>(ctx, x_range, [&](int tid) {
+      RAJA::loop<threads_t>(ctx, x_range, [&](int tid) {
         int qx = tid % BLOCK_X;
         int qy = (tid / BLOCK_X) % BLOCK_Y;
         int qz = tid / (BLOCK_X * BLOCK_Y);
@@ -274,7 +274,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>, exec> {
       tensor<tuple<tensor<double, c>, tensor<double, c, dim>>, q, q, q> three_dimensional;
     } output;
 
-    RAJA::loop<t_x>(ctx, x_range, [&](int tid) {
+    RAJA::loop<threads_t>(ctx, x_range, [&](int tid) {
       if (tid >= q * q * q) {
         return;
       }
@@ -291,7 +291,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>, exec> {
     });
     ctx.teamSync();
     if (output_ptr) {
-      RAJA::loop<t_x>(ctx, x_range, [&](int tid) {
+      RAJA::loop<threads_t>(ctx, x_range, [&](int tid) {
         if (tid < serac::size(output.one_dimensional)) {
           ((*output_ptr))[tid] = output.one_dimensional[tid];
         }
@@ -309,7 +309,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>, exec> {
     }
 
     constexpr int ntrial = std::max(size(source_type{}), size(flux_type{}) / dim) / c;
-    using t_x            = typename EvaluationSpacePolicy<exec>::threads_x;
+    using threads_t      = typename EvaluationSpacePolicy<exec>::EvaluationSpacePolicy<exec>::threads_t;
     using s_buffer_type  = std::conditional_t<is_zero<source_type>{}, zero, tensor<double, q, q, q>>;
     using f_buffer_type  = std::conditional_t<is_zero<flux_type>{}, zero, tensor<double, dim, q, q, q>>;
 
@@ -338,7 +338,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>, exec> {
     for (int j = 0; j < ntrial; j++) {
       for (int i = 0; i < c; i++) {
         ctx.teamSync();
-        RAJA::loop<t_x>(ctx, x_range, [&](int tid) {
+        RAJA::loop<threads_t>(ctx, x_range, [&](int tid) {
           if (tid >= q * q * q) {
             return;
           }
@@ -351,7 +351,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>, exec> {
         });
         for (int k = 0; k < dim; k++) {
           ctx.teamSync();
-          RAJA::loop<t_x>(ctx, x_range, [&](int tid) {
+          RAJA::loop<threads_t>(ctx, x_range, [&](int tid) {
             if (tid >= q * q * q) {
               return;
             }
@@ -367,7 +367,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>, exec> {
         }
         ctx.teamSync();
 
-        RAJA::loop<t_x>(ctx, x_range, [&](int tid) {
+        RAJA::loop<threads_t>(ctx, x_range, [&](int tid) {
           int qx = tid % BLOCK_X;
           int qy = (tid / BLOCK_X) % BLOCK_Y;
           int qz = tid / (BLOCK_X * BLOCK_Y);
@@ -380,7 +380,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>, exec> {
           ctx.teamSync();
         });
 
-        RAJA::loop<t_x>(ctx, x_range, [&](int tid) {
+        RAJA::loop<threads_t>(ctx, x_range, [&](int tid) {
           int qx = tid % BLOCK_X;
           int qy = (tid / BLOCK_X) % BLOCK_Y;
           int qz = tid / (BLOCK_X * BLOCK_Y);
@@ -394,7 +394,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>, exec> {
           ctx.teamSync();
         });
 
-        RAJA::loop<t_x>(ctx, x_range, [&](int tid) {
+        RAJA::loop<threads_t>(ctx, x_range, [&](int tid) {
           int qx = tid % BLOCK_X;
           int qy = (tid / BLOCK_X) % BLOCK_Y;
           int qz = tid / (BLOCK_X * BLOCK_Y);
@@ -406,7 +406,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>, exec> {
           ctx.teamSync();
         });
 
-        RAJA::loop<t_x>(ctx, x_range, [&](int tid) {
+        RAJA::loop<threads_t>(ctx, x_range, [&](int tid) {
           int qx = tid % BLOCK_X;
           int qy = (tid / BLOCK_X) % BLOCK_Y;
           int qz = tid / (BLOCK_X * BLOCK_Y);

@@ -8,6 +8,7 @@
 #include <RAJA/pattern/launch/launch_core.hpp>
 #include <array>
 
+#include "serac/infrastructure/accelerator.hpp"
 #include "serac/serac_config.hpp"
 #include "serac/numerics/functional/quadrature_data.hpp"
 #include "serac/numerics/functional/differentiate_wrt.hpp"
@@ -159,7 +160,7 @@ SERAC_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, 
 }
 
 /// @trial_elements the element type for each trial space
-template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, typename test_element,
+template <uint32_t differentiation_index, int Q, mfem::Geometry::Type geom, ExecutionSpace exec, typename test_element,
           typename trial_element_type, typename lambda_type, typename derivative_type, int... indices>
 void evaluation_kernel_impl(trial_element_type trial_elements, test_element, double t,
                             const std::vector<const double*>& inputs, double* outputs, const double* positions,
@@ -183,29 +184,21 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
       reinterpret_cast<const typename decltype(type<indices>(trial_elements))::dof_type*>(inputs[indices])...};
 
   using interpolate_out_type = decltype(tuple{get<indices>(trial_elements).template interpolate_output_helper<Q>()...});
-
-  using qf_inputs_type = decltype(tuple{promote_each_to_dual_when_output_helper<indices == differentiation_index>(
+  using qf_inputs_type       = decltype(tuple{promote_each_to_dual_when_output_helper<indices == differentiation_index>(
       get<indices>(trial_elements).template interpolate_output_helper<Q>())...});
-
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  std::string device_name = "DEVICE";
-  // auto        device_r    = copy_data(r, serac::size(*r) * sizeof(double), device_name);
-#else
-  std::string device_name = "HOST";
-  // typename test_element::dof_type* device_r    = r;
-#endif
-
-  auto&           rm        = umpire::ResourceManager::getInstance();
-  auto            allocator = rm.getAllocator(device_name);
+  // Determine allocation destination based on exec parameter
+  std::string device_name = exec == ExecutionSpace::GPU ? "DEVICE" : "HOST";
+  auto&       rm          = umpire::ResourceManager::getInstance();
+  auto        allocator   = rm.getAllocator(device_name);
+  // Perform allocations
   qf_inputs_type* qf_inputs = static_cast<qf_inputs_type*>(allocator.allocate(sizeof(qf_inputs_type) * num_elements));
   interpolate_out_type* interpolate_result =
       static_cast<interpolate_out_type*>(allocator.allocate(sizeof(interpolate_out_type) * num_elements));
-
+  // Zero out memory
   rm.memset(qf_inputs, 0);
   rm.memset(interpolate_result, 0);
 
   auto e_range = RAJA::TypedRangeSegment<uint32_t>(0, num_elements);
-
   // for each element in the domain
   RAJA::launch<launch_policy>(
       RAJA::LaunchParams(RAJA::Teams(static_cast<int>(num_elements)), RAJA::Threads(BLOCK_SZ)),
@@ -257,10 +250,6 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
               test_element::integrate(get_value(qf_outputs), rule, &r[elements[e]], ctx);
             });
       });
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  // rm.copy(r, device_r);
-  // allocator.deallocate(device_r);
-#endif
   allocator.deallocate(qf_inputs);
   allocator.deallocate(interpolate_result);
 }
@@ -311,31 +300,24 @@ SERAC_HOST_DEVICE auto batch_apply_chain_rule(derivative_type* qf_derivatives, c
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  */
-template <int Q, mfem::Geometry::Type geom, typename test, typename trial, typename derivatives_type>
+template <int Q, mfem::Geometry::Type geom, typename test, typename trial, ExecutionSpace exec,
+          typename derivatives_type>
 void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* qf_derivatives, const int* elements,
                                std::size_t num_elements)
 {
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  std::string    device_name = "DEVICE";
-  constexpr auto exec        = ExecutionSpace::GPU;
-#else
-  std::string    device_name = "HOST";
-  constexpr auto exec        = ExecutionSpace::CPU;
-#endif
-
-  using test_element  = finite_element<geom, test, exec>;
-  using trial_element = finite_element<geom, trial, exec>;
+  using test_element   = finite_element<geom, test, exec>;
+  using trial_element  = finite_element<geom, trial, exec>;
+  using qf_inputs_type = decltype(trial_element::template interpolate_output_helper<Q>());
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
-  constexpr int                            nqp = num_quadrature_points(geom, Q);
-  auto                                     du  = reinterpret_cast<const typename trial_element::dof_type*>(dU);
-  auto                                     dr  = reinterpret_cast<typename test_element::dof_type*>(dR);
+  constexpr int                            nqp         = num_quadrature_points(geom, Q);
+  std::string                              device_name = exec == ExecutionSpace::GPU ? "DEVICE" : "HOST";
   constexpr TensorProductQuadratureRule<Q> rule{};
 
+  auto du      = reinterpret_cast<const typename trial_element::dof_type*>(dU);
+  auto dr      = reinterpret_cast<typename test_element::dof_type*>(dR);
   auto e_range = RAJA::TypedRangeSegment<std::size_t>(0, num_elements);
-
-  using qf_inputs_type = decltype(trial_element::template interpolate_output_helper<Q>());
 
   auto&           rm        = umpire::ResourceManager::getInstance();
   auto            allocator = rm.getAllocator(device_name);
@@ -383,23 +365,15 @@ void action_of_gradient_kernel(const double* dU, double* dR, derivatives_type* q
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  */
-template <mfem::Geometry::Type g, typename test, typename trial, int Q, typename derivatives_type>
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::GPU> dK,
-#else
-void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
-#endif
-                             derivatives_type* qf_derivatives, const int* elements, std::size_t num_elements)
+template <mfem::Geometry::Type g, typename test, typename trial, int Q, ExecutionSpace exec, typename derivatives_type>
+void element_gradient_kernel(ExecArrayView<double, 3, exec> dK, derivatives_type* qf_derivatives, const int* elements,
+                             std::size_t num_elements)
 {
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  constexpr auto exec = ExecutionSpace::GPU;
-#else
-  constexpr auto exec = ExecutionSpace::CPU;
-#endif
   using test_element  = finite_element<g, test, exec>;
   using trial_element = finite_element<g, trial, exec>;
 
-  constexpr bool is_QOI = test::family == Family::QOI;
+  std::string    device_name = exec == ExecutionSpace::GPU ? "DEVICE" : "HOST";
+  constexpr bool is_QOI      = test::family == Family::QOI;
   using padded_derivative_type [[maybe_unused]] =
       std::conditional_t<is_QOI, tuple<derivatives_type, zero>, derivatives_type>;
 
@@ -434,51 +408,40 @@ void element_gradient_kernel(ExecArrayView<double, 3, ExecutionSpace::CPU> dK,
       });
 }
 
-template <uint32_t wrt, int Q, mfem::Geometry::Type geom, typename signature, typename lambda_type,
+template <uint32_t wrt, int Q, mfem::Geometry::Type geom, ExecutionSpace exec, typename signature, typename lambda_type,
           typename derivative_type>
 auto evaluation_kernel(signature s, lambda_type qf, const double* positions, const double* jacobians,
                        std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  constexpr auto exec = ExecutionSpace::GPU;
-#else
-  constexpr auto exec = ExecutionSpace::CPU;
-#endif
   auto trial_elements = trial_elements_tuple<geom, exec>(s);
   auto test_element   = get_test_element<geom, exec>(s);
   return [=](double time, const std::vector<const double*>& inputs, double* outputs, bool /* update state */) {
-    evaluation_kernel_impl<wrt, Q, geom>(trial_elements, test_element, time, inputs, outputs, positions, jacobians, qf,
+    evaluation_kernel_impl<wrt, Q, geom, exec>(trial_elements, test_element, time, inputs, outputs, positions, jacobians, qf,
                                          qf_derivatives.get(), elements, num_elements, s.index_seq);
   };
 }
 
-template <int wrt, int Q, mfem::Geometry::Type geom, typename signature, typename derivative_type>
+template <int wrt, int Q, mfem::Geometry::Type geom, ExecutionSpace exec, typename signature, typename derivative_type>
 std::function<void(const double*, double*)> jacobian_vector_product_kernel(
     signature, std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {
   return [=](const double* du, double* dr) {
     using test_space  = typename signature::return_type;
     using trial_space = typename std::tuple_element<wrt, typename signature::parameter_types>::type;
-    action_of_gradient_kernel<Q, geom, test_space, trial_space>(du, dr, qf_derivatives.get(), elements, num_elements);
+    action_of_gradient_kernel<Q, geom, test_space, trial_space, exec>(du, dr, qf_derivatives.get(), elements,
+                                                                      num_elements);
   };
 }
 
-template <int wrt, int Q, mfem::Geometry::Type geom, typename signature, typename derivative_type>
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-std::function<void(ExecArrayView<double, 3, ExecutionSpace::GPU>)> element_gradient_kernel(
-#else
-std::function<void(ExecArrayView<double, 3, ExecutionSpace::CPU>)> element_gradient_kernel(
-#endif
+template <int wrt, int Q, mfem::Geometry::Type geom, ExecutionSpace exec, typename signature, typename derivative_type>
+std::function<void(ExecArrayView<double, 3, exec>)> element_gradient_kernel(
     signature, std::shared_ptr<derivative_type> qf_derivatives, const int* elements, uint32_t num_elements)
 {
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-  return [=](ExecArrayView<double, 3, ExecutionSpace::GPU> K_elem) {
-#else
-  return [=](ExecArrayView<double, 3, ExecutionSpace::CPU> K_elem) {
-#endif
+  return [=](ExecArrayView<double, 3, exec> K_elem) {
     using test_space  = typename signature::return_type;
     using trial_space = typename std::tuple_element<wrt, typename signature::parameter_types>::type;
-    element_gradient_kernel<geom, test_space, trial_space, Q>(K_elem, qf_derivatives.get(), elements, num_elements);
+    element_gradient_kernel<geom, test_space, trial_space, Q, exec>(K_elem, qf_derivatives.get(), elements,
+                                                                    num_elements);
   };
 }
 

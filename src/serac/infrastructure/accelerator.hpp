@@ -76,21 +76,21 @@ struct EvaluationSpacePolicy;
 
 template <>
 struct EvaluationSpacePolicy<ExecutionSpace::CPU> {
-  using threads_x = RAJA::LoopPolicy<RAJA::seq_exec>;
+  using threads_t = RAJA::LoopPolicy<RAJA::seq_exec>;
   /// @brief Alias for number of teams for GPU kernel launches.
-  using teams_e = RAJA::LoopPolicy<RAJA::seq_exec>;
+  using teams_t = RAJA::LoopPolicy<RAJA::seq_exec>;
   /// @brief Alias for GPU kernel launch policy.
-  using launch_policy = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
-  using forall_policy = RAJA::seq_exec;
+  using launch_t = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
+  using forall_t = RAJA::seq_exec;
 };
 
 #if defined(__CUDACC__)
 template <>
 struct EvaluationSpacePolicy<ExecutionSpace::GPU> {
-  using threads_x     = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
-  using teams_e       = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
-  using launch_policy = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
-  using forall_policy = RAJA::cuda_exec<128>;
+  using threads_t = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+  using teams_t   = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
+  using launch_t  = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
+  using forall_t  = RAJA::cuda_exec<128>;
 };
 #endif
 // TODO(cuda): Delete these serac namespace scope type definitions in favor
