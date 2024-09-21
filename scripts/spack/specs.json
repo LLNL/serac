@@ -18,7 +18,7 @@
       "clang@14.0.6+devtools+profiling" ],
 
     "toss_4_x86_64_ib_cray":
-    [ "clang@16.0.0~openmp+profiling+raja+rocm+umpire amdgpu_target=gfx90a ^hip@5.6.0 ^hsa-rocr-dev@5.6.0 ^llvm-amdgpu@5.6.0 ^rocprim@5.6.0 ^raja~openmp+rocm ^umpire~openmp+rocm ^hdf5 cflags=-Wno-int-conversion"],
+    [ "clang@17.0.0~openmp~profiling+rocm+raja+umpire~strumpack amdgpu_target=gfx90a ^hdf5 cflags=-Wno-int-conversion ^petsc cflags=-O0"],
 
     "blueos_3_ppc64le_ib_p9":
     [ "clang@10.0.1+devtools+cuda+raja+umpire+profiling~strumpack cuda_arch=70" ]

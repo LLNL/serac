@@ -307,7 +307,6 @@ class Serac(CachedCMakePackage, CudaPackage, ROCmPackage):
     depends_on("rocprim", when="+rocm")
 
 
-
     def _get_sys_type(self, spec):
         sys_type = spec.architecture
         # if on llnl systems, we can use the SYS_TYPE

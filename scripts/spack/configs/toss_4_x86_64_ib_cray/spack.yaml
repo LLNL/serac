@@ -20,10 +20,10 @@ spack:
       modules: []
       operating_system: rhel8
       paths:
-        cc: /opt/rocm-6.1.2/llvm/bin/amdclang
-        cxx: /opt/rocm-6.1.2/llvm/bin/amdclang++
-        f77: /opt/rocm-6.1.2/llvm/bin/amdflang
-        fc: /opt/rocm-6.1.2/llvm/bin/amdflang
+        cc: /opt/rocm-5.7.1/llvm/bin/amdclang
+        cxx: /opt/rocm-5.7.1/llvm/bin/amdclang++
+        f77: /opt/rocm-5.7.1/llvm/bin/amdflang
+        fc: /opt/rocm-5.7.1/llvm/bin/amdflang
       spec: clang@17.0.0
       target: x86_64
 
@@ -70,85 +70,85 @@ spack:
     cray-mpich:
       buildable: false
       externals:
-      - spec: cray-mpich@8.1.30
-        prefix: /usr/tce/packages/cray-mpich-tce/cray-mpich-8.1.30-rocmcc-6.1.2
+      - spec: cray-mpich@8.1.27
+        prefix: /usr/tce/packages/cray-mpich-tce/cray-mpich-8.1.27-rocmcc-5.7.1/
 
     # ROCm
     hip:
       buildable: false
       externals:
-      - spec: hip@6.1.2
-        prefix: /opt/rocm-6.1.2/
+      - spec: hip@5.7.1
+        prefix: /opt/rocm-5.7.1/
     hipblas:
       buildable: false
       externals:
-      - spec: hipblas@6.1.2
-        prefix: /opt/rocm-6.1.2/
+      - spec: hipblas@5.7.1
+        prefix: /opt/rocm-5.7.1/
     hipsolver:
       buildable: false
       externals:
-      - spec: hipsolver@6.1.2
-        prefix: /opt/rocm-6.1.2/
+      - spec: hipsolver@5.7.1
+        prefix: /opt/rocm-5.7.1/
     hipsparse:
       buildable: false
       externals:
-      - spec: hipsparse@6.1.2
-        prefix: /opt/rocm-6.1.2/
+      - spec: hipsparse@5.7.1
+        prefix: /opt/rocm-5.7.1/
     llvm-amdgpu:
       buildable: false
       externals:
-      - spec: llvm-amdgpu@6.1.2
-        prefix: /opt/rocm-6.1.2/llvm
+      - spec: llvm-amdgpu@5.7.1
+        prefix: /opt/rocm-5.7.1/llvm
     hsa-rocr-dev:
       buildable: false
       externals:
-      - spec: hsa-rocr-dev@6.1.2
-        prefix: /opt/rocm-6.1.2/
+      - spec: hsa-rocr-dev@5.7.1
+        prefix: /opt/rocm-5.7.1/
     rocblas:
       buildable: false
       externals:
-      - spec: rocblas@6.1.2
-        prefix: /opt/rocm-6.1.2/
+      - spec: rocblas@5.7.1
+        prefix: /opt/rocm-5.7.1/
     rocm-core:
       buildable: false
       externals:
-      - spec: rocm-core@6.1.2
-        prefix: /opt/rocm-6.1.2/
+      - spec: rocm-core@5.7.1
+        prefix: /opt/rocm-5.7.1/
     rocrand:
       buildable: false
       externals:
-      - spec: rocrand@6.1.2
-        prefix: /opt/rocm-6.1.2/
+      - spec: rocrand@5.7.1
+        prefix: /opt/rocm-5.7.1/
     rocminfo:
       buildable: false
       externals:
-      - spec: rocminfo@6.1.2
-        prefix: /opt/rocm-6.1.2/
+      - spec: rocminfo@5.7.1
+        prefix: /opt/rocm-5.7.1/
     rocsolver:
       buildable: false
       externals:
-      - spec: rocsolver@6.1.2
-        prefix: /opt/rocm-6.1.2/
+      - spec: rocsolver@5.7.1
+        prefix: /opt/rocm-5.7.1/
     rocsparse:
       buildable: false
       externals:
-      - spec: rocsparse@6.1.2
-        prefix: /opt/rocm-6.1.2/
+      - spec: rocsparse@5.7.1
+        prefix: /opt/rocm-5.7.1/
     rocthrust:
       buildable: false
       externals:
-      - spec: rocthrust@6.1.2
-        prefix: /opt/rocm-6.1.2/
+      - spec: rocthrust@5.7.1
+        prefix: /opt/rocm-5.7.1/
     rocprim:
       buildable: false
       externals:
-      - spec: rocprim@6.1.2
-        prefix: /opt/rocm-6.1.2/
+      - spec: rocprim@5.7.1
+        prefix: /opt/rocm-5.7.1/
     rocm-device-libs:
       buildable: false
       externals:
-      - spec: rocm-device-libs@6.1.2
-        prefix: /opt/rocm-6.1.2/
+      - spec: rocm-device-libs@5.7.1
+        prefix: /opt/rocm-5.7.1/
 
     # System level packages to not build
     autoconf:
@@ -320,7 +320,6 @@ spack:
 
     # Lock in versions of Devtools
     cmake:
-      version: [3.23.1]
       buildable: false
       externals:
       - spec: cmake@3.23.1
