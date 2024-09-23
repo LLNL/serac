@@ -10,7 +10,6 @@ set(materials_sources
     solid_material_input.cpp)
 
 set(materials_headers
-    green_saint_venant_thermoelastic.hpp
     hardening_input.hpp
     liquid_crystal_elastomer.hpp
     material_verification_tools.hpp
@@ -20,6 +19,7 @@ set(materials_headers
     solid_material.hpp
     thermal_material_input.hpp
     thermal_material.hpp
+    thermomechanics_material.hpp
     )
 
 set(materials_depends

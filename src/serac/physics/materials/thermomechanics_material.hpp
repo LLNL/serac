@@ -7,7 +7,7 @@
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/tuple.hpp"
 
-namespace serac {
+namespace serac::thermomechanics {
 
 /**
  * @brief Compute Green's strain from the displacement gradient
@@ -19,7 +19,7 @@ auto greenStrain(const tensor<T, 3, 3>& grad_u)
 }
 
 /// @brief Green-Saint Venant isotropic thermoelastic model
-struct GreenSaintVenantThermoelasticMaterial {
+struct GreenSaintVenant {
   double density;    ///< density
   double E;          ///< Young's modulus
   double nu;         ///< Poisson's ratio
@@ -99,7 +99,7 @@ struct GreenSaintVenantThermoelasticMaterial {
 };
 
 /// @brief Green-Saint Venant isotropic thermoelastic model
-struct ParameterizedGreenSaintVenantThermoelasticMaterial {
+struct ParameterizedGreenSaintVenant {
   double density;    ///< density
   double E;          ///< Young's modulus
   double nu;         ///< Poisson's ratio
@@ -186,4 +186,79 @@ struct ParameterizedGreenSaintVenantThermoelasticMaterial {
   }
 };
 
-}  // namespace serac
+/// @brief Plasticity model with self-heating from plastic work
+struct J2SmallStrain {
+  static constexpr int dim = 3;  ///< dimensionality of space
+
+  double density;  ///< density
+  double E;        ///< Young's modulus
+  double nu;       ///< Poisson's ratio
+  double C_v;      ///< volumetric heat capacity
+  double k;        ///< thermal conductivity
+  double Hi;       ///< isotropic hardening modulus
+  double sigma_y;  ///< yield strength
+
+  /// @brief variables required to characterize the hysteresis response
+  struct State {
+    tensor<double, dim, dim> plastic_strain;              ///< plastic strain
+    double                   accumulated_plastic_strain;  ///< uniaxial equivalent plastic strain
+    double                   delta_eqps;                  ///< previous increment of accumulated plastic strain
+  };
+
+  /**
+   * @brief Evaluate constitutive variables for thermomechanics
+   *
+   * @tparam T1 Type of the displacement gradient components (number-like)
+   * @tparam T2 Type of the temperature (number-like)
+   * @tparam T3 Type of the temperature gradient components (number-like)
+   *
+   * @param[in,out] state Internal state variables
+   * @param[in] du_dX Displacement gradient
+   * @param[in] dtheta_dX Temperature gradient
+   *
+   * @return[out] tuple of constitutive outputs. Contains the
+   * Cauchy stress, the volumetric heat capacity in the reference
+   * configuration, the heat generated per unit volume during the time
+   * step (units of energy), and the referential heat flux (units of
+   * energy per unit time and per unit area).
+   */
+  template <typename T1, typename T2, typename T3>
+  auto operator()(State& state, const tensor<T1, dim, dim>& du_dX, T2 /* theta */,
+                  const tensor<T3, dim>& dtheta_dX) const
+  {
+    using std::sqrt;
+
+    // update internal heat source
+    // update is lagged by a time step to be consistent with explicit
+    // operator split of thermal and mechanical problems
+    auto src = sigma_y * state.delta_eqps;
+
+    const double K                  = E / (3.0 * (1.0 - 2.0 * nu));
+    const double G                  = 0.5 * E / (1.0 + nu);
+    auto         el_strain          = sym(du_dX) - state.plastic_strain;
+    auto         s                  = 2.0 * G * dev(el_strain);
+    auto         mises              = sqrt(1.5) * norm(s);
+    double       yield_strength_old = sigma_y + Hi * state.accumulated_plastic_strain;
+
+    // enforce consistency condition
+    if (mises > yield_strength_old) {
+      auto delta_eqps               = (mises - yield_strength_old) / (3 * G + Hi);
+      auto N                        = 1.5 * s / mises;
+      auto plastic_strain_increment = delta_eqps * N;
+      s -= 2.0 * G * plastic_strain_increment;
+      state.accumulated_plastic_strain += get_value(delta_eqps);
+      state.plastic_strain += get_value(plastic_strain_increment);
+      state.delta_eqps = get_value(delta_eqps);
+    }
+
+    // update stress
+    auto sigma = s + K * tr(el_strain) * Identity<3>();
+
+    // update heat flux
+    const auto q0 = -k * dtheta_dX;
+
+    return serac::tuple{sigma, C_v, src, q0};
+  }
+};
+
+}  // namespace serac::thermomechanics

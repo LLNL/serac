@@ -484,6 +484,27 @@ public:
   }
 
   /**
+   * @brief Set time-dependent displacement essential boundary conditions on a single component
+   *
+   * @param[in] disp_bdr The set of boundary attributes to set the displacement on
+   * @param[in] disp The vector function containing the set displacement values
+   * @param[in] component The component to set the displacment on
+   *
+   * u_i = disp(x, t), where x is the is the input position and t is the time. u_i is the value of
+   * the component of the applied displacement.
+   *
+   * @note This method must be called prior to completeSetup()
+   */
+  void setDisplacementBCs(const std::set<int>& disp_bdr, std::function<double(const mfem::Vector& x, double t)> disp,
+                          int component)
+  {
+    // Project the coefficient onto the grid function
+    component_disp_bdr_coef_ = std::make_shared<mfem::FunctionCoefficient>(disp);
+
+    bcs_.addEssential(disp_bdr, component_disp_bdr_coef_, displacement_.space(), component);
+  }
+
+  /**
    * @brief Set the displacement essential boundary conditions on a set of true degrees of freedom
    *
    * @param true_dofs A set of true degrees of freedom to set the displacement on

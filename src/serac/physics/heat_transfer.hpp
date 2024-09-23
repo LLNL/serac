@@ -97,6 +97,11 @@ public:
   /// integrators
   static constexpr auto NUM_STATE_VARS = 2;
 
+  /// @brief a container holding quadrature point data of the specified type
+  /// @tparam T the type of data to store at each quadrature point
+  template <typename T>
+  using qdata_type = std::shared_ptr<QuadratureData<T>>;
+
   /**
    * @brief Construct a new heat transfer object
    *
@@ -389,14 +394,14 @@ public:
     /**
      * @brief Evaluate integrand
      */
-    template <typename X, typename T, typename dT_dt, typename... Params>
-    auto operator()(double /*time*/, X x, T temperature, dT_dt dtemp_dt, Params... params) const
+    template <typename X, typename State, typename T, typename dT_dt, typename... Params>
+    auto operator()(double /*time*/, X x, State& state, T temperature, dT_dt dtemp_dt, Params... params) const
     {
       // Get the value and the gradient from the input tuple
       auto [u, du_dX] = temperature;
       auto du_dt      = get<VALUE>(dtemp_dt);
 
-      auto [heat_capacity, heat_flux] = material_(x, u, du_dX, params...);
+      auto [heat_capacity, heat_flux] = material_(state, x, u, du_dX, params...);
 
       return serac::tuple{heat_capacity * du_dt, -1.0 * heat_flux};
     }
@@ -409,7 +414,9 @@ public:
    * @brief Set the thermal material model for the physics solver
    *
    * @tparam MaterialType The thermal material type
+   * @tparam StateType the type that contains the internal variables for MaterialType
    * @param material A material containing heat capacity and thermal flux evaluation information
+   * @param qdata the buffer of material internal variables at each quadrature point
    *
    * @pre material must be a object that can be called with the following arguments:
    *    1. `tensor<T,dim> x` the spatial position of the material evaluation call
@@ -428,11 +435,14 @@ public:
    *
    * @note This method must be called prior to completeSetup()
    */
-  template <int... active_parameters, typename MaterialType>
-  void setMaterial(DependsOn<active_parameters...>, const MaterialType& material)
+  template <int... active_parameters, typename MaterialType, typename StateType = Empty>
+  void setMaterial(DependsOn<active_parameters...>, const MaterialType& material,
+                   qdata_type<StateType> qdata = EmptyQData)
   {
+    static_assert(std::is_same_v<StateType, Empty> || std::is_same_v<StateType, typename MaterialType::State>,
+                  "invalid quadrature data provided in setMaterial()");
     residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, NUM_STATE_VARS + active_parameters...>{},
-                                 ThermalMaterialIntegrand<MaterialType>(material), mesh_);
+                                 ThermalMaterialIntegrand<MaterialType>(material), mesh_, qdata);
   }
 
   /// @overload
@@ -644,6 +654,42 @@ public:
     } else {
       return std::vector<std::string>{"temperature", "temperature_rate"};
     }
+  }
+
+  /**
+   * @brief register a custom domain integral calculation as part of the residual
+   *
+   * @tparam active_parameters a list of indices, describing which parameters to pass to the q-function
+   * @tparam StateType the type that contains the internal variables (if any) for q-function
+   * @param qfunction a callable that returns a tuple of body-force and stress
+   * @param qdata the buffer of material internal variables at each quadrature point
+   *
+   * ~~~ {.cpp}
+   *
+   *  double k = 500.0;
+   *  double c = 10.0;
+   *  solid_mechanics.addCustomDomainIntegral(DependsOn<>{}, [=](auto x, auto temperature,
+   *    auto temperature_rate, auto shape_displacement){
+   *
+   *    auto dT_dx = serac::get<1>(displacement);
+   *    auto flux = -k * dT_dx;
+   *
+   *    auto dT_dt = serac::get<0>(temperature_rate);
+   *    double c = 1.0 + x[0]; // spatially-varying heat capacity
+   *
+   *    return serac::tuple{c * dT_dt, flux};
+   *  });
+   *
+   * ~~~
+   *
+   * @note This method must be called prior to completeSetup()
+   */
+  template <int... active_parameters, typename callable, typename StateType = Nothing>
+  void addCustomDomainIntegral(DependsOn<active_parameters...>, callable qfunction,
+                               qdata_type<StateType> qdata = NoQData)
+  {
+    residual_->AddDomainIntegral(Dimension<dim>{}, DependsOn<0, 1, active_parameters + NUM_STATE_VARS...>{}, qfunction,
+                                 mesh_, qdata);
   }
 
   /**
