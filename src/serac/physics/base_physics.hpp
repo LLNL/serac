@@ -345,11 +345,12 @@ public:
    * @param reaction_direction A FiniteElementState which specifies how the reactions dofs are weighted for the reaction
    * qoi
    */
-  virtual void assembleDualAdjointLoad(const std::string& dual_name, const serac::FiniteElementState& reaction_direction)
+  virtual void assembleDualAdjointLoad(const std::string&               dual_name,
+                                       const serac::FiniteElementState& reaction_direction)
   {
     (void)reaction_direction;
-    SLIC_ERROR_ROOT(axom::fmt::format("assembleDualAdjointLoad not enabled in physics module {}, dual name {} requested",
-                                      name_, dual_name));
+    SLIC_ERROR_ROOT(axom::fmt::format(
+        "assembleDualAdjointLoad not enabled in physics module {}, dual name {} requested", name_, dual_name));
   }
 
   /**

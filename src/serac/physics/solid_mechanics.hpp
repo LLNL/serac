@@ -1491,7 +1491,7 @@ public:
 
   /// @overload
   void assembleDualAdjointLoad(const std::string&               dual_name,
-                              const serac::FiniteElementState& reaction_direction) override
+                               const serac::FiniteElementState& reaction_direction) override
   {
     SLIC_ERROR_ROOT_IF(dual_name != "reactions", "Solid mechanics has reactions as its only dual");
 
