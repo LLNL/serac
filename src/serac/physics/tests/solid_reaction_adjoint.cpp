@@ -121,7 +121,9 @@ auto computeSolidMechanicsQoiSensitivities(BasePhysics& solid_solver)
 
   auto reactionDirections = createReactionDirection(solid_solver, 0);
 
-  solid_solver.computeDualAdjointLoad(solid_solver.dualNames()[0], reactionDirections);
+  FiniteElementDual zero(solid_solver.state("displacement").space(), "zero");
+  solid_solver.setAdjointLoad({{"displacement", zero}});
+  solid_solver.assembleDualAdjointLoad(solid_solver.dualNames()[0], reactionDirections);
   solid_solver.reverseAdjointTimestep();
 
   shear_modulus_sensitivity += solid_solver.computeTimestepSensitivity(0);
@@ -177,7 +179,6 @@ struct SolidMechanicsSensitivityFixture : public ::testing::Test {
   void fillDirection(FiniteElementState& direction) const
   {
     auto sz = direction.Size();
-    std::cout << "sizes = " << sz << std::endl;
     for (int i = 0; i < sz; ++i) {
       direction(i) = -1.2 + 2.02 * (double(i) / sz);
     }

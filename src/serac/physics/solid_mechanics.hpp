@@ -1338,6 +1338,33 @@ public:
   }
 
   /// @overload
+  const serac::FiniteElementDual& computeDualSensitivity(const serac::FiniteElementState& reaction_direction,
+                                                         size_t                           parameter_field) override
+  {
+    SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
+                    axom::fmt::format("Invalid parameter index '{}' requested for reaction sensitivity."));
+
+    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](time_end_step_));
+    auto drdparam_mat = assemble(drdparam);
+
+    drdparam_mat->MultTranspose(reaction_direction, *parameters_[parameter_field].sensitivity);
+
+    return *parameters_[parameter_field].sensitivity;
+  };
+
+  /// @overload
+  const serac::FiniteElementDual& computeDualShapeSensitivity(
+      const serac::FiniteElementState& reaction_direction) override
+  {
+    auto drdshape =
+        serac::get<DERIVATIVE>((*residual_)(time_end_step_, differentiate_wrt(shape_displacement_), displacement_,
+                                            acceleration_, *parameters_[parameter_indices].state...));
+    auto drdshape_mat = assemble(drdshape);
+    drdshape_mat->MultTranspose(reaction_direction, *shape_displacement_sensitivity_);
+    return *shape_displacement_sensitivity_;
+  };
+
+  /// @overload
   void reverseAdjointTimestep() override
   {
     auto& lin_solver = nonlin_solver_->linearSolver();
@@ -1463,7 +1490,7 @@ public:
   const serac::FiniteElementDual& reactions() const { return reactions_; };
 
   /// @overload
-  void computeDualAdjointLoad(const std::string&               dual_name,
+  void assembleDualAdjointLoad(const std::string&               dual_name,
                               const serac::FiniteElementState& reaction_direction) override
   {
     SLIC_ERROR_ROOT_IF(dual_name != "reactions", "Solid mechanics has reactions as its only dual");
@@ -1471,37 +1498,11 @@ public:
     auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
                                   *parameters_[parameter_indices].state...);
     std::unique_ptr<mfem::HypreParMatrix> jacobian = assemble(drdu);
-    reactions_adjoint_load_                        = 0.0;
+
+    // this is currently hard coded for the case of quasi-statics
     jacobian->MultTranspose(reaction_direction, reactions_adjoint_load_);
-    setAdjointLoad({{"displacement", reactions_adjoint_load_}});
+    displacement_adjoint_load_ -= reactions_adjoint_load_;
   }
-
-  /// @overload
-  const serac::FiniteElementDual& computeDualSensitivity(const serac::FiniteElementState& reaction_direction,
-                                                         size_t                           parameter_field) override
-  {
-    SLIC_ASSERT_MSG(parameter_field < sizeof...(parameter_indices),
-                    axom::fmt::format("Invalid parameter index '{}' requested for reaction sensitivity."));
-
-    auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](time_end_step_));
-    auto drdparam_mat = assemble(drdparam);
-
-    drdparam_mat->MultTranspose(reaction_direction, *parameters_[parameter_field].sensitivity);
-
-    return *parameters_[parameter_field].sensitivity;
-  };
-
-  /// @overload
-  const serac::FiniteElementDual& computeDualShapeSensitivity(
-      const serac::FiniteElementState& reaction_direction) override
-  {
-    auto drdshape =
-        serac::get<DERIVATIVE>((*residual_)(time_end_step_, differentiate_wrt(shape_displacement_), displacement_,
-                                            acceleration_, *parameters_[parameter_indices].state...));
-    auto drdshape_mat = assemble(drdshape);
-    drdshape_mat->MultTranspose(reaction_direction, *shape_displacement_sensitivity_);
-    return *shape_displacement_sensitivity_;
-  };
 
 protected:
   /// The compile-time finite element trial space for displacement and velocity (H1 of order p)

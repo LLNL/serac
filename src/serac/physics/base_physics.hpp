@@ -345,10 +345,10 @@ public:
    * @param reaction_direction A FiniteElementState which specifies how the reactions dofs are weighted for the reaction
    * qoi
    */
-  virtual void computeDualAdjointLoad(const std::string& dual_name, const serac::FiniteElementState& reaction_direction)
+  virtual void assembleDualAdjointLoad(const std::string& dual_name, const serac::FiniteElementState& reaction_direction)
   {
     (void)reaction_direction;
-    SLIC_ERROR_ROOT(axom::fmt::format("computeDualAdjointLoad not enabled in physics module {}, dual name {} requested",
+    SLIC_ERROR_ROOT(axom::fmt::format("assembleDualAdjointLoad not enabled in physics module {}, dual name {} requested",
                                       name_, dual_name));
   }
 
@@ -361,7 +361,7 @@ public:
    * @param parameter_index the index of the parameter
    * @return reaction sensitivity field
    *
-   * @pre `computeDualAdjointLoad' for the desired dual (reaction) and `reverseAdjointTimestep` must be called before
+   * @pre `assembleDualAdjointLoad' for the desired dual (reaction) and `reverseAdjointTimestep` must be called before
    * this
    */
   virtual const serac::FiniteElementDual& computeDualSensitivity(const serac::FiniteElementState& reaction_direction,
@@ -379,7 +379,7 @@ public:
    * qoi
    * @return reaction sensitivity field
    *
-   * @pre `computeDualAdjointLoad' for the desired dual (reaction) and `reverseAdjointTimestep` must be called before
+   * @pre `assembleDualAdjointLoad' for the desired dual (reaction) and `reverseAdjointTimestep` must be called before
    * this
    */
   virtual const serac::FiniteElementDual& computeDualShapeSensitivity(
