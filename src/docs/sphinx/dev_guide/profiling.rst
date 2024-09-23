@@ -27,7 +27,7 @@ Introduction to SPOT
 --------------------
 
 `SPOT <https://software.llnl.gov/news/2021/01/07/spot-new>`_ is a framework developed at
-LLNL for vizualizing performance data.  SPOT is an external tool and does not need to be
+LLNL for visualizing performance data.  SPOT is an external tool and does not need to be
 linked into Serac.
 
 TPL Build Instructions
@@ -121,9 +121,21 @@ with benchmarking enabled (off by default). Then, run the build target ``run_ben
   cd <serac build location>
   make -j
   make run_benchmarks
-  find . -name "*.cali" -print0 | xargs -0 mv -t .
   pwd
 
 This will run all of Serac's benchmarks multiple times with varying MPI task counts, and generate a Caliper file for
-each benchmark run. The ``find`` command afterwards ensures all Caliper files are moved to the same directory. Now, you
-can visualize the results with SPOT, entering the path printed from ``pwd``.
+each benchmark run at ``PROJECT_BINARY_DIR``. Now, you can visualize the results with SPOT, entering the path printed
+from ``pwd``.
+
+Visualizing Benchmarks using SPOT
+---------------------------------
+
+If you have access to LC, you can go to the following website and enter a directory in CZ/ RZ that contains Caliper
+files:
+
+- `SPOT CZ <https://lc.llnl.gov/spot2>`_
+- `SPOT RZ <https://rzlc.llnl.gov/spot2>`_
+
+.. note::
+  There is a bug in SPOT where if you remove Caliper files from a directory, they still show up on SPOT - if you've
+  visualized them previously. The current workaround is by removing the ``llnl.gov`` site cache manually.
