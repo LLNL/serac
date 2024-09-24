@@ -352,7 +352,7 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c>, exec> {
     constexpr auto xi = GaussLegendreNodes<q, mfem::Geometry::TETRAHEDRON>();
 
     auto x_range = RAJA::RangeSegment(0, nqpts(q));
-    RAJA::loop<threads_x>(ctx, x_range, [&](int i) {
+    RAJA::loop<typename EvaluationSpacePolicy<exec>::threads_t>(ctx, x_range, [&](int i) {
       double              phi_j      = shape_function(xi[i], j);
       tensor<double, dim> dphi_j_dxi = shape_function_gradient(xi[i], j);
 

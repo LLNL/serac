@@ -245,7 +245,7 @@ struct QOI {
  * @param block_idx index into the array of jacobians
  * @param ctx the RAJA launch context used to synchronize threads and required by the RAJA API.
  */
-template <Family f, typename T, int q, int dim>
+template <Family f, ExecutionSpace exec, typename T, int q, int dim>
 SERAC_HOST_DEVICE void parent_to_physical(tensor<T, q>& qf_input, const tensor<double, dim, dim, q>* jacobians,
                                           uint32_t block_idx, RAJA::LaunchContext ctx)
 {
@@ -254,7 +254,7 @@ SERAC_HOST_DEVICE void parent_to_physical(tensor<T, q>& qf_input, const tensor<d
 
   RAJA::RangeSegment k_range(0, BLOCK_SZ);
 
-  RAJA::loop<threads_x>(ctx, k_range, [&](int k) {
+  RAJA::loop<typename EvaluationSpacePolicy<exec>::threads_t>(ctx, k_range, [&](int k) {
     if (k >= q) {
       return;
     }
@@ -295,7 +295,7 @@ SERAC_HOST_DEVICE void parent_to_physical(tensor<T, q>& qf_input, const tensor<d
  * @param block_idx index into the array of jacobians
  * @param ctx the RAJA launch context used to synchronize threads and required by the RAJA API.
  */
-template <Family f, typename T, int q, int dim>
+template <Family f, ExecutionSpace exec, typename T, int q, int dim>
 SERAC_HOST_DEVICE void physical_to_parent(tensor<T, q>& qf_output, const tensor<double, dim, dim, q>* jacobians,
                                           uint32_t block_idx, RAJA::LaunchContext ctx)
 {
@@ -303,7 +303,7 @@ SERAC_HOST_DEVICE void physical_to_parent(tensor<T, q>& qf_output, const tensor<
   [[maybe_unused]] constexpr int FLUX   = 1;
 
   RAJA::RangeSegment k_range(0, BLOCK_SZ);
-  RAJA::loop<threads_x>(ctx, k_range, [&](int k) {
+  RAJA::loop<typename EvaluationSpacePolicy<exec>::threads_t>(ctx, k_range, [&](int k) {
     if (k >= q) {
       return;
     }

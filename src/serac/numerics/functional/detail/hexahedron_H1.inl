@@ -197,7 +197,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>, exec> {
     // A1(dz, dy, qx)  := B(qx, dx) * X_e(dz, dy, dx)
     // A2(dz, qy, qx)  := B(qy, dy) * A1(dz, dy, qx)
     // X_q(qz, qy, qx) := B(qz, dz) * A2(dz, qy, qx)
-    using threads_t                     = typename EvaluationSpacePolicy<exec>::EvaluationSpacePolicy<exec>::threads_t;
+    using threads_t                     = typename EvaluationSpacePolicy<exec>::threads_t;
     static constexpr bool apply_weights = false;
 
     RAJA::RangeSegment x_range(0, BLOCK_SZ);
@@ -309,7 +309,7 @@ struct finite_element<mfem::Geometry::CUBE, H1<p, c>, exec> {
     }
 
     constexpr int ntrial = std::max(size(source_type{}), size(flux_type{}) / dim) / c;
-    using threads_t      = typename EvaluationSpacePolicy<exec>::EvaluationSpacePolicy<exec>::threads_t;
+    using threads_t      = typename EvaluationSpacePolicy<exec>::threads_t;
     using s_buffer_type  = std::conditional_t<is_zero<source_type>{}, zero, tensor<double, q, q, q>>;
     using f_buffer_type  = std::conditional_t<is_zero<flux_type>{}, zero, tensor<double, dim, q, q, q>>;
 

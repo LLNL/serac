@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "serac/infrastructure/accelerator.hpp"
 #include "serac/serac_config.hpp"
 #include "serac/numerics/functional/tuple.hpp"
 #include "serac/numerics/functional/tensor.hpp"
@@ -249,7 +250,7 @@ auto promote_each_to_dual_when_output_helper(const tensor<T, n>&)
  * @param output_ptr pointer to output array
  * @param ctx the RAJA launch context used to synchronize threads and required by the RAJA API.
  */
-template <bool dualify, typename T, int n>
+template <bool dualify, ExecutionSpace exec, typename T, int n>
 SERAC_HOST_DEVICE void promote_each_to_dual_when(const tensor<T, n>& x, void* output_ptr,
                                                  RAJA::LaunchContext ctx = RAJA::LaunchContext{})
 {
@@ -257,12 +258,14 @@ SERAC_HOST_DEVICE void promote_each_to_dual_when(const tensor<T, n>& x, void* ou
     RAJA::RangeSegment x_range(0, n);
     using return_type      = decltype(make_dual(T{}));
     auto casted_output_ptr = static_cast<tensor<return_type, n>*>(output_ptr);
-    RAJA::loop<threads_x>(ctx, x_range, [&](int i) { (*casted_output_ptr)[i] = make_dual(x[i]); });
+    RAJA::loop<typename EvaluationSpacePolicy<exec>::threads_t>(
+        ctx, x_range, [&](int i) { (*casted_output_ptr)[i] = make_dual(x[i]); });
   }
   if constexpr (!dualify) {
     RAJA::RangeSegment x_range(0, n);
     auto               casted_output_ptr = static_cast<tensor<T, n>*>(output_ptr);
-    RAJA::loop<threads_x>(ctx, x_range, [&](int i) { (*casted_output_ptr)[i] = x[i]; });
+    RAJA::loop<typename EvaluationSpacePolicy<exec>::threads_t>(ctx, x_range,
+                                                                [&](int i) { (*casted_output_ptr)[i] = x[i]; });
   }
 }
 
