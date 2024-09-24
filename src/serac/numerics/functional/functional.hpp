@@ -293,12 +293,6 @@ public:
   {
     if (domain.GetNE() == 0) return;
 
-    // Check that Integrand is not a generic lambda.
-    class DummyArgumentType {};
-    static_assert(!std::is_invocable<Integrand, DummyArgumentType&>::value);
-    static_assert(!std::is_invocable<Integrand, DummyArgumentType*>::value);
-    static_assert(!std::is_invocable<Integrand, DummyArgumentType>::value);
-
     SLIC_ERROR_ROOT_IF(dim != domain.Dimension(), "invalid mesh dimension for domain integral");
 
     check_for_unsupported_elements(domain);
@@ -340,12 +334,6 @@ public:
   {
     auto num_bdr_elements = domain.GetNBE();
     if (num_bdr_elements == 0) return;
-
-    // Check that Integrand is not a generic lambda.
-    class DummyArgumentType {};
-    static_assert(!std::is_invocable<Integrand, DummyArgumentType&>::value);
-    static_assert(!std::is_invocable<Integrand, DummyArgumentType*>::value);
-    static_assert(!std::is_invocable<Integrand, DummyArgumentType>::value);
 
     check_for_missing_nodal_gridfunc(domain);
 
@@ -623,8 +611,7 @@ private:
 
         integral.ComputeElementGradients(K_elem, which_argument);
       }
-      int nr = 0;
-      int nc = 0;
+
       for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
         auto& K_elem             = element_gradients[type];
         auto& test_restrictions  = form_.G_test_[type].restrictions;
@@ -643,8 +630,7 @@ private:
 #else
               auto elem_matrices_host = elem_matrices;
 #endif
-              nr = elem_matrices.shape()[1];
-              nc = elem_matrices.shape()[2];
+
               for (uint32_t i = 0; i < uint32_t(elem_matrices.shape()[1]); i++) {
                 int col = int(trial_vdofs[i].index());
 
@@ -668,12 +654,7 @@ private:
 
       // Copy the column indices to an auxilliary array as MFEM can mutate these during HypreParMatrix construction
       col_ind_copy_ = lookup_tables.col_ind;
-      for (uint32_t i = 0; i < uint32_t(nr); i++) {
-        for (uint32_t j = 0; j < uint32_t(nc); j++) {
-          std::cout << values[i * uint32_t(nr) + j] << " ";
-        }
-        std::cout << std::endl;
-      }
+
       auto J_local =
           mfem::SparseMatrix(lookup_tables.row_ptr.data(), col_ind_copy_.data(), values, form_.output_L_.Size(),
                              form_.input_L_[which_argument].Size(), sparse_matrix_frees_graph_ptrs,

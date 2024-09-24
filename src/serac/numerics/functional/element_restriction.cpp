@@ -430,8 +430,8 @@ uint64_t ElementRestriction::ESize() const { return esize; }
 
 uint64_t ElementRestriction::LSize() const { return lsize; }
 
-SERAC_DEVICE DoF ElementRestriction::GetVDofDevice(DoF node, mfem::Ordering::Type ordering_, uint64_t component,
-                                                   uint64_t num_nodes_, uint64_t components_)
+SERAC_HOST_DEVICE DoF ElementRestriction::GetVDofDevice(DoF node, mfem::Ordering::Type ordering_, uint64_t component,
+                                                        uint64_t num_nodes_, uint64_t components_)
 {
   if (ordering_ == mfem::Ordering::Type::byNODES) {
     return DoF{component * num_nodes_ + node.index(), (node.sign() == 1) ? 0ull : 1ull, node.orientation()};
