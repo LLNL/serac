@@ -38,7 +38,7 @@ spack:
         mpi: [cray-mpich]
 
     # Providers
-    # NOTE: Avoid building blas or lapack providers. Compiler was treating shared object path as cpp file in MFEM, which
+    # NOTE: Avoid external blas or lapack providers. Compiler was treating shared object path as cpp file in MFEM, which
     # resulted in "expected unqualified-id" errors.
     opengl:
       buildable: false
