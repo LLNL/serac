@@ -182,7 +182,14 @@ struct ElementRestriction {
   DoF GetVDof(DoF node, uint64_t component) const;
 
   SERAC_HOST_DEVICE static DoF GetVDofDevice(DoF node, mfem::Ordering::Type ordering_, uint64_t component,
-                                             uint64_t num_nodes_, uint64_t components_);
+                                             uint64_t num_nodes_, uint64_t components_)
+  {
+    if (ordering_ == mfem::Ordering::Type::byNODES) {
+      return DoF{component * num_nodes_ + node.index(), (node.sign() == 1) ? 0ull : 1ull, node.orientation()};
+    } else {
+      return DoF{node.index() * components_ + component, (node.sign() == 1) ? 0ull : 1ull, node.orientation()};
+    }
+  }
 
   /// "L->E" in mfem parlance, each element gathers the values that belong to it, and stores them in the "E-vector"
   template <ExecutionSpace exec = ExecutionSpace::CPU>

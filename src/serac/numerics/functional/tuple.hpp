@@ -681,7 +681,6 @@ auto& operator<<(std::ostream& out, const serac::tuple<T...>& A)
  * @tparam T The tuple types
  * @tparam i The integer sequence to i
  * @param A the tensor to print
- * @param (anonymous) integer sequence representing 1, ..., sizeof...(tuple)
 */
 template <typename... T, size_t... i>
 SERAC_HOST_DEVICE void print(const serac::tuple<T...>& A, std::integer_sequence<size_t, i...>)

@@ -1451,48 +1451,59 @@ SERAC_HOST_DEVICE constexpr auto deduce_contract_return_type(const zero&, const 
 }
 
 // TODO(bowen): Figure out using decltype vs helper structs for shared memory buffers
-// template<int i1, int i2, typename... T>
-// class contract_type {
-//
-//};
+/* template<int i1, int i2, typename... T>
+ class contract_type {
 
-// template <int i1, int i2, typename S, int m, typename T, int p, int q, int... n>
-// class contract_type<i1, i2, tensor<S, m, n...>,  tensor<T, p, q>> {
-// SERAC_HOST_DEVICE contract_type(const tensor<S, m, n...>&, const tensor<T, p, q>&) {}
-//
-//   static constexpr int Adims[] = {m, n...};
-//   static constexpr int Bdims[] = {p, q};
-//   static_assert(sizeof...(n) < 3);
-//   static_assert(Adims[i1] == Bdims[i2], "error: incompatible tensor dimensions");
-//
-//   // first, we have to figure out the dimensions of the output tensor
-//   static constexpr int new_dim = (i2 == 0) ? q : p;
-//   static constexpr int d1      = (i1 == 0) ? new_dim : Adims[0];
-//   static constexpr int d2      = (i1 == 1) ? new_dim : Adims[1];
-//   static constexpr int d3      = sizeof...(n) == 1 ? 0 : ((i1 == 2) ? new_dim : Adims[2]);
-//   using U               = decltype(S{} * T{});
-//   // if constexpr (d3 == 0) {
-//   //   return serac::tensor<U, d1, d2>{};
-//   // }
-// public:
-//   using type = typename std::conditional<d3 == 0, tensor<U, d1, d2>, tensor<U, d1, d2, d3>>::type;
-// };
+};
 
-// template </*int i1, int i2,*/ typename S, int m, typename T, int p, int q, int... n>
-// contract_type(tensor<S, m, n...>,  tensor<T, p, q>) -> contract_type<1, 1, tensor<S, m, n...>,  tensor<T, p, q>>;
-//
-// template<int i1, int i2, typename S>
-// struct contract_type<i1, i2, zero, S> {
-//   SERAC_HOST_DEVICE contract_type(const zero&, const S&) {}
-//   using type = zero;
-// };
-//
-// template<int i1, int i2, typename S>
-// struct contract_type<i1, i2, S, zero> {
-//   SERAC_HOST_DEVICE contract_type(const S&, const zero&) {}
-//   using type = zero;
-// };
+ template <int i1, int i2, typename S, int m, typename T, int p, int q, int... n>
+ class contract_type<i1, i2, tensor<S, m, n...>,  tensor<T, p, q>> {
+ SERAC_HOST_DEVICE contract_type(const tensor<S, m, n...>&, const tensor<T, p, q>&) {}
 
+   static constexpr int Adims[] = {m, n...};
+   static constexpr int Bdims[] = {p, q};
+   static_assert(sizeof...(n) < 3);
+   static_assert(Adims[i1] == Bdims[i2], "error: incompatible tensor dimensions");
+
+   // first, we have to figure out the dimensions of the output tensor
+   static constexpr int new_dim = (i2 == 0) ? q : p;
+   static constexpr int d1      = (i1 == 0) ? new_dim : Adims[0];
+   static constexpr int d2      = (i1 == 1) ? new_dim : Adims[1];
+   static constexpr int d3      = sizeof...(n) == 1 ? 0 : ((i1 == 2) ? new_dim : Adims[2]);
+   using U               = decltype(S{} * T{});
+   // if constexpr (d3 == 0) {
+   //   return serac::tensor<U, d1, d2>{};
+   // }
+ public:
+   using type = typename std::conditional<d3 == 0, tensor<U, d1, d2>, tensor<U, d1, d2, d3>>::type;
+ };
+
+ template <int i1, int i2, typename S, int m, typename T, int p, int q, int... n>
+ contract_type(tensor<S, m, n...>,  tensor<T, p, q>) -> contract_type<1, 1, tensor<S, m, n...>,  tensor<T, p, q>>;
+
+ template<int i1, int i2, typename S>
+ struct contract_type<i1, i2, zero, S> {
+   SERAC_HOST_DEVICE contract_type(const zero&, const S&) {}
+   using type = zero;
+ };
+
+ template<int i1, int i2, typename S>
+ struct contract_type<i1, i2, S, zero> {
+   SERAC_HOST_DEVICE contract_type(const S&, const zero&) {}
+   using type = zero;
+ };
+ */
+
+/**
+ * @brief When deducing the result of a sum of contractions, e.g. the type
+ *   using type = decltype(contract(A, B) + contract(C, D))
+ *   it is necessary to determine if both contractions result in a zero tensor.
+ *   This simple struct returns has
+ *          type = zero if S and T are identically zero
+ *          type = S if T is zero
+ *          type = T if S is zero
+ *          type = S if neither is zero (S == T always in thius case)
+ */
 template <typename S, typename T>
 struct is_zero_and {
 private:
@@ -1504,6 +1515,32 @@ public:
   using type = typename std::conditional<is_S_zero && is_T_zero, zero, helper_t>::type;
 };
 
+/**
+ * @brief a convenience function that computes a dot product between
+ * two tensors, and allows the user to specify which indices to summed
+ * over.  This overload is void, and accepts a pointer to the resultant
+ * tensor.  Useful for GPU execution, where buffers must be filled
+ * manuall.
+ *
+ * @tparam i1 the index of contraction for the left operand
+ * @tparam i2 the index of contraction for the right operand
+ * @tparam S the datatype stored in the left operand
+ * @tparam m leading dimension of the left operand
+ * @tparam n the trailing dimensions of the left operand
+ * @tparam T the datatype stored in the right operand
+ * @tparam p the number of rows in the right operand
+ * @tparam q the number of columns in the right operand
+ * @tparam n0 the first dimension of the result
+ * @tparam n1 the second dimension of the result
+ * @tparam n2 the third dimension of the result
+ * @param A the left operand
+ * @param B the right operand
+ * @param C the result
+ * @param qx thread index for GPU backends
+ * @param qy thread index for GPU backends
+ * @param qz thread index for GPU backends
+ * @param accumulate control whether contract adds the result to C, or sets C.
+ */
 template <int l1, int l2, typename S, int m, typename T, int p, int q, int n0, int n1, int n2, int... n>
 SERAC_HOST_DEVICE void contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B, tensor<S, n0, n1, n2>* C, int qx,
                                 int qy, int qz, bool accumulate = false)
@@ -1549,6 +1586,7 @@ SERAC_HOST_DEVICE void contract(const tensor<S, m, n...>& A, const tensor<T, p, 
   }
 }
 
+/// @overload
 template <int l1, int l2, typename T, int p, int q>
 SERAC_HOST_DEVICE void contract(const zero&, const tensor<T, p, q>&, zero*, int, int, int,
                                 [[maybe_unused]] bool accumulate = false)
@@ -1556,6 +1594,7 @@ SERAC_HOST_DEVICE void contract(const zero&, const tensor<T, p, q>&, zero*, int,
   return;
 }
 
+/// @overload
 template <int l1, int l2>
 SERAC_HOST_DEVICE void contract(const zero&, const zero&, zero*, int, int, int,
                                 [[maybe_unused]] bool accumulate = false)
@@ -1563,6 +1602,7 @@ SERAC_HOST_DEVICE void contract(const zero&, const zero&, zero*, int, int, int,
   return;
 }
 
+/// @overload
 template <int l1, int l2, typename T, int... n>
 SERAC_HOST_DEVICE void contract(const tensor<T, n...>&, const zero&, zero*, int, int, int,
                                 [[maybe_unused]] bool accumulate = false)
@@ -1570,6 +1610,7 @@ SERAC_HOST_DEVICE void contract(const tensor<T, n...>&, const zero&, zero*, int,
   return;
 }
 
+/// @overload
 template <int l1, int l2, typename S, typename T, int p, int q, int n0, int n1, int n2>
 SERAC_HOST_DEVICE void contract(const zero&, const tensor<T, p, q>&, tensor<S, n0, n1, n2>*, int, int, int,
                                 [[maybe_unused]] bool accumulate = false)
@@ -1882,11 +1923,28 @@ SERAC_HOST_DEVICE void print_shape(const tensor<T, m, n...>&)
   printf(" ]\n");
 }
 
+/**
+ * @brief helper function for setting a tensor to zero on GPU
+ * @param[in] A the tensor
+ * @param qx thread index
+ * @param qy thread index
+ * @param qz thread index
+ */
+template <typename T, int m, int... n>
+SERAC_HOST_DEVICE void memset_tensor(tensor<T, m, n...>& A, T value, int qx, int qy, int qz)
+{
+  for (int i = 0; i < m; ++i) {
+    memset_tensor(A[i], value, qx, qy, qz);
+  }
+}
+
+/// @overload
 template <typename T>
 SERAC_HOST_DEVICE void memset_tensor(serac::zero&, T, int, int, int)
 {
 }
 
+/// @overload
 template <typename T, int m, int n>
 SERAC_HOST_DEVICE void memset_tensor(tensor<T, m, n>& A, T value, int qx, int qy, int)
 {
@@ -1895,19 +1953,12 @@ SERAC_HOST_DEVICE void memset_tensor(tensor<T, m, n>& A, T value, int qx, int qy
   }
 }
 
+/// @overload
 template <typename T, int m, int n, int l>
 SERAC_HOST_DEVICE void memset_tensor(tensor<T, m, n, l>& A, T value, int qx, int qy, int qz)
 {
   if (qx < m && qy < n && qz < l) {
     A(qx, qy, qz) = value;
-  }
-}
-
-template <typename T, int m, int... n>
-SERAC_HOST_DEVICE void memset_tensor(tensor<T, m, n...>& A, T value, int qx, int qy, int qz)
-{
-  for (int i = 0; i < m; ++i) {
-    memset_tensor(A[i], value, qx, qy, qz);
   }
 }
 

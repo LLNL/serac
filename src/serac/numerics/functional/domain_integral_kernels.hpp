@@ -66,11 +66,15 @@ struct QFunctionArgument<Hcurl<p>, Dimension<3>> {
   using type = tuple<tensor<double, 3>, tensor<double, 3>>;  ///< what will be passed to the q-function
 };
 
-template <bool is_QOI, typename derivative_type, int n, typename T>
-struct BatchApplyChainRule {
-  using type = tensor<decltype(chain_rule<is_QOI>(derivative_type{}, T{})), n>;
-};
-
+/**
+ *  @tparam lambda the qfunction type
+ *  @tparam state_type describes state type, if there is one
+ *  @tparam dim describes whether the problem is 1D, 2D, or 3D
+ *  @tparam n length of output tensor
+ *  @tparam T... extra args
+ *
+ *  @brief a struct used to deduce the return type of a q-function.
+ */
 template <typename lambda, typename state_type, int dim, int n, typename... T>
 struct QFunctionOutput {
   using position_type = serac::tuple<tensor<double, dim>, tensor<double, dim, dim>>;
@@ -81,6 +85,7 @@ struct QFunctionOutput {
   }
 };
 
+/// @overload
 template <typename lambda, int dim, int n, typename... T>
 struct QFunctionOutput<lambda, Nothing, dim, n, T...> {
   using position_type = serac::tuple<tensor<double, dim>, tensor<double, dim, dim>>;
