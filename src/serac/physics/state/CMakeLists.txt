@@ -18,7 +18,7 @@ set(state_sources
     )
 
 set(state_depends serac_infrastructure serac_functional)
-blt_list_append(TO state_depends ELEMENTS cuda IF ENABLE_CUDA)
+blt_list_append(TO state_depends ELEMENTS serac_device_depends)
 
 blt_add_library(
     NAME        serac_state

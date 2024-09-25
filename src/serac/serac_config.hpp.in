@@ -26,6 +26,7 @@
 #cmakedefine SERAC_DEBUG
 
 #cmakedefine SERAC_USE_CUDA
+#cmakedefine SERAC_USE_HIP
 
 // Compiler defines for TPLs
 #cmakedefine SERAC_USE_ADIAK

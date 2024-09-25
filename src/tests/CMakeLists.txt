@@ -17,18 +17,22 @@ set(language_depends
     mfem
     blt::mpi)
 
-blt_list_append(TO language_depends ELEMENTS blt::openmp IF ENABLE_OPENMP)
+blt_list_append(TO language_depends ELEMENTS blt::openmp IF SERAC_ENABLE_OPENMP)
 
 serac_add_tests( SOURCES    ${language_tests}
                  DEPENDS_ON ${language_depends})
 
-if(ENABLE_CUDA)
+if(SERAC_ENABLE_CUDA)
     blt_add_library( NAME       cuda_smoketest_kernel
                      SOURCES    cuda_smoketest_kernel.cpp 
-                     DEPENDS_ON blt::cuda)
+                     DEPENDS_ON serac_device_depends)
 
     serac_add_tests( SOURCES    cuda_smoketest.cpp
                      DEPENDS_ON cuda_smoketest_kernel gtest)
+endif()
+
+if(SERAC_ENABLE_HIP)
+    # TODO add a hip smoketest
 endif()
 
 #
