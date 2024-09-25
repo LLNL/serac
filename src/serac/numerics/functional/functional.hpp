@@ -621,15 +621,10 @@ private:
           for (auto [geom, elem_matrices] : K_elem) {
             std::vector<DoF> test_vdofs(test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components);
             std::vector<DoF> trial_vdofs(trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components);
-
+            axom::Array<double, 3, axom::MemorySpace::Host> elem_matrices_host = elem_matrices;
             for (axom::IndexType e = 0; e < elem_matrices.shape()[0]; e++) {
               test_restrictions[geom].GetElementVDofs(e, test_vdofs);
               trial_restrictions[geom].GetElementVDofs(e, trial_vdofs);
-#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
-              axom::Array<double, 3, axom::MemorySpace::Host> elem_matrices_host = elem_matrices;
-#else
-              auto elem_matrices_host = elem_matrices;
-#endif
 
               for (uint32_t i = 0; i < uint32_t(elem_matrices.shape()[1]); i++) {
                 int col = int(trial_vdofs[i].index());

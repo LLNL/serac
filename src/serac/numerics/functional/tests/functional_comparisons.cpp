@@ -255,7 +255,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   std::unique_ptr<mfem::HypreParVector> F(f.ParallelAssemble());
 
   mfem::ParGridFunction u_global(fespace.get());
-  u_global.Randomize(42);
+  u_global.Randomize();
 
   mfem::Vector U(fespace->TrueVSize());
   u_global.GetTrueDofs(U);
