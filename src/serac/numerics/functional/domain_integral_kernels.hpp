@@ -77,7 +77,12 @@ struct QFunctionArgument<Hcurl<p>, Dimension<3>> {
  */
 template <typename lambda, typename state_type, int dim, int n, typename... T>
 struct QFunctionOutput {
+  /// @brief Typedef for the position argument of a qf func
   using position_type = serac::tuple<tensor<double, dim>, tensor<double, dim, dim>>;
+  /// @brief static method for deducing the return type of a given qf function.
+  /// Many objects of type lambda are actually functors that aren't trivially
+  /// constructable with closed brace constructor {}, so qf must be passed in
+  /// to a function.
   static auto get_type(const lambda& qf)
   {
     state_type state_l_value{};
@@ -88,7 +93,11 @@ struct QFunctionOutput {
 /// @overload
 template <typename lambda, int dim, int n, typename... T>
 struct QFunctionOutput<lambda, Nothing, dim, n, T...> {
+  /// @brief Typedef for the position argument of a qf func
   using position_type = serac::tuple<tensor<double, dim>, tensor<double, dim, dim>>;
+  /// @brief This method is identical to the above get_type method but doesn't
+  /// trivially construct a state, because this partial specialization is for
+  /// Nothing type states.
   static auto get_type(const lambda& qf) { return tensor<decltype(qf(double{}, position_type{}, T{}[0]...)), n>{}; }
 };
 

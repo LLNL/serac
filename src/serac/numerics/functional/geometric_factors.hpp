@@ -83,9 +83,9 @@ struct GeometricFactors {
    * @brief calculate positions and jacobians for quadrature points belonging to
    * elements with the specified geometry, belonging to the provided mesh.
    *
-   * @param domain the domain of integration
+   * @param d the domain of integration
    * @param q a parameter controlling the number of quadrature points per element
-   * @param elem_geom which kind of element geometry to select
+   * @param g which kind of element geometry to select
    */
   GeometricFactors(const Domain& d, int q, mfem::Geometry::Type g)
   {
@@ -169,9 +169,9 @@ struct GeometricFactors {
    * @brief calculate positions and jacobians for quadrature points belonging to
    * boundary elements with the specified geometry, belonging to the provided mesh.
    *
-   * @param domain the domain of integration
+   * @param d the domain of integration
    * @param q a parameter controlling the number of quadrature points per element
-   * @param elem_geom which kind of element geometry to select
+   * @param g which kind of element geometry to select
    * @param type whether or not the faces are on the boundary (supported) or interior (unsupported)
    */
   GeometricFactors(const Domain& d, int q, mfem::Geometry::Type g, FaceType type)

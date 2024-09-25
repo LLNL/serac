@@ -77,29 +77,31 @@ enum class ExecutionSpace
 template <ExecutionSpace exec>
 struct EvaluationSpacePolicy;
 
-/**
- * @brief Specialization for CPU
- */
+/// @overload
 template <>
 struct EvaluationSpacePolicy<ExecutionSpace::CPU> {
+  /// @brief Alias for loop policy.
   using threads_t = RAJA::LoopPolicy<RAJA::seq_exec>;
-  /// @brief Alias for number of teams for GPU kernel launches.
+  /// @brief Alias for number of teams for CPU kernel launches.
   using teams_t = RAJA::LoopPolicy<RAJA::seq_exec>;
-  /// @brief Alias for GPU kernel launch policy.
+  /// @brief Alias for CPU kernel launch policy.
   using launch_t = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
+  /// @brief Alias for forall policy.
   using forall_t = RAJA::seq_exec;
 };
 
 #if defined(__CUDACC__)
-/**
- * @brief Specialization for GPU
- */
+/// @overload
 template <>
 struct EvaluationSpacePolicy<ExecutionSpace::GPU> {
+  /// @brief Alias for loop policy.
   using threads_t = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
-  using teams_t   = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
-  using launch_t  = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
-  using forall_t  = RAJA::cuda_exec<128>;
+  /// @brief Alias for number of teams for GPU kernel launches.
+  using teams_t = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
+  /// @brief Alias for GPU kernel launch policy.
+  using launch_t = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
+  /// @brief Alias for forall policy.
+  using forall_t = RAJA::cuda_exec<128>;
 };
 #endif
 
@@ -129,18 +131,21 @@ SERAC_HOST_DEVICE void suppress_capture_warnings(T...)
 /// @overload
 template <>
 struct execution_to_memory<ExecutionSpace::CPU> {
+  /// @brief axom memory space corresponding to ExecutionSpace
   static constexpr axom::MemorySpace value = axom::MemorySpace::Host;
 };
 
 /// @overload
 template <>
 struct execution_to_memory<ExecutionSpace::GPU> {
+  /// @brief axom memory space corresponding to ExecutionSpace
   static constexpr axom::MemorySpace value = axom::MemorySpace::Device;
 };
 
 /// @overload
 template <>
 struct execution_to_memory<ExecutionSpace::Dynamic> {
+  /// @brief axom memory space corresponding to ExecutionSpace
   static constexpr axom::MemorySpace value = axom::MemorySpace::Unified;
 };
 

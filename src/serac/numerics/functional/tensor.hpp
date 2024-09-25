@@ -1512,6 +1512,7 @@ private:
   using helper_t                  = typename std::conditional<is_S_zero, T, S>::type;
 
 public:
+  /// @brief type corresponding to the rules described in brief above.
   using type = typename std::conditional<is_S_zero && is_T_zero, zero, helper_t>::type;
 };
 
@@ -1913,7 +1914,6 @@ SERAC_HOST_DEVICE void print(const tensor<T, m, n...>& A)
 
 /**
  * @brief print a tensor's shape using printf for use inside CUDA kenels
- * @param[in] A the tensor whose shape to print.
  */
 template <typename T, int m, int... n>
 SERAC_HOST_DEVICE void print_shape(const tensor<T, m, n...>&)
@@ -1924,8 +1924,9 @@ SERAC_HOST_DEVICE void print_shape(const tensor<T, m, n...>&)
 }
 
 /**
- * @brief helper function for setting a tensor to zero on GPU
+ * @brief helper function for setting a tensor to a value on GPU
  * @param[in] A the tensor
+ * @param value to fill tensor
  * @param qx thread index
  * @param qy thread index
  * @param qz thread index

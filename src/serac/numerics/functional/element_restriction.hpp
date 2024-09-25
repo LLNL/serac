@@ -181,6 +181,15 @@ struct ElementRestriction {
 
   DoF GetVDof(DoF node, uint64_t component) const;
 
+  /**
+   * @brief Static version of GetVDof for device code.
+   *
+   * @param node to get vdofs
+   * @param ordering_ elemtn ordering type to be provided from ElementRestriction struct
+   * @param component component idx to be provided from ElementRestriction struct
+   * @param num_nodes_ number of nodes in ElementRestriction
+   * @param components_ ordering to be provided from ElementRestriction struct
+   */
   SERAC_HOST_DEVICE static DoF GetVDofDevice(DoF node, mfem::Ordering::Type ordering_, uint64_t component,
                                              uint64_t num_nodes_, uint64_t components_)
   {
