@@ -62,7 +62,7 @@ spack:
     cray-mpich:
       buildable: false
       externals:
-      - spec: cray-mpich@8.1.27
+      - spec: cray-mpich@8.1.27+slurm
         prefix: /usr/tce/packages/cray-mpich-tce/cray-mpich-8.1.27-rocmcc-5.7.1/
 
     # ROCm
