@@ -119,7 +119,7 @@ public:
       // See https://github.com/mfem/mfem/issues/3531
       mfem::Vector r_blk(r, 0, displacement_.Size());
       r_blk = res;
-      mfem::Vector uPlusShapeDisp(u.Size());
+      serac::FiniteElementState uPlusShapeDisp(shape_displacement_.space(), "u_plus_shape_disp");
       uPlusShapeDisp = u;
       uPlusShapeDisp.Add(1.0, shape_displacement_);
 
@@ -141,7 +141,7 @@ public:
                                           *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
 
-            mfem::Vector uPlusShapeDisp(u.Size());
+            serac::FiniteElementState uPlusShapeDisp(shape_displacement_.space(), "u_plus_shape_disp");
             uPlusShapeDisp = u;
             uPlusShapeDisp.Add(1.0, shape_displacement_);
 
@@ -181,7 +181,7 @@ public:
                                           *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
 
-            mfem::Vector uPlusShapeDisp(u.Size());
+            serac::FiniteElementState uPlusShapeDisp(shape_displacement_.space(), "u_plus_shape_disp");
             uPlusShapeDisp = u;
             uPlusShapeDisp.Add(1.0, shape_displacement_);
 
@@ -279,7 +279,7 @@ protected:
                                   *parameters_[parameter_indices].state...);
     auto jacobian  = assemble(drdu);
 
-    mfem::Vector uPlusShapeDisp(displacement_.Size());
+    serac::FiniteElementState uPlusShapeDisp(shape_displacement_.space(), "u_plus_shape_disp");
     uPlusShapeDisp = displacement_;
     uPlusShapeDisp.Add(1.0, shape_displacement_);
 
@@ -306,7 +306,7 @@ protected:
 
     auto drdshape_mat = assemble(drdshape);
 
-    mfem::Vector uPlusShapeDisp(displacement_.Size());
+    serac::FiniteElementState uPlusShapeDisp(shape_displacement_.space(), "u_plus_shape_disp");
     uPlusShapeDisp = displacement_;
     uPlusShapeDisp.Add(1.0, shape_displacement_);
 
