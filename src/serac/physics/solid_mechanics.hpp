@@ -1768,8 +1768,6 @@ protected:
 
     displacement_ += du_;
   }
-
-
 };
 
 }  // namespace serac
