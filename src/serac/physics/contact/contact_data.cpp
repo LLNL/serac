@@ -226,7 +226,7 @@ std::unique_ptr<mfem::BlockOperator> ContactData::mergedJacobian() const
   return block_J;
 }
 
-void ContactData::residualFunction(const mfem::Vector& u, mfem::Vector& r)
+void ContactData::residualFunction(const mfem::Vector& u_shape, const mfem::Vector& u, mfem::Vector& r)
 {
   const int disp_size = reference_nodes_->ParFESpace()->GetTrueVSize();
 
@@ -239,7 +239,7 @@ void ContactData::residualFunction(const mfem::Vector& u, mfem::Vector& r)
   mfem::Vector r_blk(r, 0, disp_size);
   mfem::Vector g_blk(r, disp_size, numPressureDofs());
 
-  setDisplacements(u_blk);
+  setDisplacements(u_shape, u_blk);
   // we need to call update first to update gaps
   update(cycle_, time_, dt_);
   // with updated gaps, we can update pressure for contact interactions with penalty enforcement
@@ -253,14 +253,8 @@ void ContactData::residualFunction(const mfem::Vector& u, mfem::Vector& r)
   g_blk.Set(1.0, mergedGaps(true));
 }
 
-std::unique_ptr<mfem::BlockOperator> ContactData::jacobianFunction(const mfem::Vector&   u,
-                                                                   mfem::HypreParMatrix* orig_J) const
+std::unique_ptr<mfem::BlockOperator> ContactData::jacobianFunction(mfem::HypreParMatrix* orig_J) const
 {
-  // u_const should not change in this method; const cast is to create vector views which are used to compute the
-  // (non-contact) Jacobian
-  auto&              u_const = const_cast<mfem::Vector&>(u);
-  const mfem::Vector u_blk(u_const, 0, reference_nodes_->ParFESpace()->GetTrueVSize());
-
   auto J_contact = mergedJacobian();
   if (J_contact->IsZeroBlock(0, 0)) {
     J_contact->SetBlock(0, 0, orig_J);
@@ -295,10 +289,14 @@ void ContactData::setPressures(const mfem::Vector& merged_pressures) const
   }
 }
 
-void ContactData::setDisplacements(const mfem::Vector& u)
+void ContactData::setDisplacements(const mfem::Vector& shape_u, const mfem::Vector& u)
 {
+  mfem::ParGridFunction prolonged_shape_disp{current_coords_};
   reference_nodes_->ParFESpace()->GetProlongationMatrix()->Mult(u, current_coords_);
+  reference_nodes_->ParFESpace()->GetProlongationMatrix()->Mult(shape_u, prolonged_shape_disp);
+
   current_coords_ += *reference_nodes_;
+  current_coords_ += prolonged_shape_disp;
 }
 
 void ContactData::updateDofOffsets() const

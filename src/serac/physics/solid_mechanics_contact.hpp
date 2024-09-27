@@ -119,11 +119,8 @@ public:
       // See https://github.com/mfem/mfem/issues/3531
       mfem::Vector r_blk(r, 0, displacement_.Size());
       r_blk = res;
-      serac::FiniteElementState uPlusShapeDisp(shape_displacement_.space(), "u_plus_shape_disp");
-      uPlusShapeDisp = u;
-      uPlusShapeDisp.Add(1.0, shape_displacement_);
 
-      contact_.residualFunction(uPlusShapeDisp, r);
+      contact_.residualFunction(shape_displacement_, u, r);
       r_blk.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
     };
     // This if-block below breaks up building the Jacobian operator depending if there is Lagrange multiplier
@@ -141,12 +138,8 @@ public:
                                           *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
 
-            serac::FiniteElementState uPlusShapeDisp(shape_displacement_.space(), "u_plus_shape_disp");
-            uPlusShapeDisp = u;
-            uPlusShapeDisp.Add(1.0, shape_displacement_);
-
             // create block operator holding jacobian contributions
-            J_constraint_ = contact_.jacobianFunction(uPlusShapeDisp, J_.release());
+            J_constraint_ = contact_.jacobianFunction(J_.release());
 
             // take ownership of blocks
             J_constraint_->owns_blocks = false;
@@ -181,12 +174,8 @@ public:
                                           *parameters_[parameter_indices].state...);
             J_             = assemble(drdu);
 
-            serac::FiniteElementState uPlusShapeDisp(shape_displacement_.space(), "u_plus_shape_disp");
-            uPlusShapeDisp = u;
-            uPlusShapeDisp.Add(1.0, shape_displacement_);
-
             // get 11-block holding jacobian contributions
-            auto block_J         = contact_.jacobianFunction(uPlusShapeDisp, J_.release());
+            auto block_J         = contact_.jacobianFunction(J_.release());
             block_J->owns_blocks = false;
             J_ = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&block_J->GetBlock(0, 0)));
 
@@ -279,11 +268,7 @@ protected:
                                   *parameters_[parameter_indices].state...);
     auto jacobian  = assemble(drdu);
 
-    serac::FiniteElementState uPlusShapeDisp(shape_displacement_.space(), "u_plus_shape_disp");
-    uPlusShapeDisp = displacement_;
-    uPlusShapeDisp.Add(1.0, shape_displacement_);
-
-    auto block_J         = contact_.jacobianFunction(uPlusShapeDisp, jacobian.release());
+    auto block_J         = contact_.jacobianFunction(jacobian.release());
     block_J->owns_blocks = false;
     jacobian = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&block_J->GetBlock(0, 0)));
     auto J_T = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
@@ -306,11 +291,7 @@ protected:
 
     auto drdshape_mat = assemble(drdshape);
 
-    serac::FiniteElementState uPlusShapeDisp(shape_displacement_.space(), "u_plus_shape_disp");
-    uPlusShapeDisp = displacement_;
-    uPlusShapeDisp.Add(1.0, shape_displacement_);
-
-    auto block_J         = contact_.jacobianFunction(uPlusShapeDisp, drdshape_mat.release());
+    auto block_J         = contact_.jacobianFunction(drdshape_mat.release());
     block_J->owns_blocks = false;
     drdshape_mat = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&block_J->GetBlock(0, 0)));
 
