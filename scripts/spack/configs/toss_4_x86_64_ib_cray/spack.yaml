@@ -70,7 +70,7 @@ spack:
       buildable: false
       externals:
       - spec: hip@5.7.1
-        prefix: /opt/rocm-5.7.1/
+        prefix: /opt/rocm-5.7.1/hip
     hipblas:
       buildable: false
       externals:
@@ -329,7 +329,7 @@ spack:
     adiak:
       require: "@0.4.0"
     caliper:
-      require: "@2.10.0~kokkos"
+      require: "@2.10.0~kokkos+shared"
     camp:
       require: "@2024.02.0"
     conduit:

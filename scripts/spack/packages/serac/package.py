@@ -181,10 +181,14 @@ class Serac(CachedCMakePackage, CudaPackage, ROCmPackage):
     depends_on("sundials build_type=Debug".format(dep), when="+sundials build_type=Debug".format(dep))
 
     # Optional (require when="+profile")
-    for dep in ["adiak", "caliper"]:
-        depends_on("{0} build_type=Debug".format(dep), when="+profiling build_type=Debug")
-        depends_on("{0}+shared".format(dep), when="+profiling+shared")
-        depends_on("{0}~shared".format(dep), when="+profiling~shared")
+    depends_on("adiak build_type=Debug".format(dep), when="+profiling build_type=Debug")
+    depends_on("adiak+shared".format(dep), when="+profiling+shared")
+    depends_on("adiak~shared".format(dep), when="+profiling~shared")
+
+    # Don't propagate ~shared to caliper in rocm builds
+    depends_on("caliper build_type=Debug".format(dep), when="+profiling build_type=Debug")
+    depends_on("caliper+shared".format(dep), when="+profiling+shared")
+    depends_on("caliper~shared".format(dep), when="+profiling~shared~rocm")
 
     # Required
     for dep in ["axom", "hdf5", "metis", "parmetis", "superlu-dist"]:
@@ -192,7 +196,7 @@ class Serac(CachedCMakePackage, CudaPackage, ROCmPackage):
         depends_on("{0}+shared".format(dep), when="+shared")
         depends_on("{0}~shared".format(dep), when="~shared")
 
-    # Don't propagate shared to conduit, since it doesn't concretize in rocm builds
+    # Don't propagate +shared to conduit, since it doesn't concretize in rocm builds
     depends_on("conduit build_type=Debug".format(dep), when="build_type=Debug")
 
     # Optional packages that are controlled by variants
@@ -377,11 +381,11 @@ class Serac(CachedCMakePackage, CudaPackage, ROCmPackage):
         if "+rocm" in spec:
             entries.append(cmake_cache_option("ENABLE_HIP", True))
 
-            rocm_root = spec["rocm-core"].prefix
+            hip_root = spec["hip"].prefix
 
             # Additional libraries for TOSS4
-            hip_link_flags = " -L{0}/lib64 -Wl,-rpath,{0}/lib64 ".format(rocm_root)
-            hip_link_flags += " -L{0}/lib -Wl,-rpath,{0}/lib ".format(rocm_root)
+            hip_link_flags = " -L{0}/../lib64 -Wl,-rpath,{0}/../lib64 ".format(hip_root)
+            hip_link_flags += " -L{0}/../lib -Wl,-rpath,{0}/../lib ".format(hip_root)
             hip_link_flags += "-lamd_comgr -lhsa-runtime64 "
 
             entries.append(cmake_cache_string("CMAKE_EXE_LINKER_FLAGS", hip_link_flags))
