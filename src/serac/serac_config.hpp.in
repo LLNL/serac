@@ -22,6 +22,10 @@
 #define SERAC_REPO_DIR "@SERAC_REPO_DIR@"
 #define SERAC_BIN_DIR "@SERAC_BIN_DIR@"
 
+// Compiler Information
+#define SERAC_COMPILER_NAME "@CMAKE_CXX_COMPILER_ID@"
+#define SERAC_COMPILER_VERSION "@CMAKE_CXX_COMPILER_VERSION@"
+
 // General defines
 #cmakedefine SERAC_DEBUG
 

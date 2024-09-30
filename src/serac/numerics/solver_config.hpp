@@ -393,6 +393,9 @@ struct NonlinearSolverOptions {
   /// Debug print level
   int print_level = 0;
 
+  /// Scaling for the initial trust region size
+  double trust_region_scaling = 0.1;
+
   /// Should the gradient be converted to a monolithic matrix
   bool force_monolithic = false;
 };
