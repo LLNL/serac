@@ -505,7 +505,7 @@ public:
     settings.min_cg_iterations                          = static_cast<size_t>(nonlinear_options.min_iterations);
     settings.max_cg_iterations                          = static_cast<size_t>(linear_options.max_iterations);
     settings.cg_tol                                     = 0.5 * norm_goal;
-    double tr_size                                      = 0.1 * std::sqrt(X.Size());
+    double tr_size                                      = nonlinear_options.trust_region_scaling * std::sqrt(X.Size());
     size_t cumulative_cg_iters_from_last_precond_update = 0;
 
     auto& d  = trResults.d;   // reuse, maybe dangerous!

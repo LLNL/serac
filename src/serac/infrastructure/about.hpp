@@ -49,4 +49,11 @@ void printRunInfo();
  */
 std::string version(bool add_SHA = true);
 
+/**
+ * @brief Returns a string for the current compiler name and version
+ *
+ * @return string value of the the current compiler name and version
+ */
+std::string compiler();
+
 }  // namespace serac
