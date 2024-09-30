@@ -56,6 +56,7 @@ TEST_P(ContactTest, patch)
   // #ifdef MFEM_USE_STRUMPACK
   LinearSolverOptions linear_options{.linear_solver = LinearSolver::Strumpack, .print_level = 1};
 #else
+  LinearSolverOptions linear_options{};
   SLIC_INFO_ROOT("Contact requires MFEM built with strumpack.");
   return;
 #endif
