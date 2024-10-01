@@ -76,11 +76,6 @@ spack:
       externals:
       - spec: hipblas@5.7.1
         prefix: /opt/rocm-5.7.1/
-    hipsolver:
-      buildable: false
-      externals:
-      - spec: hipsolver@5.7.1
-        prefix: /opt/rocm-5.7.1/
     hipsparse:
       buildable: false
       externals:

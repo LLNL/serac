@@ -5,6 +5,7 @@
 
 from spack import *
 from spack.spec import UnsupportedCompilerError
+from spack.util.executable import which_string
 
 import os
 import socket
@@ -382,9 +383,22 @@ class Serac(CachedCMakePackage, CudaPackage, ROCmPackage):
             entries.append(cmake_cache_option("ENABLE_HIP", True))
 
             hip_root = spec["hip"].prefix
+            rocm_root = hip_root + "/.."
+
+            # Fix blt_hip getting HIP_CLANG_INCLUDE_PATH-NOTFOUND bad include directory
+            if (self.spec.satisfies('%cce') or self.spec.satisfies('%clang')) and 'toss_4' in self._get_sys_type(spec):
+                # Set the patch version to 0 if not already
+                clang_version= str(self.compiler.version)[:-1] + "0"
+                hip_clang_include_path = rocm_root + "/llvm/lib/clang/" + clang_version + "/include"
+                if os.path.isdir(hip_clang_include_path):
+                    entries.append(cmake_cache_path("HIP_CLANG_INCLUDE_PATH", hip_clang_include_path))
 
             # Additional libraries for TOSS4
-            hip_link_flags = " -L{0}/../lib64 -Wl,-rpath,{0}/../lib64 ".format(hip_root)
+            hip_link_flags = ""
+            hip_link_flags += "-L{0}/../llvm/lib -L{0}/lib ".format(hip_root)
+            hip_link_flags += "-Wl,-rpath,{0}/../llvm/lib:{0}/lib ".format(hip_root)
+            hip_link_flags += "-lpgmath -lflang -lflangrti -lompstub -lamdhip64 "
+            hip_link_flags += " -L{0}/../lib64 -Wl,-rpath,{0}/../lib64 ".format(hip_root)
             hip_link_flags += " -L{0}/../lib -Wl,-rpath,{0}/../lib ".format(hip_root)
             hip_link_flags += "-lamd_comgr -lhsa-runtime64 "
 
@@ -420,6 +434,14 @@ class Serac(CachedCMakePackage, CudaPackage, ROCmPackage):
         if spec["mpi"].name == "spectrum-mpi":
             entries.append(cmake_cache_string("BLT_MPI_COMMAND_APPEND",
                                               "mpibind"))
+
+        # Replace /usr/bin/srun path with srun flux wrapper path on TOSS 4
+        if 'toss_4' in self._get_sys_type(spec):
+            srun_wrapper = which_string("srun")
+            mpi_exec_index = [index for index,entry in enumerate(entries)
+                                                  if "MPIEXEC_EXECUTABLE" in entry]
+            del entries[mpi_exec_index[0]]
+            entries.append(cmake_cache_path("MPIEXEC_EXECUTABLE", srun_wrapper))
 
         return entries
 
