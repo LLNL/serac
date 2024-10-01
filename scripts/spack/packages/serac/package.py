@@ -379,7 +379,7 @@ class Serac(CachedCMakePackage, CudaPackage, ROCmPackage):
                 entries.append(
                     cmake_cache_option("gtest_disable_pthreads", True))
 
-        if "+rocm" in spec:
+        if spec.satisfies("+rocm"):
             entries.append(cmake_cache_option("ENABLE_HIP", True))
 
             hip_root = spec["hip"].prefix
@@ -398,9 +398,12 @@ class Serac(CachedCMakePackage, CudaPackage, ROCmPackage):
             hip_link_flags += "-L{0}/../llvm/lib -L{0}/lib ".format(hip_root)
             hip_link_flags += "-Wl,-rpath,{0}/../llvm/lib:{0}/lib ".format(hip_root)
             hip_link_flags += "-lpgmath -lflang -lflangrti -lompstub -lamdhip64 "
-            hip_link_flags += " -L{0}/../lib64 -Wl,-rpath,{0}/../lib64 ".format(hip_root)
-            hip_link_flags += " -L{0}/../lib -Wl,-rpath,{0}/../lib ".format(hip_root)
+            hip_link_flags += "-L{0}/../lib64 -Wl,-rpath,{0}/../lib64 ".format(hip_root)
+            hip_link_flags += "-L{0}/../lib -Wl,-rpath,{0}/../lib ".format(hip_root)
             hip_link_flags += "-lamd_comgr -lhsa-runtime64 "
+
+            if spec.satisfies("+strumpack"):
+                hip_link_flags += "-lhipblas -lrocsolver "
 
             entries.append(cmake_cache_string("CMAKE_EXE_LINKER_FLAGS", hip_link_flags))
 
