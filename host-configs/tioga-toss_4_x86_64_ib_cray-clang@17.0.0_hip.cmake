@@ -79,7 +79,7 @@ set(ENABLE_HIP ON CACHE BOOL "")
 
 set(HIP_CLANG_INCLUDE_PATH "/opt/rocm-5.7.1/hip/../llvm/lib/clang/17.0.0/include" CACHE PATH "")
 
-set(CMAKE_EXE_LINKER_FLAGS "-L/opt/rocm-5.7.1/hip/../llvm/lib -L/opt/rocm-5.7.1/hip/lib -Wl,-rpath,/opt/rocm-5.7.1/hip/../llvm/lib:/opt/rocm-5.7.1/hip/lib -lpgmath -lflang -lflangrti -lompstub -lamdhip64 -L/opt/rocm-5.7.1/hip/../lib64 -Wl,-rpath,/opt/rocm-5.7.1/hip/../lib64 -L/opt/rocm-5.7.1/hip/../lib -Wl,-rpath,/opt/rocm-5.7.1/hip/../lib -lamd_comgr -lhsa-runtime64 -lhipblas -lrocsolver " CACHE STRING "")
+set(CMAKE_EXE_LINKER_FLAGS "-L/opt/rocm-5.7.1/hip/../llvm/lib -L/opt/rocm-5.7.1/hip/lib -Wl,-rpath,/opt/rocm-5.7.1/hip/../llvm/lib:/opt/rocm-5.7.1/hip/lib -lpgmath -lflang -lflangrti -lompstub -lamdhip64 -L/opt/rocm-5.7.1/hip/../lib64 -Wl,-rpath,/opt/rocm-5.7.1/hip/../lib64 -L/opt/rocm-5.7.1/hip/../lib -Wl,-rpath,/opt/rocm-5.7.1/hip/../lib -lamd_comgr -lhsa-runtime64 -lhipblas -lrocblas -lrocsolver " CACHE STRING "")
 
 #------------------------------------------------------------------------------
 # TPLs

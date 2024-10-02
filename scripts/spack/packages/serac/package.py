@@ -403,7 +403,7 @@ class Serac(CachedCMakePackage, CudaPackage, ROCmPackage):
             hip_link_flags += "-lamd_comgr -lhsa-runtime64 "
 
             if spec.satisfies("+strumpack"):
-                hip_link_flags += "-lhipblas -lrocsolver "
+                hip_link_flags += "-lhipblas -lrocblas -lrocsolver "
 
             entries.append(cmake_cache_string("CMAKE_EXE_LINKER_FLAGS", hip_link_flags))
 
