@@ -25,7 +25,7 @@ serac_add_tests( SOURCES    ${language_tests}
 
 if(SERAC_ENABLE_CUDA)
     blt_add_library( NAME       cuda_smoketest_kernel
-                     SOURCES    cuda_smoketest_kernel.cpp 
+                     SOURCES    cuda_smoketest_kernel.cpp
                      DEPENDS_ON ${serac_device_depends})
 
     serac_add_tests( SOURCES    cuda_smoketest.cpp
@@ -33,7 +33,8 @@ if(SERAC_ENABLE_CUDA)
 endif()
 
 if(SERAC_ENABLE_HIP)
-    # TODO add a hip smoketest
+    serac_add_tests( SOURCES    hip_smoketest.cpp
+                     DEPENDS_ON ${serac_device_depends} gtest)
 endif()
 
 #
