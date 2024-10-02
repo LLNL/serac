@@ -34,7 +34,7 @@
 toss4_cray-clang_17_0_0-src:
   variables:
     COMPILER: "clang@17.0.0"
-    HOST_CONFIG: "tioga-toss_4_x86_64_ib_cray-${COMPILER}.cmake"
+    HOST_CONFIG: "tioga-toss_4_x86_64_ib_cray-${COMPILER}_hip.cmake"
     EXTRA_CMAKE_OPTIONS: "-DENABLE_BENCHMARKS=ON"
     ALLOC_NODES: "1"
     ALLOC_TIME: "30"
