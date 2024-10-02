@@ -11,7 +11,6 @@
       when: never
   before_script:
     - module load cmake/3.23.1
-    - module load texlive
 
 ####
 # Templates
