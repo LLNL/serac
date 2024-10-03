@@ -30,7 +30,7 @@ using SolidMechanicsType = SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>>;
 const std::string mesh_tag       = "mesh";
 const std::string physics_prefix = "solid";
 
-//using SolidMaterial = solid_mechanics::ParameterizedNeoHookeanSolid;
+// using SolidMaterial = solid_mechanics::ParameterizedNeoHookeanSolid;
 using SolidMaterial = solid_mechanics::ParameterizedLinearIsotropicSolid;
 auto geoNonlinear   = GeometricNonlinearities::Off;
 
@@ -43,7 +43,7 @@ std::unique_ptr<SolidMechanicsType> createNonlinearSolidMechanicsSolver(mfem::Pa
                                                                         const SolidMaterial&          mat)
 {
   static int iter  = 0;
-  auto solid = std::make_unique<SolidMechanicsType>(nonlinear_opts, solid_mechanics::direct_linear_options,
+  auto       solid = std::make_unique<SolidMechanicsType>(nonlinear_opts, solid_mechanics::direct_linear_options,
                                                     solid_mechanics::default_quasistatic_options, geoNonlinear,
                                                     physics_prefix + std::to_string(iter++), mesh_tag,
                                                     std::vector<std::string>{"shear modulus", "bulk modulus"});
@@ -106,8 +106,8 @@ double computeSolidMechanicsQoi(BasePhysics& solid_solver)
   solid_solver.resetStates();
   solid_solver.advanceTimestep(0.1);
 
-  const FiniteElementDual& reactions = solid_solver.dual("reactions");
-  auto reactionDirections = createReactionDirection(solid_solver, 0);
+  const FiniteElementDual& reactions          = solid_solver.dual("reactions");
+  auto                     reactionDirections = createReactionDirection(solid_solver, 0);
 
   const FiniteElementState& displacements = solid_solver.state("displacement");
   return innerProduct(reactions, reactionDirections) + 0.05 * innerProduct(displacements, displacements);
