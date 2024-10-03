@@ -215,7 +215,6 @@ TEST_F(SolidMechanicsSensitivityFixture, ReactionShapeSensitivities)
   double qoi_plus          = computeSolidMechanicsQoiAdjustingShape(*solid_solver, derivative_direction, eps);
   double directional_deriv = innerProduct(derivative_direction, shape_sensitivity);
 
-  // EXPECT_NEAR(qoi_base, -0.35, 1e-14);
   EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, eps);
 }
 
@@ -231,7 +230,6 @@ TEST_F(SolidMechanicsSensitivityFixture, ReactionParameterSensitivities)
   double qoi_plus          = computeSolidMechanicsQoiAdjustingShearModulus(*solid_solver, derivative_direction, eps);
   double directional_deriv = innerProduct(derivative_direction, shear_modulus_sensitivity);
 
-  // EXPECT_NEAR(qoi_base, -0.35, 1e-14);
   EXPECT_NEAR(directional_deriv, (qoi_plus - qoi_base) / eps, eps);
 }
 
