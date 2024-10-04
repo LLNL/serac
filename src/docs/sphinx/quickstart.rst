@@ -350,10 +350,7 @@ The invocation of ``uberenv.py`` is slightly modified from the standard instruct
 
 .. code-block:: bash
 
-   $ ./scripts/uberenv/uberenv.py --spack-env-file=/path/to/spack.yaml --prefix=/path/to/install --spec="%clang@14 ^openmpi@5"
+   $ ./scripts/uberenv/uberenv.py --spack-env-file=/path/to/spack.yaml --prefix=/path/to/install --spec="%clang@14+devtools ^openmpi@5"
 
-Note: If you want to build with PETSc, you should instead use the command
-
-.. code-block:: bash
-
-   $ ./scripts/uberenv/uberenv.py --spack-env-file=scripts/spack/configs/macos_sonoma_aarch64/spack.yaml --prefix=../path/to/install --spec="%clang@14 +petsc ^openmpi@5 ^petsc+tetgen+scalapack+strumpack"
+.. note::
+   Remove `+devtools` if you don't intend on using Serac developer tools.
