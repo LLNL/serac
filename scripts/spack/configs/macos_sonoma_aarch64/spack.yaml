@@ -1,6 +1,4 @@
-
 spack:
-  # add package specs to the `specs` list
   view: true
   concretizer:
     unify: true
@@ -23,15 +21,10 @@ spack:
       externals:
       - spec: netlib-lapack@3.12.0
         prefix: /opt/homebrew/opt/lapack
-    autoconf:
-      buildable: false
-      externals:
-      - spec: autoconf@2.72
-        prefix: /opt/homebrew
     automake:
       buildable: false
       externals:
-      - spec: automake@1.16.5
+      - spec: automake@1.17
         prefix: /opt/homebrew
     bzip2:
       buildable: false
@@ -39,37 +32,61 @@ spack:
       - spec: bzip2@1.0.8
         prefix: /opt/homebrew/opt/bzip2
     cmake:
-      version: [3.29.6]
+      version: [3.30.4]
       buildable: false
       externals:
-      - spec: cmake@3.29.5
+      - spec: cmake@3.30.4
+        prefix: /opt/homebrew
+    curl:
+      buildable: false
+      externals:
+      - spec: curl@8.7.1
+        prefix: /usr
+    diffutils:
+      buildable: false
+      externals:
+      - spec: diffutils@3.10
+        prefix: /opt/homebrew
+    fmt:
+      buildable: false
+      externals:
+      - spec: fmt@11.0.2
         prefix: /opt/homebrew
     gettext:
       buildable: false
       externals:
       - spec: gettext@0.22.5
         prefix: /opt/homebrew
+    gmake:
+      buildable: false
+      externals:
+      - spec: gmake@3.8.1
+        prefix: /usr
+    gnuconfig:
+      buildable: false
+      externals:
+      - spec: gnuconfig@2.72
+        prefix: /opt/homebrew
     graphviz:
       buildable: false
       externals:
-      - spec: graphviz@11.0.0
+      - spec: graphviz@12.1.12
         prefix: /opt/homebrew
     libtool:
       buildable: false
       externals:
-      - spec: libtool@2.4.7
+      - spec: libtool@2.5.3
         prefix: /opt/homebrew
     libx11:
       buildable: false
       externals:
-      - spec: libx11@1.8.9
+      - spec: libx11@1.8.10
         prefix: /opt/homebrew
-    llvm:
-      version: [18.1.8]
+    lua:
       buildable: false
       externals:
-      - spec: llvm+clang@18.1.8
-        prefix: /opt/homebrew/opt/llvm
+      - spec: lua@5.4.7
+        prefix: /opt/homebrew
     m4:
       buildable: false
       externals:
@@ -85,10 +102,15 @@ spack:
       externals:
       - spec: pkg-config@0.29.2_3
         prefix: /opt/homebrew
+    pkgconf:
+      buildable: false
+      externals:
+      - spec: pkgconf@0.29.2_3
+        prefix: /opt/homebrew
     python:
       buildable: false
       externals:
-      - spec: python@3.12.4+bz2+crypt+ctypes+dbm+lzma+nis+pyexpat~pythoncmd+readline+sqlite3+ssl~tkinter+uuid+zlib
+      - spec: python@3.12.7+bz2+crypt+ctypes+dbm+lzma+nis+pyexpat~pythoncmd+readline+sqlite3+ssl~tkinter+uuid+zlib
         prefix: /opt/homebrew/opt/python
     tar:
       buildable: false
@@ -98,26 +120,47 @@ spack:
     readline:
       buildable: false
       externals:
-      - spec: readline@8.2.10
+      - spec: readline@8.2.13
         prefix: /opt/homebrew
     unzip:
       buildable: false
       externals:
       - spec: unzip@6.0
         prefix: /usr
-    zlib:
+    zlib-ng:
       buildable: false
       externals:
-      - spec: zlib@1.3.1
+      - spec: zlib-ng@1.3.1
         prefix: /opt/homebrew
+    
+    # Devtools
+    # optional, for dev tools
+    cppcheck:
+      version: [2.15.0]
+      buildable: false
+      externals:
+      - spec: cppcheck@2.15.0
+        prefix: /opt/homebrew
+    doxygen:
+      version: [1.12.0]
+      buildable: false
+      externals:
+      - spec: doxygen@1.12.0
+        prefix: /opt/homebrew
+    llvm:
+      version: [14.0.6]
+      buildable: false
+      externals:
+      - spec: llvm+clang@14.0.6
+        prefix: /opt/homebrew/opt/llvm@14
 
  # The "::" removes all found/known compilers from Spack except for these.
   compilers::
   - compiler:
-      spec: clang@=18.1.8
+      spec: clang@=14.0.6
       paths:
-        cc: /opt/homebrew/opt/llvm/bin/clang
-        cxx: /opt/homebrew/opt/llvm/bin/clang++
+        cc: /opt/homebrew/opt/llvm@14/bin/clang
+        cxx: /opt/homebrew/opt/llvm@14/bin/clang++
         f77: /opt/homebrew/bin/gfortran-14
         fc: /opt/homebrew/bin/gfortran-14
       flags: {}

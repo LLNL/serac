@@ -287,7 +287,7 @@ Install the following packages using Homebrew.
 
 .. code-block:: bash
 
-   $ brew install autoconf automake bzip2 clingo cmake gcc gettext gnu-sed graphviz hwloc lapack libx11 llvm m4 make ninja open-mpi openblas pkg-config python readline spack zlib
+   $ brew install autoconf automake bzip2 clingo cmake diffutils fmt gcc gettext gnu-sed graphviz hwloc lapack libx11 llvm@14 m4 make ninja open-mpi openblas pkg-config python readline spack zlib
 
 If you plan to install the developer tools, you should also run
 
@@ -308,7 +308,7 @@ This is also useful for a few additional packages:
 
 .. code-block:: bash
 
-   $ export PATH="/opt/homebrew/opt/llvm/bin:/opt/homebrew/opt/m4/bin:/opt/homebrew/opt/gnu-sed/libexec/gnubin:$PATH"
+   $ export PATH="/opt/homebrew/opt/llvm@14/bin:/opt/homebrew/opt/m4/bin:/opt/homebrew/opt/gnu-sed/libexec/gnubin:$PATH"
 
 Configuring Spack
 ^^^^^^^^^^^^^^^^^
@@ -331,16 +331,16 @@ If you want to install the devtools, you should also add the following under ``p
 
   # optional, for dev tools
   cppcheck:
-    version: [2.14.2]
+    version: [2.15.0]
     buildable: false
     externals:
-    - spec: cppcheck@2.14.2
+    - spec: cppcheck@2.15.0
       prefix: /opt/homebrew
   doxygen:
-    version: [1.11.0]
+    version: [1.12.0]
     buildable: false
     externals:
-    - spec: doxygen@1.11.0
+    - spec: doxygen@1.12.0
       prefix: /opt/homebrew
 
 Building dependencies
@@ -350,10 +350,10 @@ The invocation of ``uberenv.py`` is slightly modified from the standard instruct
 
 .. code-block:: bash
 
-   $ ./scripts/uberenv/uberenv.py --spack-env-file=scripts/spack/configs/macos_sonoma_aarch64/spack.yaml --prefix=../path/to/install --spec="%clang@18.1.8 ^openmpi@5.0.3_1"
+   $ ./scripts/uberenv/uberenv.py --spack-env-file=/path/to/spack.yaml --prefix=/path/to/install --spec="%clang@14 ^openmpi@5"
 
 Note: If you want to build with PETSc, you should instead use the command
 
 .. code-block:: bash
 
-   $ ./scripts/uberenv/uberenv.py --spack-env-file=scripts/spack/configs/macos_sonoma_aarch64/spack.yaml --prefix=../path/to/install --spec="+petsc %clang@18.1.8 ^openmpi@5.0.3_1 ^petsc+tetgen+scalapack+strumpack"
+   $ ./scripts/uberenv/uberenv.py --spack-env-file=scripts/spack/configs/macos_sonoma_aarch64/spack.yaml --prefix=../path/to/install --spec="%clang@14 +petsc ^openmpi@5 ^petsc+tetgen+scalapack+strumpack"
