@@ -453,6 +453,20 @@ mfem::Array<int> Domain::dof_list(mfem::FiniteElementSpace* fes) const
   return uniq_dof_ids;
 }
 
+void Domain::insert_restriction(const mfem::FiniteElementSpace * fes, FunctionSpace space) {
+
+  // if we don't already have a BlockElementRestriction for this FunctionSpace, make one
+  if (restriction_operators.count(space) == 0) {
+    restriction_operators[space] = BlockElementRestriction(fes, *this);
+  }
+
+}
+
+const BlockElementRestriction & Domain::get_restriction(FunctionSpace space) {
+  return restriction_operators.at(space);
+};
+
+
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////

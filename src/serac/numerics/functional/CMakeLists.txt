@@ -11,7 +11,6 @@ blt_list_append(TO functional_depends ELEMENTS blt::cuda IF ENABLE_CUDA)
 set(functional_headers
     differentiate_wrt.hpp
     boundary_integral_kernels.hpp
-    dof_numbering.hpp
     element_restriction.hpp
     geometry.hpp
     geometric_factors.hpp

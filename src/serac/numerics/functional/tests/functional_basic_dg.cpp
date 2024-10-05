@@ -61,10 +61,9 @@ void L2_test_2D()
 
         auto a = dot(u_2 - u_1, n);
 
-        auto s_1 = u_1 * a;
-        auto s_2 = u_2 * a;
-
-        return serac::tuple{s_1, s_2};
+        auto f_1 = u_1 * a;
+        auto f_2 = u_2 * a;
+        return serac::tuple{f_1, f_2};
 
       },
       *mesh);

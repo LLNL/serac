@@ -7,11 +7,16 @@
 #pragma once
 
 #include <vector>
+
 #include "mfem.hpp"
 
 #include "serac/numerics/functional/tensor.hpp"
+#include "serac/numerics/functional/finite_element.hpp"
+#include "serac/numerics/functional/element_restriction.hpp"
 
 namespace serac {
+
+struct BlockElementRestriction;
 
 /**
  * @brief a class for representing a geometric region that can be used for integration
@@ -19,6 +24,7 @@ namespace serac {
  * This region can be an entire mesh or some subset of its elements
  */
 struct Domain {
+
   /// @brief enum describing what kind of elements are included in a Domain
   enum Type
   {
@@ -58,6 +64,8 @@ struct Domain {
   std::vector<int> mfem_tet_ids_;
   std::vector<int> mfem_hex_ids_;
   /// @endcond
+
+  std::map< FunctionSpace, BlockElementRestriction > restriction_operators;
 
   Domain(const mfem::Mesh& m, int d, Type type = Domain::Type::Elements) : mesh_(m), dim_(d), type_(type) {}
 
@@ -131,8 +139,27 @@ struct Domain {
     exit(1);
   }
 
+  /// @brief get elements by geometry type
+  const std::vector<int>& get_mfem_ids(mfem::Geometry::Type geom) const
+  {
+    if (geom == mfem::Geometry::SEGMENT) return mfem_edge_ids_;
+    if (geom == mfem::Geometry::TRIANGLE) return mfem_tri_ids_;
+    if (geom == mfem::Geometry::SQUARE) return mfem_quad_ids_;
+    if (geom == mfem::Geometry::TETRAHEDRON) return mfem_tet_ids_;
+    if (geom == mfem::Geometry::CUBE) return mfem_hex_ids_;
+
+    exit(1);
+  }
+
   /// @brief get mfem degree of freedom list for a given FiniteElementSpace
   mfem::Array<int> dof_list(mfem::FiniteElementSpace* fes) const;
+
+  /// @brief TODO
+  void insert_restriction(const mfem::FiniteElementSpace * fes, FunctionSpace space);
+
+  /// @brief TODO
+  const BlockElementRestriction & get_restriction(FunctionSpace space);
+
 };
 
 /// @brief constructs a domain from all the elements in a mesh

@@ -24,7 +24,7 @@ namespace serac {
 /// @brief a class for representing a Integral calculations and their derivatives
 struct Integral {
   /// @brief the number of different kinds of integration domains
-  static constexpr std::size_t num_types = 2;
+  static constexpr std::size_t num_types = 3;
 
   /**
    * @brief Construct an "empty" Integral object, whose kernels are to be initialized later
@@ -91,14 +91,14 @@ struct Integral {
    * @param differentiation_index a non-negative value indicates directional derivative with respect to the trial space
    * with that index.
    */
-  void GradientMult(const mfem::BlockVector& input_E, mfem::BlockVector& output_E, uint32_t differentiation_index) const
+  void GradientMult(const mfem::BlockVector& dinput_E, mfem::BlockVector& doutput_E, uint32_t differentiation_index) const
   {
-    output_E = 0.0;
+    doutput_E = 0.0;
 
     // if this integral actually depends on the specified variable
     if (functional_to_integral_index_.count(differentiation_index) > 0) {
       for (auto& [geometry, func] : jvp_[functional_to_integral_index_.at(differentiation_index)]) {
-        func(input_E.GetBlock(geometry).Read(), output_E.GetBlock(geometry).ReadWrite());
+        func(dinput_E.GetBlock(geometry).Read(), doutput_E.GetBlock(geometry).ReadWrite());
       }
     }
   }
@@ -193,13 +193,12 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
 
   const double*  positions        = gf.X.Read();
   const double*  jacobians        = gf.J.Read();
-  const int*     elements         = &integral.domain_.get(geom)[0];
   const uint32_t num_elements     = uint32_t(gf.num_elements);
   const uint32_t qpts_per_element = num_quadrature_points(geom, Q);
 
   std::shared_ptr<zero> dummy_derivatives;
   integral.evaluation_[geom] = domain_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom>(
-      s, qf, positions, jacobians, qdata, dummy_derivatives, elements, num_elements);
+      s, qf, positions, jacobians, qdata, dummy_derivatives, num_elements);
 
   constexpr std::size_t                 num_args = s.num_args;
   [[maybe_unused]] static constexpr int dim      = dimension_of(geom);
@@ -213,12 +212,12 @@ void generate_kernels(FunctionSignature<test(trials...)> s, Integral& integral, 
     auto ptr = accelerator::make_shared_array<ExecutionSpace::CPU, derivative_type>(num_elements * qpts_per_element);
 
     integral.evaluation_with_AD_[index][geom] = domain_integral::evaluation_kernel<index, Q, geom>(
-        s, qf, positions, jacobians, qdata, ptr, elements, num_elements);
+        s, qf, positions, jacobians, qdata, ptr, num_elements);
 
     integral.jvp_[index][geom] =
-        domain_integral::jacobian_vector_product_kernel<index, Q, geom>(s, ptr, elements, num_elements);
+        domain_integral::jacobian_vector_product_kernel<index, Q, geom>(s, ptr, num_elements);
     integral.element_gradient_[index][geom] =
-        domain_integral::element_gradient_kernel<index, Q, geom>(s, ptr, elements, num_elements);
+        domain_integral::element_gradient_kernel<index, Q, geom>(s, ptr, num_elements);
   });
 }
 
@@ -276,7 +275,7 @@ Integral MakeDomainIntegral(const Domain& domain, const lambda_type& qf,
 template <mfem::Geometry::Type geom, int Q, typename test, typename... trials, typename lambda_type>
 void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integral, const lambda_type& qf)
 {
-  integral.geometric_factors_[geom] = GeometricFactors(integral.domain_, Q, geom, FaceType::BOUNDARY);
+  integral.geometric_factors_[geom] = GeometricFactors(integral.domain_, Q, geom);
   GeometricFactors& gf              = integral.geometric_factors_[geom];
   if (gf.num_elements == 0) return;
 
@@ -284,11 +283,10 @@ void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integr
   const double*  jacobians        = gf.J.Read();
   const uint32_t num_elements     = uint32_t(gf.num_elements);
   const uint32_t qpts_per_element = num_quadrature_points(geom, Q);
-  const int*     elements         = &gf.elements[0];
 
   std::shared_ptr<zero> dummy_derivatives;
   integral.evaluation_[geom] = boundary_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom>(
-      s, qf, positions, jacobians, dummy_derivatives, elements, num_elements);
+      s, qf, positions, jacobians, dummy_derivatives, num_elements);
 
   constexpr std::size_t                 num_args = s.num_args;
   [[maybe_unused]] static constexpr int dim      = dimension_of(geom);
@@ -302,12 +300,12 @@ void generate_bdr_kernels(FunctionSignature<test(trials...)> s, Integral& integr
     auto ptr = accelerator::make_shared_array<ExecutionSpace::CPU, derivative_type>(num_elements * qpts_per_element);
 
     integral.evaluation_with_AD_[index][geom] =
-        boundary_integral::evaluation_kernel<index, Q, geom>(s, qf, positions, jacobians, ptr, elements, num_elements);
+        boundary_integral::evaluation_kernel<index, Q, geom>(s, qf, positions, jacobians, ptr, num_elements);
 
     integral.jvp_[index][geom] =
-        boundary_integral::jacobian_vector_product_kernel<index, Q, geom>(s, ptr, elements, num_elements);
+        boundary_integral::jacobian_vector_product_kernel<index, Q, geom>(s, ptr, num_elements);
     integral.element_gradient_[index][geom] =
-        boundary_integral::element_gradient_kernel<index, Q, geom>(s, ptr, elements, num_elements);
+        boundary_integral::element_gradient_kernel<index, Q, geom>(s, ptr, num_elements);
   });
 }
 
@@ -371,11 +369,10 @@ void generate_interior_face_kernels(FunctionSignature<test(trials...)> s, Integr
   const double*  jacobians        = gf.J.Read();
   const uint32_t num_elements     = uint32_t(gf.num_elements);
   const uint32_t qpts_per_element = num_quadrature_points(geom, Q);
-  const int*     elements         = &gf.elements[0];
 
   std::shared_ptr<zero> dummy_derivatives;
   integral.evaluation_[geom] = interior_face_integral::evaluation_kernel<NO_DIFFERENTIATION, Q, geom>(
-      s, qf, positions, jacobians, dummy_derivatives, elements, num_elements);
+      s, qf, positions, jacobians, dummy_derivatives, num_elements);
 
   constexpr std::size_t                 num_args = s.num_args;
   [[maybe_unused]] static constexpr int dim      = dimension_of(geom);
@@ -389,12 +386,12 @@ void generate_interior_face_kernels(FunctionSignature<test(trials...)> s, Integr
     auto ptr = accelerator::make_shared_array<ExecutionSpace::CPU, derivative_type>(num_elements * qpts_per_element);
 
     integral.evaluation_with_AD_[index][geom] =
-        interior_face_integral::evaluation_kernel<index, Q, geom>(s, qf, positions, jacobians, ptr, elements, num_elements);
+        interior_face_integral::evaluation_kernel<index, Q, geom>(s, qf, positions, jacobians, ptr, num_elements);
 
     integral.jvp_[index][geom] =
-        interior_face_integral::jacobian_vector_product_kernel<index, Q, geom>(s, ptr, elements, num_elements);
+        interior_face_integral::jacobian_vector_product_kernel<index, Q, geom>(s, ptr, num_elements);
     integral.element_gradient_[index][geom] =
-        interior_face_integral::element_gradient_kernel<index, Q, geom>(s, ptr, elements, num_elements);
+        interior_face_integral::element_gradient_kernel<index, Q, geom>(s, ptr, num_elements);
   });
 }
 

@@ -232,6 +232,20 @@ struct QOI {
   static constexpr Family family     = Family::QOI;  ///< the family of the basis functions
 };
 
+struct FunctionSpace {
+  Family family;
+  int order;
+  int components;
+
+  std::tuple<int,int,int> as_tuple() const {
+    return std::tuple<int,int,int>(int(family), order, components);
+  }
+
+  bool operator<(FunctionSpace other) const {
+    return this->as_tuple() < other.as_tuple();
+  }
+};
+
 /**
  * @brief transform information in the parent space  (i.e. values and derivatives w.r.t {xi, eta, zeta})
  * into the physical space (i.e. values and derivatives w.r.t. {x, y, z})

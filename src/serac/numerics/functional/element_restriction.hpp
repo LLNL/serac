@@ -142,19 +142,15 @@ struct Array2D {
 
 namespace serac {
 
+struct Domain;
+
 /// a more complete version of mfem::ElementRestriction that works with {H1, Hcurl, L2} spaces (including on the
 /// boundary)
 struct ElementRestriction {
   /// default ctor leaves this object uninitialized
   ElementRestriction() {}
 
-  ElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type elem_geom, const std::vector<int> & domain);
-
-  /// create an ElementRestriction for all domain-type (geom dim == spatial dim) elements of the specified geometry
-  ElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type elem_geom);
-
-  /// create an ElementRestriction for all face-type (geom dim == spatial dim) elements of the specified geometry
-  ElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom, FaceType type);
+  ElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type elem_geom, const std::vector<int> & domain_elements);
 
   /// the size of the "E-vector" associated with this restriction operator
   uint64_t ESize() const;
@@ -197,6 +193,9 @@ struct ElementRestriction {
   /// the number of nodes in each element
   uint64_t nodes_per_elem;
 
+  /// an array mapping from domain element ids [0, num_elements) to 
+  std::vector<int> element_ids;
+
   /// a 2D array (num_elements-by-nodes_per_elem) holding the dof info extracted from the finite element space
   axom::Array<DoF, 2, axom::MemorySpace::Host> dof_info;
 
@@ -215,12 +214,6 @@ struct BlockElementRestriction {
 
   /// create a BlockElementRestriction for the elements in a given domain
   BlockElementRestriction(const mfem::FiniteElementSpace* fes, const Domain & domain);
-
-  /// create a BlockElementRestriction for all domain-elements (geom dim == spatial dim)
-  BlockElementRestriction(const mfem::FiniteElementSpace* fes);
-
-  /// create a BlockElementRestriction for all face-elements (geom dim + 1 == spatial dim)
-  BlockElementRestriction(const mfem::FiniteElementSpace* fes, FaceType type);
 
   /// the size of the "E-vector" associated with this restriction operator
   uint64_t ESize() const;

@@ -20,12 +20,13 @@
 #include "serac/numerics/functional/quadrature.hpp"
 #include "serac/numerics/functional/finite_element.hpp"
 #include "serac/numerics/functional/integral.hpp"
-#include "serac/numerics/functional/dof_numbering.hpp"
 #include "serac/numerics/functional/differentiate_wrt.hpp"
 
 #include "serac/numerics/functional/element_restriction.hpp"
 
 #include "serac/numerics/functional/domain.hpp"
+
+#include "serac/infrastructure/mpi_fstream.hpp"
 
 #include <array>
 #include <vector>
@@ -218,53 +219,32 @@ public:
    */
   Functional(const mfem::ParFiniteElementSpace*                               test_fes,
              std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
-      : update_qdata_(false), test_space_(test_fes), trial_space_(trial_fes)
+      : update_qdata_(false), test_space_(test_fes), trial_space_(trial_fes), mem_type(mfem::Device::GetMemoryType())
   {
     SERAC_MARK_FUNCTION;
-
-    auto mem_type = mfem::Device::GetMemoryType();
-
-    for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements, Domain::Type::InteriorFaces}) {
-      input_E_[type].resize(num_trial_spaces);
-    }
 
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       P_trial_[i] = trial_space_[i]->GetProlongationMatrix();
 
       input_L_[i].SetSize(P_trial_[i]->Height(), mfem::Device::GetMemoryType());
 
-      // L->E
-      for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements, Domain::Type::InteriorFaces}) {
-        if (type == Domain::Type::Elements) {
-          G_trial_[type][i] = BlockElementRestriction(trial_fes[i]);
-        }
-        if (type == Domain::Type::BoundaryElements) {
-          G_trial_[type][i] = BlockElementRestriction(trial_fes[i], FaceType::BOUNDARY);
-        }
-        if (type == Domain::Type::InteriorFaces) {
-          G_trial_[type][i] = BlockElementRestriction(trial_fes[i], FaceType::INTERIOR);
-        }
-
-        // note: we have to use "Update" here, as mfem::BlockVector's
-        // copy assignment ctor (operator=) doesn't let you make changes
-        // to the block size
-        input_E_[type][i].Update(G_trial_[type][i].bOffsets(), mem_type);
-      }
+      // create the necessary number of empty mfem::Vectors, to be resized later
+      input_E_.push_back({});
+      input_E_buffer_.push_back({});
     }
 
-    for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements, Domain::Type::InteriorFaces}) {
-      if (type == Domain::Type::Elements) {
-        G_test_[type] = BlockElementRestriction(test_fes);
-      }
-      if (type == Domain::Type::BoundaryElements) {
-        G_test_[type] = BlockElementRestriction(test_fes, FaceType::BOUNDARY);
-      }
-      if (type == Domain::Type::InteriorFaces) {
-        G_test_[type] = BlockElementRestriction(test_fes, FaceType::INTERIOR);
-      }
+    test_function_space_ = {test::family, test::order, test::components};
 
-      output_E_[type].Update(G_test_[type].bOffsets(), mem_type);
+    std::array<Family, num_trial_spaces> trial_families = {trials::family ...};
+    std::array<int, num_trial_spaces> trial_orders = {trials::order ...};
+    std::array<int, num_trial_spaces> trial_components = {trials::components ...};
+    for (uint32_t i = 0; i < num_trial_spaces; i++) {
+      trial_function_spaces_[i] = {trial_families[i], trial_orders[i], trial_components[i]};
     }
+
+    //for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements, Domain::Type::InteriorFaces}) {
+    //  output_E_[type].Update(G_test_[type].bOffsets(), mem_type);
+    //}
 
     P_test_ = test_space_->GetProlongationMatrix();
 
@@ -278,6 +258,7 @@ public:
     for (uint32_t i = 0; i < num_trial_spaces; i++) {
       grad_.emplace_back(*this, i);
     }
+
   }
 
   /**
@@ -291,23 +272,6 @@ public:
    * and @a spatial_dim template parameter
    * @param[inout] qdata The data for each quadrature point
    */
-  template <int dim, int... args, typename Integrand, typename qpt_data_type = Nothing>
-  void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, const Integrand& integrand, mfem::Mesh& domain,
-                         std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
-  {
-    if (domain.GetNE() == 0) return;
-
-    SLIC_ERROR_ROOT_IF(dim != domain.Dimension(), "invalid mesh dimension for domain integral");
-
-    check_for_unsupported_elements(domain);
-    check_for_missing_nodal_gridfunc(domain);
-
-    using signature = test(decltype(serac::type<args>(trial_spaces))...);
-    integrals_.push_back(
-        MakeDomainIntegral<signature, Q, dim>(EntireDomain(domain), integrand, qdata, std::vector<uint32_t>{args...}));
-  }
-
-  /// @overload
   template <int dim, int... args, typename lambda, typename qpt_data_type = Nothing>
   void AddDomainIntegral(Dimension<dim>, DependsOn<args...>, const lambda& integrand, Domain& domain,
                          std::shared_ptr<QuadratureData<qpt_data_type>> qdata = NoQData)
@@ -318,6 +282,12 @@ public:
 
     check_for_unsupported_elements(domain.mesh_);
     check_for_missing_nodal_gridfunc(domain.mesh_);
+
+    std::vector< uint32_t > arg_vec = {args ...};
+    for (uint32_t i : arg_vec) {
+      domain.insert_restriction(trial_space_[i], trial_function_spaces_[i]);
+    }
+    domain.insert_restriction(test_space_, test_function_space_);
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
     integrals_.push_back(
@@ -333,22 +303,8 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
    */
-  template <int dim, int... args, typename Integrand>
-  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, const Integrand& integrand, mfem::Mesh& domain)
-  {
-    auto num_bdr_elements = domain.GetNBE();
-    if (num_bdr_elements == 0) return;
-
-    check_for_missing_nodal_gridfunc(domain);
-
-    using signature = test(decltype(serac::type<args>(trial_spaces))...);
-    integrals_.push_back(
-        MakeBoundaryIntegral<signature, Q, dim>(EntireBoundary(domain), integrand, std::vector<uint32_t>{args...}));
-  }
-
-  /// @overload
   template <int dim, int... args, typename lambda>
-  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, const lambda& integrand, const Domain& domain)
+  void AddBoundaryIntegral(Dimension<dim>, DependsOn<args...>, const lambda& integrand, Domain& domain)
   {
     auto num_bdr_elements = domain.mesh_.GetNBE();
     if (num_bdr_elements == 0) return;
@@ -356,6 +312,12 @@ public:
     SLIC_ERROR_ROOT_IF(dim != domain.dim_, "invalid domain of integration for boundary integral");
 
     check_for_missing_nodal_gridfunc(domain.mesh_);
+
+    std::vector< uint32_t > arg_vec = {args ...};
+    for (uint32_t i : arg_vec) {
+      domain.insert_restriction(trial_space_[i], trial_function_spaces_[i]);
+    }
+    domain.insert_restriction(test_space_, test_function_space_);
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
     integrals_.push_back(MakeBoundaryIntegral<signature, Q, dim>(domain, integrand, std::vector<uint32_t>{args...}));
@@ -365,13 +327,19 @@ public:
    * @brief TODO
    */
   template <int dim, int... args, typename Integrand>
-  void AddInteriorFaceIntegral(Dimension<dim>, DependsOn<args...>, const Integrand& integrand, mfem::Mesh& mesh)
+  void AddInteriorFaceIntegral(Dimension<dim>, DependsOn<args...>, const Integrand& integrand, Domain& domain)
   {
-    check_for_missing_nodal_gridfunc(mesh);
+    check_for_missing_nodal_gridfunc(domain.mesh_);
+
+    std::vector< uint32_t > arg_vec = {args ...};
+    for (uint32_t i : arg_vec) {
+      domain.insert_restriction(trial_space_[i], trial_function_spaces_[i]);
+    }
+    domain.insert_restriction(test_space_, test_function_space_);
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
     integrals_.push_back(
-        MakeInteriorFaceIntegral<signature, Q, dim>(InteriorFaces(mesh), integrand, std::vector<uint32_t>{args...}));
+        MakeInteriorFaceIntegral<signature, Q, dim>(domain, integrand, std::vector<uint32_t>{args...}));
   }
 
   /**
@@ -384,7 +352,7 @@ public:
    * @param[inout] data The data for each quadrature point
    */
   template <int... args, typename lambda, typename qpt_data_type = Nothing>
-  void AddAreaIntegral(DependsOn<args...> which_args, const lambda& integrand, mfem::Mesh& domain,
+  void AddAreaIntegral(DependsOn<args...> which_args, const lambda& integrand, Domain& domain,
                        std::shared_ptr<QuadratureData<qpt_data_type>> data = NoQData)
   {
     AddDomainIntegral(Dimension<2>{}, which_args, integrand, domain, data);
@@ -400,7 +368,7 @@ public:
    * @param[inout] data The data for each quadrature point
    */
   template <int... args, typename lambda, typename qpt_data_type = Nothing>
-  void AddVolumeIntegral(DependsOn<args...> which_args, const lambda& integrand, mfem::Mesh& domain,
+  void AddVolumeIntegral(DependsOn<args...> which_args, const lambda& integrand, Domain& domain,
                          std::shared_ptr<QuadratureData<qpt_data_type>> data = NoQData)
   {
     AddDomainIntegral(Dimension<3>{}, which_args, integrand, domain, data);
@@ -408,7 +376,7 @@ public:
 
   /// @brief alias for Functional::AddBoundaryIntegral(Dimension<2>{}, integrand, domain);
   template <int... args, typename lambda>
-  void AddSurfaceIntegral(DependsOn<args...> which_args, const lambda& integrand, mfem::Mesh& domain)
+  void AddSurfaceIntegral(DependsOn<args...> which_args, const lambda& integrand, Domain& domain)
   {
     AddBoundaryIntegral(Dimension<2>{}, which_args, integrand, domain);
   }
@@ -430,22 +398,21 @@ public:
 
     output_L_ = 0.0;
 
-    // this is used to mark when gather operations have been performed,
-    // to avoid doing them more than once per trial space
-    bool already_computed[Domain::num_types]{};  // default initializes to `false`
-
     for (auto& integral : integrals_) {
-      auto type = integral.domain_.type_;
+      Domain & dom = integral.domain_;
 
-      if (!already_computed[type]) {
-        G_trial_[type][which].Gather(input_L_[which], input_E_[type][which]);
-        already_computed[type] = true;
-      }
+      const serac::BlockElementRestriction & G_trial = dom.get_restriction(trial_function_spaces_[which]);
+      input_E_buffer_[which].SetSize(int(G_trial.ESize()));
+      input_E_[which].Update(input_E_buffer_[which], G_trial.bOffsets());
+      G_trial.Gather(input_L_[which], input_E_[which]);
 
-      integral.GradientMult(input_E_[type][which], output_E_[type], which);
+      const serac::BlockElementRestriction & G_test = dom.get_restriction(test_function_space_);
+      output_E_buffer_.SetSize(int(G_test.ESize()));
+      output_E_.Update(output_E_buffer_, G_test.bOffsets());
+      integral.GradientMult(input_E_[which], output_E_, which);
 
       // scatter-add to compute residuals on the local processor
-      G_test_[type].ScatterAdd(output_E_[type], output_L_);
+      G_test.ScatterAdd(output_E_, output_L_);
     }
 
     // scatter-add to compute global residuals
@@ -476,24 +443,25 @@ public:
 
     output_L_ = 0.0;
 
-    // this is used to mark when operations have been performed,
-    // to avoid doing them more than once
-    bool already_computed[Domain::num_types][num_trial_spaces]{};  // default initializes to `false`
-
     for (auto& integral : integrals_) {
-      auto type = integral.domain_.type_;
+      Domain & dom = integral.domain_;
+
+      const serac::BlockElementRestriction & G_test = dom.get_restriction(test_function_space_);
 
       for (auto i : integral.active_trial_spaces_) {
-        if (!already_computed[type][i]) {
-          G_trial_[type][i].Gather(input_L_[i], input_E_[type][i]);
-          already_computed[type][i] = true;
-        }
+        const serac::BlockElementRestriction & G_trial = dom.get_restriction(trial_function_spaces_[i]);
+        input_E_buffer_[i].SetSize(int(G_trial.ESize()));
+        input_E_[i].Update(input_E_buffer_[i], G_trial.bOffsets());
+        G_trial.Gather(input_L_[i], input_E_[i]);
       }
 
-      integral.Mult(t, input_E_[type], output_E_[type], wrt, update_qdata_);
+      output_E_buffer_.SetSize(int(G_test.ESize()));
+      output_E_.Update(output_E_buffer_, G_test.bOffsets());
+      integral.Mult(t, input_E_, output_E_, wrt, update_qdata_);
 
       // scatter-add to compute residuals on the local processor
-      G_test_[type].ScatterAdd(output_E_[type], output_L_);
+      mfem::BlockVector output_EBV(output_E_, G_test.bOffsets());
+      G_test.ScatterAdd(output_EBV, output_L_);
     }
 
     // scatter-add to compute global residuals
@@ -508,6 +476,7 @@ public:
       // e.g. auto [value, gradient_wrt_arg1] = my_functional(arg0, differentiate_wrt(arg1));
       return {output_T_, grad_[wrt]};
     }
+
     if constexpr (wrt == NO_DIFFERENTIATION) {
       // if the user passes only `mfem::Vector`s then we assume they only want the output value
       //
@@ -586,6 +555,182 @@ private:
       return df_;
     }
 
+#if 1
+    void initialize_sparsity_pattern() {
+
+      using row_col = std::tuple<int,int>;
+      
+      std::set< row_col > nonzero_entries;
+
+      for (auto& integral : form_.integrals_) {
+        Domain & dom = integral.domain_;
+        const auto& G_test  = dom.get_restriction(form_.test_function_space_);
+        const auto& G_trial = dom.get_restriction(form_.trial_function_spaces_[which_argument]);
+        for (const auto& [geom, test_restriction] : G_test.restrictions) {
+          const auto& trial_restriction = G_trial.restrictions.at(geom);
+
+          // the degrees of freedom associated with the rows/columns of the e^th element stiffness matrix
+          std::vector<int> test_vdofs(test_restriction.nodes_per_elem * test_restriction.components);
+          std::vector<int> trial_vdofs(trial_restriction.nodes_per_elem * trial_restriction.components);
+
+          auto num_elements = static_cast<uint32_t>(test_restriction.num_elements);
+          for (uint32_t e = 0; e < num_elements; e++) {
+
+            for (uint32_t i = 0; i < test_restriction.nodes_per_elem; i++) {
+              auto test_dof = test_restriction.dof_info(e, i);
+              for (uint32_t j = 0; j < test_restriction.components; j++) {
+                test_vdofs[i * test_restriction.components + j] = int(test_restriction.GetVDof(test_dof, j).index());
+              }
+            }
+
+            for (uint32_t i = 0; i < trial_restriction.nodes_per_elem; i++) {
+              auto trial_dof = trial_restriction.dof_info(e, i);
+              for (uint32_t j = 0; j < trial_restriction.components; j++) {
+                trial_vdofs[i * trial_restriction.components + j] = int(trial_restriction.GetVDof(trial_dof, j).index());
+              }
+            }
+
+            for (int row : test_vdofs) {
+              for (int col : trial_vdofs) {
+                nonzero_entries.insert({row, col});
+              }
+            }
+          }
+        }
+      }
+
+      uint64_t nnz = nonzero_entries.size();
+      int nrows = form_.output_L_.Size();
+
+      row_ptr.resize(nrows + 1);
+      col_ind.resize(nnz);
+
+      int nz = 0;
+      int last_row = -1;
+      for (auto [row, col] : nonzero_entries) {
+        col_ind[nz] = col;
+        for (int i = last_row+1; i <= row; i++) { row_ptr[i] = nz; }
+        last_row = row;
+        nz++;
+      }
+      for (int i = last_row+1; i <= nrows; i++) { row_ptr[i] = nz; }
+    };
+
+    uint64_t max_buffer_size() {
+      uint64_t max_entries = 0;
+      for (auto & integral : form_.integrals_) {
+        Domain & dom = integral.domain_;
+        const auto& G_test  = dom.get_restriction(form_.test_function_space_);
+        const auto& G_trial = dom.get_restriction(form_.trial_function_spaces_[which_argument]);
+        for (const auto& [geom, test_restriction] : G_test.restrictions) {
+          const auto& trial_restriction = G_trial.restrictions.at(geom);
+          uint64_t nrows_per_element = test_restriction.nodes_per_elem * test_restriction.components;
+          uint64_t ncols_per_element = trial_restriction.nodes_per_elem * trial_restriction.components;
+          uint64_t entries_per_element = nrows_per_element * ncols_per_element;
+          uint64_t entries_needed = test_restriction.num_elements * entries_per_element;
+          max_entries = std::max(entries_needed, max_entries);
+        }
+      }
+      return max_entries;
+    }
+
+    std::unique_ptr<mfem::HypreParMatrix> assemble() {
+
+      if (row_ptr.empty()) {
+        initialize_sparsity_pattern();
+      }
+
+      // since we own the storage for row_ptr, col_ind, values, 
+      // we ask mfem to not deallocate those pointers in the SparseMatrix dtor
+      constexpr bool sparse_matrix_frees_graph_ptrs = false;
+      constexpr bool sparse_matrix_frees_values_ptr = false;
+      constexpr bool col_ind_is_sorted = true;
+
+      // note: we make a copy of col_ind since mfem::HypreParMatrix
+      //       changes it in the constructor
+      std::vector<int> col_ind_copy = col_ind;
+
+      int nnz = row_ptr.back();
+      std::vector<double> values(nnz, 0.0);
+      auto A_local = mfem::SparseMatrix(
+        row_ptr.data(), 
+        col_ind_copy.data(), 
+        values.data(), 
+        form_.output_L_.Size(),
+        form_.input_L_[which_argument].Size(), 
+        sparse_matrix_frees_graph_ptrs,
+        sparse_matrix_frees_values_ptr, 
+        col_ind_is_sorted
+      );
+
+      std::vector<double> K_elem_buffer(max_buffer_size());
+
+      for (auto & integral : form_.integrals_) {
+
+        Domain & dom = integral.domain_;
+
+        // if this integral's derivative isn't identically zero
+        if (integral.functional_to_integral_index_.count(which_argument) > 0) {
+
+          int id = integral.functional_to_integral_index_.at(which_argument);
+          const auto& G_test  = dom.get_restriction(form_.test_function_space_);
+          const auto& G_trial = dom.get_restriction(form_.trial_function_spaces_[which_argument]);
+          for (const auto& [geom, calculate_element_matrices_func] : integral.element_gradient_[id]) {
+
+            const auto& test_restriction = G_test.restrictions.at(geom);
+            const auto& trial_restriction = G_trial.restrictions.at(geom);
+
+            // prepare a buffer to hold the element matrices
+            CPUArrayView<double, 3> K_e(K_elem_buffer.data(), 
+                                        test_restriction.num_elements,
+                                        trial_restriction.nodes_per_elem * trial_restriction.components,
+                                        test_restriction.nodes_per_elem * test_restriction.components);
+            detail::zero_out(K_e);
+
+            // perform the actual calculations
+            calculate_element_matrices_func(K_e);
+
+            const std::vector<int> & element_ids = integral.domain_.get(geom);
+
+            uint32_t rows_per_elem = uint32_t(test_restriction.nodes_per_elem * test_restriction.components);
+            uint32_t cols_per_elem = uint32_t(trial_restriction.nodes_per_elem * trial_restriction.components);
+
+            std::vector<DoF> test_vdofs(rows_per_elem);
+            std::vector<DoF> trial_vdofs(cols_per_elem);
+
+            for (uint32_t e = 0; e < element_ids.size(); e++) {
+              test_restriction.GetElementVDofs(e, test_vdofs);
+              trial_restriction.GetElementVDofs(e, trial_vdofs);
+
+              for (uint32_t i = 0; i < cols_per_elem; i++) {
+                int col = int(trial_vdofs[i].index());
+
+                for (uint32_t j = 0; j < rows_per_elem; j++) {
+                  int row = int(test_vdofs[j].index());
+
+                  A_local.SearchRow(row, col) += K_e(e, i, j);
+                }
+              }
+            }
+
+          }
+        }
+      }
+
+      auto* R = form_.test_space_->Dof_TrueDof_Matrix();
+
+      auto* A_hypre = new mfem::HypreParMatrix(test_space_->GetComm(), test_space_->GlobalVSize(), trial_space_->GlobalVSize(),
+                                               test_space_->GetDofOffsets(), trial_space_->GetDofOffsets(), &A_local);
+
+      auto* P = trial_space_->Dof_TrueDof_Matrix();
+
+      std::unique_ptr<mfem::HypreParMatrix> A(mfem::RAP(R, A_hypre, P));
+
+      delete A_hypre;
+
+      return A;
+    };
+#else
     /// @brief assemble element matrices and form an mfem::HypreParMatrix
     std::unique_ptr<mfem::HypreParMatrix> assemble()
     {
@@ -665,315 +810,6 @@ private:
 
       }
 
-      for (int i = 0; i < lookup_tables.col_ind.size(); i++) {
-        std::cout << lookup_tables.col_ind[i] << " ";
-      }
-      std::cout << std::endl;
-
-      for (int i = 0; i < lookup_tables.row_ptr.size(); i++) {
-        std::cout << lookup_tables.row_ptr[i] << " ";
-      }
-      std::cout << std::endl;
-
-
-      // Copy the column indices to an auxilliary array as MFEM can mutate these during HypreParMatrix construction
-      col_ind_copy_ = lookup_tables.col_ind;
-
-      auto J_local =
-          mfem::SparseMatrix(lookup_tables.row_ptr.data(), col_ind_copy_.data(), values, form_.output_L_.Size(),
-                             form_.input_L_[which_argument].Size(), sparse_matrix_frees_graph_ptrs,
-                             sparse_matrix_frees_values_ptr, col_ind_is_sorted);
-
-      std::ofstream outfile("K_old.mtx");
-      J_local.PrintMM(outfile);
-      outfile.close();
-
-      auto* R = form_.test_space_->Dof_TrueDof_Matrix();
-
-      auto* A =
-          new mfem::HypreParMatrix(test_space_->GetComm(), test_space_->GlobalVSize(), trial_space_->GlobalVSize(),
-                                   test_space_->GetDofOffsets(), trial_space_->GetDofOffsets(), &J_local);
-
-      auto* P = trial_space_->Dof_TrueDof_Matrix();
-
-      std::unique_ptr<mfem::HypreParMatrix> K(mfem::RAP(R, A, P));
-
-      delete A;
-
-      return K;
-    };
-
-    void initialize_sparsity_pattern(mfem::SparseMatrix & A_local) {
-
-      using row_col = std::tuple<int,int>;
-      
-      std::set< row_col > nonzero_entries;
-
-      for (auto& integral : form_.integrals_) {
-        auto& test_restrictions  = form_.G_test_[integral.domain_.type_].restrictions;
-        auto& trial_restrictions = form_.G_trial_[integral.domain_.type_][which_argument].restrictions;
-
-        for (auto& [geom, test_restriction] : test_restrictions) {
-          auto& trial_restriction = trial_restrictions[geom];
-
-          // the degrees of freedom associated with the rows/columns of the e^th element stiffness matrix
-          std::vector<int> test_vdofs(test_restriction.nodes_per_elem * test_restriction.components);
-          std::vector<int> trial_vdofs(trial_restriction.nodes_per_elem * trial_restriction.components);
-
-          auto num_elements = static_cast<uint32_t>(test_restriction.num_elements);
-          for (uint32_t e = 0; e < num_elements; e++) {
-
-            for (uint32_t i = 0; i < test_restriction.nodes_per_elem; i++) {
-              auto test_dof = test_restriction.dof_info(e, i);
-              for (uint32_t j = 0; j < test_restriction.components; j++) {
-                test_vdofs[i * test_restriction.components + j] = test_restriction.GetVDof(test_dof, j).index();
-                std::cout << test_restriction.GetVDof(test_dof, j).index() << " ";
-              }
-            }
-            std::cout << std::endl;
-
-            for (uint32_t i = 0; i < trial_restriction.nodes_per_elem; i++) {
-              auto trial_dof = trial_restriction.dof_info(e, i);
-              for (uint32_t j = 0; j < trial_restriction.components; j++) {
-                trial_vdofs[i * trial_restriction.components + j] = trial_restriction.GetVDof(trial_dof, j).index();
-                std::cout << trial_restriction.GetVDof(trial_dof, j).index() << " ";
-              }
-            }
-            std::cout << std::endl;
-            std::cout << std::endl;
-
-            for (int row : test_vdofs) {
-              for (int col : trial_vdofs) {
-                nonzero_entries.insert({row, col});
-              }
-            }
-          }
-        }
-      }
-
-      int nnz = nonzero_entries.size();
-      int nrows = form_.output_L_.Size();
-      int ncols = form_.input_L_[which_argument].Size();
-
-      int * row_ptr = new int[nrows + 1];
-      int * col_ind = new int[nnz];
-      double * values = new double[nnz];
-
-      int nz = 0;
-      int last_row = -1;
-      for (auto [row, col] : nonzero_entries) {
-        col_ind[nz] = col;
-        values[nz] = 0;
-        for (int i = last_row+1; i <= row; i++) { row_ptr[i] = nz; }
-        last_row = row;
-        nz++;
-      }
-      for (int i = last_row+1; i <= nrows; i++) { row_ptr[i] = nz; }
-
-      for (int i = 0; i < nnz; i++) {
-        std::cout << col_ind[i] << " ";
-      }
-      std::cout << std::endl;
-
-      for (int i = 0; i <= nrows; i++) {
-        std::cout << row_ptr[i] << " ";
-      }
-      std::cout << std::endl;
-
-      constexpr bool sparse_matrix_frees_graph_ptrs = true;
-      constexpr bool sparse_matrix_frees_values_ptr = true;
-      constexpr bool col_ind_is_sorted = true;
-      A_local = mfem::SparseMatrix(row_ptr, col_ind, values, nrows, ncols, sparse_matrix_frees_graph_ptrs, sparse_matrix_frees_values_ptr, col_ind_is_sorted);
-
-    };
-
-    /**
-     * @brief assemble element matrices and return an mfem::HypreParMatrix by-reference
-     * 
-     * @note: if A is empty, its nonzero sparsity will be determined automatically, but
-     *        if A is nonempty, then we assume its sparsity pattern 
-     *        has all of the necessary nonzero entries (which will be true after passing
-     *        in an empty HypreParMatrix to this function). 
-     */
-    void assemble(mfem::HypreParMatrix & A) {
-
-      mfem::SparseMatrix A_local;
-
-      // if A is an uninitialized HypreParMatrix
-      if (A.Height() == 0) {
-
-        // then, we need to figure out which entries of the matrix could be nonzero
-        initialize_sparsity_pattern(A_local);
-
-      } else {
-
-        // otherwise, we can reuse the information in the provided HypreParMatrix
-        A.GetDiag(A_local);
-
-        // except there is one catch: HypreParMatrix puts the diagonal entries  
-        // first in each row, so we need to "sort" each row again so that we can
-        // do binary search later on in the actual assembly step
-
-        // TODO
-
-      }
-
-      std::map<mfem::Geometry::Type, ExecArray<double, 3, exec>> element_gradients[Domain::num_types];
-
-      for (auto & integral : form_.integrals_) {
-
-        auto& K_elem             = element_gradients[integral.domain_.type_];
-        auto& test_restrictions  = form_.G_test_[integral.domain_.type_].restrictions;
-        auto& trial_restrictions = form_.G_trial_[integral.domain_.type_][which_argument].restrictions;
-
-        if (K_elem.empty()) {
-          for (auto& [geom, test_restriction] : test_restrictions) {
-            auto& trial_restriction = trial_restrictions[geom];
-
-            K_elem[geom] = ExecArray<double, 3, exec>(test_restriction.num_elements,
-                                                      trial_restriction.nodes_per_elem * trial_restriction.components,
-                                                      test_restriction.nodes_per_elem * test_restriction.components);
-
-            detail::zero_out(K_elem[geom]);
-          }
-        }
-
-        integral.ComputeElementGradients(K_elem, which_argument);
-
-      }
-
-      int * row_ptr = A_local.GetI();
-      int * col_ind = A_local.GetJ();
-      double * values = A_local.GetData();
-
-      for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
-        auto& K_elem             = element_gradients[type];
-        auto& test_restrictions  = form_.G_test_[type].restrictions;
-        auto& trial_restrictions = form_.G_trial_[type][which_argument].restrictions;
-
-        if (!K_elem.empty()) {
-          for (auto [geom, elem_matrices] : K_elem) {
-            std::vector<DoF> test_vdofs(test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components);
-            std::vector<DoF> trial_vdofs(trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components);
-
-            for (axom::IndexType e = 0; e < elem_matrices.shape()[0]; e++) {
-              test_restrictions[geom].GetElementVDofs(e, test_vdofs);
-              trial_restrictions[geom].GetElementVDofs(e, trial_vdofs);
-
-              for (uint32_t i = 0; i < uint32_t(elem_matrices.shape()[1]); i++) {
-                int col = int(trial_vdofs[i].index());
-
-                for (uint32_t j = 0; j < uint32_t(elem_matrices.shape()[2]); j++) {
-                  int row = int(test_vdofs[j].index());
-
-                  for (int nz = row_ptr[row]; nz < row_ptr[row+1]; nz++) {
-                    // TODO: replace linear search with binary search
-                    if (col_ind[nz] == col) {
-                      values[nz] += elem_matrices(e, i, j);
-                    }
-                  }
-
-                }
-              }
-            }
-          }
-        }
-
-      }
-
-      std::ofstream outfile("K_new.mtx");
-      A_local.PrintMM(outfile);
-      outfile.close();
-
-      auto* R = form_.test_space_->Dof_TrueDof_Matrix();
-
-      auto* tmp = new mfem::HypreParMatrix(test_space_->GetComm(), test_space_->GlobalVSize(), trial_space_->GlobalVSize(),
-                                           test_space_->GetDofOffsets(), trial_space_->GetDofOffsets(), &A_local);
-
-      auto* P = trial_space_->Dof_TrueDof_Matrix();
-
-      A = *mfem::RAP(R, tmp, P);
-
-      delete tmp;
-
-      #if 0
-
-      // the CSR graph (sparsity pattern) is reusable, so we cache
-      // that and ask mfem to not free that memory in ~SparseMatrix()
-      constexpr bool sparse_matrix_frees_graph_ptrs = false;
-
-      // the CSR values are NOT reusable, so we pass ownership of
-      // them to the mfem::SparseMatrix, to be freed in ~SparseMatrix()
-      constexpr bool sparse_matrix_frees_values_ptr = true;
-
-      constexpr bool col_ind_is_sorted = true;
-
-      if (!lookup_tables.initialized) {
-        lookup_tables.init(form_.G_test_[Domain::Type::Elements],
-                           form_.G_trial_[Domain::Type::Elements][which_argument]);
-      }
-
-      double* values = new double[lookup_tables.nnz]{};
-
-      std::map<mfem::Geometry::Type, ExecArray<double, 3, exec>> element_gradients[Domain::num_types];
-
-      for (auto& integral : form_.integrals_) {
-        auto& K_elem             = element_gradients[integral.domain_.type_];
-        auto& test_restrictions  = form_.G_test_[integral.domain_.type_].restrictions;
-        auto& trial_restrictions = form_.G_trial_[integral.domain_.type_][which_argument].restrictions;
-
-        if (K_elem.empty()) {
-          for (auto& [geom, test_restriction] : test_restrictions) {
-            auto& trial_restriction = trial_restrictions[geom];
-
-            K_elem[geom] = ExecArray<double, 3, exec>(test_restriction.num_elements,
-                                                      trial_restriction.nodes_per_elem * trial_restriction.components,
-                                                      test_restriction.nodes_per_elem * test_restriction.components);
-
-            detail::zero_out(K_elem[geom]);
-          }
-        }
-
-        integral.ComputeElementGradients(K_elem, which_argument);
-      }
-
-      for (auto type : {Domain::Type::Elements, Domain::Type::BoundaryElements}) {
-        auto& K_elem             = element_gradients[type];
-        auto& test_restrictions  = form_.G_test_[type].restrictions;
-        auto& trial_restrictions = form_.G_trial_[type][which_argument].restrictions;
-
-        if (!K_elem.empty()) {
-          for (auto [geom, elem_matrices] : K_elem) {
-            std::vector<DoF> test_vdofs(test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components);
-            std::vector<DoF> trial_vdofs(trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components);
-
-            for (axom::IndexType e = 0; e < elem_matrices.shape()[0]; e++) {
-              test_restrictions[geom].GetElementVDofs(e, test_vdofs);
-              trial_restrictions[geom].GetElementVDofs(e, trial_vdofs);
-
-              for (uint32_t i = 0; i < uint32_t(elem_matrices.shape()[1]); i++) {
-                int col = int(trial_vdofs[i].index());
-
-                for (uint32_t j = 0; j < uint32_t(elem_matrices.shape()[2]); j++) {
-                  int row = int(test_vdofs[j].index());
-
-                  int sign = test_vdofs[j].sign() * trial_vdofs[i].sign();
-
-                  // note: col / row appear backwards here, because the element matrix kernel
-                  //       is actually transposed, as a result of being row-major storage.
-                  //
-                  //       This is kind of confusing, and will be fixed in a future refactor
-                  //       of the element gradient kernel implementation
-                  [[maybe_unused]] auto nz = lookup_tables(row, col);
-                  values[lookup_tables(row, col)] += sign * elem_matrices(e, i, j);
-                }
-              }
-            }
-          }
-        }
-
-      }
-
       // Copy the column indices to an auxilliary array as MFEM can mutate these during HypreParMatrix construction
       col_ind_copy_ = lookup_tables.col_ind;
 
@@ -995,9 +831,8 @@ private:
       delete A;
 
       return K;
-
-      #endif
     };
+  #endif
 
     friend auto assemble(Gradient& g) { return g.assemble(); }
 
@@ -1005,18 +840,8 @@ private:
     /// @brief The "parent" @p Functional to calculate gradients with
     Functional<test(trials...), exec>& form_;
 
-    /**
-     * @brief this object has lookup tables for where to place each
-     *   element and boundary element gradient contribution in the global
-     *   sparse matrix
-     */
-    GradientAssemblyLookupTables lookup_tables;
-
-    /**
-     * @brief Copy of the column indices for sparse matrix assembly
-     * @note These are mutated by MFEM during HypreParMatrix construction
-     */
-    std::vector<int> col_ind_copy_;
+    std::vector<int> row_ptr;
+    std::vector<int> col_ind;
 
     /**
      * @brief this member variable tells us which argument the associated Functional this gradient
@@ -1044,7 +869,10 @@ private:
   const mfem::ParFiniteElementSpace* test_space_;
 
   /// @brief Manages DOFs for the trial space
-  std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_space_;
+  std::array< const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_space_;
+
+  std::array< FunctionSpace, num_trial_spaces > trial_function_spaces_;
+  FunctionSpace test_function_space_;
 
   /**
    * @brief Operator that converts true (global) DOF values to local (current rank) DOF values
@@ -1055,15 +883,13 @@ private:
   /// @brief The input set of local DOF values (i.e., on the current rank)
   mutable mfem::Vector input_L_[num_trial_spaces];
 
-  BlockElementRestriction G_trial_[Domain::num_types][num_trial_spaces];
+  mutable std::vector<mfem::Vector> input_E_buffer_;
+  mutable std::vector<mfem::BlockVector> input_E_;
 
-  mutable std::vector<mfem::BlockVector> input_E_[Domain::num_types];
+  mutable std::vector<Integral> integrals_;
 
-  std::vector<Integral> integrals_;
-
-  mutable mfem::BlockVector output_E_[Domain::num_types];
-
-  BlockElementRestriction G_test_[Domain::num_types];
+  mutable mfem::Vector output_E_buffer_;
+  mutable mfem::BlockVector output_E_;
 
   /// @brief The output set of local DOF values (i.e., on the current rank)
   mutable mfem::Vector output_L_;
@@ -1074,7 +900,10 @@ private:
   mutable mfem::Vector output_T_;
 
   /// @brief The objects representing the gradients w.r.t. each input argument of the Functional
-  mutable std::vector<Gradient> grad_;
+  mutable std::vector< Gradient > grad_;
+
+  const mfem::MemoryType mem_type;
+
 };
 
 }  // namespace serac

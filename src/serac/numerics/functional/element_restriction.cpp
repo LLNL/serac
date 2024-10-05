@@ -587,21 +587,7 @@ ElementRestriction::ElementRestriction(const mfem::FiniteElementSpace* fes, mfem
 
   ordering = fes->GetOrdering();
 
-  lsize          = uint64_t(fes->GetVSize());
-  components     = uint64_t(fes->GetVDim());
-  num_nodes      = lsize / components;
-  num_elements   = uint64_t(dof_info.shape()[0]);
-  nodes_per_elem = uint64_t(dof_info.shape()[1]);
-  esize          = num_elements * nodes_per_elem * components;
-
-
-}
-
-ElementRestriction::ElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type elem_geom)
-{
-  dof_info = GetElementRestriction(fes, elem_geom);
-
-  ordering = fes->GetOrdering();
+  element_ids = elem_ids;
 
   lsize          = uint64_t(fes->GetVSize());
   components     = uint64_t(fes->GetVDim());
@@ -609,21 +595,7 @@ ElementRestriction::ElementRestriction(const mfem::FiniteElementSpace* fes, mfem
   num_elements   = uint64_t(dof_info.shape()[0]);
   nodes_per_elem = uint64_t(dof_info.shape()[1]);
   esize          = num_elements * nodes_per_elem * components;
-}
 
-ElementRestriction::ElementRestriction(const mfem::FiniteElementSpace* fes, mfem::Geometry::Type face_geom,
-                                       FaceType type)
-{
-  dof_info = GetFaceDofs(fes, face_geom, type);
-
-  ordering = fes->GetOrdering();
-
-  lsize          = uint64_t(fes->GetVSize());
-  components     = uint64_t(fes->GetVDim());
-  num_nodes      = lsize / components;
-  num_elements   = uint64_t(dof_info.shape()[0]);
-  nodes_per_elem = uint64_t(dof_info.shape()[1]);
-  esize          = num_elements * nodes_per_elem * components;
 }
 
 uint64_t ElementRestriction::ESize() const { return esize; }
@@ -700,38 +672,6 @@ BlockElementRestriction::BlockElementRestriction(const mfem::FiniteElementSpace*
     restrictions[mfem::Geometry::CUBE] = ElementRestriction(fes, mfem::Geometry::CUBE, domain.mfem_hex_ids_);
   }
 
-}
-
-BlockElementRestriction::BlockElementRestriction(const mfem::FiniteElementSpace* fes)
-{
-  int dim = fes->GetMesh()->Dimension();
-
-  if (dim == 2) {
-    for (auto geom : {mfem::Geometry::TRIANGLE, mfem::Geometry::SQUARE}) {
-      restrictions[geom] = ElementRestriction(fes, geom);
-    }
-  }
-
-  if (dim == 3) {
-    for (auto geom : {mfem::Geometry::TETRAHEDRON, mfem::Geometry::CUBE}) {
-      restrictions[geom] = ElementRestriction(fes, geom);
-    }
-  }
-}
-
-BlockElementRestriction::BlockElementRestriction(const mfem::FiniteElementSpace* fes, FaceType type)
-{
-  int dim = fes->GetMesh()->Dimension();
-
-  if (dim == 2) {
-    restrictions[mfem::Geometry::SEGMENT] = ElementRestriction(fes, mfem::Geometry::SEGMENT, type);
-  }
-
-  if (dim == 3) {
-    for (auto geom : {mfem::Geometry::TRIANGLE, mfem::Geometry::SQUARE}) {
-      restrictions[geom] = ElementRestriction(fes, geom, type);
-    }
-  }
 }
 
 uint64_t BlockElementRestriction::ESize() const { 
