@@ -24,6 +24,7 @@ set(functional_serial_test_sources
     hcurl_unit_tests.cpp
     functional_tet_quality.cpp
     test_tensor_ad.cpp
+    qdata_example.cpp
     tuple_arithmetic_unit_tests.cpp
     test_newton.cpp)
 
