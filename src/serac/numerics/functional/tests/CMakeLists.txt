@@ -70,3 +70,6 @@ if(ENABLE_CUDA)
                      DEPENDS_ON ${functional_test_depends})
 
 endif()
+
+add_executable(parametrized_design parametrized_design.cpp)
+target_link_libraries(parametrized_design PUBLIC serac_functional ${functional_depends})
