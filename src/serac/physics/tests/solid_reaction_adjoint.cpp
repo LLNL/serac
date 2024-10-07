@@ -30,8 +30,8 @@ using SolidMechanicsType = SolidMechanics<p, dim, Parameters<H1<1>, H1<1>>>;
 const std::string mesh_tag       = "mesh";
 const std::string physics_prefix = "solid";
 
-// using SolidMaterial = solid_mechanics::ParameterizedNeoHookeanSolid;
-using SolidMaterial = solid_mechanics::ParameterizedLinearIsotropicSolid;
+using SolidMaterial = solid_mechanics::ParameterizedNeoHookeanSolid;
+// using SolidMaterial = solid_mechanics::ParameterizedLinearIsotropicSolid;
 auto geoNonlinear   = GeometricNonlinearities::Off;
 
 constexpr double boundary_disp       = 0.013;
@@ -108,6 +108,7 @@ double computeSolidMechanicsQoi(BasePhysics& solid_solver)
 
   const FiniteElementDual& reactions          = solid_solver.dual("reactions");
   auto                     reactionDirections = createReactionDirection(solid_solver, 0);
+  //reactionDirections = solid_solver.dual("reactions");
 
   const FiniteElementState& displacements = solid_solver.state("displacement");
   return innerProduct(reactions, reactionDirections) + 0.05 * innerProduct(displacements, displacements);
@@ -123,21 +124,18 @@ auto computeSolidMechanicsQoiSensitivities(BasePhysics& solid_solver)
   FiniteElementDual shear_modulus_sensitivity(StateManager::mesh(mesh_tag), H1<p>{}, "shear modulus sensitivity");
   shear_modulus_sensitivity = 0.0;
 
-  auto reactionDirections = createReactionDirection(solid_solver, 0);
+  auto reaction_adjoint_load = createReactionDirection(solid_solver, 0);
 
   FiniteElementDual displacement_adjoint_load(solid_solver.state("displacement").space(), "displacement_adjoint_load");
   displacement_adjoint_load = solid_solver.state("displacement");
   displacement_adjoint_load *= 0.1;
 
   solid_solver.setAdjointLoad({{"displacement", displacement_adjoint_load}});
-  solid_solver.assembleDualAdjointLoad(solid_solver.dualNames()[0], reactionDirections);
+  solid_solver.setDualAdjointLoad({{"reactions", reaction_adjoint_load}});
   solid_solver.reverseAdjointTimestep();
 
   shear_modulus_sensitivity += solid_solver.computeTimestepSensitivity(0);
-  shear_modulus_sensitivity += solid_solver.computeDualSensitivity(reactionDirections, 0);
-
   shape_sensitivity += solid_solver.computeTimestepShapeSensitivity();
-  shape_sensitivity += solid_solver.computeDualShapeSensitivity(reactionDirections);
 
   return std::make_tuple(qoi, shear_modulus_sensitivity, shape_sensitivity);
 }
