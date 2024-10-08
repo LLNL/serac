@@ -400,8 +400,8 @@ public:
    * @brief Accessor for getting a single named finite element state primal solution from the physics modules at a given
    * checkpointed cycle index
    *
-   * @param cycle The cycle to retrieve state from
    * @param state_name The name of the state to retrieve (e.g. "temperature", "displacement")
+   * @param cycle The cycle to retrieve state from
    * @return The named primal Finite Element State
    */
   FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const;
@@ -410,11 +410,11 @@ public:
    * @brief Accessor for getting a single named finite element dual solution from the physics modules at a given
    * checkpointed cycle index
    *
-   * @param cycle The cycle to retrieve state from
    * @param state_name The name of the state to retrieve (e.g. "reaction")
+   * @param cycle The cycle to retrieve state from
    * @return The named Finite Element Dual
    */
-  virtual FiniteElementDual loadCheckpointedDual(const std::string&, int) const
+  virtual FiniteElementDual loadCheckpointedDual([[maybe_unused]] const std::string& state_name, [[maybe_unused]] int cycle) const
   {
     SLIC_ERROR_ROOT(axom::fmt::format("loadCheckpointedDual not enabled in physics module {}", name_));
     return *duals_[0];
