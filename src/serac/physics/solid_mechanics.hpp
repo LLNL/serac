@@ -1135,7 +1135,9 @@ public:
           SERAC_MARK_FUNCTION;
           auto [r, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(u), acceleration_,
                                         *parameters_[parameter_indices].state...);
+          J_.reset();
           J_             = assemble(drdu);
+          J_e_.reset();
           J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
         });
@@ -1202,7 +1204,9 @@ public:
             std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
             // J = M + c0 * K
+            J_.reset();
             J_.reset(mfem::Add(1.0, *m_mat, c0_, *k_mat));
+            J_e_.reset();
             J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
 
             return *J_;
@@ -1354,10 +1358,6 @@ public:
   {
     auto& lin_solver = nonlin_solver_->linearSolver();
 
-    // By default, use a homogeneous essential boundary condition
-    mfem::HypreParVector adjoint_essential(displacement_adjoint_load_);
-    adjoint_essential = 0.0;
-
     SLIC_ERROR_ROOT_IF(cycle_ <= min_cycle_,
                        "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
                        "number of forward timesteps");
@@ -1373,9 +1373,13 @@ public:
     if (is_quasistatic_) {
       auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
                                     *parameters_[parameter_indices].state...);
-      J_  = assemble(drdu);
-      auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(J_->Transpose());
-      J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_T);
+      J_.reset();
+      J_ = assemble(drdu);
+
+      auto J_T = std::unique_ptr<mfem::HypreParMatrix>(J_->Transpose());
+
+      J_e_.reset();
+      J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_T);
 
       auto& constrained_dofs = bcs_.allEssentialTrueDofs();
 
@@ -1413,7 +1417,7 @@ public:
       solid_mechanics::detail::adjoint_integrate(
           dt_n_to_np1, dt_np1_to_np2, m_mat.get(), k_mat.get(), displacement_adjoint_load_, velocity_adjoint_load_,
           acceleration_adjoint_load_, adjoint_displacement_, implicit_sensitivity_displacement_start_of_step_,
-          implicit_sensitivity_velocity_start_of_step_, adjoint_essential, bcs_, lin_solver);
+          implicit_sensitivity_velocity_start_of_step_, reactions_adjoint_bcs_, bcs_, lin_solver);
     }
 
     time_end_step_ = time_;
@@ -1725,7 +1729,9 @@ protected:
       // use the most recently evaluated Jacobian
       auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
                                     *parameters_[parameter_indices].previous_state...);
+      J_.reset();
       J_             = assemble(drdu);
+      J_e_.reset();
       J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
 
       r *= -1.0;
