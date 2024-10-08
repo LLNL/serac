@@ -374,7 +374,7 @@ public:
    * @brief Set the dual loads (dirichlet values) for the adjoint reverse timestep solve
    * This must be called after setAdjointLoad
    */
-  virtual void setDualAdjointLoad(std::unordered_map<std::string, const serac::FiniteElementState&>)
+  virtual void setDualAdjointBcs(std::unordered_map<std::string, const serac::FiniteElementState&>)
   {
     SLIC_ERROR_ROOT(axom::fmt::format("Adjoint analysis not defined for physics module {}", name_));
   }

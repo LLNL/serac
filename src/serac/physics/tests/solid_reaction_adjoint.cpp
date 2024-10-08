@@ -131,7 +131,7 @@ auto computeSolidMechanicsQoiSensitivities(BasePhysics& solid_solver)
   displacement_adjoint_load *= 0.1;
 
   solid_solver.setAdjointLoad({{"displacement", displacement_adjoint_load}});
-  solid_solver.setDualAdjointLoad({{"reactions", reaction_adjoint_load}});
+  solid_solver.setDualAdjointBcs({{"reactions", reaction_adjoint_load}});
   solid_solver.reverseAdjointTimestep();
 
   shear_modulus_sensitivity += solid_solver.computeTimestepSensitivity(0);

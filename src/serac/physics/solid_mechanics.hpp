@@ -182,7 +182,7 @@ public:
         implicit_sensitivity_displacement_start_of_step_(displacement_.space(), "total_deriv_wrt_displacement."),
         implicit_sensitivity_velocity_start_of_step_(displacement_.space(), "total_deriv_wrt_velocity."),
         reactions_(StateManager::newDual(H1<order, dim>{}, detail::addPrefix(physics_name, "reactions"), mesh_tag_)),
-        reactions_adjoint_load_(reactions_.space(), "reactions_shape_sensitivity"),
+        reactions_adjoint_bcs_(reactions_.space(), "reactions_shape_sensitivity"),
         nonlin_solver_(std::move(solver)),
         ode2_(displacement_.space().TrueVSize(),
               {.time = time_, .c0 = c0_, .c1 = c1_, .u = u_, .du_dt = v_, .d2u_dt2 = acceleration_}, *nonlin_solver_,
@@ -216,7 +216,7 @@ public:
 
     adjoints_.push_back(&adjoint_displacement_);
     duals_.push_back(&reactions_);
-    dual_adjoints_.push_back(&reactions_adjoint_load_);
+    dual_adjoints_.push_back(&reactions_adjoint_bcs_);
 
     // Create a pack of the primal field and parameter finite element spaces
     mfem::ParFiniteElementSpace* test_space  = &displacement_.space();
@@ -386,7 +386,7 @@ public:
     implicit_sensitivity_velocity_start_of_step_     = 0.0;
 
     reactions_ = 0.0;
-    reactions_adjoint_load_ = 0.0;
+    reactions_adjoint_bcs_ = 0.0;
 
     u_                      = 0.0;
     v_                      = 0.0;
@@ -757,12 +757,12 @@ public:
   const FiniteElementState& dualAdjoint(const std::string& dual_name) const override
   {
     if (dual_name == "reactions") {
-      return reactions_adjoint_load_;
+      return reactions_adjoint_bcs_;
     }
 
     SLIC_ERROR_ROOT(axom::fmt::format(
         "dualAdjoint '{}' requested from solid mechanics module '{}', but it doesn't exist", dual_name, name_));
-    return reactions_adjoint_load_;
+    return reactions_adjoint_bcs_;
   }
 
   /**
@@ -1338,7 +1338,7 @@ public:
     }
   }
 
-  virtual void setDualAdjointLoad(std::unordered_map<std::string, const serac::FiniteElementState&> loads) override
+  virtual void setDualAdjointBcs(std::unordered_map<std::string, const serac::FiniteElementState&> loads) override
   {
     SLIC_ERROR_ROOT_IF(loads.size() == 0, "Adjoint load container size must be greater than 0 in the solid mechanics.");
 
@@ -1346,7 +1346,7 @@ public:
 
     SLIC_ERROR_ROOT_IF(reaction_adjoint_load == loads.end(), "Adjoint load for \"reaction\" not found.");
 
-    reactions_adjoint_load_ = reaction_adjoint_load->second;
+    reactions_adjoint_bcs_ = reaction_adjoint_load->second;
   }
 
   /// @overload
@@ -1373,21 +1373,20 @@ public:
     if (is_quasistatic_) {
       auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
                                     *parameters_[parameter_indices].state...);
-      auto jacobian  = assemble(drdu);
-      auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
+      J_  = assemble(drdu);
+      auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(J_->Transpose());
+      J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_T);
 
-      serac::FiniteElementState displacement_adjoint_load_contribution(displacement_adjoint_load_.space(), "adjoint_load_contribution" );
-      J_T->Mult(reactions_adjoint_load_, displacement_adjoint_load_contribution);
-      displacement_adjoint_load_ -= displacement_adjoint_load_contribution;
+      auto& constrained_dofs = bcs_.allEssentialTrueDofs();
 
-      for (const auto& bc : bcs_.essentials()) {
-        bc.apply(*J_T, displacement_adjoint_load_, adjoint_essential);
+      mfem::EliminateBC(*J_T, *J_e_, constrained_dofs, reactions_adjoint_bcs_, displacement_adjoint_load_);
+      for (int i = 0; i < constrained_dofs.Size(); i++) {
+        int j = constrained_dofs[i];
+        displacement_adjoint_load_[j] = reactions_adjoint_bcs_[j];
       }
 
       lin_solver.SetOperator(*J_T);
       lin_solver.Mult(displacement_adjoint_load_, adjoint_displacement_);
-
-      adjoint_displacement_ += reactions_adjoint_load_;
 
       // Reset the equation solver to use the full nonlinear residual operator.  MRT, is this needed?
       nonlin_solver_->setOperator(*residual_with_bcs_);
@@ -1524,7 +1523,7 @@ protected:
   FiniteElementDual reactions_;
 
   /// sensitivity of qoi with respect to reaction forces
-  FiniteElementState reactions_adjoint_load_;
+  FiniteElementState reactions_adjoint_bcs_;
 
   /// serac::Functional that is used to calculate the residual and its derivatives
   std::unique_ptr<ShapeAwareFunctional<shape_trial, test(trial, trial, parameter_space...)>> residual_;
