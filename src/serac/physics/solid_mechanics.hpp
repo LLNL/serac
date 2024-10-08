@@ -1369,15 +1369,15 @@ public:
     }
   }
 
-  virtual void setDualAdjointBcs(std::unordered_map<std::string, const serac::FiniteElementState&> loads) override
+  virtual void setDualAdjointBcs(std::unordered_map<std::string, const serac::FiniteElementState&> bcs) override
   {
-    SLIC_ERROR_ROOT_IF(loads.size() == 0, "Adjoint load container size must be greater than 0 in the solid mechanics.");
+    SLIC_ERROR_ROOT_IF(bcs.size() == 0, "Adjoint load container size must be greater than 0 in the solid mechanics.");
 
-    auto reaction_adjoint_load = loads.find("reactions");
+    auto reaction_adjoint_load = bcs.find("reactions");
 
-    SLIC_ERROR_ROOT_IF(reaction_adjoint_load == loads.end(), "Adjoint load for \"reaction\" not found.");
+    SLIC_ERROR_ROOT_IF(reaction_adjoint_load == bcs.end(), "Adjoint load for \"reaction\" not found.");
 
-    if (reaction_adjoint_load != loads.end()) {
+    if (reaction_adjoint_load != bcs.end()) {
       reactions_adjoint_bcs_ = reaction_adjoint_load->second;
     }
   }
