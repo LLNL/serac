@@ -414,7 +414,8 @@ public:
    * @param cycle The cycle to retrieve state from
    * @return The named Finite Element Dual
    */
-  virtual FiniteElementDual loadCheckpointedDual([[maybe_unused]] const std::string& state_name, [[maybe_unused]] int cycle) const
+  virtual FiniteElementDual loadCheckpointedDual([[maybe_unused]] const std::string& state_name,
+                                                 [[maybe_unused]] int                cycle) const
   {
     SLIC_ERROR_ROOT(axom::fmt::format("loadCheckpointedDual not enabled in physics module {}", name_));
     return *duals_[0];
