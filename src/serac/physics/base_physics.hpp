@@ -338,7 +338,6 @@ public:
     return *shape_displacement_sensitivity_;
   }
 
-
   /**
    * @brief Compute the implicit sensitivity of the quantity of interest with respect to the initial condition fields
    *
@@ -415,7 +414,8 @@ public:
    * @param state_name The name of the state to retrieve (e.g. "reaction")
    * @return The named Finite Element Dual
    */
-  virtual FiniteElementDual loadCheckpointedDual(const std::string&, int) const{
+  virtual FiniteElementDual loadCheckpointedDual(const std::string&, int) const
+  {
     SLIC_ERROR_ROOT(axom::fmt::format("loadCheckpointedDual not enabled in physics module {}", name_));
     return *duals_[0];
   }

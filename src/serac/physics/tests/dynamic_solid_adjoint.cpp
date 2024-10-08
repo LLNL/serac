@@ -49,10 +49,11 @@ double computeStepQoi(const FiniteElementState& displacement, const FiniteElemen
   FiniteElementState displacement_error(displacement);
   displacement_error = disp_target;
   displacement_error.Add(1.0, displacement);
-  return 0.5 * dt * innerProduct(displacement_error, displacement_error) + 0.05 * dt * innerProduct(reactions, reactions);
+  return 0.5 * dt * innerProduct(displacement_error, displacement_error) +
+         0.05 * dt * innerProduct(reactions, reactions);
 }
 
-void computeStepAdjointLoad(const FiniteElementState& displacement, const FiniteElementDual& reactions, 
+void computeStepAdjointLoad(const FiniteElementState& displacement, const FiniteElementDual& reactions,
                             FiniteElementDual& d_qoi_d_displacement, FiniteElementState& d_qoi_d_reactions, double dt)
 {
   d_qoi_d_displacement = disp_target;
@@ -114,16 +115,16 @@ double computeSolidMechanicsQoi(BasePhysics& solid_solver, const TimeSteppingInf
   auto dts = ts_info.dts;
   solid_solver.advanceTimestep(dts(0));  // advance by 0.0 seconds to get initial acceleration
   solid_solver.outputStateToDisk();
-  
-  FiniteElementState dispForObjective = solid_solver.state("displacement");
-  FiniteElementDual reactionsForObjective = solid_solver.dual("reactions");
-  double qoi = computeStepQoi(dispForObjective, reactionsForObjective, 0.5 * (dts(0) + dts(1)));
+
+  FiniteElementState dispForObjective      = solid_solver.state("displacement");
+  FiniteElementDual  reactionsForObjective = solid_solver.dual("reactions");
+  double             qoi = computeStepQoi(dispForObjective, reactionsForObjective, 0.5 * (dts(0) + dts(1)));
 
   for (int i = 1; i <= ts_info.numTimesteps(); ++i) {
     solid_solver.advanceTimestep(dts(i));
     solid_solver.outputStateToDisk();
-  
-    dispForObjective = solid_solver.state("displacement");
+
+    dispForObjective      = solid_solver.state("displacement");
     reactionsForObjective = solid_solver.dual("reactions");
     qoi += computeStepQoi(dispForObjective, reactionsForObjective, 0.5 * (dts(i) + dts(i + 1)));
   }
@@ -145,14 +146,14 @@ std::tuple<double, FiniteElementDual, FiniteElementDual, FiniteElementDual> comp
   FiniteElementDual shape_sensitivity(solid_solver.shapeDisplacement().space(), "shape sensitivity");
   shape_sensitivity = 0.0;
 
-  FiniteElementDual adjoint_load(solid_solver.state("displacement").space(), "adjoint_displacement_load");
+  FiniteElementDual  adjoint_load(solid_solver.state("displacement").space(), "adjoint_displacement_load");
   FiniteElementState adjoint_bcs(solid_solver.dual("reactions").space(), "adjoint_reaction_bcs");
 
   // for solids, we go back to time = 0, because there is an extra hidden implicit solve at the start
   // consider unifying the interface between solids and thermal
   for (int i = solid_solver.cycle(); i > 0; --i) {
     auto previous_displacement = solid_solver.loadCheckpointedState("displacement", solid_solver.cycle());
-    auto previous_reactions = solid_solver.loadCheckpointedDual("reactions", solid_solver.cycle());
+    auto previous_reactions    = solid_solver.loadCheckpointedDual("reactions", solid_solver.cycle());
     computeStepAdjointLoad(
         previous_displacement, previous_reactions, adjoint_load, adjoint_bcs,
         0.5 * (solid_solver.getCheckpointedTimestep(i - 1) + solid_solver.getCheckpointedTimestep(i)));
@@ -160,7 +161,6 @@ std::tuple<double, FiniteElementDual, FiniteElementDual, FiniteElementDual> comp
     solid_solver.setAdjointLoad({{"displacement", adjoint_load}});
     solid_solver.setDualAdjointBcs({{"reactions", adjoint_bcs}});
     solid_solver.reverseAdjointTimestep();
-    
 
     shape_sensitivity += solid_solver.computeTimestepShapeSensitivity();
     EXPECT_EQ(i - 1, solid_solver.cycle());

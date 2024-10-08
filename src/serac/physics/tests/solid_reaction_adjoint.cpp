@@ -32,7 +32,7 @@ const std::string physics_prefix = "solid";
 
 using SolidMaterial = solid_mechanics::ParameterizedNeoHookeanSolid;
 // using SolidMaterial = solid_mechanics::ParameterizedLinearIsotropicSolid;
-auto geoNonlinear   = GeometricNonlinearities::Off;
+auto geoNonlinear = GeometricNonlinearities::Off;
 
 constexpr double boundary_disp       = 0.013;
 constexpr double shear_modulus_value = 1.0;
@@ -108,7 +108,7 @@ double computeSolidMechanicsQoi(BasePhysics& solid_solver)
 
   const FiniteElementDual& reactions          = solid_solver.dual("reactions");
   auto                     reactionDirections = createReactionDirection(solid_solver, 0);
-  //reactionDirections = solid_solver.dual("reactions");
+  // reactionDirections = solid_solver.dual("reactions");
 
   const FiniteElementState& displacements = solid_solver.state("displacement");
   return innerProduct(reactions, reactionDirections) + 0.05 * innerProduct(displacements, displacements);

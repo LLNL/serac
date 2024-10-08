@@ -385,7 +385,7 @@ public:
     implicit_sensitivity_displacement_start_of_step_ = 0.0;
     implicit_sensitivity_velocity_start_of_step_     = 0.0;
 
-    reactions_ = 0.0;
+    reactions_             = 0.0;
     reactions_adjoint_bcs_ = 0.0;
 
     u_                      = 0.0;
@@ -777,15 +777,16 @@ public:
         reactions = (*residual_)(time_, shape_displacement_, checkpointed_sol.at("displacement"), acceleration_,
                                  *parameters_[parameter_indices].state...);
       } else {
-        reactions = (*residual_)(time_, shape_displacement_, checkpointed_sol.at("displacement"), checkpointed_sol.at("acceleration"),
-                                 *parameters_[parameter_indices].state...);
+        reactions = (*residual_)(time_, shape_displacement_, checkpointed_sol.at("displacement"),
+                                 checkpointed_sol.at("acceleration"), *parameters_[parameter_indices].state...);
       }
-      
+
       return reactions;
     }
 
-    SLIC_ERROR_ROOT(axom::fmt::format(
-        "loadCheckpointedDual '{}' requested from solid mechanics module '{}', but it doesn't exist", dual_name, name_));
+    SLIC_ERROR_ROOT(
+        axom::fmt::format("loadCheckpointedDual '{}' requested from solid mechanics module '{}', but it doesn't exist",
+                          dual_name, name_));
     return reactions_;
   }
 
@@ -1160,9 +1161,9 @@ public:
           auto [r, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(u), acceleration_,
                                         *parameters_[parameter_indices].state...);
           J_.reset();
-          J_             = assemble(drdu);
+          J_ = assemble(drdu);
           J_e_.reset();
-          J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+          J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           return *J_;
         });
   }
@@ -1413,7 +1414,7 @@ public:
 
       mfem::EliminateBC(*J_T, *J_e_, constrained_dofs, reactions_adjoint_bcs_, displacement_adjoint_load_);
       for (int i = 0; i < constrained_dofs.Size(); i++) {
-        int j = constrained_dofs[i];
+        int j                         = constrained_dofs[i];
         displacement_adjoint_load_[j] = reactions_adjoint_bcs_[j];
       }
 
@@ -1534,7 +1535,6 @@ protected:
   // In the case of transient dynamics, this is more like an adjoint_acceleration
   /// The displacement finite element adjoint state
   FiniteElementState adjoint_displacement_;
-
 
   /// The adjoint load (RHS) for the displacement adjoint system solve (downstream -dQOI/d displacement)
   FiniteElementDual displacement_adjoint_load_;
@@ -1758,9 +1758,9 @@ protected:
       auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
                                     *parameters_[parameter_indices].previous_state...);
       J_.reset();
-      J_             = assemble(drdu);
+      J_ = assemble(drdu);
       J_e_.reset();
-      J_e_           = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+      J_e_ = bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
 
       r *= -1.0;
 
