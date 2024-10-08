@@ -341,16 +341,6 @@ class Serac(CachedCMakePackage, CudaPackage, ROCmPackage):
             special_case,
         )
 
-    def initconfig_compiler_entries(self):
-        spec = self.spec
-        entries = super().initconfig_compiler_entries()
-
-        # Add optimization flag workaround for Debug builds with cray compiler or newer HIP
-        if "+rocm" in spec:
-            entries.append(cmake_cache_string("CMAKE_CXX_FLAGS_DEBUG", "-O1 -g -DNDEBUG"))
-
-        return entries
-
     def initconfig_hardware_entries(self):
         spec = self.spec
         entries = super(Serac, self).initconfig_hardware_entries()
