@@ -1347,19 +1347,6 @@ public:
     SLIC_ERROR_ROOT_IF(reaction_adjoint_load == loads.end(), "Adjoint load for \"reaction\" not found.");
 
     reactions_adjoint_load_ = reaction_adjoint_load->second;
-    // Add the sign correction to move the term to the RHS
-    reactions_adjoint_load_ *= 1.0;
-
-    auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
-                                  *parameters_[parameter_indices].state...);
-    std::unique_ptr<mfem::HypreParMatrix> jacobian = assemble(drdu);
-
-    serac::FiniteElementState displacement_adjoint_load_contribution(displacement_adjoint_load_.space(), "adjoint_load_contribution" );
-
-    // this is currently hard coded for the case of quasi-statics
-    jacobian->MultTranspose(reactions_adjoint_load_, displacement_adjoint_load_contribution);
-    displacement_adjoint_load_ -= displacement_adjoint_load_contribution;
-
   }
 
   /// @overload
@@ -1389,12 +1376,18 @@ public:
       auto jacobian  = assemble(drdu);
       auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
 
+      serac::FiniteElementState displacement_adjoint_load_contribution(displacement_adjoint_load_.space(), "adjoint_load_contribution" );
+      J_T->Mult(reactions_adjoint_load_, displacement_adjoint_load_contribution);
+      displacement_adjoint_load_ -= displacement_adjoint_load_contribution;
+
       for (const auto& bc : bcs_.essentials()) {
         bc.apply(*J_T, displacement_adjoint_load_, adjoint_essential);
       }
 
       lin_solver.SetOperator(*J_T);
       lin_solver.Mult(displacement_adjoint_load_, adjoint_displacement_);
+
+      adjoint_displacement_ += reactions_adjoint_load_;
 
       // Reset the equation solver to use the full nonlinear residual operator.  MRT, is this needed?
       nonlin_solver_->setOperator(*residual_with_bcs_);
@@ -1437,10 +1430,7 @@ public:
     auto drdparam     = serac::get<DERIVATIVE>(d_residual_d_[parameter_field](time_end_step_));
     auto drdparam_mat = assemble(drdparam);
 
-    serac::FiniteElementState total_adjoint_displacement(adjoint_displacement_);
-    total_adjoint_displacement += reactions_adjoint_load_;
-
-    drdparam_mat->MultTranspose(total_adjoint_displacement, *parameters_[parameter_field].sensitivity);
+    drdparam_mat->MultTranspose(adjoint_displacement_, *parameters_[parameter_field].sensitivity);
 
     return *parameters_[parameter_field].sensitivity;
   }
@@ -1454,10 +1444,7 @@ public:
 
     auto drdshape_mat = assemble(drdshape);
 
-    serac::FiniteElementState total_adjoint_displacement(adjoint_displacement_);
-    total_adjoint_displacement += reactions_adjoint_load_;
-
-    drdshape_mat->MultTranspose(total_adjoint_displacement, *shape_displacement_sensitivity_);
+    drdshape_mat->MultTranspose(adjoint_displacement_, *shape_displacement_sensitivity_);
 
     return *shape_displacement_sensitivity_;
   }
