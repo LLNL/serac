@@ -765,6 +765,30 @@ public:
     return reactions_adjoint_bcs_;
   }
 
+  /// @overload
+  FiniteElementDual loadCheckpointedDual(const std::string& dual_name, int cycle) const override
+  {
+    if (dual_name == "reactions") {
+      auto checkpointed_sol = getCheckpointedStates(cycle);
+
+      FiniteElementDual reactions(reactions_.space(), "reactions_tmp");
+
+      if (is_quasistatic_) {
+        reactions = (*residual_)(time_, shape_displacement_, checkpointed_sol.at("displacement"), acceleration_,
+                                 *parameters_[parameter_indices].state...);
+      } else {
+        reactions = (*residual_)(time_, shape_displacement_, checkpointed_sol.at("displacement"), checkpointed_sol.at("acceleration"),
+                                 *parameters_[parameter_indices].state...);
+      }
+      
+      return reactions;
+    }
+
+    SLIC_ERROR_ROOT(axom::fmt::format(
+        "loadCheckpointedDual '{}' requested from solid mechanics module '{}', but it doesn't exist", dual_name, name_));
+    return reactions_;
+  }
+
   /**
    * @brief register a custom domain integral calculation as part of the residual
    *
@@ -1321,9 +1345,11 @@ public:
 
     SLIC_ERROR_ROOT_IF(disp_adjoint_load == loads.end(), "Adjoint load for \"displacement\" not found.");
 
-    displacement_adjoint_load_ = disp_adjoint_load->second;
-    // Add the sign correction to move the term to the RHS
-    displacement_adjoint_load_ *= -1.0;
+    if (disp_adjoint_load != loads.end()) {
+      displacement_adjoint_load_ = disp_adjoint_load->second;
+      // Add the sign correction to move the term to the RHS
+      displacement_adjoint_load_ *= -1.0;
+    }
 
     auto velo_adjoint_load = loads.find("velocity");
 
@@ -1350,7 +1376,9 @@ public:
 
     SLIC_ERROR_ROOT_IF(reaction_adjoint_load == loads.end(), "Adjoint load for \"reaction\" not found.");
 
-    reactions_adjoint_bcs_ = reaction_adjoint_load->second;
+    if (reaction_adjoint_load != loads.end()) {
+      reactions_adjoint_bcs_ = reaction_adjoint_load->second;
+    }
   }
 
   /// @overload

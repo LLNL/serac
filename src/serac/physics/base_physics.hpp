@@ -408,6 +408,19 @@ public:
   FiniteElementState loadCheckpointedState(const std::string& state_name, int cycle) const;
 
   /**
+   * @brief Accessor for getting a single named finite element dual solution from the physics modules at a given
+   * checkpointed cycle index
+   *
+   * @param cycle The cycle to retrieve state from
+   * @param state_name The name of the state to retrieve (e.g. "reaction")
+   * @return The named Finite Element Dual
+   */
+  virtual FiniteElementDual loadCheckpointedDual(const std::string&, int) const{
+    SLIC_ERROR_ROOT(axom::fmt::format("loadCheckpointedDual not enabled in physics module {}", name_));
+    return *duals_[0];
+  }
+
+  /**
    * @brief Get a timestep increment which has been previously checkpointed at the give cycle
    * @param cycle The previous 'timestep' number where the timestep increment is requested
    * @return The timestep increment
