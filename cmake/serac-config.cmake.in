@@ -27,7 +27,10 @@ if(NOT SERAC_FOUND)
   #----------------------------------------------------------------------------
 
   set(SERAC_ENABLE_CODEVELOP   @SERAC_ENABLE_CODEVELOP@)
-  set(SERAC_ENABLE_CUDA        @ENABLE_CUDA@)
+  set(SERAC_ENABLE_CUDA        @SERAC_ENABLE_CUDA@)
+  set(SERAC_ENABLE_HIP         @SERAC_ENABLE_HIP@)
+  set(SERAC_ENABLE_MPI         @SERAC_ENABLE_MPI@)
+  set(SERAC_ENABLE_OPENMP      @SERAC_ENABLE_OPENMP@)
 
   set(SERAC_USE_ADIAK          @SERAC_USE_ADIAK@)
   set(SERAC_USE_AXOM           @SERAC_USE_AXOM@)
