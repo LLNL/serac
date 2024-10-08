@@ -127,7 +127,7 @@ struct Box {
 
 template < typename T >
 auto mu(const tensor< T, 2, 2 > & J) {
-  return 0.5 * (inner(J, J) / det(J)) - 1.0;
+  return 0.5 * (inner(J, J) / abs(det(J))) - 1.0;
 }
 
 template < typename T >
@@ -165,6 +165,7 @@ int main(int argc, char* argv[])
   int serial_refinement = 0;
   int parallel_refinement = 0;
   std::string meshfile = SERAC_REPO_DIR "/data/meshes/parameterized.msh";
+  //std::string meshfile = SERAC_REPO_DIR "/data/meshes/one_tri.mesh";
   std::unique_ptr<mfem::ParMesh> mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile), serial_refinement, parallel_refinement);
 
   // these are the values of the parameters used to generate parameterized.msh
@@ -189,10 +190,16 @@ int main(int argc, char* argv[])
   serac::Functional< double(trial_space) > F({fes.get()});
 
   F.AddDomainIntegral(Dimension<2>{}, DependsOn<0>{}, [](double t, auto X, auto u){
+    static constexpr mat2 I = DenseIdentity<2>();
+
+    // the metric `mu` tries to make dx_dxi == identity, but that doesn't
+    // make sense for triangle elements. This correction makes it so that
+    // mu is minimized for dx_dxi that corresponds to an equilateral triangle
+    mat2 triangle_correction = {{{1.00000000000000, -0.577350269189626}, {0, 1.15470053837925}}};
     auto dX_dxi = get<1>(X);
     auto du_dX = get<1>(u);
     auto dx_dxi = dX_dxi + dot(du_dX, dX_dxi);
-    return (1.0 - t) * mu(dx_dxi);
+    return (1.0 - t) * mu(dot(dx_dxi, triangle_correction)) * det(I + du_dX);
   }, *mesh);
 
   F.AddBoundaryIntegral(Dimension<1>{}, DependsOn<0>{}, [&parameters](double t, auto X, auto u){
@@ -212,15 +219,15 @@ int main(int argc, char* argv[])
   paraview_dc.SetDataFormat(mfem::VTKFormat::BINARY);
   paraview_dc.RegisterField("displacement", &u_gf);
 
-  for (int k = 0; k < 100; k++) {
+  for (int k = 0; k < 200; k++) {
 
-    auto [Fvalue, dF_du] = F(1.0, differentiate_wrt(*u));
+    auto [Fvalue, dF_du] = F(0.0, differentiate_wrt(*u));
 
     auto dF_du_vector = assemble(dF_du);
 
     std::cout << k << " " << Fvalue << std::endl;
     
-    u->Add(-5.0, *dF_du_vector);
+    u->Add(-0.2, *dF_du_vector);
 
     u_gf.SetFromTrueDofs(*u);
 
