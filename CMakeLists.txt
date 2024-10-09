@@ -47,7 +47,9 @@ if(NOT DEFINED SERAC_SOURCE_DIR)
 endif()
 message(STATUS "Serac Source Dir: ${SERAC_SOURCE_DIR}")
 
-if(SERAC_ENABLE_CODEVELOP)
+# For HIP case, this flag prevents the following Strumpack linker error:
+# undefined symbol: mpi_abort_
+if(SERAC_ENABLE_CODEVELOP OR (ENABLE_HIP AND STRUMPACK_DIR))
     set(ENABLE_FORTRAN ON CACHE BOOL "")
 endif()
 

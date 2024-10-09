@@ -5,6 +5,7 @@
 
 from spack import *
 from spack.spec import UnsupportedCompilerError
+from spack.util.executable import which_string
 
 import os
 import socket
@@ -29,12 +30,14 @@ def get_spec_path(spec, package_name, path_replacements={}, use_bin=False):
     return path
 
 
-class Serac(CachedCMakePackage, CudaPackage):
+class Serac(CachedCMakePackage, CudaPackage, ROCmPackage):
     """Serac is a 3D implicit nonlinear thermal-structural simulation code.
        Its primary purpose is to investigate multiphysics abstraction
        strategies and implicit finite element-based algorithm development
        for emerging computing architectures. It also serves as a proxy-app
        for LLNL's Smith code."""
+
+    maintainers("chapman39", "white238")
 
     homepage = "https://www.github.com/LLNL/serac"
     git      = "https://github.com/LLNL/serac.git"
@@ -77,6 +80,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     # Basic dependencies
     depends_on("mpi")
     depends_on("cmake@3.14:")
+    depends_on("cmake@3.21:", type="build", when="+rocm")
 
     depends_on("lua")
 
@@ -178,16 +182,23 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("sundials build_type=Debug".format(dep), when="+sundials build_type=Debug".format(dep))
 
     # Optional (require when="+profile")
-    for dep in ["adiak", "caliper"]:
-        depends_on("{0} build_type=Debug".format(dep), when="+profiling build_type=Debug")
-        depends_on("{0}+shared".format(dep), when="+profiling+shared")
-        depends_on("{0}~shared".format(dep), when="+profiling~shared")
+    depends_on("adiak build_type=Debug".format(dep), when="+profiling build_type=Debug")
+    depends_on("adiak+shared".format(dep), when="+profiling+shared")
+    depends_on("adiak~shared".format(dep), when="+profiling~shared")
+
+    # Don't propagate ~shared to caliper in rocm builds
+    depends_on("caliper build_type=Debug".format(dep), when="+profiling build_type=Debug")
+    depends_on("caliper+shared".format(dep), when="+profiling+shared")
+    depends_on("caliper~shared".format(dep), when="+profiling~shared~rocm")
 
     # Required
-    for dep in ["axom", "conduit", "hdf5", "metis", "parmetis", "superlu-dist"]:
+    for dep in ["axom", "hdf5", "metis", "parmetis", "superlu-dist"]:
         depends_on("{0} build_type=Debug".format(dep), when="build_type=Debug")
         depends_on("{0}+shared".format(dep), when="+shared")
         depends_on("{0}~shared".format(dep), when="~shared")
+
+    # Don't propagate +shared to conduit, since it doesn't concretize in rocm builds
+    depends_on("conduit build_type=Debug".format(dep), when="build_type=Debug")
 
     # Optional packages that are controlled by variants
     for dep in ["petsc"]:
@@ -217,6 +228,11 @@ class Serac(CachedCMakePackage, CudaPackage):
     # Conflicts
     #
 
+    conflicts("+openmp", when="+rocm")
+    conflicts("+cuda", when="+rocm")
+
+    conflicts("%intel", msg="Intel has a bug with C++17 support as of May 2020")
+
     conflicts("~petsc", when="+slepc", msg="PETSc must be built when building with SLEPc!")
 
     conflicts("sundials@:6.0.0", when="+sundials",
@@ -242,7 +258,7 @@ class Serac(CachedCMakePackage, CudaPackage):
         )
 
     #
-    # GPU
+    # CUDA
     #
     conflicts("cuda_arch=none", when="+cuda",
               msg="CUDA architecture is required")
@@ -268,7 +284,32 @@ class Serac(CachedCMakePackage, CudaPackage):
         depends_on("caliper cuda_arch={0}".format(sm_),
                 when="+profiling cuda_arch={0}".format(sm_))
 
-    conflicts("%intel", msg="Intel has a bug with C++17 support as of May 2020")
+
+    #
+    # ROCm
+    #
+
+    with when("+profiling"):
+        depends_on("caliper+rocm", when="+rocm")
+        depends_on("caliper~rocm", when="~rocm")
+
+    for val in ROCmPackage.amdgpu_targets:
+        ext_rocm_dep = f"+rocm amdgpu_target={val}"
+
+        # required
+        depends_on(f"axom {ext_rocm_dep}", when=f"{ext_rocm_dep}")
+        depends_on(f"mfem {ext_rocm_dep}", when=f"{ext_rocm_dep}")
+
+        # optional
+        depends_on(f"caliper {ext_rocm_dep}", when=f"+profiling {ext_rocm_dep}")
+        depends_on(f"petsc {ext_rocm_dep}", when=f"+petsc {ext_rocm_dep}")
+        depends_on(f"raja {ext_rocm_dep}", when=f"+raja {ext_rocm_dep}")
+        depends_on(f"slepc {ext_rocm_dep}", when=f"+slepc {ext_rocm_dep}")
+        depends_on(f"sundials {ext_rocm_dep}", when=f"+sundials {ext_rocm_dep}")
+        depends_on(f"tribol {ext_rocm_dep}", when=f"+tribol {ext_rocm_dep}")
+        depends_on(f"umpire {ext_rocm_dep}", when=f"+umpire {ext_rocm_dep}")
+
+    depends_on("rocprim", when="+rocm")
 
 
     def _get_sys_type(self, spec):
@@ -290,6 +331,8 @@ class Serac(CachedCMakePackage, CudaPackage):
             special_case += "_cuda"
         if "+asan" in self.spec:
             special_case += "_asan"
+        if "+rocm" in self.spec:
+            special_case += "_hip"
         return "{0}-{1}-{2}@{3}{4}.cmake".format(
             hostname,
             self._get_sys_type(self.spec),
@@ -297,7 +340,6 @@ class Serac(CachedCMakePackage, CudaPackage):
             self.spec.compiler.version,
             special_case,
         )
-
 
     def initconfig_hardware_entries(self):
         spec = self.spec
@@ -326,6 +368,34 @@ class Serac(CachedCMakePackage, CudaPackage):
                     "# nvcc does not like gtest's 'pthreads' flag\n")
                 entries.append(
                     cmake_cache_option("gtest_disable_pthreads", True))
+
+        if spec.satisfies("+rocm"):
+            entries.append(cmake_cache_option("ENABLE_HIP", True))
+
+            hip_root = spec["hip"].prefix
+            rocm_root = hip_root + "/.."
+
+            # Fix blt_hip getting HIP_CLANG_INCLUDE_PATH-NOTFOUND bad include directory
+            if (self.spec.satisfies('%cce') or self.spec.satisfies('%clang')) and 'toss_4' in self._get_sys_type(spec):
+                # Set the patch version to 0 if not already
+                clang_version= str(self.compiler.version)[:-1] + "0"
+                hip_clang_include_path = rocm_root + "/llvm/lib/clang/" + clang_version + "/include"
+                if os.path.isdir(hip_clang_include_path):
+                    entries.append(cmake_cache_path("HIP_CLANG_INCLUDE_PATH", hip_clang_include_path))
+
+            # Additional libraries for TOSS4
+            hip_link_flags = ""
+            hip_link_flags += "-L{0}/../llvm/lib -L{0}/lib ".format(hip_root)
+            hip_link_flags += "-Wl,-rpath,{0}/../llvm/lib:{0}/lib ".format(hip_root)
+            hip_link_flags += "-lpgmath -lflang -lflangrti -lompstub -lamdhip64 "
+            hip_link_flags += "-L{0}/../lib64 -Wl,-rpath,{0}/../lib64 ".format(hip_root)
+            hip_link_flags += "-L{0}/../lib -Wl,-rpath,{0}/../lib ".format(hip_root)
+            hip_link_flags += "-lamd_comgr -lhsa-runtime64 "
+
+            if spec.satisfies("+strumpack"):
+                hip_link_flags += "-lhipblas -lrocblas -lrocsolver "
+
+            entries.append(cmake_cache_string("CMAKE_EXE_LINKER_FLAGS", hip_link_flags))
 
         if spec.satisfies("target=ppc64le:"):
             # Fix for working around CMake adding implicit link directories
@@ -357,6 +427,14 @@ class Serac(CachedCMakePackage, CudaPackage):
         if spec["mpi"].name == "spectrum-mpi":
             entries.append(cmake_cache_string("BLT_MPI_COMMAND_APPEND",
                                               "mpibind"))
+
+        # Replace /usr/bin/srun path with srun flux wrapper path on TOSS 4
+        if 'toss_4' in self._get_sys_type(spec):
+            srun_wrapper = which_string("srun")
+            mpi_exec_index = [index for index,entry in enumerate(entries)
+                                                  if "MPIEXEC_EXECUTABLE" in entry]
+            del entries[mpi_exec_index[0]]
+            entries.append(cmake_cache_path("MPIEXEC_EXECUTABLE", srun_wrapper))
 
         return entries
 
