@@ -54,5 +54,5 @@ toss4_cray-clang_17_0_0-benchmarks:
     COMPILER: "clang@17.0.0"
     HOST_CONFIG: "tioga-toss_4_x86_64_ib_cray-${COMPILER}_hip.cmake"
     ALLOC_NODES: "1"
-    ALLOC_TIME: "30"
+    ALLOC_TIME: "60"
   extends: .benchmarks_build_on_toss4_cray

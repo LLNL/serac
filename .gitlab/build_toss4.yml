@@ -95,7 +95,7 @@ toss4-clang_14_0_6-benchmarks:
     COMPILER: "clang@14.0.6"
     HOST_CONFIG: "ruby-toss_4_x86_64_ib-${COMPILER}.cmake"
     ALLOC_NODES: "1"
-    ALLOC_TIME: "30"
+    ALLOC_TIME: "60"
   extends: .benchmarks_build_on_toss4
 
 toss4-gcc_10_3_1-benchmarks:
@@ -103,5 +103,5 @@ toss4-gcc_10_3_1-benchmarks:
     COMPILER: "gcc@10.3.1"
     HOST_CONFIG: "ruby-toss_4_x86_64_ib-${COMPILER}.cmake"
     ALLOC_NODES: "1"
-    ALLOC_TIME: "30"
+    ALLOC_TIME: "60"
   extends: .benchmarks_build_on_toss4

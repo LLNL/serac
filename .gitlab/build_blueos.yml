@@ -68,5 +68,5 @@ blueos-clang_10_0_1-benchmarks:
     COMPILER: "clang@10.0.1"
     HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}_cuda.cmake"
     ALLOC_NODES: "1"
-    ALLOC_TIME: "30"
+    ALLOC_TIME: "60"
   extends: [.benchmarks_build_on_blueos, .with_cuda]
