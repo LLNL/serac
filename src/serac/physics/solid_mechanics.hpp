@@ -36,10 +36,9 @@ namespace detail {
 void adjoint_integrate(double dt_n, double dt_np1, mfem::HypreParMatrix* m_mat, mfem::HypreParMatrix* k_mat,
                        mfem::HypreParVector& disp_adjoint_load_vector, mfem::HypreParVector& velo_adjoint_load_vector,
                        mfem::HypreParVector& accel_adjoint_load_vector, mfem::HypreParVector& adjoint_displacement_,
-                       mfem::HypreParVector& implicit_sensitivity_displacement_start_of_step_,
-                       mfem::HypreParVector& implicit_sensitivity_velocity_start_of_step_,
-                       mfem::HypreParVector& adjoint_essential, BoundaryConditionManager& bcs_,
-                       mfem::Solver& lin_solver);
+                       mfem::HypreParVector&     implicit_sensitivity_displacement_start_of_step_,
+                       mfem::HypreParVector&     implicit_sensitivity_velocity_start_of_step_,
+                       BoundaryConditionManager& bcs_, mfem::Solver& lin_solver);
 }  // namespace detail
 
 /**
@@ -1182,6 +1181,7 @@ public:
             // tracking strategy
             // See https://github.com/mfem/mfem/issues/3531
             r = res;
+
             r.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
           },
 
@@ -1340,12 +1340,6 @@ public:
   /// @overload
   void reverseAdjointTimestep() override
   {
-    auto& lin_solver = nonlin_solver_->linearSolver();
-
-    // By default, use a homogeneous essential boundary condition
-    mfem::HypreParVector adjoint_essential(displacement_adjoint_load_);
-    adjoint_essential = 0.0;
-
     SLIC_ERROR_ROOT_IF(cycle_ <= min_cycle_,
                        "Maximum number of adjoint timesteps exceeded! The number of adjoint timesteps must equal the "
                        "number of forward timesteps");
@@ -1359,20 +1353,7 @@ public:
     displacement_ = end_step_solution.at("displacement");
 
     if (is_quasistatic_) {
-      auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
-                                    *parameters_[parameter_indices].state...);
-      auto jacobian  = assemble(drdu);
-      auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
-
-      for (const auto& bc : bcs_.essentials()) {
-        bc.apply(*J_T, displacement_adjoint_load_, adjoint_essential);
-      }
-
-      lin_solver.SetOperator(*J_T);
-      lin_solver.Mult(displacement_adjoint_load_, adjoint_displacement_);
-
-      // Reset the equation solver to use the full nonlinear residual operator.  MRT, is this needed?
-      nonlin_solver_->setOperator(*residual_with_bcs_);
+      quasiStaticAdjointSolve(dt_n_to_np1);
     } else {
       SLIC_ERROR_ROOT_IF(ode2_.GetTimestepper() != TimestepMethod::Newmark,
                          "Only Newmark implemented for transient adjoint solid mechanics.");
@@ -1393,10 +1374,11 @@ public:
                                                    *parameters_[parameter_indices].state...));
       std::unique_ptr<mfem::HypreParMatrix> m_mat(assemble(M));
 
+      auto& lin_solver = nonlin_solver_->linearSolver();
       solid_mechanics::detail::adjoint_integrate(
           dt_n_to_np1, dt_np1_to_np2, m_mat.get(), k_mat.get(), displacement_adjoint_load_, velocity_adjoint_load_,
           acceleration_adjoint_load_, adjoint_displacement_, implicit_sensitivity_displacement_start_of_step_,
-          implicit_sensitivity_velocity_start_of_step_, adjoint_essential, bcs_, lin_solver);
+          implicit_sensitivity_velocity_start_of_step_, bcs_, lin_solver);
     }
 
     time_end_step_ = time_;
@@ -1627,6 +1609,30 @@ protected:
     // this method is essentially equivalent to the 1-liner
     // u += dot(inv(J), dot(J_elim[:, dofs], (U(t + dt) - u)[dofs]));
     nonlin_solver_->solve(displacement_);
+  }
+
+  /// @brief Solve the Quasi-static adjoint linear
+  virtual void quasiStaticAdjointSolve(double /*dt*/)
+  {
+    // By default, use a homogeneous essential boundary condition
+    mfem::HypreParVector adjoint_essential(displacement_adjoint_load_);
+    adjoint_essential = 0.0;
+
+    auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
+                                  *parameters_[parameter_indices].state...);
+    auto jacobian  = assemble(drdu);
+    auto J_T       = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
+
+    for (const auto& bc : bcs_.essentials()) {
+      bc.apply(*J_T, displacement_adjoint_load_, adjoint_essential);
+    }
+
+    auto& lin_solver = nonlin_solver_->linearSolver();
+    lin_solver.SetOperator(*J_T);
+    lin_solver.Mult(displacement_adjoint_load_, adjoint_displacement_);
+
+    // Reset the equation solver to use the full nonlinear residual operator.  MRT, is this needed?
+    nonlin_solver_->setOperator(*residual_with_bcs_);
   }
 
   /**

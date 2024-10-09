@@ -119,7 +119,8 @@ public:
       // See https://github.com/mfem/mfem/issues/3531
       mfem::Vector r_blk(r, 0, displacement_.Size());
       r_blk = res;
-      contact_.residualFunction(u, r);
+
+      contact_.residualFunction(shape_displacement_, u, r);
       r_blk.SetSubVector(bcs_.allEssentialTrueDofs(), 0.0);
     };
     // This if-block below breaks up building the Jacobian operator depending if there is Lagrange multiplier
@@ -138,7 +139,7 @@ public:
             J_             = assemble(drdu);
 
             // create block operator holding jacobian contributions
-            J_constraint_ = contact_.jacobianFunction(u, J_.release());
+            J_constraint_ = contact_.jacobianFunction(J_.release());
 
             // take ownership of blocks
             J_constraint_->owns_blocks = false;
@@ -174,7 +175,7 @@ public:
             J_             = assemble(drdu);
 
             // get 11-block holding jacobian contributions
-            auto block_J         = contact_.jacobianFunction(u, J_.release());
+            auto block_J         = contact_.jacobianFunction(J_.release());
             block_J->owns_blocks = false;
             J_ = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&block_J->GetBlock(0, 0)));
 
@@ -253,6 +254,52 @@ protected:
     forces_.SetVector(contact_.forces(), 0);
   }
 
+  /// @brief Solve the Quasi-static Newton system
+  void quasiStaticAdjointSolve(double /*dt*/) override
+  {
+    SLIC_ERROR_ROOT_IF(contact_.haveLagrangeMultipliers(),
+                       "Lagrange multiplier contact does not currently support sensitivities/adjoints.");
+
+    // By default, use a homogeneous essential boundary condition
+    mfem::HypreParVector adjoint_essential(displacement_adjoint_load_);
+    adjoint_essential = 0.0;
+
+    auto [_, drdu] = (*residual_)(time_, shape_displacement_, differentiate_wrt(displacement_), acceleration_,
+                                  *parameters_[parameter_indices].state...);
+    auto jacobian  = assemble(drdu);
+
+    auto block_J         = contact_.jacobianFunction(jacobian.release());
+    block_J->owns_blocks = false;
+    jacobian = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&block_J->GetBlock(0, 0)));
+    auto J_T = std::unique_ptr<mfem::HypreParMatrix>(jacobian->Transpose());
+
+    for (const auto& bc : bcs_.essentials()) {
+      bc.apply(*J_T, displacement_adjoint_load_, adjoint_essential);
+    }
+
+    auto& lin_solver = nonlin_solver_->linearSolver();
+    lin_solver.SetOperator(*J_T);
+    lin_solver.Mult(displacement_adjoint_load_, adjoint_displacement_);
+  }
+
+  /// @overload
+  FiniteElementDual& computeTimestepShapeSensitivity() override
+  {
+    auto drdshape =
+        serac::get<DERIVATIVE>((*residual_)(time_end_step_, differentiate_wrt(shape_displacement_), displacement_,
+                                            acceleration_, *parameters_[parameter_indices].state...));
+
+    auto drdshape_mat = assemble(drdshape);
+
+    auto block_J         = contact_.jacobianFunction(drdshape_mat.release());
+    block_J->owns_blocks = false;
+    drdshape_mat = std::unique_ptr<mfem::HypreParMatrix>(static_cast<mfem::HypreParMatrix*>(&block_J->GetBlock(0, 0)));
+
+    drdshape_mat->MultTranspose(adjoint_displacement_, *shape_displacement_sensitivity_);
+
+    return *shape_displacement_sensitivity_;
+  }
+
   using BasePhysics::bcs_;
   using BasePhysics::cycle_;
   using BasePhysics::duals_;
@@ -261,12 +308,15 @@ protected:
   using BasePhysics::name_;
   using BasePhysics::parameters_;
   using BasePhysics::shape_displacement_;
+  using BasePhysics::shape_displacement_sensitivity_;
   using BasePhysics::states_;
   using BasePhysics::time_;
   using SolidMechanicsBase::acceleration_;
+  using SolidMechanicsBase::adjoint_displacement_;
   using SolidMechanicsBase::d_residual_d_;
   using SolidMechanicsBase::DERIVATIVE;
   using SolidMechanicsBase::displacement_;
+  using SolidMechanicsBase::displacement_adjoint_load_;
   using SolidMechanicsBase::du_;
   using SolidMechanicsBase::J_;
   using SolidMechanicsBase::J_e_;
@@ -274,6 +324,7 @@ protected:
   using SolidMechanicsBase::ode_time_point_;
   using SolidMechanicsBase::residual_;
   using SolidMechanicsBase::residual_with_bcs_;
+  using SolidMechanicsBase::time_end_step_;
   using SolidMechanicsBase::warmStartDisplacement;
 
   /// Pointer to the Jacobian operator (J_ if no Lagrange multiplier contact, J_constraint_ otherwise)
