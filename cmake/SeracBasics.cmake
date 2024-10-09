@@ -28,6 +28,10 @@ endif()
 option(SERAC_ENABLE_CODE_CHECKS "Enable Serac's code checks" ${_enable_serac_code_checks})
 
 cmake_dependent_option(SERAC_ENABLE_TESTS "Enables Serac Tests" ON "ENABLE_TESTS" OFF)
+cmake_dependent_option(SERAC_ENABLE_CUDA "Enables Serac with CUDA support" ON "ENABLE_CUDA" OFF)
+cmake_dependent_option(SERAC_ENABLE_HIP "Enables Serac with HIP support" ON "ENABLE_HIP" OFF)
+cmake_dependent_option(SERAC_ENABLE_MPI "Enables Serac with MPI support" ON "ENABLE_MPI" OFF)
+cmake_dependent_option(SERAC_ENABLE_OPENMP "Enables Serac with OPENMP support" ON "ENABLE_OPENMP" OFF)
 
 #------------------------------------------------------------------------------
 # Profiling options
