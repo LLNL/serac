@@ -76,7 +76,7 @@ variables:
     # Builds src, runs benchmarks, and stores Caliper files in shared location
     - echo -e "section_start:$(date +%s):benchmarks_build\r\e[0K
       Benchmarks Build ${CI_PROJECT_NAME}"
-    - ${ALLOC_COMMAND} python3 scripts/llnl/run_benchmarks.py --host-config ${HOST_CONFIG} --extra-cmake-options ${EXTRA_CMAKE_OPTIONS}
+    - ${ALLOC_COMMAND} python3 scripts/llnl/run_benchmarks.py
     - echo -e "section_end:$(date +%s):benchmarks_build\r\e[0K"
   artifacts:
     expire_in: 2 weeks

@@ -26,7 +26,7 @@ def parse_args():
     parser = ArgumentParser()
     parser.add_argument("-e", "--extra-cmake-options",
                       dest="extra_cmake_options",
-                      default="",
+                      default=os.environ.get("EXTRA_CMAKE_OPTIONS", ""),
                       help="Extra cmake options to add to the cmake configure line. Note '-DENABLE_BENCHMARKS=ON -DENABLE_DOCS=OFF' is always appended.")
     parser.add_argument("-hc", "--host-config",
                     dest="host_config",
