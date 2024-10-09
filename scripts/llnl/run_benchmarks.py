@@ -31,7 +31,7 @@ def parse_args():
     parser.add_argument("-hc", "--host-config",
                     dest="host_config",
                     default=os.environ.get("HOST_CONFIG", None),
-                    help="Specific host-config file to build (defaults to HOST_CONFIG environment variable)")
+                    help="Specific host-config filename to build (defaults to HOST_CONFIG environment variable)")
     parser.add_argument("-sd", "--spot-directory",
                       dest="spot_dir",
                       default=get_shared_spot_dir(),
@@ -50,10 +50,6 @@ def parse_args():
         print("[ERROR: Both host_config argument and HOST_CONFIG environment variable unset!]")
         sys.exit(1)
 
-    if not os.path.exists(args["host_config"]):
-        print("[ERROR: Host config path does not exist: %s]" % args["host_config"])
-        sys.exit(1)
-
     return args
 
 
@@ -68,13 +64,14 @@ def main():
     # Vars
     repo_dir = get_repo_dir()
     test_root = get_build_and_test_root(repo_dir, timestamp)
+    host_config_path = get_host_config_path(repo_dir, host_config)
     host_config_root = get_host_config_root(host_config)
     benchmarks_output_file = os.path.join(test_root, "output.log.%s.benchmarks.txt" % host_config_root)
 
     # Build Serac
     os.chdir(repo_dir)
     os.makedirs(test_root, exist_ok=True)
-    build_and_test_host_config(test_root=test_root, host_config=host_config,
+    build_and_test_host_config(test_root=test_root, host_config=host_config_path,
                                report_to_stdout=True, extra_cmake_options=cmake_options,
                                skip_install=True, skip_tests=True)
 
