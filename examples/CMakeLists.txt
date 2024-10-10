@@ -50,3 +50,13 @@ install(
     DESTINATION
         examples/serac/buckling
 )
+
+# Add the tmopexamples
+add_subdirectory(tmopWithSerac)
+
+install(
+    FILES
+        tmopWithSerac/tmopWithSeracInitialTesting.cpp
+    DESTINATION
+        examples/serac/tmopWithSerac
+)
