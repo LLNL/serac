@@ -36,7 +36,7 @@ message(STATUS "Configuring Serac version ${SERAC_VERSION_FULL}")
 #------------------------------------------------------------------------------
 # Create variable for every TPL
 #------------------------------------------------------------------------------
-set(TPL_DEPS ADIAK AXOM CALIPER CAMP CONDUIT CUDA FMT HDF5 LUA MFEM MPI PETSC RAJA SLEPC STRUMPACK SUNDIALS TRIBOL UMPIRE)
+set(TPL_DEPS ADIAK AXOM CALIPER CAMP CONDUIT CUDA FMT HDF5 HIP LUA MFEM MPI PETSC RAJA SLEPC STRUMPACK SUNDIALS TRIBOL UMPIRE)
 foreach(dep ${TPL_DEPS})
     if( ${dep}_FOUND OR ENABLE_${dep} )
         set(SERAC_USE_${dep} TRUE)
@@ -60,7 +60,7 @@ endif()
 # General Build Info
 #------------------------------------------------------------------------------
 serac_convert_to_native_escaped_file_path(${PROJECT_SOURCE_DIR} SERAC_REPO_DIR)
-serac_convert_to_native_escaped_file_path(${CMAKE_BINARY_DIR}   SERAC_BIN_DIR)
+serac_convert_to_native_escaped_file_path(${CMAKE_BINARY_DIR}   SERAC_BINARY_DIR)
 
 #------------------------------------------------------------------------------
 # Create Config Header

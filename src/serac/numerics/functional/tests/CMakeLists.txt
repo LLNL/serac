@@ -56,7 +56,7 @@ endforeach()
 
 target_link_libraries(bug_boundary_qoi PUBLIC serac_physics)
 
-if(ENABLE_CUDA)
+if(SERAC_ENABLE_CUDA)
 
     set(functional_cuda_test_sources 
         tensor_unit_tests_cuda.cu 

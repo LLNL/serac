@@ -1740,7 +1740,7 @@ protected:
       du_[j] -= displacement_(j);
     }
 
-    if (use_warm_start_ && is_quasistatic_) {
+    if (use_warm_start_) {
       // Update the linearized Jacobian matrix
       auto r = (*residual_)(time_ + dt, shape_displacement_, displacement_, acceleration_,
                             *parameters_[parameter_indices].state...);

@@ -20,12 +20,19 @@
 
 // Serac Locations
 #define SERAC_REPO_DIR "@SERAC_REPO_DIR@"
-#define SERAC_BIN_DIR "@SERAC_BIN_DIR@"
+#define SERAC_BINARY_DIR "@SERAC_BINARY_DIR@"
+
+// Compiler Information
+#define SERAC_COMPILER_NAME "@CMAKE_CXX_COMPILER_ID@"
+#define SERAC_COMPILER_VERSION "@CMAKE_CXX_COMPILER_VERSION@"
 
 // General defines
 #cmakedefine SERAC_DEBUG
 
 #cmakedefine SERAC_USE_CUDA
+#cmakedefine SERAC_USE_HIP
+#cmakedefine SERAC_USE_OPENMP
+#cmakedefine SERAC_USE_MPI
 
 // Compiler defines for TPLs
 #cmakedefine SERAC_USE_ADIAK

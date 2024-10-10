@@ -221,4 +221,6 @@ std::string version(bool add_SHA)
   return version;
 }
 
+std::string compiler() { return axom::fmt::format("{0} version {1}", SERAC_COMPILER_NAME, SERAC_COMPILER_VERSION); }
+
 }  // namespace serac

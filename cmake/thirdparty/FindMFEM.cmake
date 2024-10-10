@@ -116,7 +116,7 @@ else()
     list(APPEND MFEM_LIBRARIES ${mfem_tpl_lnk_flags})
 
     if(mfem_cfg_file_txt MATCHES "MFEM_USE_CUDA += YES")
-        if(NOT ENABLE_CUDA)
+        if(NOT SERAC_ENABLE_CUDA)
             message(WARNING "MFEM was built with CUDA but CUDA is not enabled")
         endif()
         list(APPEND MFEM_INCLUDE_DIRS ${CUDA_INCLUDE_DIRS})

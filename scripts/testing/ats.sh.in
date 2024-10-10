@@ -15,7 +15,7 @@
 # WSL: ./ats.sh
 
 # Variables used inside of the base test.ats and this script
-export ATS_SERAC_BIN_DIR=@SERAC_BIN_DIR@/bin
+export ATS_SERAC_BIN_DIR=@SERAC_BINARY_DIR@/bin
 export ATS_SERAC_REPO_DIR=@SERAC_REPO_DIR@
 export ATS_EXECUTABLE=@ATS_EXECUTABLE@
 export ATS_SERAC_BASELINE="none"

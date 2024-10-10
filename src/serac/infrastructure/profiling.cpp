@@ -4,8 +4,8 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#include "serac/infrastructure/about.hpp"
 #include "serac/infrastructure/profiling.hpp"
-
 #include "serac/infrastructure/logger.hpp"
 
 #ifdef SERAC_USE_CALIPER
@@ -34,6 +34,8 @@ void initialize([[maybe_unused]] MPI_Comm comm, [[maybe_unused]] std::string opt
   adiak::walltime();
   adiak::cputime();
   adiak::systime();
+  SERAC_SET_METADATA("serac_version", serac::version(true));
+  SERAC_SET_METADATA("serac_compiler", serac::compiler());
 #endif
 
 #ifdef SERAC_USE_CALIPER
