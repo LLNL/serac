@@ -84,7 +84,7 @@ def main():
     os.chdir(build_dir)
 
     # Run benchmarks
-    shell_exec("make run_benchmarks", echo=True, print_output=True, output_file=benchmarks_output_file)
+    result = shell_exec("make run_benchmarks", echo=True, print_output=True, output_file=benchmarks_output_file)
 
     # Move resulting .cali files to specified directory
     os.makedirs(spot_dir, exist_ok=True)
@@ -99,7 +99,7 @@ def main():
     else:
         print("[View SPOT directory here: https://lc.llnl.gov/spot2/?sf={0}]".format(spot_dir))
 
-    return 0
+    return result; 
 
 
 if __name__ == "__main__":
