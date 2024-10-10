@@ -30,6 +30,8 @@
 
 #include <mfem/linalg/tensor.hpp>
 
+// #define ALT_SETUP
+#undef ALT_SETUP
 
 // _main_init_start
 int main(int argc, char* argv[])
@@ -41,18 +43,30 @@ int main(int argc, char* argv[])
   
   // Define the spatial dimension of the problem and the type of finite elements used.
   static constexpr int ORDER {1};
+#ifdef ALT_SETUP
+  static constexpr int DIM {2};
+#else
   static constexpr int DIM {3};
-  using shapeFES = serac::H1<ORDER, DIM>;
+#endif
 
-  // auto inputFilename = lido::meshes::connecting_rod_mesh;
+
+
+#ifdef ALT_SETUP
+  auto inputFilename = "../../data/meshes/circleTriMesh.g";
+  int numElements = 285;
+#else
   auto inputFilename = "../../data/meshes/cylOneElemThickness.g";
-  auto mesh = serac::buildMeshFromFile(inputFilename);
-  // auto mesh = ::mfem::Mesh::MakeCartesian3D(10, 5, 1, ::mfem::Element::HEXAHEDRON, 2, 1, 0.1);
   int numElements = 354;
+#endif
+
+
+  auto mesh = serac::buildMeshFromFile(inputFilename);
 
   auto pmesh = ::mfem::ParMesh(MPI_COMM_WORLD, mesh);
   pmesh.EnsureNodes();
   pmesh.ExchangeFaceNbrData();
+
+  using shapeFES = serac::H1<ORDER, DIM>;
 
   // Create finite element space for design parameters, and register it with LiDO DataManager
   auto [shape_fes, shape_fec] = serac::generateParFiniteElementSpace<shapeFES>(&pmesh);
@@ -75,9 +89,18 @@ int main(int argc, char* argv[])
     [=](double /*t*/, auto position, auto nodeDisp) {
       auto [X, dXdxi] = position;
       auto du_dX = serac::get<1>(nodeDisp);
-      auto J = dXdxi + serac::dot(du_dX, dXdxi);
-      using std::pow;
+#ifdef ALT_SETUP
+      // auto mu = 0.5 * (serac::inner(Jtet, Jtet) / abs(serac::det(Jtet))) - 1.0;
+      static constexpr serac::mat2 I = serac::DenseIdentity<2>();
+      serac::mat2 triangle_correction = {{{1.00000000000000, -0.577350269189626}, {0, 1.15470053837925}}};
+      auto dx_dxi = dXdxi + serac::dot(du_dX, dXdxi);
+      auto Jtet = serac::dot(dx_dxi, triangle_correction)
+      auto flux       = scale * (J - (JJ/3.0) * invJT) * serac::det(I + du_dX);
+#else
       // auto mu = (serac::squared_norm(J) / (3 * pow(serac::det(J), 2.0 / 3.0))) - 1.0; // serac::dot(J, J)
+      static constexpr auto I = serac::DenseIdentity<3>();
+      using std::pow;
+      auto J = dXdxi + serac::dot(du_dX, dXdxi);
       auto JJ    = serac::squared_norm(J); // serac::dot(J, J)
       auto invJT = serac::inv(serac::transpose(J));
       auto scale = (2.0 / (3.0 * pow(serac::det(J), 2.0 / 3.0) ));
@@ -85,7 +108,8 @@ int main(int argc, char* argv[])
       {
         scale = 0.0;
       }
-      auto flux       = scale * (J - (JJ/3.0) * invJT);
+      auto flux       = scale * (J - (JJ/3.0) * invJT) * serac::det(I + du_dX);;
+#endif
       auto source     = serac::zero{};
       return ::serac::tuple{source, flux};
     },
@@ -114,8 +138,10 @@ int main(int argc, char* argv[])
     radial_boundary // whole_boundary
   );
 
-  // Get dofs in z direction for all elements (pseudo 2D problem)
   int totNumDofs = shape_fes->TrueVSize();
+
+#ifndef ALT_SETUP
+  // Get dofs in z direction for all elements (pseudo 2D problem)
   mfem::Array<int> ess_tdof_list, ess_bdr(mesh.bdr_attributes.Max());
   ess_bdr = 0;
   ess_bdr[1] = 1;
@@ -127,6 +153,7 @@ int main(int argc, char* argv[])
     dofsZdirection[counter] = ess_tdof_list[iDof];
     counter++;
   }
+#endif
 
   // wrap residual and provide Jacobian
   serac::mfem_ext::StdFunctionOperator residual_opr(
@@ -135,7 +162,9 @@ int main(int argc, char* argv[])
       double dummy_time = 1.0;
       const mfem::Vector res = residual(dummy_time, u);
       r = res;
+#ifndef ALT_SETUP
       r.SetSubVector(dofsZdirection, 0.0);
+#endif
     },
     [&residual, &dresidualdu](const mfem::Vector& u) -> mfem::Operator& { // &node_disp_exact,
       double dummy_time = 1.0;
@@ -162,7 +191,7 @@ int main(int argc, char* argv[])
                                               .relative_tol   = 1.0e-10,
                                               .absolute_tol   = 1.0e-12,
                                               .min_iterations = 1, 
-                                              .max_iterations = 50, // 2000
+                                              .max_iterations = 2000, // 2000
                                               .max_line_search_iterations = 30, //0
                                               .print_level    = 1};
 
