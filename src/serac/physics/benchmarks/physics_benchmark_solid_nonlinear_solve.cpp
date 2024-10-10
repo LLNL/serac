@@ -357,9 +357,11 @@ int main(int argc, char* argv[])
     functional_solid_test_nonlinear_buckle(NonlinSolve::NEWTON, Prec::MULTIGRID, 5e-10);
     SERAC_MARK_END("Multigrid Preconditioner");
 
+#ifdef SERAC_USE_PETSC
     SERAC_MARK_BEGIN("Petsc Multigrid Preconditioner");
     functional_solid_test_nonlinear_buckle(NonlinSolve::NEWTON, Prec::PETSC_MULTIGRID, 5e-10);
     SERAC_MARK_END("Petsc Multigrid Preconditioner");
+#endif
   } else {
     SERAC_SET_METADATA("nonlinear solver", nonlinSolveToString(nonlinSolve));
     SERAC_SET_METADATA("preconditioner", precToString(prec));
