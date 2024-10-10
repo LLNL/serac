@@ -105,6 +105,8 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   // Construct the new functional object using the known test and trial spaces
   Functional<test_space(trial_space)> residual(fespace.get(), {fespace.get()});
 
+  Domain dom = EntireDomain(mesh);
+
   // Add the total domain residual term to the functional
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
@@ -116,7 +118,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
         auto flux        = b * du_dX;
         return serac::tuple{source, flux};
       },
-      mesh);
+      dom);
 
   // Compute the residual using standard MFEM methods
   // mfem::Vector r1 = (*J_mfem) * U - (*F);
@@ -233,6 +235,8 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 
   Functional<test_space(trial_space)> residual(fespace.get(), {fespace.get()});
 
+  Domain dom = EntireDomain(mesh);
+
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
       [=](double /*t*/, auto /*x*/, auto displacement) {
@@ -242,7 +246,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
         auto stress     = b * tr(strain) * I + 2.0 * b * strain;
         return serac::tuple{body_force, stress};
       },
-      mesh);
+      dom);
 
   // mfem::Vector r1 = (*J_mfem) * U - (*F);
   mfem::Vector r1(U.Size());

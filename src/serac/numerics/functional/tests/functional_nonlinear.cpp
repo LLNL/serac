@@ -72,6 +72,9 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   // Construct the new functional object using the known test and trial spaces
   Functional<test_space(trial_space)> residual(fespace.get(), {fespace.get()});
 
+  Domain dom = EntireDomain(mesh);
+  Domain bdr = EntireBoundary(mesh);
+
   // Add the total domain residual term to the functional
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
@@ -82,7 +85,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
         auto flux        = b * du_dX;
         return serac::tuple{source, flux};
       },
-      mesh);
+      dom);
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
@@ -91,7 +94,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
         auto u           = get<0>(temperature);
         return X[0] + X[1] - cos(u);
       },
-      mesh);
+      bdr);
 
   double t = 0.0;
   check_gradient(residual, t, U);
@@ -119,6 +122,9 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   // Construct the new functional object using the known test and trial spaces
   Functional<test_space(trial_space)> residual(fespace.get(), {fespace.get()});
 
+  Domain dom = EntireDomain(mesh);
+  Domain bdr = EntireBoundary(mesh);
+
   // Add the total domain residual term to the functional
   residual.AddDomainIntegral(
       Dimension<dim>{}, DependsOn<0>{},
@@ -129,17 +135,18 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
         auto flux       = b * du_dx;
         return serac::tuple{source, flux};
       },
-      mesh);
+      dom);
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
       [=](double /*t*/, auto position, auto displacement) {
         auto [X, dX_dxi] = position;
+        std::cout << X << " " << dX_dxi << std::endl;
         auto u           = get<0>(displacement);
         auto n           = normalize(cross(dX_dxi));
         return (X[0] + X[1] - cos(u[0])) * n;
       },
-      mesh);
+      bdr);
 
   double t = 0.0;
   check_gradient(residual, t, U);

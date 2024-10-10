@@ -92,6 +92,8 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 
   Functional<test_space(trial_space)> residual(fespace.get(), {fespace.get()});
 
+  Domain bdr = EntireBoundary(mesh);
+
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
       [&](double /*t*/, auto position, auto temperature) {
@@ -103,7 +105,7 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
         tensor<double, dim> b{sin(X[0]), X[0] * X[1]};
         return X[0] * X[1] + dot(b, n) + rho * u;
       },
-      mesh);
+      bdr);
 
   // mfem::Vector r1 = (*J) * U + (*F);
   mfem::Vector r1(U.Size());
@@ -171,6 +173,8 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
 
   Functional<test_space(trial_space)> residual(fespace.get(), {fespace.get()});
 
+  Domain bdr = EntireBoundary(mesh);
+
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{}, DependsOn<0>{},
       [&](double /*t*/, auto position, auto temperature) {
@@ -181,7 +185,7 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
         // tensor<double,dim> b{sin(x[0]), x[0] * x[1]};
         return X[0] * X[1] + /* dot(b, n) +*/ rho * u;
       },
-      mesh);
+      bdr);
 
   // mfem::Vector r1 = (*J) * U + (*F);
   mfem::Vector r1(U.Size());

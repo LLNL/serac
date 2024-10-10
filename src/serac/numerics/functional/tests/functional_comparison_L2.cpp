@@ -103,7 +103,8 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   Functional<test_space(trial_space)> residual(fespace.get(), {fespace.get()});
 
   // Add the total domain residual term to the weak form
-  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, test_qfunction{}, mesh);
+  Domain dom = EntireDomain(mesh);
+  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, test_qfunction{}, dom);
 
   // uncomment lines below to verify that compile-time error messages
   // explain L2 spaces are not currently supported in boundary integrals.
@@ -174,8 +175,10 @@ TEST(L2, 2DMixed)
 
   auto [H1fespace, H1fec] = serac::generateParFiniteElementSpace<trial_space>(mesh2D.get());
 
+  Domain dom = EntireDomain(*mesh2D);
+
   serac::Functional<test_space(trial_space)> f(L2fespace.get(), {H1fespace.get()});
-  f.AddDomainIntegral(serac::Dimension<dim>{}, serac::DependsOn<0>{}, hcurl_qfunction<dim>{}, *mesh2D);
+  f.AddDomainIntegral(serac::Dimension<dim>{}, serac::DependsOn<0>{}, hcurl_qfunction<dim>{}, dom);
 }
 
 int main(int argc, char* argv[])

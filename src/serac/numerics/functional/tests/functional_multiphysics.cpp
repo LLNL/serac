@@ -52,6 +52,9 @@ TEST(FunctionalMultiphysics, NonlinearThermalTest3D)
   // Construct the new functional object using the known test and trial spaces
   Functional<test_space(trial_space, trial_space)> residual(fespace.get(), {fespace.get(), fespace.get()});
 
+  Domain dom = EntireDomain(*mesh3D);
+  Domain bdr = EntireBoundary(*mesh3D);
+
   residual.AddVolumeIntegral(
       DependsOn<0, 1>{},
       [=](double /*t*/, auto position, auto temperature, auto dtemperature_dt) {
@@ -62,7 +65,7 @@ TEST(FunctionalMultiphysics, NonlinearThermalTest3D)
         auto flux            = kappa * du_dX;
         return serac::tuple{source, flux};
       },
-      *mesh3D);
+      dom);
 
   residual.AddSurfaceIntegral(
       DependsOn<0, 1>{},
@@ -72,7 +75,7 @@ TEST(FunctionalMultiphysics, NonlinearThermalTest3D)
         auto [du_dt, _1] = dtemperature_dt;
         return X[0] + X[1] - cos(u) * du_dt;
       },
-      *mesh3D);
+      bdr);
 
   double       t = 0.0;
   mfem::Vector r = residual(t, U, dU_dt);

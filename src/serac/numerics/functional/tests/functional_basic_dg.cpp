@@ -46,6 +46,8 @@ void L2_test_2D()
 
   constexpr int DERIVATIVE = 1;
 
+  Domain interior_faces = InteriorFaces(*mesh);
+
   residual.AddInteriorFaceIntegral(
       Dimension<dim-1>{}, DependsOn<0>{},
       [=](double /*t*/, auto X, auto velocity) {
@@ -65,8 +67,7 @@ void L2_test_2D()
         auto f_2 = u_2 * a;
         return serac::tuple{f_1, f_2};
 
-      },
-      *mesh);
+      }, interior_faces);
 
   double t = 0.0;
   check_gradient(residual, t, U);

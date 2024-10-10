@@ -96,9 +96,10 @@ void weird_mixed_test(std::unique_ptr<mfem::ParMesh>& mesh)
   // note: this is not really an elasticity problem, it's testing source and flux
   // terms that have the appropriate shapes to ensure that all the differentiation
   // code works as intended
-  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, MixedModelOne<dim>{}, *mesh);
-
-  residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, MixedModelTwo<dim>{}, *mesh);
+  Domain dom = EntireDomain(*mesh);
+  Domain bdr = EntireBoundary(*mesh);
+  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, MixedModelOne<dim>{}, dom);
+  residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, MixedModelTwo<dim>{}, bdr);
 
   double t = 0.0;
   check_gradient(residual, t, U);
@@ -122,8 +123,11 @@ void elasticity_test(std::unique_ptr<mfem::ParMesh>& mesh)
   // note: this is not really an elasticity problem, it's testing source and flux
   // terms that have the appropriate shapes to ensure that all the differentiation
   // code works as intended
-  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, ElasticityTestModelOne<dim>{}, *mesh);
-  residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, ElasticityTestModelTwo<dim>{}, *mesh);
+  Domain dom = EntireDomain(*mesh);
+  Domain bdr = EntireBoundary(*mesh);
+
+  residual.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, ElasticityTestModelOne<dim>{}, dom);
+  residual.AddBoundaryIntegral(Dimension<dim - 1>{}, DependsOn<0>{}, ElasticityTestModelTwo<dim>{}, bdr);
 
   double t = 0.0;
   check_gradient(residual, t, U);
