@@ -243,7 +243,7 @@ struct finite_element<mfem::Geometry::SQUARE, L2<p, c> > {
 
   // overload for two-sided interior face kernels
   template <int q>
-  SERAC_HOST_DEVICE static auto interpolate(const dof_type_if& X, const TensorProductQuadratureRule<q>&)
+  SERAC_HOST_DEVICE static auto interpolate([[maybe_unused]] const dof_type_if& X, const TensorProductQuadratureRule<q>&)
   {
     static constexpr bool apply_weights = false;
     static constexpr auto B             = calculate_B<apply_weights, q>();

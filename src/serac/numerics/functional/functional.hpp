@@ -460,8 +460,7 @@ public:
       integral.Mult(t, input_E_, output_E_, wrt, update_qdata_);
 
       // scatter-add to compute residuals on the local processor
-      mfem::BlockVector output_EBV(output_E_, G_test.bOffsets());
-      G_test.ScatterAdd(output_EBV, output_L_);
+      G_test.ScatterAdd(output_E_, output_L_);
     }
 
     // scatter-add to compute global residuals
@@ -602,7 +601,7 @@ private:
       uint64_t nnz = nonzero_entries.size();
       int nrows = form_.output_L_.Size();
 
-      row_ptr.resize(nrows + 1);
+      row_ptr.resize(uint32_t(nrows + 1));
       col_ind.resize(nnz);
 
       int nz = 0;
@@ -651,7 +650,7 @@ private:
       std::vector<int> col_ind_copy = col_ind;
 
       int nnz = row_ptr.back();
-      std::vector<double> values(nnz, 0.0);
+      std::vector<double> values(uint32_t(nnz), 0.0);
       auto A_local = mfem::SparseMatrix(
         row_ptr.data(), 
         col_ind_copy.data(), 

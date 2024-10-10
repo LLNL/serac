@@ -301,7 +301,7 @@ struct finite_element<mfem::Geometry::TRIANGLE, L2<p, c> > {
 
   // overload for two-sided interior face kernels
   template <int q>
-  SERAC_HOST_DEVICE static auto interpolate(const tensor<double, c, 2*ndof>& X, const TensorProductQuadratureRule<q>&)
+  SERAC_HOST_DEVICE static auto interpolate([[maybe_unused]] const tensor<double, c, 2*ndof>& X, const TensorProductQuadratureRule<q>&)
   {
     constexpr auto       xi                    = GaussLegendreNodes<q, mfem::Geometry::TRIANGLE>();
     static constexpr int num_quadrature_points = q * (q + 1) / 2;

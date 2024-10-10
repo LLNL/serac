@@ -84,7 +84,7 @@ GeometricFactors::GeometricFactors(const Domain& domain, int q, mfem::Geometry::
   J = mfem::Vector(int(num_elements) * qpts_per_elem * spatial_dim * geometry_dim);
 
 #define DISPATCH_KERNEL(GEOM, P, Q, BDR)  \
-  if (geom == mfem::Geometry::GEOM && p == P && q == Q) { \
+  if (geom == mfem::Geometry::GEOM && p == P && q == Q && (spatial_dim - geometry_dim) == BDR) { \
     compute_geometric_factors<Q, mfem::Geometry::GEOM, H1<P, dimension_of(mfem::Geometry::GEOM) + BDR> >(X, J, X_e, element_ids); \
     return; \
   }

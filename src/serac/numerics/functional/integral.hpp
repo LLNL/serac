@@ -361,7 +361,7 @@ Integral MakeBoundaryIntegral(const Domain& domain, const lambda_type& qf, std::
 template <mfem::Geometry::Type geom, int Q, typename test, typename... trials, typename lambda_type>
 void generate_interior_face_kernels(FunctionSignature<test(trials...)> s, Integral& integral, const lambda_type& qf)
 {
-  integral.geometric_factors_[geom] = GeometricFactors(integral.domain_, Q, geom, FaceType::BOUNDARY);
+  integral.geometric_factors_[geom] = GeometricFactors(integral.domain_, Q, geom);
   GeometricFactors& gf              = integral.geometric_factors_[geom];
   if (gf.num_elements == 0) return;
 
