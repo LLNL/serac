@@ -30,8 +30,8 @@
 
 #include <mfem/linalg/tensor.hpp>
 
-// #define ALT_SETUP
-#undef ALT_SETUP
+#define ALT_SETUP
+// #undef ALT_SETUP
 
 // _main_init_start
 int main(int argc, char* argv[])
@@ -93,9 +93,11 @@ int main(int argc, char* argv[])
       // auto mu = 0.5 * (serac::inner(Jtet, Jtet) / abs(serac::det(Jtet))) - 1.0;
       static constexpr serac::mat2 I = serac::DenseIdentity<2>();
       serac::mat2 triangle_correction = {{{1.00000000000000, -0.577350269189626}, {0, 1.15470053837925}}};
-      auto dx_dxi = dXdxi + serac::dot(du_dX, dXdxi);
-      auto Jtet = serac::dot(dx_dxi, triangle_correction)
-      auto flux       = scale * (J - (JJ/3.0) * invJT) * serac::det(I + du_dX);
+      auto dx_dxi   = dXdxi + serac::dot(du_dX, dXdxi);
+      auto Jtet     = serac::dot(dx_dxi, triangle_correction);
+      auto JJtet    = serac::dot(Jtet, Jtet);
+      auto invJTtet = serac::inv(serac::transpose(Jtet));
+      auto flux     = (0.5 * JJtet * invJTtet - Jtet) / serac::det(Jtet) * serac::det(I + du_dX);
 #else
       // auto mu = (serac::squared_norm(J) / (3 * pow(serac::det(J), 2.0 / 3.0))) - 1.0; // serac::dot(J, J)
       static constexpr auto I = serac::DenseIdentity<3>();
@@ -118,7 +120,7 @@ int main(int argc, char* argv[])
 
   serac::Domain radial_boundary = serac::Domain::ofBoundaryElements(pmesh, serac::by_attr<DIM>(1));
 
-  auto omega = 1.0e1;
+  auto omega = 5.0e1;
   auto radius = 1.015;
   auto x0 = 0.0;
   auto y0 = 0.0;
@@ -158,7 +160,11 @@ int main(int argc, char* argv[])
   // wrap residual and provide Jacobian
   serac::mfem_ext::StdFunctionOperator residual_opr(
     totNumDofs,
+#ifdef ALT_SETUP
+    [&residual](const mfem::Vector& u, mfem::Vector& r) {
+#else
     [&dofsZdirection, &residual](const mfem::Vector& u, mfem::Vector& r) {
+#endif
       double dummy_time = 1.0;
       const mfem::Vector res = residual(dummy_time, u);
       r = res;
@@ -191,8 +197,8 @@ int main(int argc, char* argv[])
                                               .relative_tol   = 1.0e-10,
                                               .absolute_tol   = 1.0e-12,
                                               .min_iterations = 1, 
-                                              .max_iterations = 2000, // 2000
-                                              .max_line_search_iterations = 30, //0
+                                              .max_iterations = 500, // 2000
+                                              .max_line_search_iterations = 20, //0
                                               .print_level    = 1};
 
   serac::EquationSolver eq_solver(nonlin_opts, lin_opts);
