@@ -30,6 +30,15 @@ tensor<double, dim> average(std::vector<tensor<double, dim> >& positions)
 
 TEST(Solid, MultiMaterial)
 {
+  /*
+   * Checks multi material case with the following uniaxial problem:
+   *              MATERIAL 1            MATERIAL 2
+   *               E = 1                 E = 2 
+   * u = 0   --------------------|-------------------- stress = 1
+   * 
+   * strain =       1                    0.5
+   * 
+   */
   MPI_Barrier(MPI_COMM_WORLD);
 
   constexpr int p                   = 2;
@@ -41,7 +50,12 @@ TEST(Solid, MultiMaterial)
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, "solid_mechanics_multimaterial");
 
-  auto mesh = mesh::refineAndDistribute(buildCuboidMesh(8, 1, 1, 8.0, 1.0, 1.0), serial_refinement, parallel_refinement);
+  constexpr double L = 8.0;
+  constexpr double W = 1.0;
+  constexpr double H = 1.0;
+  constexpr double VOLUME = L*W*H;
+
+  auto mesh = mesh::refineAndDistribute(buildCuboidMesh(8, 1, 1, L, W, H), serial_refinement, parallel_refinement);
 
   const std::string mesh_tag{"mesh"};
 
@@ -63,11 +77,12 @@ TEST(Solid, MultiMaterial)
   using Material = solid_mechanics::LinearIsotropic;
 
   constexpr double E_left = 1.0;
-  constexpr double nu = 0.25;
-  Material mat_left{.K = E_left/3.0/(1 - 2*nu), .G = 0.5*E_left/(1 + nu)};
+  constexpr double nu_left = 0.125;
+  Material mat_left{.K = E_left/3.0/(1 - 2*nu_left), .G = 0.5*E_left/(1 + nu_left)};
 
-  constexpr double E_right = 2.0;
-  Material mat_right{.K = E_right/3.0/(1 - 2*nu), .G = 0.5*E_right/(1 + nu)};
+  constexpr double E_right = 2.0*E_left;
+  constexpr double nu_right = 2*nu_left;
+  Material mat_right{.K = E_right/3.0/(1 - 2*nu_right), .G = 0.5*E_right/(1 + nu_right)};
 //   using Hardening = solid_mechanics::LinearHardening;
 //   using MaterialB  = solid_mechanics::J2SmallStrain<Hardening>;
 
@@ -85,7 +100,7 @@ TEST(Solid, MultiMaterial)
   //auto qdata = solid_solver.createQuadratureDataBuffer(initial_state);
 
   auto is_in_left = [](std::vector<tensor<double, dim>> coords, int /* attribute */) {
-    return average(coords)[0] < 4.0;
+    return average(coords)[0] < 0.5*L;
   };
   Domain left = Domain::ofElements(pmesh, is_in_left);
 
@@ -95,16 +110,39 @@ TEST(Solid, MultiMaterial)
   solid.setMaterial(mat_left, left);
   solid.setMaterial(mat_right, right);
 
-  solid.setDisplacementBCs({2}, [](auto){ return 0.0; }, 2);
-  solid.setDisplacementBCs({3}, [](auto){ return 1.0; }, 0);
+  constexpr double stress = 1.0;
+  Domain end_face = Domain::ofBoundaryElements(pmesh, by_attr<dim>(3));
+  solid.setTraction(DependsOn<>{}, [stress](auto, auto n, auto){ return stress*n; }, end_face);
+
+  solid.setDisplacementBCs({2}, [](auto){ return 0.0; }, 1);
   solid.setDisplacementBCs({5}, [](auto){ return 0.0; }, 0);
-  solid.setDisplacementBCs({6}, [](auto){ return 0.0; }, 1);
+  solid.setDisplacementBCs({1}, [](auto){ return 0.0; }, 2);
 
   solid.completeSetup();
 
   // Perform the quasi-static solve
   solid.advanceTimestep(1.0);
   solid.outputStateToDisk("paraview");
+
+  // Define output functionals for verification
+
+  constexpr double subdomain_volume = 0.5*VOLUME;
+
+  auto average_strain_integrand = [](auto, auto, auto displacement) {
+    auto strain = get<1>(displacement);
+    return strain[0][0]/subdomain_volume;
+  };
+
+  Functional<double(H1<p, dim>)> average_strain_left({&solid.displacement().space()});
+  average_strain_left.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, average_strain_integrand,
+    left);
+
+  Functional<double(H1<p, dim>)> average_strain_right({&solid.displacement().space()});
+  average_strain_right.AddDomainIntegral(Dimension<dim>{}, DependsOn<0>{}, average_strain_integrand,
+    right);
+
+  EXPECT_NEAR(average_strain_left(solid.time(), solid.displacement()), stress/E_left, 1e-10);
+  EXPECT_NEAR(average_strain_right(solid.time(), solid.displacement()), stress/E_right, 1e-10);
 }
 
 } // namespace serac
