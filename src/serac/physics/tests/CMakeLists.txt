@@ -4,10 +4,11 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause) 
 
-set(test_dependencies serac_physics serac_mesh gtest)
+set(physics_test_depends serac_physics serac_mesh gtest)
 
-set(serial_solver_tests
+set(physics_serial_test_sources
     beam_bending.cpp
+    fit_test.cpp
     thermal_finite_diff.cpp
     thermal_statics_patch.cpp
     thermal_dynamics_patch.cpp
@@ -15,12 +16,13 @@ set(serial_solver_tests
     solid_statics_patch.cpp
     solid_dynamics_patch.cpp
     dynamic_solid_adjoint.cpp
+    quasistatic_solid_adjoint.cpp
     finite_element_vector_set_over_domain.cpp
     )
 
-serac_add_tests( SOURCES ${serial_solver_tests}
-    DEPENDS_ON ${test_dependencies}
-    NUM_MPI_TASKS 1)
+serac_add_tests(SOURCES       ${physics_serial_test_sources}
+                DEPENDS_ON    ${physics_test_depends}
+                NUM_MPI_TASKS 1)
 
 set(solver_tests
     mmp_functionally_graded_tensile.cpp
@@ -58,10 +60,9 @@ set(solver_tests
     dynamic_thermal_adjoint.cpp
     solid_reaction_adjoint.cpp
     thermal_nonlinear_solve.cpp
-    solid_nonlinear_solve.cpp
     )
-blt_list_append(TO solver_tests ELEMENTS contact_patch.cpp contact_beam.cpp IF TRIBOL_FOUND)
+blt_list_append(TO physics_parallel_test_sources ELEMENTS contact_patch.cpp contact_beam.cpp IF TRIBOL_FOUND)
 
-serac_add_tests( SOURCES ${solver_tests}
-                 DEPENDS_ON ${test_dependencies}
-                 NUM_MPI_TASKS 2)
+serac_add_tests(SOURCES       ${physics_parallel_test_sources}
+                DEPENDS_ON    ${physics_test_depends}
+                NUM_MPI_TASKS 2)

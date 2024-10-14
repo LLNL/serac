@@ -4,8 +4,7 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-set(functional_depends serac_mesh)
-blt_list_append(TO functional_depends ELEMENTS blt::cuda IF ENABLE_CUDA)
+set(functional_depends serac_mesh ${serac_device_depends})
 
 # Add the library first
 set(functional_headers
@@ -62,7 +61,7 @@ set(functional_cuda_headers
     domain_integral_kernels.cuh
     )
 
-blt_list_append(TO functional_headers ELEMENTS ${functional_cuda_headers} IF ENABLE_CUDA)
+blt_list_append(TO functional_headers ELEMENTS ${functional_cuda_headers} IF SERAC_ENABLE_CUDA)
 
 blt_add_library(
       NAME        serac_functional
@@ -80,6 +79,6 @@ install(TARGETS              serac_functional
         DESTINATION          lib
         )
 
-if(ENABLE_TESTS)
+if(SERAC_ENABLE_TESTS)
    add_subdirectory(tests)
 endif()

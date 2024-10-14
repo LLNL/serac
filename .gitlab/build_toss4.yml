@@ -2,9 +2,7 @@
 # This is the shared configuration of jobs for toss4
 .on_toss4:
   variables:
-    # TODO Re-add eng bank to scheduler parameters once all users have the bank on ruby
-    # -A ${ALLOC_BANK}
-    SCHEDULER_PARAMETERS: "--res=ci --exclusive=user --deadline=now+1hour -N ${ALLOC_NODES} -t ${ALLOC_TIME}"
+    SCHEDULER_PARAMETERS: "--res=ci --exclusive=user --deadline=now+1hour -N ${ALLOC_NODES} -t ${ALLOC_TIME} -A ${ALLOC_BANK}"
   tags:
     - batch
     - ruby
@@ -38,7 +36,7 @@
 toss4-clang_14_0_6-src:
   variables:
     COMPILER: "clang@14.0.6"
-    HOST_CONFIG: "quartz-toss_4_x86_64_ib-${COMPILER}.cmake"
+    HOST_CONFIG: "ruby-toss_4_x86_64_ib-${COMPILER}.cmake"
     EXTRA_CMAKE_OPTIONS: "-DENABLE_BENCHMARKS=ON"
     DO_INTEGRATION_TESTS: "yes"
     ALLOC_NODES: "2"
@@ -48,7 +46,7 @@ toss4-clang_14_0_6-src:
 toss4-gcc_10_3_1-src:
   variables:
     COMPILER: "gcc@10.3.1"
-    HOST_CONFIG: "quartz-toss_4_x86_64_ib-${COMPILER}.cmake"
+    HOST_CONFIG: "ruby-toss_4_x86_64_ib-${COMPILER}.cmake"
     EXTRA_CMAKE_OPTIONS: "-DENABLE_BENCHMARKS=ON"
     ALLOC_NODES: "1"
     ALLOC_TIME: "30"
@@ -57,17 +55,17 @@ toss4-gcc_10_3_1-src:
 toss4-gcc_10_3_1-src-no-tribol:
   variables:
     COMPILER: "gcc@10.3.1"
-    HOST_CONFIG: "quartz-toss_4_x86_64_ib-${COMPILER}.cmake"
+    HOST_CONFIG: "ruby-toss_4_x86_64_ib-${COMPILER}.cmake"
     EXTRA_CMAKE_OPTIONS: "-DENABLE_BENCHMARKS=ON -UTRIBOL_DIR"
     ALLOC_NODES: "1"
     ALLOC_TIME: "30"
   extends: .src_build_on_toss4
 
-toss4-gcc_10_3_1-src-no-sundials:
+toss4-gcc_10_3_1-src-no-optional-solvers:
   variables:
     COMPILER: "gcc@10.3.1"
-    HOST_CONFIG: "quartz-toss_4_x86_64_ib-${COMPILER}.cmake"
-    EXTRA_CMAKE_OPTIONS: "-DENABLE_BENCHMARKS=ON -USUNDIALS_DIR"
+    HOST_CONFIG: "ruby-toss_4_x86_64_ib-${COMPILER}.cmake"
+    EXTRA_CMAKE_OPTIONS: "-DENABLE_BENCHMARKS=ON -USUNDIALS_DIR -UPETSC_DIR"
     ALLOC_NODES: "1"
     ALLOC_TIME: "20"
   extends: .src_build_on_toss4

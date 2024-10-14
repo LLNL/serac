@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/state/state_manager.hpp"
+#include "serac/serac_config.hpp"
 
 #include "axom/core.hpp"
 
@@ -69,8 +70,8 @@ double StateManager::newDataCollection(const std::string& name, const std::optio
     // 1. Sets the order of the mesh to  p = 1
     // 2. Uses the existing continuity of the mesh finite element space (periodic meshes are discontinuous)
     // 3. Uses the spatial dimension as the mesh dimension (i.e. it is not a lower dimension manifold)
-    // 4. Uses nodal instead of VDIM ordering (i.e. xxxyyyzzz instead of xyzxyzxyz)
-    mesh(name).SetCurvature(1, is_discontinuous, -1, mfem::Ordering::byNODES);
+    // 4. Uses the ordering set by serac::ordering
+    mesh(name).SetCurvature(1, is_discontinuous, -1, serac::ordering);
 
     // Sidre will destruct the nodal grid function instead of the mesh
     mesh(name).SetNodesOwner(false);
@@ -90,25 +91,26 @@ double StateManager::newDataCollection(const std::string& name, const std::optio
   return datacoll.GetTime();
 }
 
-void StateManager::loadCheckpointedStates(int                                                     cycle_to_load,
-                                          std::vector<std::reference_wrapper<FiniteElementState>> states_to_load)
+void StateManager::loadCheckpointedStates(int cycle_to_load, std::vector<FiniteElementState*> states_to_load)
 {
-  std::string mesh_name = collectionID(&states_to_load.begin()->get().mesh());
+  mfem::ParMesh* meshPtr   = &(*states_to_load.begin())->mesh();
+  std::string    mesh_name = collectionID(meshPtr);
 
   std::string coll_name = mesh_name + "_datacoll";
 
   axom::sidre::MFEMSidreDataCollection previous_datacoll(coll_name);
 
-  previous_datacoll.SetComm(states_to_load.begin()->get().mesh().GetComm());
+  previous_datacoll.SetComm(meshPtr->GetComm());
   previous_datacoll.SetPrefixPath(output_dir_);
   previous_datacoll.Load(cycle_to_load);
 
   for (auto state : states_to_load) {
-    SLIC_ERROR_ROOT_IF(collectionID(&state.get().mesh()) != mesh_name,
+    meshPtr = &state->mesh();
+    SLIC_ERROR_ROOT_IF(collectionID(meshPtr) != mesh_name,
                        "Loading FiniteElementStates from two different meshes at one time is not allowed.");
-    mfem::ParGridFunction* datacoll_owned_grid_function = previous_datacoll.GetParField(state.get().name());
+    mfem::ParGridFunction* datacoll_owned_grid_function = previous_datacoll.GetParField(state->name());
 
-    state.get().setFromGridFunction(*datacoll_owned_grid_function);
+    state->setFromGridFunction(*datacoll_owned_grid_function);
   }
 }
 
@@ -136,7 +138,7 @@ void StateManager::storeState(FiniteElementState& state)
 {
   SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
   auto mesh_tag = collectionID(&state.mesh());
-  SLIC_ERROR_ROOT_IF(named_states_.find(state.name()) != named_states_.end(),
+  SLIC_ERROR_ROOT_IF(hasState(state.name()),
                      axom::fmt::format("StateManager already contains a state named '{}'", state.name()));
   auto&                  datacoll = datacolls_.at(mesh_tag);
   const std::string      name     = state.name();
@@ -161,9 +163,8 @@ FiniteElementState StateManager::newState(const mfem::ParFiniteElementSpace& spa
   std::string mesh_tag = collectionID(space.GetParMesh());
 
   SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
-  SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
-                     axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
-  SLIC_ERROR_ROOT_IF(named_states_.find(state_name) != named_states_.end(),
+  SLIC_ERROR_ROOT_IF(!hasMesh(mesh_tag), axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
+  SLIC_ERROR_ROOT_IF(hasState(state_name),
                      axom::fmt::format("StateManager already contains a state named '{}'", state_name));
   auto state = FiniteElementState(space, state_name);
   storeState(state);
@@ -174,7 +175,7 @@ void StateManager::storeDual(FiniteElementDual& dual)
 {
   SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
   auto mesh_tag = collectionID(&dual.mesh());
-  SLIC_ERROR_ROOT_IF(named_duals_.find(dual.name()) != named_duals_.end(),
+  SLIC_ERROR_ROOT_IF(hasDual(dual.name()),
                      axom::fmt::format("StateManager already contains a state named '{}'", dual.name()));
   auto&                  datacoll = datacolls_.at(mesh_tag);
   const std::string      name     = dual.name();
@@ -201,9 +202,8 @@ FiniteElementDual StateManager::newDual(const mfem::ParFiniteElementSpace& space
   std::string mesh_tag = collectionID(space.GetParMesh());
 
   SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
-  SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
-                     axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
-  SLIC_ERROR_ROOT_IF(named_duals_.find(dual_name) != named_duals_.end(),
+  SLIC_ERROR_ROOT_IF(!hasMesh(mesh_tag), axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
+  SLIC_ERROR_ROOT_IF(hasDual(dual_name),
                      axom::fmt::format("StateManager already contains a dual named '{}'", dual_name));
   auto dual = FiniteElementDual(space, dual_name);
   storeDual(dual);
@@ -213,8 +213,7 @@ FiniteElementDual StateManager::newDual(const mfem::ParFiniteElementSpace& space
 void StateManager::save(const double t, const int cycle, const std::string& mesh_tag)
 {
   SLIC_ERROR_ROOT_IF(!ds_, "Serac's data store was not initialized - call StateManager::initialize first");
-  SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
-                     axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
+  SLIC_ERROR_ROOT_IF(!hasMesh(mesh_tag), axom::fmt::format("Mesh tag '{}' not found in the data store", mesh_tag));
   auto&       datacoll  = datacolls_.at(mesh_tag);
   std::string file_path = axom::utilities::filesystem::joinPath(datacoll.GetPrefixPath(), datacoll.GetCollectionName());
   SLIC_INFO_ROOT(
@@ -245,8 +244,8 @@ mfem::ParMesh& StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh, const
   // 1. Sets the order of the mesh to  p = 1
   // 2. Uses the existing continuity of the mesh finite element space (periodic meshes are discontinuous)
   // 3. Uses the spatial dimension as the mesh dimension (i.e. it is not a lower dimension manifold)
-  // 4. Uses nodal instead of VDIM ordering (i.e. xxxyyyzzz instead of xyzxyzxyz)
-  pmesh->SetCurvature(1, is_discontinuous, -1, mfem::Ordering::byNODES);
+  // 4. Uses the ordering set by serac::ordering
+  pmesh->SetCurvature(1, is_discontinuous, -1, serac::ordering);
 
   // Sidre will destruct the nodal grid function instead of the mesh
   pmesh->SetNodesOwner(false);
@@ -293,8 +292,7 @@ void StateManager::constructShapeFields(const std::string& mesh_tag)
 
 mfem::ParMesh& StateManager::mesh(const std::string& mesh_tag)
 {
-  SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
-                     axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
+  SLIC_ERROR_ROOT_IF(!hasMesh(mesh_tag), axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
   auto mesh = datacolls_.at(mesh_tag).GetMesh();
   SLIC_ERROR_ROOT_IF(!mesh, "The datacollection does not contain a mesh object");
   return static_cast<mfem::ParMesh&>(*mesh);
@@ -313,15 +311,13 @@ std::string StateManager::collectionID(const mfem::ParMesh* pmesh)
 
 int StateManager::cycle(std::string mesh_tag)
 {
-  SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
-                     axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
+  SLIC_ERROR_ROOT_IF(!hasMesh(mesh_tag), axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
   return datacolls_.at(mesh_tag).GetCycle();
 }
 
 double StateManager::time(std::string mesh_tag)
 {
-  SLIC_ERROR_ROOT_IF(datacolls_.find(mesh_tag) == datacolls_.end(),
-                     axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
+  SLIC_ERROR_ROOT_IF(!hasMesh(mesh_tag), axom::fmt::format("Mesh tag \"{}\" not found in the data store", mesh_tag));
   return datacolls_.at(mesh_tag).GetTime();
 }
 

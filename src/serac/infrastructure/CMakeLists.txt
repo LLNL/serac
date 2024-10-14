@@ -4,10 +4,6 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-if(ENABLE_TESTS)
-    add_subdirectory(tests)
-endif()
-
 # This file contains metadata that often changes (ie. git sha).
 # Hide these changes in the source file so we do not force
 # a full rebuild.
@@ -45,10 +41,9 @@ set(infrastructure_sources
     terminator.cpp
     )
 
-set(infrastructure_depends axom::inlet axom::fmt axom::cli11 mfem)
+set(infrastructure_depends axom::inlet axom::fmt axom::cli11 mfem ${serac_device_depends})
 blt_list_append(TO infrastructure_depends ELEMENTS tribol IF TRIBOL_FOUND)
 blt_list_append(TO infrastructure_depends ELEMENTS caliper adiak::adiak IF SERAC_ENABLE_PROFILING)
-blt_list_append(TO infrastructure_depends ELEMENTS blt::cuda IF ENABLE_CUDA)
 list(APPEND infrastructure_depends blt::mpi)
 
 blt_add_library(
@@ -61,7 +56,7 @@ blt_add_library(
 # Set file back to C++ due to nvcc compiler error
 set_source_files_properties(input.cpp PROPERTIES LANGUAGE CXX)
 
-target_include_directories(serac_infrastructure PUBLIC 
+target_include_directories(serac_infrastructure PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../..>
     $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>
@@ -73,3 +68,7 @@ install(TARGETS              serac_infrastructure
         EXPORT               serac-targets
         DESTINATION          lib
         )
+
+if(SERAC_ENABLE_TESTS)
+    add_subdirectory(tests)
+endif()

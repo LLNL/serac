@@ -30,8 +30,8 @@ spack:
       environment: {}
       extra_rpaths: []
       flags:
-        cflags: -pthread
-        cxxflags: -pthread
+        cflags: -fPIC -pthread
+        cxxflags: -fPIC -pthread
       modules: []
       operating_system: ubuntu22.04
       paths:
@@ -40,6 +40,21 @@ spack:
         f77: /usr/bin/gfortran-13
         fc: /usr/bin/gfortran-13
       spec: gcc@13.1.0
+      target: x86_64
+  - compiler:
+      environment: {}
+      extra_rpaths: []
+      flags:
+        cflags: -fPIC -pthread
+        cxxflags: -fPIC -pthread
+      modules: []
+      operating_system: ubuntu22.04
+      paths:
+        cc: /usr/bin/gcc
+        cxx: /usr/bin/g++
+        f77: /usr/bin/gfortran-12
+        fc: /usr/bin/gfortran-12
+      spec: gcc@12.3.0
       target: x86_64
 
   # Regular TPLs do not need views
@@ -88,6 +103,11 @@ spack:
       externals:
       - spec: bzip2@1.0.8
         prefix: /usr
+    cuda:
+      externals:
+        - spec: cuda@12.3.0
+          prefix: /usr/local/cuda-12.3
+      buildable: false
     curl:
       buildable: false
       externals:
@@ -175,10 +195,10 @@ spack:
     hdf5:
       variants: ~shared~mpi
     mfem:
-      require: "@4.7.0.0"
+      require: "@4.7.0.1"
     raja:
       require: "@2024.02.0~examples~exercises"
     tribol:
-      require: "@0.1.0.15~examples~tests"
+      require: "@0.1.0.16~examples~tests"
     umpire:
       require: "@2024.02.0~examples~werror"

@@ -24,6 +24,12 @@
 using namespace serac;
 using namespace serac::profiling;
 
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+constexpr auto exec_space = serac::ExecutionSpace::GPU;
+#else
+constexpr auto exec_space = serac::ExecutionSpace::CPU;
+#endif
+
 template <int dim>
 struct MixedModelOne {
   template <typename unused_type, typename displacement_type>
@@ -89,9 +95,9 @@ void weird_mixed_test(std::unique_ptr<mfem::ParMesh>& mesh)
   auto [test_fes, test_col]   = generateParFiniteElementSpace<test_space>(mesh.get());
 
   mfem::Vector U(trial_fes->TrueVSize());
-  U.Randomize();
 
-  Functional<test_space(trial_space)> residual(test_fes.get(), {trial_fes.get()});
+  Functional<test_space(trial_space), exec_space> residual(test_fes.get(), {trial_fes.get()});
+  U.Randomize();
 
   // note: this is not really an elasticity problem, it's testing source and flux
   // terms that have the appropriate shapes to ensure that all the differentiation
@@ -117,7 +123,7 @@ void elasticity_test(std::unique_ptr<mfem::ParMesh>& mesh)
   mfem::Vector U(trial_fes->TrueVSize());
   U.Randomize();
 
-  Functional<test_space(trial_space)> residual(test_fes.get(), {trial_fes.get()});
+  Functional<test_space(trial_space), exec_space> residual(test_fes.get(), {trial_fes.get()});
 
   // note: this is not really an elasticity problem, it's testing source and flux
   // terms that have the appropriate shapes to ensure that all the differentiation
@@ -150,19 +156,22 @@ void test_suite(std::string meshfile)
   }
 }
 
+TEST(VectorValuedH1, test_suite_hexes) { test_suite("/data/meshes/patch3D_hexes.mesh"); }
+
+#ifndef SERAC_USE_CUDA_KERNEL_EVALUATION
 TEST(VectorValuedH1, test_suite_tris) { test_suite("/data/meshes/patch2D_tris.mesh"); }
 TEST(VectorValuedH1, test_suite_quads) { test_suite("/data/meshes/patch2D_quads.mesh"); }
 TEST(VectorValuedH1, test_suite_tris_and_quads) { test_suite("/data/meshes/patch2D_tris_and_quads.mesh"); }
-
 TEST(VectorValuedH1, test_suite_tets) { test_suite("/data/meshes/patch3D_tets.mesh"); }
-TEST(VectorValuedH1, test_suite_hexes) { test_suite("/data/meshes/patch3D_hexes.mesh"); }
 TEST(VectorValuedH1, test_suite_tets_and_hexes) { test_suite("/data/meshes/patch3D_tets_and_hexes.mesh"); }
+#endif
 
 int main(int argc, char* argv[])
 {
   int num_procs, myid;
 
   ::testing::InitGoogleTest(&argc, argv);
+  serac::accelerator::initializeDevice();
 
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
@@ -173,6 +182,6 @@ int main(int argc, char* argv[])
   int result = RUN_ALL_TESTS();
 
   MPI_Finalize();
-
+  serac::accelerator::terminateDevice();
   return result;
 }

@@ -4,10 +4,6 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-# if(ENABLE_TESTS)
-#     add_subdirectory(tests)
-# endif()
-
 set(contact_headers
     contact_config.hpp
     contact_data.hpp
@@ -21,7 +17,7 @@ set(contact_sources
 
 set(contact_depends serac_infrastructure)
 blt_list_append(TO contact_depends ELEMENTS tribol IF TRIBOL_FOUND)
-blt_list_append(TO contact_depends ELEMENTS redecomp IF TRIBOL_FOUND AND ENABLE_MPI)
+blt_list_append(TO contact_depends ELEMENTS redecomp IF TRIBOL_FOUND AND SERAC_ENABLE_MPI)
 
 blt_add_library(
     NAME        serac_contact
@@ -36,3 +32,7 @@ install(TARGETS              serac_contact
         EXPORT               serac-targets
         DESTINATION          lib
         )
+
+# if(SERAC_ENABLE_TESTS)
+#     add_subdirectory(tests)
+# endif()

@@ -21,6 +21,10 @@
 
 #include "mfem.hpp"
 
+#ifdef SERAC_USE_PETSC
+#include "petsc.h"
+#endif
+
 namespace serac {
 
 std::pair<int, int> getMPIInfo(MPI_Comm comm)
@@ -60,6 +64,15 @@ std::pair<int, int> initialize(int argc, char* argv[], MPI_Comm comm)
 
 #ifdef SERAC_USE_SUNDIALS
   mfem::Sundials::Init();
+#endif
+
+#ifdef SERAC_USE_PETSC
+#ifdef SERAC_USE_SLEPC
+  mfem::MFEMInitializeSlepc(&argc, &argv);
+#else
+  mfem::MFEMInitializePetsc(&argc, &argv);
+#endif
+  PetscPopSignalHandler();
 #endif
 
   // Initialize GPU (no-op if not enabled/available)

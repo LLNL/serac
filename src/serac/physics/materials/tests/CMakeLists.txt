@@ -4,15 +4,14 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-set(test_dependencies serac_physics_materials gtest)
+set(material_test_depends serac_physics_materials gtest)
 
-set(material_tests
+set(material_test_sources
     thermomechanical_material.cpp
     J2_material.cpp
     parameterized_nonlinear_J2_material.cpp
     liquidCrystalElastomer_material.cpp
 )
 
-serac_add_tests( SOURCES ${material_tests}
-                 DEPENDS_ON ${test_dependencies})
- 
+serac_add_tests( SOURCES    ${material_test_sources}
+                 DEPENDS_ON ${material_test_depends})

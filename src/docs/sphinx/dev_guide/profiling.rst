@@ -27,11 +27,11 @@ Introduction to SPOT
 --------------------
 
 `SPOT <https://software.llnl.gov/news/2021/01/07/spot-new>`_ is a framework developed at
-LLNL for vizualizing performance data.  SPOT is an external tool and does not need to be
+LLNL for visualizing performance data.  SPOT is an external tool and does not need to be
 linked into Serac.
 
-Build Instructions
-------------------
+TPL Build Instructions
+----------------------
 
 To use Adiak and Caliper with Serac, install the ``profiling`` variant of ``serac``
 with Spack, i.e., ``serac+profiling``. Note that these libraries are pre-built as
@@ -109,3 +109,33 @@ of this file, use `cali-query <https://software.llnl.gov/Caliper/tools.html#cali
 
 To view this data with SPOT, open a browser, navigate to the SPOT server (e.g. `LC <https://lc.llnl.gov/spot2>`_), and open the directory containing one or more ``.cali`` files.  For more information, watch this recorded `tutorial <https://www.youtube.com/watch?v=p8gjA6rbpvo>`_.
 
+Benchmarking Serac
+------------------
+
+To run all of Serac's benchmarks in one command, first make sure Serac is configured
+with benchmarking enabled (off by default). Then, run the build target ``run_benchmarks``.
+
+.. code-block:: bash
+
+  ./config-build.py -hc <host config file> -DENABLE_BENCHMARKS=ON
+  cd <serac build location>
+  make -j
+  make run_benchmarks
+  pwd
+
+This will run all of Serac's benchmarks multiple times with varying MPI task counts, and generate a Caliper file for
+each benchmark run at ``PROJECT_BINARY_DIR``. Now, you can visualize the results with SPOT, entering the path printed
+from ``pwd``.
+
+Visualizing Benchmarks using SPOT
+---------------------------------
+
+If you have access to LC, you can go to the following website and enter a directory in CZ/ RZ that contains Caliper
+files:
+
+- `SPOT CZ <https://lc.llnl.gov/spot2>`_
+- `SPOT RZ <https://rzlc.llnl.gov/spot2>`_
+
+.. note::
+  There is a bug in SPOT where if you remove Caliper files from a directory, they still show up on SPOT - if you've
+  visualized them previously. The current workaround is by removing the ``llnl.gov`` site cache manually.

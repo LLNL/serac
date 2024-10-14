@@ -241,10 +241,10 @@ spack:
     hdf5:
       variants: ~shared~mpi
     mfem:
-      require: "@4.7.0.0"
+      require: "@4.7.0.1"
     raja:
       require: "@2024.02.0~shared~examples~exercises"
     tribol:
-      require: "@0.1.0.15~examples~tests"
+      require: "@0.1.0.16~examples~tests"
     umpire:
       require: "@2024.02.0~shared~examples~werror"

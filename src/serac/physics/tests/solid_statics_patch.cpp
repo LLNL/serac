@@ -101,11 +101,11 @@ public:
 
 /**
  * @brief Exact displacement solution of the form:
- * 
+ *
  *   p == 1: u(X) := A.X + b (affine)
- *   p == 2: u(X) := A.diag(X).X + b 
+ *   p == 2: u(X) := A.diag(X).X + b
  *   p == 3: u(X) := A.diag(X).diag(X).X + b
- * 
+ *
  * @tparam dim number of spatial dimensions
  */
 template <int dim>
@@ -153,7 +153,7 @@ public:
   template < typename T >
   auto gradient(const tensor<T, dim> & X) const
   {
-    return make_tensor<dim, dim>([&](int i, int j){ 
+    return make_tensor<dim, dim>([&](int i, int j){
       using std::pow;
       return A(i, j) * p * pow(X[j], p-1);
     });
@@ -190,7 +190,7 @@ public:
       typename material_type::State state{};
       auto sigma = material(state, H);
       auto P = solid_mechanics::CauchyToPiola(sigma, H);
-      return dot(P, n0); 
+      return dot(P, n0);
     };
 
     sf.setTraction(traction, EntireBoundary(sf.mesh()));
@@ -287,7 +287,7 @@ double solution_error(PatchBoundaryCondition bc)
   constexpr int dim = dimension_of(element_type::geometry);
 
   // BT: shouldn't this assertion be in the physics module?
-  // Putting it here prevents tests from having a nonsensical spatial dimension value, 
+  // Putting it here prevents tests from having a nonsensical spatial dimension value,
   // but the physics module should be catching this error to protect users.
   static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for solid test");
 
@@ -295,10 +295,10 @@ double solution_error(PatchBoundaryCondition bc)
   //      In the future, it would be better to generalize it
   //      so that solution_polynomial_order = p, but my initial
   //      attempt had some issues. I'll revisit it at a later date
-  // 
+  //
   //      relevant issue: https://github.com/LLNL/serac/issues/926
   constexpr int solution_polynomial_order = 1;
-  auto exact_displacement = ManufacturedSolution<dim>(solution_polynomial_order); 
+  auto exact_displacement = ManufacturedSolution<dim>(solution_polynomial_order);
 
   std::string meshdir = std::string(SERAC_REPO_DIR) + "/data/meshes/";
   std::string filename;
@@ -308,9 +308,9 @@ double solution_error(PatchBoundaryCondition bc)
     case mfem::Geometry::TETRAHEDRON: filename = meshdir + "patch3D_tets.mesh"; break;
     case mfem::Geometry::CUBE:        filename = meshdir + "patch3D_hexes.mesh"; break;
     default: SLIC_ERROR_ROOT("unsupported element type for patch test"); break;
-  } 
+  }
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename));
-  
+
   std::string mesh_tag{"mesh_tag"};
 
   auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
@@ -383,11 +383,11 @@ double pressure_error()
     case mfem::Geometry::TETRAHEDRON: filename = meshdir + "patch3D_tets.mesh"; break;
     case mfem::Geometry::CUBE:        filename = meshdir + "patch3D_hexes.mesh"; break;
     default: SLIC_ERROR_ROOT("unsupported element type for patch test"); break;
-  } 
+  }
   auto mesh = mesh::refineAndDistribute(buildMeshFromFile(filename));
-  
+
   std::string mesh_tag{"mesh"};
-  
+
   auto& pmesh = serac::StateManager::setMesh(std::move(mesh), mesh_tag);
 
   // Construct a solid mechanics solver
@@ -405,13 +405,13 @@ double pressure_error()
   solid.setMaterial(mat);
 
   typename solid_mechanics::NeoHookean::State state;
-  auto H = make_tensor<dim, dim>([](int i, int j) { 
+  auto H = make_tensor<dim, dim>([](int i, int j) {
       if ( i == 0 && j == 0) {
         return -0.1;
       }
       return 0.0;
   });
-    
+
   tensor<double, dim, dim> sigma = mat(state, H);
   auto P = solid_mechanics::CauchyToPiola(sigma, H);
   double pressure = -1.0 * P(0,0);
@@ -429,7 +429,7 @@ double pressure_error()
       solid.setDisplacementBCs({1,3}, [](auto&){return 0.0; }, 1);
     } else if (element_type::geometry == mfem::Geometry::SQUARE) {
       solid.setDisplacementBCs({1}, exact_uniaxial_strain);
-      solid.setDisplacementBCs({2,4}, [](auto&){return 0.0; }, 1);    
+      solid.setDisplacementBCs({2,4}, [](auto&){return 0.0; }, 1);
     }
   } else if (dim == 3) {
     solid.setDisplacementBCs({1}, exact_uniaxial_strain);

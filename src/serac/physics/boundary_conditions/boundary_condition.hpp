@@ -94,46 +94,6 @@ public:
   mfem::Array<int>& markers() { return attr_markers_; }
 
   /**
-   * @brief Accessor for the underlying vector coefficient
-   *
-   * This method performs an internal check to verify the underlying GeneralCoefficient
-   * is in fact a vector.
-   *
-   * @return A non-owning reference to the underlying vector coefficient
-   */
-  const mfem::VectorCoefficient& vectorCoefficient() const;
-
-  /**
-   * @brief Accessor for the underlying vector coefficient
-   *
-   * This method performs an internal check to verify the underlying GeneralCoefficient
-   * is in fact a vector.
-   *
-   * @return A non-owning reference to the underlying vector coefficient
-   */
-  mfem::VectorCoefficient& vectorCoefficient();
-
-  /**
-   * @brief Accessor for the underlying scalar coefficient
-   *
-   * This method performs an internal check to verify the underlying GeneralCoefficient
-   * is in fact a scalar.
-   *
-   * @return A non-owning reference to the underlying scalar coefficient
-   */
-  const mfem::Coefficient& scalarCoefficient() const;
-
-  /**
-   * @brief Accessor for the underlying scalar coefficient
-   *
-   * This method performs an internal check to verify the underlying GeneralCoefficient
-   * is in fact a scalar.
-   *
-   * @return A non-owning reference to the underlying scalar coefficient
-   */
-  mfem::Coefficient& scalarCoefficient();
-
-  /**
    * @brief Returns the DOF indices for an essential boundary condition
    * @return A non-owning reference to the array of indices
    *
@@ -199,16 +159,6 @@ private:
    * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
    */
   void setTrueDofList(const mfem::Array<int>& true_dofs);
-
-  /**
-   * @brief "Manually" set the DOF indices without specifying the field to which they apply
-   * @param[in] local_dofs The local (finite element/grid function) indices of the DOFs constrained by the boundary
-   * condition
-   *
-   * @note This will set both the true and local internal dof index arrays.
-   * @note True and local dofs are described in the <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a>
-   */
-  void setLocalDofList(const mfem::Array<int>& local_dofs);
 
   /**
    * @brief A coefficient containing either a mfem::Coefficient or an mfem::VectorCoefficient

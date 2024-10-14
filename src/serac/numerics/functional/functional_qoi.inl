@@ -65,7 +65,7 @@ class Functional<double(trials...), exec> {
   class Gradient;
 
   // clang-format off
-  template <uint32_t i> 
+  template <uint32_t i>
   struct operator_paren_return {
     using type = typename std::conditional<
         i == NO_DIFFERENTIATION,          // if `i` is greater than or equal to zero,
@@ -82,7 +82,7 @@ public:
    */
   Functional(std::array<const mfem::ParFiniteElementSpace*, num_trial_spaces> trial_fes)
       : test_fec_(0, trial_fes[0]->GetMesh()->Dimension()),
-        test_space_(dynamic_cast<mfem::ParMesh*>(trial_fes[0]->GetMesh()), &test_fec_),
+        test_space_(dynamic_cast<mfem::ParMesh*>(trial_fes[0]->GetMesh()), &test_fec_, 1, serac::ordering),
         trial_space_(trial_fes)
   {
     auto* mesh = trial_fes[0]->GetMesh();

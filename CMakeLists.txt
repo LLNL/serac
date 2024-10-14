@@ -10,7 +10,7 @@
 
 # Do not bump this over 3.14 due to it changing CMake policies and breaking
 # the CUDA build. We check the required version specifically for this below
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.14) 
 
 # Check for minimum CMake version required w/o changing policies like cmake_minimum_required
 if(ENABLE_CUDA AND ${CMAKE_VERSION} VERSION_LESS 3.18.0)
@@ -47,7 +47,9 @@ if(NOT DEFINED SERAC_SOURCE_DIR)
 endif()
 message(STATUS "Serac Source Dir: ${SERAC_SOURCE_DIR}")
 
-if(SERAC_ENABLE_CODEVELOP)
+# For HIP case, this flag prevents the following Strumpack linker error:
+# undefined symbol: mpi_abort_
+if(SERAC_ENABLE_CODEVELOP OR (ENABLE_HIP AND STRUMPACK_DIR))
     set(ENABLE_FORTRAN ON CACHE BOOL "")
 endif()
 

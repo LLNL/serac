@@ -78,7 +78,7 @@ For example on **Ubuntu 20.04**:
    python3 scripts/uberenv/uberenv.py --project-json=scripts/spack/devtools.json --spack-env-file=scripts/spack/configs/linux_ubuntu_20/spack.yaml --prefix=../path/to/install
 
 Unlike Serac's library dependencies, our developer tools can be built with any compiler because
-they are not linked into the serac executable.  We recommend GCC 8 because we have tested that they all
+they are not linked into the serac executable.  We recommend GCC 10 because we have tested that they all
 build with that compiler.
 
 Building Serac's Dependencies via Spack/uberenv
@@ -97,7 +97,7 @@ This has been encapsulated using `Uberenv <https://github.com/LLNL/uberenv>`_. U
 doing the following:
 
 * Pulls a blessed version of Spack locally
-* If you are on a known operating system (like TOSS3), we have defined Spack configuration files
+* If you are on a known operating system (like TOSS4), we have defined Spack configuration files
   to keep Spack from building the world
 * Installs our Spack packages into the local Spack
 * Simplifies whole dependency build into one command
@@ -120,18 +120,18 @@ Serac.
 
 .. note::
   On LC machines, it is good practice to do the build step in parallel on a compute node.
-  Here is an example command: ``salloc -ppdebug -N1-1 python3 scripts/uberenv/uberenv.py``
+  Here is an example command: ``salloc -ppdebug -N1 python3 scripts/uberenv/uberenv.py``
 
 Unless otherwise specified Spack will default to a compiler.  This is generally not a good idea when
 developing large codes. To specify which compiler to use add the compiler specification to the ``--spec`` Uberenv
-command line option. On TOSS3, we recommend and have tested ``--spec=%clang@10.0.0``.  More compiler specs
+command line option. On TOSS4, we recommend and have tested ``--spec=%clang@14.0.6``.  More compiler specs
 can be found in the Spack compiler files in our repository:
 ``scripts/spack/configs/<platform>/spack.yaml``.
 
 We currently regularly test the following Spack configuration files:
 
-* Linux Ubuntu 20.04 (via Windows WSL 2)
-* TOSS 3 (On Ruby at LC)
+* Linux Ubuntu 22.04 (via Azure)
+* TOSS4 (On Ruby at LC)
 * BlueOS (On Lassen at LC)
 
 To install Serac on a new platform, it is a good idea to start with a known Spack environments file, or ``spack.yaml`` file,
@@ -143,17 +143,20 @@ in the `Spack docs <https://spack.readthedocs.io/en/latest/configuration.html>`_
 .. note::
    If you do not have a ``spack.yaml`` already, you can leave off that command line option from ``uberenv`` and
    Spack will generate a new one for you. Uberenv will copy it where you ran your uberenv command for future use.
+.. note::
+   A newer version of cmake (>=3.20) and llvm (>=14) may be required.
+
 
 Some helpful uberenv options include :
 
 * ``--spec=" build_type=Debug"`` (build the MFEM and Hypre libraries with debug symbols)
 * ``--spec=+profiling`` (build the Adiak and Caliper libraries)
 * ``--spec=+devtools`` (also build the devtools with one command)
-* ``--spec=%clang@10.0.0`` (build with a specific compiler as defined in the ``spack.yaml`` file)
+* ``--spec=%clang@14.0.6`` (build with a specific compiler as defined in the ``spack.yaml`` file)
 * ``--spack-env-file=<Path to Spack environment file>`` (use specific Spack environment configuration file)
 * ``--prefix=<Path>`` (required, build and install the dependencies in a particular location) - this *must be outside* of your local Serac repository
 
-The modifiers to the Spack specification ``spec`` can be chained together, e.g. ``--spec='%clang@10.0.0+devtools build_type=Debug'``.
+The modifiers to the Spack specification ``spec`` can be chained together, e.g. ``--spec='%clang@14.0.6+devtools build_type=Debug'``.
 
 If you already have a Spack instance from another project that you would like to reuse,
 you can do so by changing the uberenv command as follows:
@@ -166,7 +169,7 @@ Building Serac's Dependencies by Hand
 -------------------------------------
 
 To build Serac's dependencies by hand, use of a ``host-config`` CMake configuration file is
-stongly encouraged. A good place to start is by copying an existing host config in the
+strongly encouraged. A good place to start is by copying an existing host config in the
 ``host-config`` directory and modifying it according to your system setup.
 
 .. _build-label:
@@ -199,7 +202,7 @@ one of the following commands:
 
 If you built the dependencies using Spack/uberenv, the host-config file is output at the
 project root. To use the pre-built dependencies on LC, you must be in the appropriate
-LC group. Contact `Jamie Bramwell <bramwell1@llnl.gov>`_ for access.
+LC group. Contact `Brandon Talamini <talamini1@llnl.gov>`_ for access.
 
 Some build options frequently used by Serac include:
 
@@ -207,7 +210,10 @@ Some build options frequently used by Serac include:
 * ``ENABLE_BENCHMARKS``: Enables Google Benchmark performance tests, defaults to ``OFF``
 * ``ENABLE_WARNINGS_AS_ERRORS``: Turns compiler warnings into errors, defaults to ``ON``
 * ``ENABLE_ASAN``: Enables the Address Sanitizer for memory safety inspections, defaults to ``OFF``
+* ``SERAC_ENABLE_TESTS``: Enables Serac unit tests, defaults to ``ON``
 * ``SERAC_ENABLE_CODEVELOP``: Enables local development build of MFEM/Axom, see :ref:`codevelop-label`, defaults to ``OFF``
+* ``SERAC_USE_VDIM_ORDERING``: Sets the vector ordering to be ``byVDIM``, which is significantly faster for algebraic multigrid,
+   but may conflict with other packages if Serac is being used as a dependency, defaults to ``OFF``.
 
 Once the build has been configured, Serac can be built with the following commands:
 
@@ -291,6 +297,8 @@ If you plan to install the developer tools, you should also run
    $ ln -s /opt/homebrew/opt/llvm@14/bin/clang-format /opt/homebrew/bin/clang-format
 
 If you have installed Homebrew using the default installation prefix, most packages will be accessible through the prefix ``/opt/homebrew``.
+Note for Intel-based Macs, the installation prefix is ``/usr/local``. If you set a custom prefix or aren't sure what the prefix is, run ``brew --prefix``.
+For the rest of this section, we will assume the prefix is ``/opt/homebrew``.
 Some packages are not linked into this prefix to prevent conflicts with MacOS-provided versions.
 These will only be accessible via the prefix ``/opt/homebrew/opt/[package-name]``.
 Homebrew will warn about such packages after installing them.
@@ -314,7 +322,7 @@ The versions for all installed packages can be listed via:
 
 Note that the version format output by the above command is not the same as that expected by Spack, so be sure to add an ``@`` symbol between the package name and version string.
 
-If you are not using an M2 or M3 Mac, you will need to change the ``target`` for the compiler to ``x86_64`` or ``m1`` for Intel and M1-based Macs, respectively.
+If you are not using an M2 or M3 Mac, you will need to change the ``target`` for the compiler to ``x86_64`` or ``aarch64`` for Intel and M1-based Macs, respectively.
 Similarly, you need to set the ``operating_system`` to the proper value if you are not using ``sonoma`` (MacOS 14.X).
 
 If you want to install the devtools, you should also add the following under ``packages`` in the ``spack.yaml`` files.
