@@ -168,8 +168,8 @@ public:
     check_for_missing_nodal_gridfunc(mesh);
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
-    integrals_.push_back(
-        MakeDomainIntegral<signature, Q, dim>(EntireDomain(mesh), integrand, qdata, std::vector<uint32_t>{args...}));
+    integrals_.push_back(MakeDomainIntegral<signature, Q, dim, exec>(EntireDomain(mesh), integrand, qdata,
+                                                                     std::vector<uint32_t>{args...}));
   }
 
   /// @overload
@@ -186,7 +186,7 @@ public:
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
     integrals_.push_back(
-        MakeDomainIntegral<signature, Q, dim>(domain, integrand, qdata, std::vector<uint32_t>{args...}));
+        MakeDomainIntegral<signature, Q, dim, exec>(domain, integrand, qdata, std::vector<uint32_t>{args...}));
   }
 
   /**
@@ -210,7 +210,7 @@ public:
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
     integrals_.push_back(
-        MakeBoundaryIntegral<signature, Q, dim>(EntireBoundary(mesh), integrand, std::vector<uint32_t>{args...}));
+        MakeBoundaryIntegral<signature, Q, dim, exec>(EntireBoundary(mesh), integrand, std::vector<uint32_t>{args...}));
   }
 
   /// @overload
@@ -225,7 +225,8 @@ public:
     check_for_missing_nodal_gridfunc(domain.mesh_);
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
-    integrals_.push_back(MakeBoundaryIntegral<signature, Q, dim>(domain, integrand, std::vector<uint32_t>{args...}));
+    integrals_.push_back(
+        MakeBoundaryIntegral<signature, Q, dim, exec>(domain, integrand, std::vector<uint32_t>{args...}));
   }
 
   /**
@@ -293,7 +294,7 @@ public:
       auto type = integral.domain_.type_;
 
       if (!already_computed[type]) {
-        G_trial_[type][which].Gather(input_L_[which], input_E_[type][which]);
+        G_trial_[type][which].template Gather<exec>(input_L_[which], input_E_[type][which]);
         already_computed[type] = true;
       }
 
@@ -340,7 +341,7 @@ public:
 
       for (auto i : integral.active_trial_spaces_) {
         if (!already_computed[type][i]) {
-          G_trial_[type][i].Gather(input_L_[i], input_E_[type][i]);
+          G_trial_[type][i].template Gather<exec>(input_L_[i], input_E_[type][i]);
           already_computed[type][i] = true;
         }
       }
@@ -507,7 +508,7 @@ private:
 
   mutable std::vector<mfem::BlockVector> input_E_[Domain::num_types];
 
-  std::vector<Integral> integrals_;
+  std::vector<Integral<exec>> integrals_;
 
   mutable mfem::BlockVector output_E_[Domain::num_types];
 

@@ -10,6 +10,8 @@
  * @brief Specialization of finite_element for Hcurl on quadrilateral geometry
  */
 
+#include "RAJA/RAJA.hpp"
+
 // this specialization defines shape functions (and their curls) that
 // interpolate at Gauss-Lobatto nodes for closed intervals, and Gauss-Legendre
 // nodes for open intervals.
@@ -21,8 +23,8 @@
 //         rather than 3D vector along the z-direction.
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
-template <int p>
-struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
+template <int p, ExecutionSpace exec>
+struct finite_element<mfem::Geometry::SQUARE, Hcurl<p>, exec> {
   static constexpr auto geometry   = mfem::Geometry::SQUARE;
   static constexpr auto family     = Family::HCURL;
   static constexpr int  dim        = 2;
@@ -35,6 +37,14 @@ struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
 
   using residual_type =
       typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
+
+  template <typename in_t, int q>
+  struct batch_apply_shape_fn_output {
+    using source_t = decltype(dot(get<0>(get<0>(in_t{})), tensor<double, 2>{}) + get<1>(get<0>(in_t{})) * double{});
+    using flux_t   = decltype(dot(get<0>(get<1>(in_t{})), tensor<double, 2>{}) + get<1>(get<1>(in_t{})) * double{});
+
+    using type = tensor<tuple<source_t, flux_t>, q * q>;
+  };
 
   // this is how mfem provides the data to us for these elements
   // if, instead, it was stored as simply tensor< double, 2, p + 1, p >,
@@ -243,7 +253,9 @@ struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
   }
 
   template <typename in_t, int q>
-  static auto batch_apply_shape_fn(int j, tensor<in_t, q * q> input, const TensorProductQuadratureRule<q>&)
+  static void RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q> input,
+                                                    typename batch_apply_shape_fn_output<in_t, q>::type* output,
+                                                    const TensorProductQuadratureRule<q>&, RAJA::LaunchContext)
   {
     constexpr bool                     apply_weights = false;
     constexpr tensor<double, q, p>     B1            = calculate_B1<apply_weights, q>();
@@ -260,11 +272,6 @@ struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
       jy = (j % ((p + 1) * p)) / n;
     }
 
-    using source_t = decltype(dot(get<0>(get<0>(in_t{})), tensor<double, 2>{}) + get<1>(get<0>(in_t{})) * double{});
-    using flux_t   = decltype(dot(get<0>(get<1>(in_t{})), tensor<double, 2>{}) + get<1>(get<1>(in_t{})) * double{});
-
-    tensor<tuple<source_t, flux_t>, q * q> output;
-
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
         tensor<double, 2> phi_j{(dir == 0) * B1(qx, jx) * B2(qy, jy), (dir == 1) * B1(qy, jy) * B2(qx, jx)};
@@ -277,15 +284,21 @@ struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
         auto& d10 = get<0>(get<1>(input(Q)));
         auto& d11 = get<1>(get<1>(input(Q)));
 
-        output[Q] = {dot(d00, phi_j) + d01 * curl_phi_j, dot(d10, phi_j) + d11 * curl_phi_j};
+        (*output)[Q] = {dot(d00, phi_j) + d01 * curl_phi_j, dot(d10, phi_j) + d11 * curl_phi_j};
       }
     }
-
-    return output;
   }
 
   template <int q>
-  SERAC_HOST_DEVICE static auto interpolate(const dof_type& element_values, const TensorProductQuadratureRule<q>&)
+  static auto interpolate_output_helper()
+  {
+    return tensor<tuple<tensor<double, 2>, double>, q * q>{};
+  };
+
+  template <int q>
+  SERAC_HOST_DEVICE static void interpolate(const dof_type& element_values, const TensorProductQuadratureRule<q>&,
+                                            tensor<tuple<tensor<double, 2>, double>, q * q>* output_ptr,
+                                            RAJA::LaunchContext)
   {
     constexpr bool                     apply_weights = false;
     constexpr tensor<double, q, p>     B1            = calculate_B1<apply_weights, q>();
@@ -312,20 +325,18 @@ struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
     for (int qy = 0; qy < q; qy++) {
       for (int qx = 0; qx < q; qx++) {
         for (int i = 0; i < dim; i++) {
-          get<VALUE>(qf_inputs(count))[i] = value[i](qy, qx);
+          get<VALUE>((*output_ptr)(count))[i] = value[i](qy, qx);
         }
-        get<CURL>(qf_inputs(count)) = curl(qy, qx);
+        get<CURL>((*output_ptr)(count)) = curl(qy, qx);
         count++;
       }
     }
-
-    return qf_inputs;
   }
 
   template <typename source_type, typename flux_type, int q>
   SERAC_HOST_DEVICE static void integrate(const tensor<tuple<source_type, flux_type>, q * q>& qf_output,
                                           const TensorProductQuadratureRule<q>&, dof_type* element_residual,
-                                          [[maybe_unused]] int step = 1)
+                                          RAJA::LaunchContext, [[maybe_unused]] int        step = 1)
   {
     constexpr bool                     apply_weights = true;
     constexpr tensor<double, q, p>     B1            = calculate_B1<apply_weights, q>();
@@ -359,7 +370,7 @@ struct finite_element<mfem::Geometry::SQUARE, Hcurl<p> > {
 #if 0
 
   template <int q>
-  static SERAC_DEVICE auto interpolate(const dof_type& element_values, const tensor<double, dim, dim>& J,
+  static SERAC_DEVICE void interpolate(const dof_type& element_values, const tensor<double, dim, dim>& J,
                                        const TensorProductQuadratureRule<q>& rule, cache_type<q>& A)
   {
     int tidx = threadIdx.x % q;

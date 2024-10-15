@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 
 set(functional_test_depends gtest serac_functional ${functional_depends})
+blt_list_append(TO functional_depends ELEMENTS blt::cuda IF ENABLE_CUDA)
 
 # This test is all constexpr-evaluated, so it doesn't
 # actually need to run, if it compiles without error, the tests have passed
@@ -58,15 +59,21 @@ target_link_libraries(bug_boundary_qoi PUBLIC serac_physics)
 
 if(SERAC_ENABLE_CUDA)
 
-    set(functional_cuda_test_sources 
-        tensor_unit_tests_cuda.cu 
-#        some of the GPU functionality is temporarily disabled to 
-#        help incrementally roll-out the variadic implementation of Functional
-#        TODO: re-enable GPU kernels in a follow-up PR
-#        functional_comparisons_cuda.cu
-       )
+    set(functional_tests_cuda
+    # functional_basic_hcurl.cpp
+    # functional_with_domain.cpp
+    functional_basic_h1_scalar.cpp
+    # functional_basic_h1_vector.cpp
+    # functional_multiphysics.cpp
+    # functional_qoi.cpp
+    # functional_nonlinear.cpp
+    # functional_boundary_test.cpp
+    functional_comparisons.cpp
+    # functional_comparison_L2.cpp
+    )
 
-    serac_add_tests( SOURCES    ${functional_cuda_test_sources}
-                     DEPENDS_ON ${functional_test_depends})
+    serac_add_tests( SOURCES ${functional_tests_cuda}
+                     USE_CUDA ON
+                     DEPENDS_ON gtest serac_functional serac_state ${functional_depends} blt::cuda)
 
 endif()

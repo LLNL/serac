@@ -13,6 +13,7 @@
 *.orig
 __pycache__/
 view
+*.cache*
 /_serac_build_and_test*
 build-linux-*-*-*
 *.core

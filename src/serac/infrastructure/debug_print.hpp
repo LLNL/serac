@@ -131,16 +131,18 @@ void printCUDAMemUsage()
 {
   int deviceCount = 0;
   cudaGetDeviceCount(&deviceCount);
-  int i = 0;
-  cudaSetDevice(i);
+  for (int i = 0; i < deviceCount; ++i) {
+    cudaSetDevice(i);
 
-  size_t freeBytes, totalBytes;
-  cudaMemGetInfo(&freeBytes, &totalBytes);
-  size_t usedBytes = totalBytes - freeBytes;
+    size_t freeBytes, totalBytes;
+    cudaMemGetInfo(&freeBytes, &totalBytes);
+    size_t usedBytes = totalBytes - freeBytes;
 
-  std::cout << "Device Number: " << i << std::endl;
-  std::cout << " Total Memory (MB): " << (totalBytes / 1024.0 / 1024.0) << std::endl;
-  std::cout << " Free Memory (MB): " << (freeBytes / 1024.0 / 1024.0) << std::endl;
-  std::cout << " Used Memory (MB): " << (usedBytes / 1024.0 / 1024.0) << std::endl;
+    std::cout << "Device Number: " << i << std::endl;
+    std::cout << " Total Memory (MB): " << (totalBytes / 1024.0 / 1024.0) << std::endl;
+    std::cout << " Free Memory (MB): " << (freeBytes / 1024.0 / 1024.0) << std::endl;
+    std::cout << " Used Memory (MB): " << (usedBytes / 1024.0 / 1024.0) << std::endl;
+  }
+  cudaSetDevice(0);
 }
 #endif

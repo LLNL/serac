@@ -240,10 +240,10 @@ static Domain domain_of_elems(const mfem::Mesh&                                 
   mfem::Vector vertices;
   mesh.GetVertices(vertices);
 
-  int tri_id  = 0;
-  int quad_id = 0;
-  int tet_id  = 0;
-  int hex_id  = 0;
+  [[maybe_unused]] int tri_id  = 0;
+  [[maybe_unused]] int quad_id = 0;
+  [[maybe_unused]] int tet_id  = 0;
+  [[maybe_unused]] int hex_id  = 0;
 
   // elements that satisfy the predicate are added to the domain
   int num_elems = mesh.GetNE();

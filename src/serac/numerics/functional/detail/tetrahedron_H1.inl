@@ -10,6 +10,8 @@
  * @brief Specialization of finite_element for H1 on tetrahedron geometry
  */
 
+#include "RAJA/RAJA.hpp"
+
 // this specialization defines shape functions (and their gradients) that
 // interpolate at Gauss-Lobatto nodes for the appropriate polynomial order
 //
@@ -19,8 +21,8 @@
 // for detailed information about node locations for different polynomial orders, see
 // simplex_basis_function_unit_tests.cpp
 /// @cond
-template <int p, int c>
-struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
+template <int p, int c, ExecutionSpace exec>
+struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c>, exec> {
   static constexpr auto geometry   = mfem::Geometry::TETRAHEDRON;
   static constexpr auto family     = Family::H1;
   static constexpr int  components = c;
@@ -34,14 +36,21 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
   static constexpr int SOURCE = 0, FLUX = 1;
 
   using residual_type =
-      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
+      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components>>::type;
 
   using dof_type = tensor<double, c, ndof>;
 
-  using value_type = typename std::conditional<components == 1, double, tensor<double, components> >::type;
+  using value_type = typename std::conditional<components == 1, double, tensor<double, components>>::type;
   using derivative_type =
-      typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim> >::type;
+      typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim>>::type;
   using qf_input_type = tuple<value_type, derivative_type>;
+
+  template <typename in_t, int q>
+  struct batch_apply_shape_fn_output {
+    using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, dim>{}));
+    using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, dim>{}));
+    using type     = tensor<tuple<source_t, flux_t>, nqpts(q)>;
+  };
 
   SERAC_HOST_DEVICE static constexpr double shape_function([[maybe_unused]] tensor<double, dim> xi, int i)
   {
@@ -336,16 +345,14 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
   }
 
   template <typename in_t, int q>
-  static auto batch_apply_shape_fn(int j, tensor<in_t, nqpts(q)> input, const TensorProductQuadratureRule<q>&)
+  static auto RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, nqpts(q)> input,
+                                                    typename batch_apply_shape_fn_output<in_t, q>::type* output,
+                                                    const TensorProductQuadratureRule<q>&, RAJA::LaunchContext& ctx)
   {
-    using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, dim>{}));
-    using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, dim>{}));
-
     constexpr auto xi = GaussLegendreNodes<q, mfem::Geometry::TETRAHEDRON>();
 
-    tensor<tuple<source_t, flux_t>, nqpts(q)> output;
-
-    for (int i = 0; i < nqpts(q); i++) {
+    auto x_range = RAJA::RangeSegment(0, nqpts(q));
+    RAJA::loop<typename EvaluationSpacePolicy<exec>::threads_t>(ctx, x_range, [&](int i) {
       double              phi_j      = shape_function(xi[i], j);
       tensor<double, dim> dphi_j_dxi = shape_function_gradient(xi[i], j);
 
@@ -354,21 +361,28 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
       auto& d10 = get<0>(get<1>(input(i)));
       auto& d11 = get<1>(get<1>(input(i)));
 
-      output[i] = {d00 * phi_j + dot(d01, dphi_j_dxi), d10 * phi_j + dot(d11, dphi_j_dxi)};
-    }
+      (*output)[i] = {d00 * phi_j + dot(d01, dphi_j_dxi), d10 * phi_j + dot(d11, dphi_j_dxi)};
+    });
 
     return output;
   }
 
   template <int q>
-  SERAC_HOST_DEVICE static auto interpolate(const tensor<double, c, ndof>& X, const TensorProductQuadratureRule<q>&)
+  static auto interpolate_output_helper()
+  {
+    return tensor<qf_input_type, nqpts(q)>{};
+  }
+
+  template <int q>
+  SERAC_HOST_DEVICE static void interpolate(const tensor<double, c, ndof>&   X, const TensorProductQuadratureRule<q>&,
+                                            tensor<qf_input_type, nqpts(q)>* output_ptr, RAJA::LaunchContext ctx)
   {
     constexpr auto xi = GaussLegendreNodes<q, mfem::Geometry::TETRAHEDRON>();
 
     // transpose the quadrature data into a flat tensor of tuples
     union {
-      tensor<tuple<tensor<double, c>, tensor<double, c, dim> >, nqpts(q)> unflattened;
-      tensor<qf_input_type, nqpts(q)>                                     flattened;
+      tensor<tuple<tensor<double, c>, tensor<double, c, dim>>, nqpts(q)> unflattened;
+      tensor<qf_input_type, nqpts(q)>                                    flattened;
     } output{};
 
     for (int i = 0; i < c; i++) {
@@ -380,20 +394,27 @@ struct finite_element<mfem::Geometry::TETRAHEDRON, H1<p, c> > {
       }
     }
 
-    return output.flattened;
+    RAJA::TypedRangeSegment<int> x_range(0, BLOCK_SZ);
+    if (output_ptr) {
+      RAJA::loop<RAJA::LoopPolicy<RAJA::seq_exec>>(ctx, x_range, [&](int tid) {
+        if (tid < serac::size(output.flattened)) {
+          (*output_ptr)[tid] = output.flattened[tid];
+        }
+      });
+    }
   }
 
   template <typename source_type, typename flux_type, int q>
   SERAC_HOST_DEVICE static void integrate(const tensor<tuple<source_type, flux_type>, nqpts(q)>& qf_output,
                                           const TensorProductQuadratureRule<q>&,
-                                          tensor<double, c, ndof>* element_residual, int step = 1)
+                                          tensor<double, c, ndof>* element_residual, RAJA::LaunchContext, int step = 1)
   {
     if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) {
       return;
     }
 
     using source_component_type = std::conditional_t<is_zero<source_type>{}, zero, double>;
-    using flux_component_type   = std::conditional_t<is_zero<flux_type>{}, zero, tensor<double, dim> >;
+    using flux_component_type   = std::conditional_t<is_zero<flux_type>{}, zero, tensor<double, dim>>;
 
     constexpr int  ntrial              = std::max(size(source_type{}), size(flux_type{}) / dim) / c;
     constexpr auto integration_points  = GaussLegendreNodes<q, mfem::Geometry::TETRAHEDRON>();

@@ -12,7 +12,6 @@
  */
 
 #pragma once
-
 #if defined(__CUDACC__)
 #define SERAC_HOST_DEVICE __host__ __device__
 #define SERAC_HOST __host__
@@ -49,7 +48,7 @@
  */
 #define SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 #endif
-
+#include "RAJA/RAJA.hpp"
 #include <memory>
 
 #include "axom/core.hpp"
@@ -73,6 +72,40 @@ enum class ExecutionSpace
 };
 
 /**
+ * @brief Helper struct used for deducing RAJA exectuion policies from serac::ExecutionSpace
+ */
+template <ExecutionSpace exec>
+struct EvaluationSpacePolicy;
+
+/// @overload
+template <>
+struct EvaluationSpacePolicy<ExecutionSpace::CPU> {
+  /// @brief Alias for loop policy.
+  using threads_t = RAJA::LoopPolicy<RAJA::seq_exec>;
+  /// @brief Alias for number of teams for CPU kernel launches.
+  using teams_t = RAJA::LoopPolicy<RAJA::seq_exec>;
+  /// @brief Alias for CPU kernel launch policy.
+  using launch_t = RAJA::LaunchPolicy<RAJA::seq_launch_t>;
+  /// @brief Alias for forall policy.
+  using forall_t = RAJA::seq_exec;
+};
+
+#if defined(__CUDACC__)
+/// @overload
+template <>
+struct EvaluationSpacePolicy<ExecutionSpace::GPU> {
+  /// @brief Alias for loop policy.
+  using threads_t = RAJA::LoopPolicy<RAJA::cuda_thread_x_direct>;
+  /// @brief Alias for number of teams for GPU kernel launches.
+  using teams_t = RAJA::LoopPolicy<RAJA::cuda_block_x_direct>;
+  /// @brief Alias for GPU kernel launch policy.
+  using launch_t = RAJA::LaunchPolicy<RAJA::cuda_launch_t<false>>;
+  /// @brief Alias for forall policy.
+  using forall_t = RAJA::cuda_exec<128>;
+};
+#endif
+
+/**
  * @brief The default execution space for serac builds
  */
 constexpr ExecutionSpace default_execution_space = ExecutionSpace::CPU;
@@ -88,25 +121,33 @@ struct execution_to_memory {
   static constexpr axom::MemorySpace value = axom::MemorySpace::Dynamic;
 };
 
-#ifdef SERAC_USE_UMPIRE
+/// @brief This helper is needed to suppress -Werror compilation errors caused by the
+/// explicit captures in the main execution lambdas.
+template <typename... T>
+SERAC_HOST_DEVICE void suppress_capture_warnings(T...)
+{
+}
+
 /// @overload
 template <>
 struct execution_to_memory<ExecutionSpace::CPU> {
+  /// @brief axom memory space corresponding to ExecutionSpace
   static constexpr axom::MemorySpace value = axom::MemorySpace::Host;
 };
 
 /// @overload
 template <>
 struct execution_to_memory<ExecutionSpace::GPU> {
+  /// @brief axom memory space corresponding to ExecutionSpace
   static constexpr axom::MemorySpace value = axom::MemorySpace::Device;
 };
 
 /// @overload
 template <>
 struct execution_to_memory<ExecutionSpace::Dynamic> {
+  /// @brief axom memory space corresponding to ExecutionSpace
   static constexpr axom::MemorySpace value = axom::MemorySpace::Unified;
 };
-#endif
 
 /// @brief Helper template for @p execution_to_memory trait
 template <ExecutionSpace space>
@@ -121,7 +162,7 @@ void zero_out(axom::Array<T, dim, space>& arr)
 #ifdef __CUDACC__
 /// @overload
 template <typename T, int dim>
-void zero_out(axom::Array<T, dim, execution_to_memory_v<ExecutionSpace::GPU>>& arr)
+void zero_out(axom::Array<T, dim, axom::MemorySpace::Device>& arr)
 {
   cudaMemset(arr.data(), 0, static_cast<std::size_t>(arr.size()) * sizeof(T));
 }
@@ -191,12 +232,12 @@ namespace accelerator {
  *
  * @note This function should only be called once
  */
-void initializeDevice();
+void initializeDevice(ExecutionSpace exec = ExecutionSpace::CPU);
 
 /**
  * @brief Cleans up the device, if applicable
  */
-void terminateDevice();
+void terminateDevice(ExecutionSpace exec = ExecutionSpace::CPU);
 
 #if defined(__CUDACC__)
 

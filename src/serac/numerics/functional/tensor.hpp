@@ -12,6 +12,24 @@
 
 #pragma once
 
+/**
+ * @brief Macro defining block size for CUDA/HIP targets
+ */
+#define BLOCK_SZ 128
+/**
+ * @brief Macro defining block dimension for CUDA/HIP targets
+ */
+#define BLOCK_X 8
+/**
+ * @brief Macro defining block dimension for CUDA/HIP targets
+ */
+#define BLOCK_Y 4
+/**
+ * @brief Macro defining block dimension for CUDA/HIP targets
+ */
+#define BLOCK_Z 4
+
+#include "serac/serac_config.hpp"
 #include "serac/infrastructure/accelerator.hpp"
 
 #include "detail/metaprogramming.hpp"
@@ -708,6 +726,7 @@ template <typename S, typename T, int m, int n, int p>
 SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n, p>& B)
 {
   tensor<decltype(S{} * T{}), m, p> AB{};
+
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < p; j++) {
       for (int k = 0; k < n; k++) {
@@ -903,7 +922,7 @@ SERAC_HOST_DEVICE constexpr auto dot(const tensor<S, m, n, p, q>& A, const tenso
 
 /// compute the cross product of the columns of A: A(:,1) x A(:,2)
 template <typename T>
-auto cross(const tensor<T, 3, 2>& A)
+auto SERAC_HOST_DEVICE cross(const tensor<T, 3, 2>& A)
 {
   return tensor<T, 3>{A(1, 0) * A(2, 1) - A(2, 0) * A(1, 1), A(2, 0) * A(0, 1) - A(0, 0) * A(2, 1),
                       A(0, 0) * A(1, 1) - A(1, 0) * A(0, 1)};
@@ -911,21 +930,21 @@ auto cross(const tensor<T, 3, 2>& A)
 
 /// return the in-plane components of the cross product of {v[0], v[1], 0} x {0, 0, 1}
 template <typename T>
-auto cross(const tensor<T, 2, 1>& v)
+auto SERAC_HOST_DEVICE cross(const tensor<T, 2, 1>& v)
 {
   return tensor<T, 2>{v(1, 0), -v(0, 0)};
 }
 
 /// return the in-plane components of the cross product of {v[0], v[1], 0} x {0, 0, 1}
 template <typename T>
-auto cross(const tensor<T, 2>& v)
+auto SERAC_HOST_DEVICE cross(const tensor<T, 2>& v)
 {
   return tensor<T, 2>{v[1], -v[0]};
 }
 
 /// compute the (right handed) cross product of two 3-vectors
 template <typename S, typename T>
-auto cross(const tensor<S, 3>& u, const tensor<T, 3>& v)
+auto SERAC_HOST_DEVICE cross(const tensor<S, 3>& u, const tensor<T, 3>& v)
 {
   return tensor<decltype(S{} * T{}), 3>{u(1) * v(2) - u(2) * v(1), u(2) * v(0) - u(0) * v(2),
                                         u(0) * v(1) - u(1) * v(0)};
@@ -1282,7 +1301,7 @@ SERAC_HOST_DEVICE constexpr auto detApIm1(const tensor<T, 3, 3>& A)
 
   // clang-format off
   // equivalent to tr(A) + I2(A) + det(A)
-  return A(0, 0) + A(1, 1) + A(2, 2) 
+  return A(0, 0) + A(1, 1) + A(2, 2)
        - A(0, 1) * A(1, 0) * (1 + A(2, 2))
        + A(0, 0) * A(1, 1) * (1 + A(2, 2))
        - A(0, 2) * A(2, 0) * (1 + A(1, 1))
@@ -1358,12 +1377,8 @@ SERAC_HOST_DEVICE auto contract(const tensor<S, m, n...>& A, const tensor<T, p, 
   // the type of the output tensor is easier to figure out
   using U = decltype(S{} * T{});
 
-  auto C = []() {
-    if constexpr (d3 == 0) return tensor<U, d1, d2>{};
-    if constexpr (d3 != 0) return tensor<U, d1, d2, d3>{};
-  }();
-
   if constexpr (d3 == 0) {
+    auto C = tensor<U, d1, d2>{};
     for (int i = 0; i < d1; i++) {
       for (int j = 0; j < d2; j++) {
         U sum{};
@@ -1376,7 +1391,11 @@ SERAC_HOST_DEVICE auto contract(const tensor<S, m, n...>& A, const tensor<T, p, 
         C(i, j) = sum;
       }
     }
-  } else {
+
+    return C;
+  }
+  if constexpr (d3 != 0) {
+    auto C = tensor<U, d1, d2, d3>{};
     for (int i = 0; i < d1; i++) {
       for (int j = 0; j < d2; j++) {
         for (int k = 0; k < d3; k++) {
@@ -1393,9 +1412,211 @@ SERAC_HOST_DEVICE auto contract(const tensor<S, m, n...>& A, const tensor<T, p, 
         }
       }
     }
-  }
 
-  return C;
+    return C;
+  }
+}
+
+/**
+ * @brief This is a helper function for memory allocations and declarations in GPU implementations
+ * of serac.  For example, it can be used in declarations like
+ *   RAJA_TEAM_SHARED decltype(deduce_contract_return_type(A, B)) shared memory;
+ * or together with umpire in allocations.
+ */
+template <int i1, int i2, typename S, int m, typename T, int p, int q, int... n>
+SERAC_HOST_DEVICE constexpr auto deduce_contract_return_type(const tensor<S, m, n...>&, const tensor<T, p, q>&)
+{
+  constexpr int Adims[] = {m, n...};
+  constexpr int Bdims[] = {p, q};
+  static_assert(sizeof...(n) < 3);
+  static_assert(Adims[i1] == Bdims[i2], "error: incompatible tensor dimensions");
+
+  // first, we have to figure out the dimensions of the output tensor
+  constexpr int new_dim = (i2 == 0) ? q : p;
+  constexpr int d1      = (i1 == 0) ? new_dim : Adims[0];
+  constexpr int d2      = (i1 == 1) ? new_dim : Adims[1];
+  constexpr int d3      = sizeof...(n) == 1 ? 0 : ((i1 == 2) ? new_dim : Adims[2]);
+  using U               = decltype(S{} * T{});
+  if constexpr (d3 == 0) {
+    return serac::tensor<U, d1, d2>{};
+  }
+  return tensor<U, d1, d2, d3>{};
+}
+
+/// @overload
+template <int i1, int i2, typename T, int p, int q>
+SERAC_HOST_DEVICE constexpr auto deduce_contract_return_type(const zero&, const tensor<T, p, q>&)
+{
+  return zero{};
+}
+
+// TODO(bowen): Figure out using decltype vs helper structs for shared memory buffers
+/* template<int i1, int i2, typename... T>
+ class contract_type {
+
+};
+
+ template <int i1, int i2, typename S, int m, typename T, int p, int q, int... n>
+ class contract_type<i1, i2, tensor<S, m, n...>,  tensor<T, p, q>> {
+ SERAC_HOST_DEVICE contract_type(const tensor<S, m, n...>&, const tensor<T, p, q>&) {}
+
+   static constexpr int Adims[] = {m, n...};
+   static constexpr int Bdims[] = {p, q};
+   static_assert(sizeof...(n) < 3);
+   static_assert(Adims[i1] == Bdims[i2], "error: incompatible tensor dimensions");
+
+   // first, we have to figure out the dimensions of the output tensor
+   static constexpr int new_dim = (i2 == 0) ? q : p;
+   static constexpr int d1      = (i1 == 0) ? new_dim : Adims[0];
+   static constexpr int d2      = (i1 == 1) ? new_dim : Adims[1];
+   static constexpr int d3      = sizeof...(n) == 1 ? 0 : ((i1 == 2) ? new_dim : Adims[2]);
+   using U               = decltype(S{} * T{});
+   // if constexpr (d3 == 0) {
+   //   return serac::tensor<U, d1, d2>{};
+   // }
+ public:
+   using type = typename std::conditional<d3 == 0, tensor<U, d1, d2>, tensor<U, d1, d2, d3>>::type;
+ };
+
+ template <int i1, int i2, typename S, int m, typename T, int p, int q, int... n>
+ contract_type(tensor<S, m, n...>,  tensor<T, p, q>) -> contract_type<1, 1, tensor<S, m, n...>,  tensor<T, p, q>>;
+
+ template<int i1, int i2, typename S>
+ struct contract_type<i1, i2, zero, S> {
+   SERAC_HOST_DEVICE contract_type(const zero&, const S&) {}
+   using type = zero;
+ };
+
+ template<int i1, int i2, typename S>
+ struct contract_type<i1, i2, S, zero> {
+   SERAC_HOST_DEVICE contract_type(const S&, const zero&) {}
+   using type = zero;
+ };
+ */
+
+/**
+ * @brief When deducing the result of a sum of contractions, e.g. the type
+ *   using type = decltype(contract(A, B) + contract(C, D))
+ *   it is necessary to determine if both contractions result in a zero tensor.
+ *   This simple struct returns has
+ *          type = zero if S and T are identically zero
+ *          type = S if T is zero
+ *          type = T if S is zero
+ *          type = S if neither is zero (S == T always in thius case)
+ */
+template <typename S, typename T>
+struct is_zero_and {
+private:
+  static constexpr bool is_S_zero = std::is_same_v<S, zero>;
+  static constexpr bool is_T_zero = std::is_same_v<T, zero>;
+  using helper_t                  = typename std::conditional<is_S_zero, T, S>::type;
+
+public:
+  /// @brief type corresponding to the rules described in brief above.
+  using type = typename std::conditional<is_S_zero && is_T_zero, zero, helper_t>::type;
+};
+
+/**
+ * @brief a convenience function that computes a dot product between
+ * two tensors, and allows the user to specify which indices to summed
+ * over.  This overload is void, and accepts a pointer to the resultant
+ * tensor.  Useful for GPU execution, where buffers must be filled
+ * manuall.
+ *
+ * @tparam i1 the index of contraction for the left operand
+ * @tparam i2 the index of contraction for the right operand
+ * @tparam S the datatype stored in the left operand
+ * @tparam m leading dimension of the left operand
+ * @tparam n the trailing dimensions of the left operand
+ * @tparam T the datatype stored in the right operand
+ * @tparam p the number of rows in the right operand
+ * @tparam q the number of columns in the right operand
+ * @tparam n0 the first dimension of the result
+ * @tparam n1 the second dimension of the result
+ * @tparam n2 the third dimension of the result
+ * @param A the left operand
+ * @param B the right operand
+ * @param C the result
+ * @param qx thread index for GPU backends
+ * @param qy thread index for GPU backends
+ * @param qz thread index for GPU backends
+ * @param accumulate control whether contract adds the result to C, or sets C.
+ */
+template <int l1, int l2, typename S, int m, typename T, int p, int q, int n0, int n1, int n2, int... n>
+SERAC_HOST_DEVICE void contract(const tensor<S, m, n...>& A, const tensor<T, p, q>& B, tensor<S, n0, n1, n2>* C, int qx,
+                                int qy, int qz, bool accumulate = false)
+{
+  constexpr int Adims[] = {m, n...};
+  constexpr int Bdims[] = {p, q};
+  static_assert(sizeof...(n) < 3);
+  static_assert(Adims[l1] == Bdims[l2], "error: incompatible tensor dimensions");
+  static_assert(sizeof...(n) != 1);
+  using U = decltype(S{} * T{});
+  for (int i = qz; i < n0; i += BLOCK_Z) {
+    for (int j = qy; j < n1; j += BLOCK_Y) {
+      for (int k = qx; k < n2; k += BLOCK_X) {
+        U sum = 0.0;
+
+        for (int l = 0; l < Adims[l1]; l++) {
+          if constexpr (l1 == 0 && l2 == 0) {
+            sum += A(l, j, k) * B(l, i);
+          }
+          if constexpr (l1 == 1 && l2 == 0) {
+            sum += A(i, l, k) * B(l, j);
+          }
+          if constexpr (l1 == 2 && l2 == 0) {
+            sum += A(i, j, l) * B(l, k);
+          }
+          if constexpr (l1 == 0 && l2 == 1) {
+            sum += A(l, j, k) * B(i, l);
+          }
+          if constexpr (l1 == 1 && l2 == 1) {
+            sum += A(i, l, k) * B(j, l);
+          }
+          if constexpr (l1 == 2 && l2 == 1) {
+            sum += A(i, j, l) * B(k, l);
+          }
+        }
+        if (accumulate) {
+          (*C)(i, j, k) += sum;
+        } else {
+          (*C)(i, j, k) = sum;
+        }
+      }
+    }
+  }
+}
+
+/// @overload
+template <int l1, int l2, typename T, int p, int q>
+SERAC_HOST_DEVICE void contract(const zero&, const tensor<T, p, q>&, zero*, int, int, int,
+                                [[maybe_unused]] bool accumulate = false)
+{
+  return;
+}
+
+/// @overload
+template <int l1, int l2>
+SERAC_HOST_DEVICE void contract(const zero&, const zero&, zero*, int, int, int,
+                                [[maybe_unused]] bool accumulate = false)
+{
+  return;
+}
+
+/// @overload
+template <int l1, int l2, typename T, int... n>
+SERAC_HOST_DEVICE void contract(const tensor<T, n...>&, const zero&, zero*, int, int, int,
+                                [[maybe_unused]] bool accumulate = false)
+{
+  return;
+}
+
+/// @overload
+template <int l1, int l2, typename S, typename T, int p, int q, int n0, int n1, int n2>
+SERAC_HOST_DEVICE void contract(const zero&, const tensor<T, p, q>&, tensor<S, n0, n1, n2>*, int, int, int,
+                                [[maybe_unused]] bool accumulate = false)
+{
+  return;
 }
 
 /// @overload
@@ -1625,6 +1846,7 @@ SERAC_HOST_DEVICE constexpr tensor<double, 3, 3> inv(const tensor<double, 3, 3>&
 
   return invA;
 }
+
 /**
  * @overload
  * @note For N-by-N matrices with N > 3, requires Gaussian elimination
@@ -1678,8 +1900,8 @@ inline SERAC_HOST_DEVICE void print(double value) { printf("%f", value); }
  * @brief print a tensor using `printf`, so that it is suitable for use inside cuda kernels.
  * @param[in] A The tensor to write out
  */
-template <int m, int... n>
-SERAC_HOST_DEVICE void print(const tensor<double, m, n...>& A)
+template <typename T, int m, int... n>
+SERAC_HOST_DEVICE void print(const tensor<T, m, n...>& A)
 {
   printf("{");
   print(A[0]);
@@ -1687,7 +1909,58 @@ SERAC_HOST_DEVICE void print(const tensor<double, m, n...>& A)
     printf(",");
     print(A[i]);
   }
-  printf("}");
+  printf("}\n");
+}
+
+/**
+ * @brief print a tensor's shape using printf for use inside CUDA kenels
+ */
+template <typename T, int m, int... n>
+SERAC_HOST_DEVICE void print_shape(const tensor<T, m, n...>&)
+{
+  printf("shape [ %d", m);
+  (printf(", %d", n), ...);
+  printf(" ]\n");
+}
+
+/**
+ * @brief helper function for setting a tensor to a value on GPU
+ * @param[in] A the tensor
+ * @param value to fill tensor
+ * @param qx thread index
+ * @param qy thread index
+ * @param qz thread index
+ */
+template <typename T, int m, int... n>
+SERAC_HOST_DEVICE void memset_tensor(tensor<T, m, n...>& A, T value, int qx, int qy, int qz)
+{
+  for (int i = 0; i < m; ++i) {
+    memset_tensor(A[i], value, qx, qy, qz);
+  }
+}
+
+/// @overload
+template <typename T>
+SERAC_HOST_DEVICE void memset_tensor(serac::zero&, T, int, int, int)
+{
+}
+
+/// @overload
+template <typename T, int m, int n>
+SERAC_HOST_DEVICE void memset_tensor(tensor<T, m, n>& A, T value, int qx, int qy, int)
+{
+  if (qx < m && qy < n) {
+    A(qx, qy) = value;
+  }
+}
+
+/// @overload
+template <typename T, int m, int n, int l>
+SERAC_HOST_DEVICE void memset_tensor(tensor<T, m, n, l>& A, T value, int qx, int qy, int qz)
+{
+  if (qx < m && qy < n && qz < l) {
+    A(qx, qy, qz) = value;
+  }
 }
 
 /**
@@ -1882,13 +2155,35 @@ SERAC_HOST_DEVICE constexpr int size(const tensor<T, n...>&)
 }
 
 /**
+ * @brief returns the total number of stored values in a tensor
+ *
+ * @tparam T the datatype stored in the tensor
+ * @tparam n the extents of each dimension
+ * @return the total number of values stored in the tensor
+ */
+template <typename T, int... n>
+SERAC_HOST_DEVICE constexpr int size(const tensor<T, n...>*)
+{
+  return (n * ... * 1);
+}
+
+/**
+ * @brief returns the total number of stored values in a tensor
+ *
+ * @tparam T the datatype stored in the tensor
+ * @tparam n the extents of each dimension
+ * @return the total number of values stored in the tensor
+ */
+SERAC_HOST_DEVICE constexpr int size(const zero*) { return 1; }
+
+/**
  * @overload
  * @brief overload of size() for `double`, we say a double "stores" 1 value
  */
 SERAC_HOST_DEVICE constexpr int size(const double&) { return 1; }
 
 /// @overload
-SERAC_HOST_DEVICE constexpr int size(zero) { return 0; }
+SERAC_HOST_DEVICE constexpr int size(zero) { return 1; }
 
 /**
  * @brief a function for querying the ith dimension of a tensor
@@ -1930,6 +2225,37 @@ bool isnan(const tensor<T, n...>& A)
 
 /// @overload
 inline bool isnan(const zero&) { return false; }
+
+/**
+ * @brief Helper function that uses umpire to move memory between HOST and DEVICE.
+ * destination must be either "HOST" or "DEVICE".
+ */
+template <typename DataType>
+DataType* copy_data(DataType* source_data, std::size_t size, const std::string& destination)
+{
+  auto& rm             = umpire::ResourceManager::getInstance();
+  auto  dest_allocator = rm.getAllocator(destination);
+
+  DataType* dest_data = static_cast<DataType*>(dest_allocator.allocate(size));
+
+  umpire::register_external_allocation(
+      source_data, umpire::util::AllocationRecord(source_data, size, rm.getAllocator("HOST").getAllocationStrategy(),
+                                                  std::string("external array")));
+  rm.copy(dest_data, source_data);
+
+  return dest_data;
+}
+
+/**
+ * @brief Helper function to deallocate memory allocated with umpire.
+ */
+template <typename DataType>
+void deallocate(DataType* data, const std::string& destination)
+{
+  auto& rm             = umpire::ResourceManager::getInstance();
+  auto  dest_allocator = rm.getAllocator(destination);
+  dest_allocator.deallocate(data);
+}
 
 }  // namespace serac
 
@@ -2033,7 +2359,7 @@ inline mat < 2, 2 > look_at(const vec < 2 > & direction) {
 
 inline mat < 3, 3 > R3_basis(const vec3 & n) {
   float sign = (n[2] >= 0.0f) ? 1.0f : -1.0f;
-  float a = -1.0f / (sign + n[2]); 
+  float a = -1.0f / (sign + n[2]);
   float b = n[0] * n[1] * a;
 
   return mat < 3, 3 >{

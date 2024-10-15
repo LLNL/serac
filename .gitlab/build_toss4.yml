@@ -2,7 +2,7 @@
 # This is the shared configuration of jobs for toss4
 .on_toss4:
   variables:
-    SCHEDULER_PARAMETERS: "--res=ci --exclusive=user --deadline=now+1hour -N ${ALLOC_NODES} -t ${ALLOC_TIME} -A ${ALLOC_BANK}"
+    SCHEDULER_PARAMETERS: "--res=ci --exclusive=user --deadline=now+90minutes -N ${ALLOC_NODES} -t ${ALLOC_TIME} -A ${ALLOC_BANK}"
   tags:
     - batch
     - ruby
@@ -40,7 +40,7 @@ toss4-clang_14_0_6-src:
     EXTRA_CMAKE_OPTIONS: "-DENABLE_BENCHMARKS=ON"
     DO_INTEGRATION_TESTS: "yes"
     ALLOC_NODES: "2"
-    ALLOC_TIME: "30"
+    ALLOC_TIME: "45"
   extends: .src_build_on_toss4
 
 toss4-gcc_10_3_1-src:
@@ -49,7 +49,7 @@ toss4-gcc_10_3_1-src:
     HOST_CONFIG: "ruby-toss_4_x86_64_ib-${COMPILER}.cmake"
     EXTRA_CMAKE_OPTIONS: "-DENABLE_BENCHMARKS=ON"
     ALLOC_NODES: "1"
-    ALLOC_TIME: "30"
+    ALLOC_TIME: "45"
   extends: .src_build_on_toss4
 
 toss4-gcc_10_3_1-src-no-tribol:
@@ -58,7 +58,7 @@ toss4-gcc_10_3_1-src-no-tribol:
     HOST_CONFIG: "ruby-toss_4_x86_64_ib-${COMPILER}.cmake"
     EXTRA_CMAKE_OPTIONS: "-DENABLE_BENCHMARKS=ON -UTRIBOL_DIR"
     ALLOC_NODES: "1"
-    ALLOC_TIME: "30"
+    ALLOC_TIME: "45"
   extends: .src_build_on_toss4
 
 toss4-gcc_10_3_1-src-no-optional-solvers:
@@ -67,7 +67,7 @@ toss4-gcc_10_3_1-src-no-optional-solvers:
     HOST_CONFIG: "ruby-toss_4_x86_64_ib-${COMPILER}.cmake"
     EXTRA_CMAKE_OPTIONS: "-DENABLE_BENCHMARKS=ON -USUNDIALS_DIR -UPETSC_DIR"
     ALLOC_NODES: "1"
-    ALLOC_TIME: "20"
+    ALLOC_TIME: "45"
   extends: .src_build_on_toss4
 
 toss4-clang_14_0_6-full:

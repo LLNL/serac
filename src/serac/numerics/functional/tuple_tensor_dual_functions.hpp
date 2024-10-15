@@ -1,8 +1,17 @@
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)
+
 #pragma once
 
+#include "serac/infrastructure/accelerator.hpp"
+#include "serac/serac_config.hpp"
 #include "serac/numerics/functional/tuple.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/dual.hpp"
+#include "RAJA/RAJA.hpp"
 
 #include "mfem.hpp"
 
@@ -212,26 +221,51 @@ SERAC_HOST_DEVICE auto promote_to_dual_when(const T& x)
 }
 
 /**
+ * @brief Deduce return type of promote_each_to_dual_when.  Useful for type deduction while
+ *        allocating memory
+ *
+ * @tparam dualify specify whether or not the input should be made into its dual type
+ * @tparam T the type of the values passed in
+ * @tparam n how many values were passed in
+ */
+template <bool dualify, typename T, int n>
+auto promote_each_to_dual_when_output_helper(const tensor<T, n>&)
+{
+  if constexpr (dualify) {
+    using return_type = decltype(make_dual(T{}));
+    return tensor<return_type, n>{};
+  }
+  if constexpr (!dualify) {
+    return tensor<T, n>{};
+  }
+}
+
+/**
  * @brief a function that optionally (decided at compile time) converts a list of values to their dual types
  *
  * @tparam dualify specify whether or not the input should be made into its dual type
  * @tparam T the type of the values passed in
  * @tparam n how many values were passed in
  * @param x the values to be promoted
+ * @param output_ptr pointer to output array
+ * @param ctx the RAJA launch context used to synchronize threads and required by the RAJA API.
  */
-template <bool dualify, typename T, int n>
-SERAC_HOST_DEVICE auto promote_each_to_dual_when(const tensor<T, n>& x)
+template <bool dualify, ExecutionSpace exec, typename T, int n>
+SERAC_HOST_DEVICE void promote_each_to_dual_when(const tensor<T, n>& x, void* output_ptr,
+                                                 RAJA::LaunchContext ctx = RAJA::LaunchContext{})
 {
   if constexpr (dualify) {
-    using return_type = decltype(make_dual(T{}));
-    tensor<return_type, n> output;
-    for (int i = 0; i < n; i++) {
-      output[i] = make_dual(x[i]);
-    }
-    return output;
+    RAJA::RangeSegment x_range(0, n);
+    using return_type      = decltype(make_dual(T{}));
+    auto casted_output_ptr = static_cast<tensor<return_type, n>*>(output_ptr);
+    RAJA::loop<typename EvaluationSpacePolicy<exec>::threads_t>(
+        ctx, x_range, [&](int i) { (*casted_output_ptr)[i] = make_dual(x[i]); });
   }
   if constexpr (!dualify) {
-    return x;
+    RAJA::RangeSegment x_range(0, n);
+    auto               casted_output_ptr = static_cast<tensor<T, n>*>(output_ptr);
+    RAJA::loop<typename EvaluationSpacePolicy<exec>::threads_t>(ctx, x_range,
+                                                                [&](int i) { (*casted_output_ptr)[i] = x[i]; });
   }
 }
 
@@ -438,7 +472,8 @@ SERAC_HOST_DEVICE constexpr auto linear_solve(const tensor<S, n, n>& A, const te
 
   if constexpr (is_zero<decltype(dx)>{}) {
     return x;
-  } else {
+  }
+  if constexpr (!is_zero<decltype(dx)>{}) {
     return make_dual(x, dx);
   }
 }
@@ -799,7 +834,7 @@ SERAC_HOST_DEVICE tensor<int, 3> argsort(const tensor<T, 3>& v)
  * @note based on "A robust algorithm for finding the eigenvalues and
  * eigenvectors of 3x3 symmetric matrices", by Scherzinger & Dohrmann
  */
-inline SERAC_HOST_DEVICE tuple<vec3, mat3> eig_symm(const mat3& A)
+inline tuple<vec3, mat3> eig_symm(const mat3& A)
 {
   // We know of optimizations for this routine. When this becomes the
   // bottleneck, we can revisit. See OptimiSM for details.
@@ -971,7 +1006,8 @@ auto symmetric_mat3_function(tensor<T, 3, 3> A, const Function& f, const EigvalS
 
   if constexpr (!is_dual_number<T>::value) {
     return f_A;
-  } else {
+  }
+  if constexpr (is_dual_number<T>::value) {
     return symmetric_mat3_function_with_derivative(A, f_A, lambda, Q, g);
   }
 }

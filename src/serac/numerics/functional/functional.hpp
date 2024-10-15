@@ -14,6 +14,7 @@
 
 #include "mfem.hpp"
 
+#include "serac/infrastructure/accelerator.hpp"
 #include "serac/serac_config.hpp"
 #include "serac/infrastructure/logger.hpp"
 #include "serac/numerics/functional/tensor.hpp"
@@ -27,7 +28,10 @@
 
 #include "serac/numerics/functional/domain.hpp"
 
+#include <RAJA/index/RangeSegment.hpp>
+#include <RAJA/pattern/forall.hpp>
 #include <array>
+#include <cstdint>
 #include <vector>
 
 namespace serac {
@@ -142,7 +146,7 @@ generateParFiniteElementSpace(mfem::ParMesh* mesh)
 }
 
 /// @cond
-template <typename T, ExecutionSpace exec = serac::default_execution_space>
+template <typename T, ExecutionSpace exec = serac::ExecutionSpace::CPU>
 class Functional;
 /// @endcond
 
@@ -295,8 +299,8 @@ public:
     check_for_missing_nodal_gridfunc(domain);
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
-    integrals_.push_back(
-        MakeDomainIntegral<signature, Q, dim>(EntireDomain(domain), integrand, qdata, std::vector<uint32_t>{args...}));
+    integrals_.push_back(MakeDomainIntegral<signature, Q, dim, exec>(EntireDomain(domain), integrand, qdata,
+                                                                     std::vector<uint32_t>{args...}));
   }
 
   /// @overload
@@ -312,8 +316,8 @@ public:
     check_for_missing_nodal_gridfunc(domain.mesh_);
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
-    integrals_.push_back(
-        MakeDomainIntegral<signature, Q, dim>(domain, integrand, qdata, std::vector<uint32_t>{args...}));
+    integrals_.push_back(MakeDomainIntegral<signature, Q, dim, exec>(std::move(domain), integrand, qdata,
+                                                                     std::vector<uint32_t>{args...}));
   }
 
   /**
@@ -334,8 +338,8 @@ public:
     check_for_missing_nodal_gridfunc(domain);
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
-    integrals_.push_back(
-        MakeBoundaryIntegral<signature, Q, dim>(EntireBoundary(domain), integrand, std::vector<uint32_t>{args...}));
+    integrals_.push_back(MakeBoundaryIntegral<signature, Q, dim, exec>(EntireBoundary(domain), integrand,
+                                                                       std::vector<uint32_t>{args...}));
   }
 
   /// @overload
@@ -350,7 +354,8 @@ public:
     check_for_missing_nodal_gridfunc(domain.mesh_);
 
     using signature = test(decltype(serac::type<args>(trial_spaces))...);
-    integrals_.push_back(MakeBoundaryIntegral<signature, Q, dim>(domain, integrand, std::vector<uint32_t>{args...}));
+    integrals_.push_back(
+        MakeBoundaryIntegral<signature, Q, dim, exec>(std::move(domain), integrand, std::vector<uint32_t>{args...}));
   }
 
   /**
@@ -417,14 +422,14 @@ public:
       auto type = integral.domain_.type_;
 
       if (!already_computed[type]) {
-        G_trial_[type][which].Gather(input_L_[which], input_E_[type][which]);
+        (G_trial_[type][which]).template Gather<exec>(input_L_[which], input_E_[type][which]);
         already_computed[type] = true;
       }
 
       integral.GradientMult(input_E_[type][which], output_E_[type], which);
 
       // scatter-add to compute residuals on the local processor
-      G_test_[type].ScatterAdd(output_E_[type], output_L_);
+      G_test_[type].template ScatterAdd<exec>(output_E_[type], output_L_);
     }
 
     // scatter-add to compute global residuals
@@ -464,7 +469,7 @@ public:
 
       for (auto i : integral.active_trial_spaces_) {
         if (!already_computed[type][i]) {
-          G_trial_[type][i].Gather(input_L_[i], input_E_[type][i]);
+          G_trial_[type][i].template Gather<exec>(input_L_[i], input_E_[type][i]);
           already_computed[type][i] = true;
         }
       }
@@ -472,7 +477,7 @@ public:
       integral.Mult(t, input_E_[type], output_E_[type], wrt, update_qdata_);
 
       // scatter-add to compute residuals on the local processor
-      G_test_[type].ScatterAdd(output_E_[type], output_L_);
+      G_test_[type].template ScatterAdd<exec>(output_E_[type], output_L_);
     }
 
     // scatter-add to compute global residuals
@@ -616,7 +621,7 @@ private:
           for (auto [geom, elem_matrices] : K_elem) {
             std::vector<DoF> test_vdofs(test_restrictions[geom].nodes_per_elem * test_restrictions[geom].components);
             std::vector<DoF> trial_vdofs(trial_restrictions[geom].nodes_per_elem * trial_restrictions[geom].components);
-
+            axom::Array<double, 3, axom::MemorySpace::Host> elem_matrices_host = elem_matrices;
             for (axom::IndexType e = 0; e < elem_matrices.shape()[0]; e++) {
               test_restrictions[geom].GetElementVDofs(e, test_vdofs);
               trial_restrictions[geom].GetElementVDofs(e, trial_vdofs);
@@ -634,8 +639,7 @@ private:
                   //
                   //       This is kind of confusing, and will be fixed in a future refactor
                   //       of the element gradient kernel implementation
-                  [[maybe_unused]] auto nz = lookup_tables(row, col);
-                  values[lookup_tables(row, col)] += sign * elem_matrices(e, i, j);
+                  values[lookup_tables(row, col)] += sign * elem_matrices_host(e, i, j);
                 }
               }
             }
@@ -726,7 +730,7 @@ private:
 
   mutable std::vector<mfem::BlockVector> input_E_[Domain::num_types];
 
-  std::vector<Integral> integrals_;
+  std::vector<Integral<exec>> integrals_;
 
   mutable mfem::BlockVector output_E_[Domain::num_types];
 

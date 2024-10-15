@@ -40,7 +40,17 @@ struct Nothing {};
 /**
  * @brief see `Nothing` for a complete description of this class and when to use it
  */
-struct Empty {};
+struct Empty {
+  /**
+   * @brief operator= overload
+   * @tparam T anything can be set to Empty
+   */
+  template <typename T>
+  SERAC_HOST_DEVICE auto operator=(T) const
+  {
+    return Empty{};
+  }
+};
 
 template <typename T>
 struct QuadratureData;

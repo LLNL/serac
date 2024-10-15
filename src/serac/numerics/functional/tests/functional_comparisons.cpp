@@ -200,6 +200,9 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   // Ensure the two methods generate the same result
   EXPECT_NEAR(0.0, diff1.Norml2() / g1.Norml2(), 1.e-14);
   EXPECT_NEAR(0.0, diff2.Norml2() / g1.Norml2(), 1.e-14);
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+  printCUDAMemUsage();
+#endif
 }
 
 // this test sets up a toy "elasticity" problem where the residual includes contributions
@@ -313,6 +316,9 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 
   EXPECT_NEAR(0., diff1.Norml2() / g1.Norml2(), 1.e-14);
   EXPECT_NEAR(0., diff2.Norml2() / g1.Norml2(), 1.e-14);
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+  printCUDAMemUsage();
+#endif
 }
 
 // this test sets up part of a toy "magnetic diffusion" problem where the residual includes contributions
@@ -425,6 +431,9 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   }
   EXPECT_NEAR(0., diff1.Norml2() / g1.Norml2(), 1.e-13);
   EXPECT_NEAR(0., diff2.Norml2() / g1.Norml2(), 1.e-13);
+#ifdef SERAC_USE_CUDA_KERNEL_EVALUATION
+  printCUDAMemUsage();
+#endif
 }
 
 #ifndef SERAC_USE_CUDA_KERNEL_EVALUATION
@@ -455,7 +464,7 @@ TEST(Elasticity, 3DCubic) { functional_test(*mesh3D, H1<3, 3>{}, H1<3, 3>{}, Dim
 
 int main(int argc, char* argv[])
 {
-  serac::accelerator::initializeDevice();
+  serac::accelerator::initializeDevice(exec_space);
   ::testing::InitGoogleTest(&argc, argv);
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
@@ -494,6 +503,6 @@ int main(int argc, char* argv[])
   int result = RUN_ALL_TESTS();
   MPI_Finalize();
 
-  serac::accelerator::terminateDevice();
+  serac::accelerator::terminateDevice(exec_space);
   return result;
 }

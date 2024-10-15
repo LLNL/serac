@@ -1,10 +1,18 @@
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)
+
+#include "serac/serac_config.hpp"
+#include "serac/infrastructure/accelerator.hpp"
 #include "serac/numerics/functional/element_restriction.hpp"
 
 #include "mfem.hpp"
 
 #include "serac/numerics/functional/geometry.hpp"
 
-std::vector<std::vector<int> > lexicographic_permutations(int p)
+std::vector<std::vector<int>> lexicographic_permutations(int p)
 {
   // p == 0 is admissible for L2 spaces, but lexicographic permutations
   // aren't needed in that corner case
@@ -12,7 +20,7 @@ std::vector<std::vector<int> > lexicographic_permutations(int p)
     return {};
   }
 
-  std::vector<std::vector<int> > output(mfem::Geometry::Type::NUM_GEOMETRIES);
+  std::vector<std::vector<int>> output(mfem::Geometry::Type::NUM_GEOMETRIES);
 
   {
     auto             P = mfem::H1_SegmentElement(p).GetLexicographicOrdering();
@@ -126,7 +134,7 @@ Array2D<int> face_permutations(mfem::Geometry::Type geom, int p)
   exit(1);
 }
 
-std::vector<Array2D<int> > geom_local_face_dofs(int p)
+std::vector<Array2D<int>> geom_local_face_dofs(int p)
 {
   // FullSimplify[InterpolatingPolynomial[{
   //   {{0, 2}, (p + 1) + p},
@@ -153,7 +161,7 @@ std::vector<Array2D<int> > geom_local_face_dofs(int p)
 
   auto hex_id = [p](int x, int y, int z) { return (p + 1) * ((p + 1) * z + y) + x; };
 
-  std::vector<Array2D<int> > output(mfem::Geometry::Type::NUM_GEOMETRIES);
+  std::vector<Array2D<int>> output(mfem::Geometry::Type::NUM_GEOMETRIES);
 
   Array2D<int> tris(3, p + 1);
   for (int k = 0; k <= p; k++) {
@@ -220,8 +228,8 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetElementRestriction(const mfem::F
   mfem::Mesh*      mesh = fes->GetMesh();
 
   // note: this assumes that all the elements are the same polynomial order
-  int                            p        = fes->GetElementOrder(0);
-  std::vector<std::vector<int> > lex_perm = lexicographic_permutations(p);
+  int                           p        = fes->GetElementOrder(0);
+  std::vector<std::vector<int>> lex_perm = lexicographic_permutations(p);
 
   uint64_t n = 0;
 
@@ -284,10 +292,10 @@ axom::Array<DoF, 2, axom::MemorySpace::Host> GetFaceDofs(const mfem::FiniteEleme
   mfem::Table*     face_to_elem = mesh->GetFaceToElementTable();
 
   // note: this assumes that all the elements are the same polynomial order
-  int                            p               = fes->GetElementOrder(0);
-  Array2D<int>                   face_perm       = face_permutations(face_geom, p);
-  std::vector<Array2D<int> >     local_face_dofs = geom_local_face_dofs(p);
-  std::vector<std::vector<int> > lex_perm        = lexicographic_permutations(p);
+  int                           p               = fes->GetElementOrder(0);
+  Array2D<int>                  face_perm       = face_permutations(face_geom, p);
+  std::vector<Array2D<int>>     local_face_dofs = geom_local_face_dofs(p);
+  std::vector<std::vector<int>> lex_perm        = lexicographic_permutations(p);
 
   uint64_t n = 0;
 
@@ -440,28 +448,11 @@ void ElementRestriction::GetElementVDofs(int i, std::vector<DoF>& vdofs) const
   }
 }
 
-void ElementRestriction::Gather(const mfem::Vector& L_vector, mfem::Vector& E_vector) const
+void ElementRestriction::GetElementVDofs(int i, DoF* vdofs) const
 {
-  for (uint64_t i = 0; i < num_elements; i++) {
-    for (uint64_t c = 0; c < components; c++) {
-      for (uint64_t j = 0; j < nodes_per_elem; j++) {
-        uint64_t E_id       = (i * components + c) * nodes_per_elem + j;
-        uint64_t L_id       = GetVDof(dof_info(i, j), c).index();
-        E_vector[int(E_id)] = L_vector[int(L_id)];
-      }
-    }
-  }
-}
-
-void ElementRestriction::ScatterAdd(const mfem::Vector& E_vector, mfem::Vector& L_vector) const
-{
-  for (uint64_t i = 0; i < num_elements; i++) {
-    for (uint64_t c = 0; c < components; c++) {
-      for (uint64_t j = 0; j < nodes_per_elem; j++) {
-        uint64_t E_id = (i * components + c) * nodes_per_elem + j;
-        uint64_t L_id = GetVDof(dof_info(i, j), c).index();
-        L_vector[int(L_id)] += E_vector[int(E_id)];
-      }
+  for (uint64_t c = 0; c < components; c++) {
+    for (uint64_t j = 0; j < nodes_per_elem; j++) {
+      vdofs[c * nodes_per_elem + j] = GetVDof(dof_info(i, j), c);
     }
   }
 }
@@ -520,19 +511,5 @@ mfem::Array<int> BlockElementRestriction::bOffsets() const
   }
   return offsets;
 };
-
-void BlockElementRestriction::Gather(const mfem::Vector& L_vector, mfem::BlockVector& E_block_vector) const
-{
-  for (auto [geom, restriction] : restrictions) {
-    restriction.Gather(L_vector, E_block_vector.GetBlock(geom));
-  }
-}
-
-void BlockElementRestriction::ScatterAdd(const mfem::BlockVector& E_block_vector, mfem::Vector& L_vector) const
-{
-  for (auto [geom, restriction] : restrictions) {
-    restriction.ScatterAdd(E_block_vector.GetBlock(geom), L_vector);
-  }
-}
 
 }  // namespace serac

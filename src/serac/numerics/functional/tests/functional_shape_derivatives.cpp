@@ -67,6 +67,7 @@
 #include "mfem.hpp"
 
 #include "axom/slic/core/SimpleLogger.hpp"
+#include "serac/infrastructure/accelerator.hpp"
 #include "serac/infrastructure/input.hpp"
 #include "serac/serac_config.hpp"
 #include "serac/mesh/mesh_utils_base.hpp"
@@ -88,7 +89,7 @@ std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
 template <int p, typename T, int dim>
-auto monomials(tensor<T, dim> X)
+SERAC_HOST_DEVICE auto monomials(tensor<T, dim> X)
 {
   if constexpr (dim == 2) {
     tensor<T, ((p + 1) * (p + 2)) / 2> output;
@@ -122,7 +123,7 @@ auto monomials(tensor<T, dim> X)
 }
 
 template <int p, typename T, int dim>
-auto grad_monomials([[maybe_unused]] tensor<T, dim> X)
+SERAC_HOST_DEVICE auto grad_monomials([[maybe_unused]] tensor<T, dim> X)
 {
   if constexpr (dim == 2) {
     tensor<T, ((p + 1) * (p + 2)) / 2, 2> output;

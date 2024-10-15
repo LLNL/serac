@@ -1,5 +1,14 @@
+// Copyright (c) 2019-2023, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)
+
 #pragma once
-#include <camp/camp.hpp>
+#include "camp/camp.hpp"
+
+#include "serac/infrastructure/accelerator.hpp"
+#include "serac/serac_config.hpp"
 #include "serac/numerics/functional/finite_element.hpp"
 
 template <typename T>
@@ -32,10 +41,10 @@ struct FunctionSignature<output_type(input_types...)> {
  * template parameters in evaluation_kernel_impl.  See section 14.7.3 of the
  * CUDA programming guide, item 9.
  */
-template <mfem::Geometry::Type geom, typename test, typename... trials>
+template <mfem::Geometry::Type geom, serac::ExecutionSpace exec, typename test, typename... trials>
 auto trial_elements_tuple(FunctionSignature<test(trials...)>)
 {
-  return serac::tuple<serac::finite_element<geom, trials>...>{};
+  return serac::tuple<serac::finite_element<geom, trials, exec>...>{};
 }
 
 /**
@@ -45,8 +54,8 @@ auto trial_elements_tuple(FunctionSignature<test(trials...)>)
  * See the comments for trial_elements_tuple to understand why this is needed in
  * domain_integral_kernels::evaluation_kernel and boundary_integral_kernels::evaluation_kernel.
  */
-template <mfem::Geometry::Type geom, typename test, typename... trials>
+template <mfem::Geometry::Type geom, serac::ExecutionSpace exec, typename test, typename... trials>
 auto get_test_element(FunctionSignature<test(trials...)>)
 {
-  return serac::finite_element<geom, test>{};
+  return serac::finite_element<geom, test, exec>{};
 }

@@ -13,6 +13,7 @@
 
 #include <utility>
 
+#include "serac/serac_config.hpp"
 #include "serac/infrastructure/accelerator.hpp"
 
 namespace serac {
@@ -187,8 +188,42 @@ struct tuple_size {
 };
 
 template <class... Types>
+struct tuple_size_ptr {
+};
+
+template <class... Types>
 struct tuple_size<serac::tuple<Types...>> : std::integral_constant<std::size_t, sizeof...(Types)> {
 };
+
+template <class... Types>
+struct tuple_size_ptr<serac::tuple<Types*...>> : std::integral_constant<std::size_t, sizeof...(Types)> {
+};
+
+/**
+ * @brief returns the total number of stored values in a tensor
+ *
+ * @tparam T the datatype stored in the tensor
+ * @tparam n the extents of each dimension
+ * @return the total number of values stored in the tensor
+ */
+template <class... Types>
+SERAC_HOST_DEVICE constexpr int size(const serac::tuple<Types...>)
+{
+  return tuple_size<serac::tuple<Types...>>::value;
+}
+
+/**
+ * @brief returns the total number of stored values in a tensor
+ *
+ * @tparam T the datatype stored in the tensor
+ * @tparam n the extents of each dimension
+ * @return the total number of values stored in the tensor
+ */
+template <class... Types>
+SERAC_HOST_DEVICE constexpr int size(const serac::tuple<Types*...>)
+{
+  return tuple_size_ptr<serac::tuple<Types*...>>::value;
+}
 
 /**
  * @tparam i the tuple index to access
@@ -566,8 +601,8 @@ SERAC_HOST_DEVICE constexpr auto operator*(const tuple<S...>& x, const tuple<T..
  * @param a a constant multiplier
  * @return the returned tuple product
  */
-template <typename... T, int... i>
-SERAC_HOST_DEVICE constexpr auto mult_helper(const double a, const tuple<T...>& x, std::integer_sequence<int, i...>)
+template <typename TupleType, int... i>
+SERAC_HOST_DEVICE constexpr auto mult_helper(const double a, const TupleType& x, std::integer_sequence<int, i...>)
 {
   return tuple{a * get<i>(x)...};
 }
@@ -581,8 +616,8 @@ SERAC_HOST_DEVICE constexpr auto mult_helper(const double a, const tuple<T...>& 
  * @param a a constant multiplier
  * @return the returned tuple product
  */
-template <typename... T, int... i>
-SERAC_HOST_DEVICE constexpr auto mult_helper(const tuple<T...>& x, const double a, std::integer_sequence<int, i...>)
+template <typename TupleType, int... i>
+SERAC_HOST_DEVICE constexpr auto mult_helper(const TupleType& x, const double a, std::integer_sequence<int, i...>)
 {
   return tuple{get<i>(x) * a...};
 }
@@ -637,6 +672,33 @@ template <typename... T>
 auto& operator<<(std::ostream& out, const serac::tuple<T...>& A)
 {
   return print_helper(out, A, std::make_integer_sequence<size_t, sizeof...(T)>());
+}
+
+/**
+ * @brief Overload for the print function to print tuples or tensors of tuples.
+          Enables calling print(tensor<tuple<T, U>, ...> a);
+
+ * @tparam T The tuple types
+ * @tparam i The integer sequence to i
+ * @param A the tensor to print
+*/
+template <typename... T, size_t... i>
+SERAC_HOST_DEVICE void print(const serac::tuple<T...>& A, std::integer_sequence<size_t, i...>)
+{
+  (print(get<i>(A)), ...);
+}
+
+/**
+ * @brief Helper function for the above overload
+
+ * @tparam T The tuple types
+ * @tparam i The integer sequence to i
+ * @param A the tensor to print
+*/
+template <typename... T>
+SERAC_HOST_DEVICE void print(const serac::tuple<T...>& A)
+{
+  print(A, std::make_integer_sequence<size_t, sizeof...(T)>());
 }
 
 /**

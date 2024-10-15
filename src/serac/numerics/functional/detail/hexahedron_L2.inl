@@ -10,14 +10,16 @@
  * @brief Specialization of finite_element for L2 on hexahedron geometry
  */
 
+#include "RAJA/RAJA.hpp"
+
 // this specialization defines shape functions (and their gradients) that
 // interpolate at Gauss-Lobatto nodes for the appropriate polynomial order
 //
 // note: mfem assumes the parent element domain is [0,1]x[0,1]x[0,1]
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
-template <int p, int c>
-struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
+template <int p, int c, serac::ExecutionSpace exec>
+struct finite_element<mfem::Geometry::CUBE, L2<p, c>, exec> {
   static constexpr auto geometry   = mfem::Geometry::CUBE;
   static constexpr auto family     = Family::L2;
   static constexpr int  components = c;
@@ -31,14 +33,22 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
 
   // TODO: remove this
   using residual_type =
-      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
+      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components>>::type;
 
   using dof_type = tensor<double, c, p + 1, p + 1, p + 1>;
 
-  using value_type = typename std::conditional<components == 1, double, tensor<double, components> >::type;
+  using value_type = typename std::conditional<components == 1, double, tensor<double, components>>::type;
   using derivative_type =
-      typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim> >::type;
+      typename std::conditional<components == 1, tensor<double, dim>, tensor<double, components, dim>>::type;
   using qf_input_type = tuple<value_type, derivative_type>;
+
+  template <typename in_t, int q>
+  struct batch_apply_shape_fn_output {
+    using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, dim>{}));
+    using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, dim>{}));
+
+    using type = tensor<tuple<source_t, flux_t>, q * q * q>;
+  };
 
   SERAC_HOST_DEVICE static constexpr tensor<double, ndof> shape_functions(tensor<double, dim> xi)
   {
@@ -76,7 +86,7 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
       for (int j = 0; j < p + 1; j++) {
         for (int i = 0; i < p + 1; i++) {
           dN[count++] = {
-            dN_xi[i] *  N_eta[j] *  N_zeta[k], 
+            dN_xi[i] *  N_eta[j] *  N_zeta[k],
              N_xi[i] * dN_eta[j] *  N_zeta[k],
              N_xi[i] *  N_eta[j] * dN_zeta[k]
           };
@@ -134,7 +144,9 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
   }
 
   template <typename in_t, int q>
-  static auto batch_apply_shape_fn(int j, tensor<in_t, q * q * q> input, const TensorProductQuadratureRule<q>&)
+  static void RAJA_HOST_DEVICE batch_apply_shape_fn(int j, tensor<in_t, q * q * q> input,
+                                                    typename batch_apply_shape_fn_output<in_t, q>::type* output,
+                                                    const TensorProductQuadratureRule<q>&, RAJA::LaunchContext)
   {
     static constexpr bool apply_weights = false;
     static constexpr auto B             = calculate_B<apply_weights, q>();
@@ -143,11 +155,6 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
     int jx = j % n;
     int jy = (j % (n * n)) / n;
     int jz = j / (n * n);
-
-    using source_t = decltype(get<0>(get<0>(in_t{})) + dot(get<1>(get<0>(in_t{})), tensor<double, dim>{}));
-    using flux_t   = decltype(get<0>(get<1>(in_t{})) + dot(get<1>(get<1>(in_t{})), tensor<double, dim>{}));
-
-    tensor<tuple<source_t, flux_t>, q * q * q> output;
 
     for (int qz = 0; qz < q; qz++) {
       for (int qy = 0; qy < q; qy++) {
@@ -162,16 +169,21 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
           auto& d10 = get<0>(get<1>(input(Q)));
           auto& d11 = get<1>(get<1>(input(Q)));
 
-          output[Q] = {d00 * phi_j + dot(d01, dphi_j_dxi), d10 * phi_j + dot(d11, dphi_j_dxi)};
+          (*output)[Q] = {d00 * phi_j + dot(d01, dphi_j_dxi), d10 * phi_j + dot(d11, dphi_j_dxi)};
         }
       }
     }
-
-    return output;
   }
 
   template <int q>
-  SERAC_HOST_DEVICE static auto interpolate(const dof_type& X, const TensorProductQuadratureRule<q>&)
+  static auto interpolate_output_helper()
+  {
+    return tensor<qf_input_type, q * q * q>{};
+  }
+
+  template <int q>
+  SERAC_HOST_DEVICE static void interpolate(const dof_type&                   X, const TensorProductQuadratureRule<q>&,
+                                            tensor<qf_input_type, q * q * q>* output_ptr, RAJA::LaunchContext ctx)
   {
     // we want to compute the following:
     //
@@ -211,8 +223,8 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
 
     // transpose the quadrature data into a flat tensor of tuples
     union {
-      tensor<qf_input_type, q * q * q>                                   one_dimensional;
-      tensor<tuple<tensor<double, c>, tensor<double, c, dim> >, q, q, q> three_dimensional;
+      tensor<qf_input_type, q * q * q>                                  one_dimensional;
+      tensor<tuple<tensor<double, c>, tensor<double, c, dim>>, q, q, q> three_dimensional;
     } output;
 
     for (int qz = 0; qz < q; qz++) {
@@ -228,13 +240,20 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
       }
     }
 
-    return output.one_dimensional;
+    RAJA::TypedRangeSegment<int> x_range(0, BLOCK_SZ);
+    if (output_ptr) {
+      RAJA::loop<RAJA::LoopPolicy<RAJA::seq_exec>>(ctx, x_range, [&](int tid) {
+        if (tid < serac::size(output.one_dimensional)) {
+          ((*output_ptr))[tid] = output.one_dimensional[tid];
+        }
+      });
+    }
   }
 
   template <typename source_type, typename flux_type, int q>
   SERAC_HOST_DEVICE static void integrate(const tensor<tuple<source_type, flux_type>, q * q * q>& qf_output,
                                           const TensorProductQuadratureRule<q>&, dof_type* element_residual,
-                                          int step = 1)
+                                          RAJA::LaunchContext, int                         step = 1)
   {
     if constexpr (is_zero<source_type>{} && is_zero<flux_type>{}) {
       return;
@@ -242,8 +261,8 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
 
     constexpr int ntrial = std::max(size(source_type{}), size(flux_type{}) / dim) / c;
 
-    using s_buffer_type = std::conditional_t<is_zero<source_type>{}, zero, tensor<double, q, q, q> >;
-    using f_buffer_type = std::conditional_t<is_zero<flux_type>{}, zero, tensor<double, dim, q, q, q> >;
+    using s_buffer_type = std::conditional_t<is_zero<source_type>{}, zero, tensor<double, q, q, q>>;
+    using f_buffer_type = std::conditional_t<is_zero<flux_type>{}, zero, tensor<double, dim, q, q, q>>;
 
     static constexpr bool apply_weights = true;
     static constexpr auto B             = calculate_B<apply_weights, q>();
@@ -286,7 +305,7 @@ struct finite_element<mfem::Geometry::CUBE, L2<p, c> > {
 #if 0
 
   template <int q>
-  static SERAC_DEVICE auto interpolate(const dof_type& X, const tensor<double, dim, dim>& J,
+  static SERAC_DEVICE void interpolate(const dof_type& X, const tensor<double, dim, dim>& J,
                                        const TensorProductQuadratureRule<q>& rule, cache_type<q>& cache)
   {
     // we want to compute the following:
