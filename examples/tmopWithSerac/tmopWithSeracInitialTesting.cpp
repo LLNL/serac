@@ -30,8 +30,8 @@
 
 #include <mfem/linalg/tensor.hpp>
 
-#define ALT_SETUP
-// #undef ALT_SETUP
+#define TWO_DIM_SETUP
+// #undef TWO_DIM_SETUP
 
 // _main_init_start
 int main(int argc, char* argv[])
@@ -43,25 +43,24 @@ int main(int argc, char* argv[])
   
   // Define the spatial dimension of the problem and the type of finite elements used.
   static constexpr int ORDER {1};
-#ifdef ALT_SETUP
+#ifdef TWO_DIM_SETUP
   static constexpr int DIM {2};
+  // auto inputFilename = "../../data/meshes/circleTriMesh.g";
+  auto inputFilename = "../../data/meshes/oneElemTriEquiMesh.g";
+  // auto inputFilename = "../../data/meshes/oneElemTriRectMesh.g";
+  int numElements = 1; // 285;
 #else
   static constexpr int DIM {3};
-#endif
-
-
-
-#ifdef ALT_SETUP
-  auto inputFilename = "../../data/meshes/circleTriMesh.g";
-  int numElements = 285;
-#else
   auto inputFilename = "../../data/meshes/cylOneElemThickness.g";
   int numElements = 354;
 #endif
 
-
   auto mesh = serac::buildMeshFromFile(inputFilename);
-
+// mesh = mfem::Mesh(mfem::Mesh::MakeCartesian2D(1, 1, mfem::Element::TRIANGLE, 1, 1));
+// auto temp = mfem::ParaViewDataCollection("temp", &mesh);
+// temp.SetCycle(1);
+// temp.SetTime(1);
+// temp.Save();
   auto pmesh = ::mfem::ParMesh(MPI_COMM_WORLD, mesh);
   pmesh.EnsureNodes();
   pmesh.ExchangeFaceNbrData();
@@ -70,11 +69,9 @@ int main(int argc, char* argv[])
 
   // Create finite element space for design parameters, and register it with LiDO DataManager
   auto [shape_fes, shape_fec] = serac::generateParFiniteElementSpace<shapeFES>(&pmesh);
-  mfem::HypreParVector node_disp_exact(shape_fes.get());
   mfem::HypreParVector node_disp_computed(shape_fes.get());
   std::unique_ptr<mfem::HypreParMatrix> dresidualdu;
-
-  node_disp_exact.Randomize(0);
+  node_disp_computed = 0.0;
 
   // Define the types for the test and trial spaces using the function arguments
   using test_space  = serac::H1<ORDER, DIM>;
@@ -89,18 +86,32 @@ int main(int argc, char* argv[])
     [=](double /*t*/, auto position, auto nodeDisp) {
       auto [X, dXdxi] = position;
       auto du_dX = serac::get<1>(nodeDisp);
-#ifdef ALT_SETUP
+#ifdef TWO_DIM_SETUP
       // auto mu = 0.5 * (serac::inner(Jtet, Jtet) / abs(serac::det(Jtet))) - 1.0;
-      static constexpr serac::mat2 I = serac::DenseIdentity<2>();
+      static constexpr serac::mat2 I = serac::DenseIdentity<DIM>();
       serac::mat2 triangle_correction = {{{1.00000000000000, -0.577350269189626}, {0, 1.15470053837925}}};
-      auto dx_dxi   = dXdxi + serac::dot(du_dX, dXdxi);
+      // serac::mat2 triangle_correction = {{{1.00000000000000, 0.0}, {0, 1.0}}};
+      auto dx_dxi   = dXdxi + serac::dot(du_dX, dXdxi); // Jacobian
       auto Jtet     = serac::dot(dx_dxi, triangle_correction);
-      auto JJtet    = serac::dot(Jtet, Jtet);
       auto invJTtet = serac::inv(serac::transpose(Jtet));
-      auto flux     = (0.5 * JJtet * invJTtet - Jtet) / serac::det(Jtet) * serac::det(I + du_dX);
+///////////////////////////////////////////////
+      auto JJtet    = serac::inner(Jtet, Jtet);
+      auto scale    = -1.0 / serac::det(Jtet);
+      // if (serac::det(Jtet) <= 0.0)
+      // {
+      //   scale = 0.0;
+      // }
+////////////
+std::cout <<"... X[0] = " << X[0] << ", X[1] = " << X[1] <<", X[2] = " << X[2] << std::endl;
+std::cout <<"... Jtet = " << Jtet<<", serac::det(Jtet) = " << serac::det(Jtet) << std::endl << std::endl;
+////////////
+      auto flux     = scale * (0.5 * JJtet * invJTtet - Jtet) * serac::det(I + du_dX);
+///////////////////////////////////////////////  // auto mu = serac::inner(Jtet, Jtet) - 2 * serac::det(Jtet);
+      // auto flux     = 2.0 * (Jtet - invJTtet*serac::det(Jtet)) * serac::det(I + du_dX);
+///////////////////////////////////////////////
 #else
       // auto mu = (serac::squared_norm(J) / (3 * pow(serac::det(J), 2.0 / 3.0))) - 1.0; // serac::dot(J, J)
-      static constexpr auto I = serac::DenseIdentity<3>();
+      static constexpr auto I = serac::DenseIdentity<DIM>();
       using std::pow;
       auto J = dXdxi + serac::dot(du_dX, dXdxi);
       auto JJ    = serac::squared_norm(J); // serac::dot(J, J)
@@ -118,12 +129,13 @@ int main(int argc, char* argv[])
     pmesh
   );
 
-  serac::Domain radial_boundary = serac::Domain::ofBoundaryElements(pmesh, serac::by_attr<DIM>(1));
-
-  auto omega = 5.0e1;
+  // Circle/cylinder geometry
+  auto omega = 0.0e1;
   auto radius = 1.015;
   auto x0 = 0.0;
   auto y0 = 0.0;
+
+  serac::Domain radial_boundary = serac::Domain::ofBoundaryElements(pmesh, serac::by_attr<DIM>(1));
   residual.AddBoundaryIntegral(
     serac::Dimension<DIM - 1>{}, serac::DependsOn<0>{},
     [=](double /*t*/, auto position, auto nodeDisp) {
@@ -132,7 +144,7 @@ int main(int argc, char* argv[])
       auto x = X + u;
       auto phiVal = pow(pow(x[0]-x0, 2.0) + pow(x[1]-y0, 2.0), 0.5) - radius;
       // auto dphidXVal = (x[0] + x[1] - 2.0)* pow( pow(x[0]-x0, 2.0) + pow(x[1]-y0, 2.0), -0.5);
-      auto dphi = 0.0*x;
+      auto dphi = 0.0*x; // dphidx*dxdu
       dphi[0] = (x[0] - x0)* pow( pow(x[0]-x0, 2.0) + pow(x[1]-y0, 2.0), -0.5);
       dphi[1] = (x[1] - y0)* pow( pow(x[0]-x0, 2.0) + pow(x[1]-y0, 2.0), -0.5);
       return 2.0 * omega * phiVal * dphi;
@@ -142,15 +154,26 @@ int main(int argc, char* argv[])
 
   int totNumDofs = shape_fes->TrueVSize();
 
-#ifndef ALT_SETUP
+#ifdef TWO_DIM_SETUP
+  // Get dofs in z direction for all elements (pseudo 2D problem)
+  // mfem::Array<int> bndryDofs, ess_bdr(mesh.bdr_attributes.Max());
+  // ess_bdr = 0;
+  // ess_bdr[0] = 1;
+  // shape_fes->GetEssentialTrueDofs(ess_bdr, bndryDofs);
+
+mfem::Array<int> bndryDofs(3);
+for(auto iDof=0; iDof<3; iDof ++){
+  bndryDofs[iDof] = iDof;
+}
+#else
   // Get dofs in z direction for all elements (pseudo 2D problem)
   mfem::Array<int> ess_tdof_list, ess_bdr(mesh.bdr_attributes.Max());
   ess_bdr = 0;
   ess_bdr[1] = 1;
   ess_bdr[2] = 1;
   shape_fes->GetEssentialTrueDofs(ess_bdr, ess_tdof_list);
-  mfem::Array<int> dofsZdirection(totNumDofs/3);
-  int counter = 0; 
+  mfem::Array<int> dofsZdirection(totNumDofs/DIM);
+  int counter = 0;
   for(auto iDof=DIM-1; iDof<totNumDofs; iDof += DIM){
     dofsZdirection[counter] = ess_tdof_list[iDof];
     counter++;
@@ -160,19 +183,21 @@ int main(int argc, char* argv[])
   // wrap residual and provide Jacobian
   serac::mfem_ext::StdFunctionOperator residual_opr(
     totNumDofs,
-#ifdef ALT_SETUP
-    [&residual](const mfem::Vector& u, mfem::Vector& r) {
+#ifdef TWO_DIM_SETUP
+    [&bndryDofs, &residual](const mfem::Vector& u, mfem::Vector& r) {
 #else
     [&dofsZdirection, &residual](const mfem::Vector& u, mfem::Vector& r) {
 #endif
       double dummy_time = 1.0;
       const mfem::Vector res = residual(dummy_time, u);
       r = res;
-#ifndef ALT_SETUP
+#ifdef TWO_DIM_SETUP
+      r.SetSubVector(bndryDofs, 0.0);
+#else
       r.SetSubVector(dofsZdirection, 0.0);
 #endif
     },
-    [&residual, &dresidualdu](const mfem::Vector& u) -> mfem::Operator& { // &node_disp_exact,
+    [&residual, &dresidualdu](const mfem::Vector& u) -> mfem::Operator& {
       double dummy_time = 1.0;
       auto [val, dr_du] = residual(dummy_time, serac::differentiate_wrt(u));
       dresidualdu       = assemble(dr_du);
@@ -187,17 +212,17 @@ int main(int argc, char* argv[])
                                         .preconditioner = ::serac::Preconditioner::HypreJacobi,
                                         .relative_tol   = 0.7*1.0e-8,
                                         .absolute_tol   = 0.7*1.0e-10,
-                                        .max_iterations = 3*numElements,
+                                        .max_iterations = DIM * numElements,
                                         .print_level    = 1};
 
   const serac::NonlinearSolverOptions nonlin_opts = {
                                               // .nonlin_solver = ::serac::NonlinearSolver::Newton,
                                               .nonlin_solver  = serac::NonlinearSolver::TrustRegion,
                                               // .nonlin_solver  = serac::NonlinearSolver::NewtonLineSearch,
-                                              .relative_tol   = 1.0e-10,
-                                              .absolute_tol   = 1.0e-12,
+                                              .relative_tol   = 1.0e-8,
+                                              .absolute_tol   = 1.0e-10,
                                               .min_iterations = 1, 
-                                              .max_iterations = 500, // 2000
+                                              .max_iterations = 20, // 2000
                                               .max_line_search_iterations = 20, //0
                                               .print_level    = 1};
 
@@ -207,11 +232,13 @@ int main(int argc, char* argv[])
 
   mfem::ParGridFunction nodeSolGF(shape_fes.get());
   nodeSolGF.SetFromTrueDofs(node_disp_computed);
-
-  auto pd = mfem::ParaViewDataCollection("sol_mesh_morphing_serac", &pmesh);
+#ifdef TWO_DIM_SETUP
+  auto pd = mfem::ParaViewDataCollection("sol_mesh_morphing_serac_2D", &pmesh);
+#else
+  auto pd = mfem::ParaViewDataCollection("sol_mesh_morphing_serac_3D", &pmesh);
+#endif
   pd.RegisterField("solution", &nodeSolGF);
   pd.SetCycle(1);
   pd.SetTime(1);
   pd.Save();
 }
-// _exit_end
