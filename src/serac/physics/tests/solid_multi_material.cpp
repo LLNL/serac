@@ -154,10 +154,12 @@ TEST(Solid, MultiMaterialWithState)
    *               nu_1                 nu_2 = 0
    *                                   sigma_y = 0.5*stress
    *                                    Hi = E / 3.6 (linear hardening modulus)
+   * x = 0                       x = L/2               x = L
    * u = 0   --------------------|-------------------- stress = 1
    * 
    * The solution for the strain is:
-   * strain =       stress/E     |   (Hi + E)/(Hi*E)*stress - sigma_y/Hi
+   * strain = | stress/E,                            x in (0, L/2)
+   *          | (Hi + E)/(Hi*E)*stress - sigma_y/Hi, x in (L/2, L)
    * 
    * nu_1 is chosen so that the problem is uniaxial. That is, the lateral contraction in the
    * elastic side exactly matches the contraction in the plastic side. For the values given
