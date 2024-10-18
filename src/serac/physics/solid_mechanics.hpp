@@ -1298,12 +1298,16 @@ public:
     cycle_ += 1;
 
     if (checkpoint_to_disk_) {
+      //std::cout << "putting in at " << cycle_ << " " << displacement_.Norml2() << std::endl;
       outputStateToDisk();
     } else {
+      //std::string sname="displacement";
+      //std::cout << "putting in at " << checkpoint_states_[sname].size() << " " << cycle_ << " " << state(sname).Norml2() << std::endl;
       for (const auto& state_name : stateNames()) {
         checkpoint_states_[state_name].push_back(state(state_name));
       }
     }
+
 
     {
       // after finding displacements that satisfy equilibrium,
@@ -1385,6 +1389,7 @@ public:
   /// @overload
   void reverseAdjointTimestep() override
   {
+    SERAC_MARK_FUNCTION;
     auto& lin_solver = nonlin_solver_->linearSolver();
 
     SLIC_ERROR_ROOT_IF(cycle_ <= min_cycle_,

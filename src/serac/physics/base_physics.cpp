@@ -200,6 +200,8 @@ void BasePhysics::outputStateToDisk(std::optional<std::string> paraview_output_d
   // Save the restart/Sidre file
   StateManager::save(time_, cycle_, mesh_tag_);
 
+  std::cout << "outputting disp at " << cycle_ << " " << states_[0]->Norml2() << std::endl;
+
   // Optionally output a paraview datacollection for visualization
   if (paraview_output_dir) {
     // Check to see if the paraview data collection exists. If not, create it.
@@ -345,6 +347,9 @@ FiniteElementState BasePhysics::loadCheckpointedState(const std::string& state_n
     SLIC_ERROR_ROOT_IF(
         cached_checkpoint_states_.find(state_name) == cached_checkpoint_states_.end(),
         axom::fmt::format("Requested state name {} does not exist in physics module {}.", state_name, name_));
+    
+    std::cout << "loading disp at " << cycle << " " << cycle_ << " " << cached_checkpoint_states_.at(state_name).Norml2() << std::endl;
+
     return cached_checkpoint_states_.at(state_name);
   }
 
