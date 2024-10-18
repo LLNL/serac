@@ -2,6 +2,8 @@
 
 #include "mfem.hpp"
 
+#include "serac/numerics/functional/domain.hpp"
+
 namespace serac {
 
 /**
@@ -73,6 +75,23 @@ inline std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> geometry_counts(cons
   for (int i = 0; i < mesh.GetNE(); i++) {
     counts[uint64_t(mesh.GetElementGeometry(i))]++;
   }
+  return counts;
+}
+
+/**
+ * @brief count the number of elements of each geometry in a domain
+ * @param mesh the domain to count
+ */
+inline std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> geometry_counts(const Domain& domain)
+{
+  std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> counts{};
+
+  counts[mfem::Geometry::SEGMENT] = uint32_t(domain.edge_ids_.size());
+  counts[mfem::Geometry::TRIANGLE] = uint32_t(domain.tri_ids_.size());
+  counts[mfem::Geometry::SQUARE] = uint32_t(domain.quad_ids_.size());
+  counts[mfem::Geometry::TETRAHEDRON] = uint32_t(domain.tet_ids_.size());
+  counts[mfem::Geometry::CUBE] = uint32_t(domain.hex_ids_.size());
+
   return counts;
 }
 

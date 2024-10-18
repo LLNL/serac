@@ -418,9 +418,10 @@ public:
    * @return std::shared_ptr< QuadratureData<T> >
    */
   template <typename T>
-  qdata_type<T> createQuadratureDataBuffer(T initial_state)
+  qdata_type<T> createQuadratureDataBuffer(T initial_state, const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    return StateManager::newQuadratureDataBuffer(mesh_tag_, order, dim, initial_state);
+    Domain domain = (optional_domain) ? *optional_domain : EntireDomain(mesh_);
+    return StateManager::newQuadratureDataBuffer(domain, order, dim, initial_state);
   }
 
   /**
