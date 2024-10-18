@@ -15,10 +15,9 @@ namespace detail {
 void adjoint_integrate(double dt_n, double dt_np1, mfem::HypreParMatrix* m_mat, mfem::HypreParMatrix* k_mat,
                        mfem::HypreParVector& disp_adjoint_load_vector, mfem::HypreParVector& velo_adjoint_load_vector,
                        mfem::HypreParVector& accel_adjoint_load_vector, mfem::HypreParVector& adjoint_displacement_,
-                       mfem::HypreParVector& implicit_sensitivity_displacement_start_of_step_,
-                       mfem::HypreParVector& implicit_sensitivity_velocity_start_of_step_,
-                       mfem::HypreParVector& adjoint_essential, BoundaryConditionManager& bcs_,
-                       mfem::Solver& lin_solver)
+                       mfem::HypreParVector&     implicit_sensitivity_displacement_start_of_step_,
+                       mfem::HypreParVector&     implicit_sensitivity_velocity_start_of_step_,
+                       BoundaryConditionManager& bcs_, mfem::Solver& lin_solver)
 {
   // there are hard-coded here for now
   static constexpr double beta  = 0.25;
@@ -38,6 +37,10 @@ void adjoint_integrate(double dt_n, double dt_np1, mfem::HypreParMatrix* m_mat, 
 
   // recall that temperature_adjoint_load_vector and d_temperature_dt_adjoint_load_vector were already multiplied by
   // -1 above
+
+  // By default, use a homogeneous essential boundary condition
+  mfem::HypreParVector adjoint_essential(adjoint_displacement_);
+  adjoint_essential = 0.0;
 
   mfem::HypreParVector adjoint_rhs(accel_adjoint_load_vector);
   adjoint_rhs.Add(fac4 * dt_n, velo_adjoint_load_vector);

@@ -121,20 +121,20 @@ public:
   /**
    * @brief Computes the residual including contact terms
    *
+   * @param [in] u_shape Shape displacement vector (size of [displacement] block)
    * @param [in] u Solution vector ([displacement; pressure] block vector)
    * @param [in,out] r Residual vector ([force; gap] block vector); takes in initialized residual force vector and adds
    * contact contributions
    */
-  void residualFunction(const mfem::Vector& u, mfem::Vector& r);
+  void residualFunction(const mfem::Vector& u_shape, const mfem::Vector& u, mfem::Vector& r);
 
   /**
    * @brief Computes the Jacobian including contact terms, given the non-contact Jacobian terms
    *
-   * @param u Solution vector ([displacement; pressure] block vector)
    * @param orig_J The non-contact terms of the Jacobian, not including essential boundary conditions
    * @return Jacobian with contact terms, not including essential boundary conditions
    */
-  std::unique_ptr<mfem::BlockOperator> jacobianFunction(const mfem::Vector& u, mfem::HypreParMatrix* orig_J) const;
+  std::unique_ptr<mfem::BlockOperator> jacobianFunction(mfem::HypreParMatrix* orig_J) const;
 
   /**
    * @brief Set the pressure field
@@ -152,9 +152,10 @@ public:
   /**
    * @brief Update the current coordinates based on the new displacement field
    *
+   * @param u_shape Shape displacement vector
    * @param u Current displacement dof values
    */
-  void setDisplacements(const mfem::Vector& u);
+  void setDisplacements(const mfem::Vector& u_shape, const mfem::Vector& u);
 
   /**
    * @brief Have there been contact interactions added?
