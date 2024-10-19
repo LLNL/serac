@@ -880,8 +880,7 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename MaterialType, typename StateType = Empty>
-  void setMaterial(DependsOn<active_parameters...>, const MaterialType& material,
-                   const Domain& domain,
+  void setMaterial(DependsOn<active_parameters...>, const MaterialType& material, const Domain& domain,
                    qdata_type<StateType> qdata = EmptyQData)
   {
     static_assert(std::is_same_v<StateType, Empty> || std::is_same_v<StateType, typename MaterialType::State>,
@@ -914,9 +913,8 @@ public:
   }
 
   /// @overload
-  template <typename MaterialType, typename StateType = Empty >
-  void setMaterial(const MaterialType& material, 
-                   std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
+  template <typename MaterialType, typename StateType = Empty>
+  void setMaterial(const MaterialType& material, std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
   {
     setMaterial(DependsOn<>{}, material, EntireDomain(mesh_), qdata);
   }
