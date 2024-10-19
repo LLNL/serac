@@ -35,6 +35,7 @@ TEST(Solid, MultiMaterial)
    *               E = 1                 E = 2
    * u = 0   --------------------|-------------------- stress = 1
    *
+   * Solution:
    * strain =       1                    0.5
    *
    */
@@ -82,29 +83,12 @@ TEST(Solid, MultiMaterial)
   constexpr double E_right  = 2.0 * E_left;
   constexpr double nu_right = 2 * nu_left;
   Material mat_right{.density = 1.0, .K = E_right / 3.0 / (1 - 2 * nu_right), .G = 0.5 * E_right / (1 + nu_right)};
-  //   using Hardening = solid_mechanics::LinearHardening;
-  //   using MaterialB  = solid_mechanics::J2SmallStrain<Hardening>;
-
-  //   Hardening hardening{.sigma_y = 10.0, .Hi = 0.1, .density = 1.0;};
-  //   Material  mat{
-  //        .E         = 2.0,  // Young's modulus
-  //        .nu        = 0.25,   // Poisson's ratio
-  //        .hardening = hardening,
-  //        .Hk        = 0.0,  // kinematic hardening constant
-  //        .density   = 1.0   // mass density
-  //   };
-
-  //   MaterialB::State initial_state{};
-
-  // auto qdata = solid_solver.createQuadratureDataBuffer(initial_state);
 
   auto is_in_left = [](std::vector<tensor<double, dim>> coords, int /* attribute */) {
     return average(coords)[0] < 0.5 * L;
   };
-  Domain left = Domain::ofElements(pmesh, is_in_left);
-
-  auto   is_in_right = [=](std::vector<tensor<double, dim>> coords, int attr) { return !is_in_left(coords, attr); };
-  Domain right       = Domain::ofElements(pmesh, is_in_right);
+  Domain left  = Domain::ofElements(pmesh, is_in_left);
+  Domain right = EntireDomain(pmesh) - left;
 
   solid.setMaterial(mat_left, left);
   solid.setMaterial(mat_right, right);
@@ -179,7 +163,7 @@ TEST(Solid, MultiMaterialWithState)
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "solid_mechanics_multimaterial");
+  serac::StateManager::initialize(datastore, "solid_mechanics_multimaterial_with_state");
 
   constexpr double L      = 8.0;
   constexpr double W      = 1.0;
