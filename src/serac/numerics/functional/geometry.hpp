@@ -80,7 +80,7 @@ inline std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> geometry_counts(cons
 
 /**
  * @brief count the number of elements of each geometry in a domain
- * @param mesh the domain to count
+ * @param domain the domain to count
  */
 inline std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> geometry_counts(const Domain& domain)
 {
