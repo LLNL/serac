@@ -871,8 +871,7 @@ public:
    *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
    * 3>`)
    *
-   * @param optional_domain The subdomain which will use this material. Must be a domain of elements. If
-   * no argument is provided, it defaults to the entire mesh.
+   * @param domain The subdomain which will use this material. Must be a domain of elements.
    * @param qdata the buffer of material internal variables at each quadrature point
    *
    * @pre MaterialType must have a public member variable `density`
@@ -882,10 +881,9 @@ public:
    */
   template <int... active_parameters, typename MaterialType, typename StateType = Empty>
   void setMaterial(DependsOn<active_parameters...>, const MaterialType& material,
-                   const std::optional<Domain>& optional_domain = std::nullopt,
-                   qdata_type<StateType>        qdata           = EmptyQData)
+                   const Domain& domain,
+                   qdata_type<StateType> qdata = EmptyQData)
   {
-    Domain domain = (optional_domain) ? *optional_domain : EntireDomain(mesh_);
     static_assert(std::is_same_v<StateType, Empty> || std::is_same_v<StateType, typename MaterialType::State>,
                   "invalid quadrature data provided in setMaterial()");
     MaterialStressFunctor<MaterialType> material_functor(material, geom_nonlin_);
@@ -900,16 +898,25 @@ public:
   }
 
   /// @overload
+  template <int... active_parameters, typename MaterialType, typename StateType = Empty>
+  void setMaterial(DependsOn<active_parameters...>, const MaterialType& material,
+                   qdata_type<StateType> qdata = EmptyQData)
+  {
+    setMaterial(DependsOn<active_parameters...>{}, material, EntireDomain(mesh_), qdata);
+  }
+
+  /// @overload
   template <typename MaterialType, typename StateType = Empty>
-  void setMaterial(const MaterialType& material, const std::optional<Domain>& domain = std::nullopt,
+  void setMaterial(const MaterialType& material, const Domain& domain,
                    std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
   {
     setMaterial(DependsOn<>{}, material, domain, qdata);
   }
 
   /// @overload
-  template <typename MaterialType, typename StateType>
-  void setMaterial(const MaterialType& material, std::shared_ptr<QuadratureData<StateType>> qdata)
+  template <typename MaterialType, typename StateType = Empty >
+  void setMaterial(const MaterialType& material, 
+                   std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
   {
     setMaterial(DependsOn<>{}, material, EntireDomain(mesh_), qdata);
   }
