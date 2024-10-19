@@ -907,6 +907,14 @@ public:
     setMaterial(DependsOn<>{}, material, domain, qdata);
   }
 
+  /// @overload
+  template <typename MaterialType, typename StateType>
+  void setMaterial(const MaterialType& material,
+                   std::shared_ptr<QuadratureData<StateType>> qdata)
+  {
+    setMaterial(DependsOn<>{}, material, EntireDomain(mesh_), qdata);
+  }
+
   /**
    * @brief Set the underlying finite element state to a prescribed displacement
    *
