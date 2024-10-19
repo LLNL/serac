@@ -882,7 +882,7 @@ public:
   template <int... active_parameters, typename MaterialType, typename StateType = Empty>
   void setMaterial(DependsOn<active_parameters...>, const MaterialType& material,
                    const std::optional<Domain>& optional_domain = std::nullopt,
-                   qdata_type<StateType> qdata = EmptyQData)
+                   qdata_type<StateType>        qdata           = EmptyQData)
   {
     Domain domain = (optional_domain) ? *optional_domain : EntireDomain(mesh_);
     static_assert(std::is_same_v<StateType, Empty> || std::is_same_v<StateType, typename MaterialType::State>,
@@ -900,8 +900,7 @@ public:
 
   /// @overload
   template <typename MaterialType, typename StateType = Empty>
-  void setMaterial(const MaterialType& material,
-                   const std::optional<Domain>& domain = std::nullopt,
+  void setMaterial(const MaterialType& material, const std::optional<Domain>& domain = std::nullopt,
                    std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
   {
     setMaterial(DependsOn<>{}, material, domain, qdata);
@@ -909,8 +908,7 @@ public:
 
   /// @overload
   template <typename MaterialType, typename StateType>
-  void setMaterial(const MaterialType& material,
-                   std::shared_ptr<QuadratureData<StateType>> qdata)
+  void setMaterial(const MaterialType& material, std::shared_ptr<QuadratureData<StateType>> qdata)
   {
     setMaterial(DependsOn<>{}, material, EntireDomain(mesh_), qdata);
   }
