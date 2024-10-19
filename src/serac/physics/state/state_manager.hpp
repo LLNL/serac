@@ -130,7 +130,16 @@ public:
     return std::make_shared<QuadratureData<T>>(elems, qpts_per_elem, initial_state);
   }
 
-  // make qdata by domain
+  /**
+   * @overload
+   *
+   * @tparam T the type to be created at each quadrature point
+   * @param domain The domain to which this buffer will pertain
+   * @param order The order of the discretization of the displacement and velocity fields
+   * @param dim The spatial dimension of the mesh
+   * @param initial_state the value to be broadcast to each quadrature point
+   * @return shared pointer to quadrature data buffer
+   */
   template <typename T>
   static std::shared_ptr<QuadratureData<T>> newQuadratureDataBuffer(const Domain& domain, int order, int dim,
                                                                     T initial_state)

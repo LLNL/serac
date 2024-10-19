@@ -415,6 +415,7 @@ public:
    *
    * @tparam T the type to be created at each quadrature point
    * @param initial_state the value to be broadcast to each quadrature point
+   * @param optional_domain restricts the quadrature buffer to the given domain
    * @return std::shared_ptr< QuadratureData<T> >
    */
   template <typename T>
