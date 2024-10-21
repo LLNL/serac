@@ -88,6 +88,7 @@ int main(int argc, char* argv[])
       auto du_dX = serac::get<1>(nodeDisp);
 #ifdef TWO_DIM_SETUP
       // auto mu = 0.5 * (serac::inner(Jtet, Jtet) / abs(serac::det(Jtet))) - 1.0;
+      // triangular correction = [ 1, -1/sqrt(3); 0, -2/sqrt(3)]
       serac::mat2 triangle_correction = {{{1.00000000000000, -0.577350269189626}, {0, 1.15470053837925}}};
       // serac::mat2 triangle_correction = {{{1.00000000000000, 0.0}, {0, 1.0}}};
       auto dx_dxi   = dXdxi + serac::dot(du_dX, dXdxi); // Jacobian
@@ -96,10 +97,10 @@ int main(int argc, char* argv[])
 ///////////////////////////////////////////////
       auto JJtet    = serac::inner(Jtet, Jtet);
       auto scale    = -1.0 / serac::det(Jtet);
-      // if (serac::det(Jtet) <= 0.0)
-      // {
-      //   scale = 0.0;
-      // }
+      if (serac::det(Jtet) <= 0.0)
+      {
+        scale = 0.0;
+      }
 ////////////
 // std::cout <<"... X[0] = " << X[0] << ", X[1] = " << X[1] <<", X[2] = " << X[2] << std::endl;
 // std::cout <<"... Jtet = " << Jtet<<", serac::det(Jtet) = " << serac::det(Jtet) << std::endl << std::endl;
