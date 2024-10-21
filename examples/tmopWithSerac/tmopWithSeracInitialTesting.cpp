@@ -88,7 +88,6 @@ int main(int argc, char* argv[])
       auto du_dX = serac::get<1>(nodeDisp);
 #ifdef TWO_DIM_SETUP
       // auto mu = 0.5 * (serac::inner(Jtet, Jtet) / abs(serac::det(Jtet))) - 1.0;
-      static constexpr serac::mat2 I = serac::DenseIdentity<DIM>();
       serac::mat2 triangle_correction = {{{1.00000000000000, -0.577350269189626}, {0, 1.15470053837925}}};
       // serac::mat2 triangle_correction = {{{1.00000000000000, 0.0}, {0, 1.0}}};
       auto dx_dxi   = dXdxi + serac::dot(du_dX, dXdxi); // Jacobian
@@ -102,16 +101,17 @@ int main(int argc, char* argv[])
       //   scale = 0.0;
       // }
 ////////////
-std::cout <<"... X[0] = " << X[0] << ", X[1] = " << X[1] <<", X[2] = " << X[2] << std::endl;
-std::cout <<"... Jtet = " << Jtet<<", serac::det(Jtet) = " << serac::det(Jtet) << std::endl << std::endl;
+// std::cout <<"... X[0] = " << X[0] << ", X[1] = " << X[1] <<", X[2] = " << X[2] << std::endl;
+// std::cout <<"... Jtet = " << Jtet<<", serac::det(Jtet) = " << serac::det(Jtet) << std::endl << std::endl;
 ////////////
-      auto flux     = scale * (0.5 * JJtet * invJTtet - Jtet) * serac::det(I + du_dX);
+      // static constexpr serac::mat2 I = serac::DenseIdentity<DIM>();
+      // auto flux     = scale * (0.5 * JJtet * invJTtet - Jtet) * serac::det(I + du_dX);
+      auto flux     = scale * (0.5 * JJtet * invJTtet - Jtet);
 ///////////////////////////////////////////////  // auto mu = serac::inner(Jtet, Jtet) - 2 * serac::det(Jtet);
       // auto flux     = 2.0 * (Jtet - invJTtet*serac::det(Jtet)) * serac::det(I + du_dX);
 ///////////////////////////////////////////////
 #else
       // auto mu = (serac::squared_norm(J) / (3 * pow(serac::det(J), 2.0 / 3.0))) - 1.0; // serac::dot(J, J)
-      static constexpr auto I = serac::DenseIdentity<DIM>();
       using std::pow;
       auto J = dXdxi + serac::dot(du_dX, dXdxi);
       auto JJ    = serac::squared_norm(J); // serac::dot(J, J)
@@ -121,7 +121,9 @@ std::cout <<"... Jtet = " << Jtet<<", serac::det(Jtet) = " << serac::det(Jtet) <
       {
         scale = 0.0;
       }
-      auto flux       = scale * (J - (JJ/3.0) * invJT) * serac::det(I + du_dX);;
+      // static constexpr auto I = serac::DenseIdentity<DIM>();
+      // auto flux       = scale * (J - (JJ/3.0) * invJT) * serac::det(I + du_dX);
+      auto flux       = scale * (J - (JJ/3.0) * invJT);
 #endif
       auto source     = serac::zero{};
       return ::serac::tuple{source, flux};
@@ -207,8 +209,8 @@ for(auto iDof=0; iDof<3; iDof ++){
   );
 
   const serac::LinearSolverOptions lin_opts = {
-                                        .linear_solver = ::serac::LinearSolver::CG,
-                                        // .linear_solver  = serac::LinearSolver::Strumpack,
+                                        // .linear_solver = ::serac::LinearSolver::CG,
+                                        .linear_solver  = serac::LinearSolver::Strumpack,
                                         .preconditioner = ::serac::Preconditioner::HypreJacobi,
                                         .relative_tol   = 0.7*1.0e-8,
                                         .absolute_tol   = 0.7*1.0e-10,
@@ -216,14 +218,14 @@ for(auto iDof=0; iDof<3; iDof ++){
                                         .print_level    = 1};
 
   const serac::NonlinearSolverOptions nonlin_opts = {
-                                              // .nonlin_solver = ::serac::NonlinearSolver::Newton,
-                                              .nonlin_solver  = serac::NonlinearSolver::TrustRegion,
+                                              .nonlin_solver = ::serac::NonlinearSolver::Newton,
+                                              // .nonlin_solver  = serac::NonlinearSolver::TrustRegion,
                                               // .nonlin_solver  = serac::NonlinearSolver::NewtonLineSearch,
                                               .relative_tol   = 1.0e-8,
                                               .absolute_tol   = 1.0e-10,
-                                              .min_iterations = 1, 
-                                              .max_iterations = 20, // 2000
-                                              .max_line_search_iterations = 20, //0
+                                              // .min_iterations = 1, 
+                                              .max_iterations = 50, // 2000
+                                              // .max_line_search_iterations = 20, //0
                                               .print_level    = 1};
 
   serac::EquationSolver eq_solver(nonlin_opts, lin_opts);
