@@ -21,17 +21,18 @@
 #include <serac/numerics/functional/domain.hpp>
 #include <serac/numerics/stdfunction_operator.hpp>
 #include "serac/mesh/mesh_utils.hpp"
-
 #include <algorithm>
 #include <cfenv>
 #include <memory>
 #include <numeric>
 #include <functional>
-
 #include <mfem/linalg/tensor.hpp>
 
 #define TWO_DIM_SETUP
 // #undef TWO_DIM_SETUP
+
+#define ONE_ELEM_TEST
+// #undef ONE_ELEM_TEST
 
 // _main_init_start
 int main(int argc, char* argv[])
@@ -45,10 +46,13 @@ int main(int argc, char* argv[])
   static constexpr int ORDER {1};
 #ifdef TWO_DIM_SETUP
   static constexpr int DIM {2};
-  // auto inputFilename = "../../data/meshes/circleTriMesh.g";
-  auto inputFilename = "../../data/meshes/oneElemTriEquiMesh.g";
-  // auto inputFilename = "../../data/meshes/oneElemTriRectMesh.g";
+  auto inputFilename = "../../data/meshes/circleTriMesh.g";
   int numElements = 1; // 285;
+#ifdef ONE_ELEM_TEST  
+  inputFilename = "../../data/meshes/oneElemTriEquiMesh.g";
+  // auto inputFilename = "../../data/meshes/oneElemTriRectMesh.g";
+  numElements = 285;
+#endif  
 #else
   static constexpr int DIM {3};
   auto inputFilename = "../../data/meshes/cylOneElemThickness.g";
@@ -56,11 +60,6 @@ int main(int argc, char* argv[])
 #endif
 
   auto mesh = serac::buildMeshFromFile(inputFilename);
-// mesh = mfem::Mesh(mfem::Mesh::MakeCartesian2D(1, 1, mfem::Element::TRIANGLE, 1, 1));
-// auto temp = mfem::ParaViewDataCollection("temp", &mesh);
-// temp.SetCycle(1);
-// temp.SetTime(1);
-// temp.Save();
   auto pmesh = ::mfem::ParMesh(MPI_COMM_WORLD, mesh);
   pmesh.EnsureNodes();
   pmesh.ExchangeFaceNbrData();
@@ -89,12 +88,13 @@ int main(int argc, char* argv[])
 #ifdef TWO_DIM_SETUP
       // auto mu = 0.5 * (serac::inner(Jtet, Jtet) / abs(serac::det(Jtet))) - 1.0;
       // triangular correction = [ 1, -1/sqrt(3); 0, -2/sqrt(3)]
-      // serac::mat2 triangle_correction = {{{1.00000000000000, -0.577350269189626}, {0, 1.15470053837925}}};
-      serac::mat2 triangle_correction = {{{1.00000000000000, 0.0}, {0, 1.0}}};
+
+      serac::mat2 triangle_correction = {{{1.00000000000000, -0.577350269189626}, {0, 1.15470053837925}}};
+      // serac::mat2 triangle_correction = {{{1.00000000000000, 0.0}, {0, 1.0}}};
+      
       auto dx_dxi   = dXdxi + serac::dot(du_dX, dXdxi); // Jacobian
       auto Jtet     = serac::dot(dx_dxi, triangle_correction);
       auto invJTtet = serac::inv(serac::transpose(Jtet));
-///////////////////////////////////////////////
       auto JJtet    = serac::inner(Jtet, Jtet);
       auto scale    = -1.0 / serac::det(Jtet);
       if (serac::det(Jtet) <= 0.0)
@@ -105,10 +105,8 @@ int main(int argc, char* argv[])
       // auto flux     = scale * (0.5 * JJtet * invJTtet - Jtet) * serac::det(I + du_dX);
       auto flux     = scale * (0.5 * JJtet * invJTtet - Jtet);
       
-///// alternative mu (004)
-      // auto mu = serac::inner(Jtet, Jtet) - 2 * serac::det(Jtet);
+      ///// alternative mu (004, mu = serac::inner(Jtet, Jtet) - 2 * serac::det(Jtet); )
       // auto flux     = 2.0 * (Jtet - invJTtet*serac::det(Jtet)) * serac::det(I + du_dX);
-///////////////////////////////////////////////
 #else
       // auto mu = (serac::squared_norm(J) / (3 * pow(serac::det(J), 2.0 / 3.0))) - 1.0; // serac::dot(J, J)
       using std::pow;
@@ -156,11 +154,13 @@ int main(int argc, char* argv[])
   int totNumDofs = shape_fes->TrueVSize();
 
 #ifdef TWO_DIM_SETUP
+#ifdef ONE_ELEM_TEST
 // Constrain half of the dofs in the one element triangular mesh setup
 mfem::Array<int> constrainedDofs(3);
 for(auto iDof=0; iDof<3; iDof ++){
   constrainedDofs[iDof] = iDof;
 }
+#endif
 #else
   // Get dofs in z direction for all elements (pseudo 2D problem)
   mfem::Array<int> ess_tdof_list, ess_bdr(mesh.bdr_attributes.Max());
@@ -183,14 +183,17 @@ for(auto iDof=0; iDof<3; iDof ++){
       double dummy_time = 1.0;
       const mfem::Vector res = residual(dummy_time, u);
       r = res;
+#ifdef ONE_ELEM_TEST
       r.SetSubVector(constrainedDofs, 0.0);
-// r.Print();
+#endif      
     },
-    [&residual, &dresidualdu](const mfem::Vector& u) -> mfem::Operator& {
+    [&constrainedDofs, &residual, &dresidualdu](const mfem::Vector& u) -> mfem::Operator& {
       double dummy_time = 1.0;
       auto [val, dr_du] = residual(dummy_time, serac::differentiate_wrt(u));
       dresidualdu       = assemble(dr_du);
-// dresidualdu->Print("JacobianTest");
+#ifdef ONE_ELEM_TEST
+      dresidualdu->EliminateBC(constrainedDofs, mfem::Operator::DiagonalPolicy::DIAG_ONE);
+#endif      
       return *dresidualdu;
     }
   );
@@ -202,7 +205,7 @@ for(auto iDof=0; iDof<3; iDof ++){
                                         .relative_tol   = 0.7*1.0e-8,
                                         .absolute_tol   = 0.7*1.0e-10,
                                         .max_iterations = DIM * numElements,
-                                        .print_level    = 1};
+                                        .print_level    = 0};
 
   const serac::NonlinearSolverOptions nonlin_opts = {
                                               .nonlin_solver = ::serac::NonlinearSolver::Newton,
@@ -218,11 +221,9 @@ for(auto iDof=0; iDof<3; iDof ++){
   serac::EquationSolver eq_solver(nonlin_opts, lin_opts);
   eq_solver.setOperator(residual_opr);
   eq_solver.solve(node_disp_computed);
-// node_disp_computed.Print("Solution");
+
   mfem::ParGridFunction nodeSolGF(shape_fes.get());
   nodeSolGF.SetFromTrueDofs(node_disp_computed);
-
-// nodeSolGF.Print();
 
 #ifdef TWO_DIM_SETUP
   auto pd = mfem::ParaViewDataCollection("sol_mesh_morphing_serac_2D", &pmesh);
