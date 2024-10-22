@@ -86,8 +86,9 @@ inline std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> geometry_counts(cons
 {
   std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> counts{};
 
-  constexpr std::array geometries = {mfem::Geometry::SEGMENT, mfem::Geometry::TRIANGLE, mfem::Geometry::SQUARE,
-                                     mfem::Geometry::TETRAHEDRON, mfem::Geometry::CUBE};
+  constexpr std::array<mfem::Geometry::Type, 5> geometries = {mfem::Geometry::SEGMENT, mfem::Geometry::TRIANGLE,
+                                                              mfem::Geometry::SQUARE, mfem::Geometry::TETRAHEDRON,
+                                                              mfem::Geometry::CUBE};
   for (auto geom : geometries) {
     counts[uint32_t(geom)] = uint32_t(domain.get(geom).size());
   }
