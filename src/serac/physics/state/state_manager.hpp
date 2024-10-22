@@ -131,6 +131,39 @@ public:
   }
 
   /**
+   * @overload
+   *
+   * @tparam T the type to be created at each quadrature point
+   * @param domain The domain to which this buffer will pertain
+   * @param order The order of the discretization of the displacement and velocity fields
+   * @param dim The spatial dimension of the mesh
+   * @param initial_state the value to be broadcast to each quadrature point
+   * @return shared pointer to quadrature data buffer
+   */
+  template <typename T>
+  static std::shared_ptr<QuadratureData<T>> newQuadratureDataBuffer(const Domain& domain, int order, int dim,
+                                                                    T initial_state)
+  {
+    int Q = order + 1;
+
+    std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> elems = geometry_counts(domain);
+    std::array<uint32_t, mfem::Geometry::NUM_GEOMETRIES> qpts_per_elem{};
+
+    std::vector<mfem::Geometry::Type> geometries;
+    if (dim == 2) {
+      geometries = {mfem::Geometry::TRIANGLE, mfem::Geometry::SQUARE};
+    } else {
+      geometries = {mfem::Geometry::TETRAHEDRON, mfem::Geometry::CUBE};
+    }
+
+    for (auto geom : geometries) {
+      qpts_per_elem[size_t(geom)] = uint32_t(num_quadrature_points(geom, Q));
+    }
+
+    return std::make_shared<QuadratureData<T>>(elems, qpts_per_elem, initial_state);
+  }
+
+  /**
    * @brief Checks if StateManager has a dual with the given name
    * @param name A string that uniquely identifies the name
    * @return True if dual exists with the given name

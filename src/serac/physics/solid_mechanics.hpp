@@ -415,12 +415,14 @@ public:
    *
    * @tparam T the type to be created at each quadrature point
    * @param initial_state the value to be broadcast to each quadrature point
+   * @param optional_domain restricts the quadrature buffer to the given domain
    * @return std::shared_ptr< QuadratureData<T> >
    */
   template <typename T>
-  qdata_type<T> createQuadratureDataBuffer(T initial_state)
+  qdata_type<T> createQuadratureDataBuffer(T initial_state, const std::optional<Domain>& optional_domain = std::nullopt)
   {
-    return StateManager::newQuadratureDataBuffer(mesh_tag_, order, dim, initial_state);
+    Domain domain = (optional_domain) ? *optional_domain : EntireDomain(mesh_);
+    return StateManager::newQuadratureDataBuffer(domain, order, dim, initial_state);
   }
 
   /**
@@ -869,6 +871,7 @@ public:
    *    values will change to `dual` numbers rather than `double`. (e.g. `tensor<double,3>` becomes `tensor<dual<...>,
    * 3>`)
    *
+   * @param domain The subdomain which will use this material. Must be a domain of elements.
    * @param qdata the buffer of material internal variables at each quadrature point
    *
    * @pre MaterialType must have a public member variable `density`
@@ -877,7 +880,7 @@ public:
    * @note This method must be called prior to completeSetup()
    */
   template <int... active_parameters, typename MaterialType, typename StateType = Empty>
-  void setMaterial(DependsOn<active_parameters...>, const MaterialType& material,
+  void setMaterial(DependsOn<active_parameters...>, const MaterialType& material, const Domain& domain,
                    qdata_type<StateType> qdata = EmptyQData)
   {
     static_assert(std::is_same_v<StateType, Empty> || std::is_same_v<StateType, typename MaterialType::State>,
@@ -890,14 +893,30 @@ public:
                                                              // fact that the displacement, acceleration, and shape
                                                              // fields are always-on and come first, so the `n`th
                                                              // parameter will actually be argument `n + NUM_STATE_VARS`
-        std::move(material_functor), mesh_, qdata);
+        std::move(material_functor), domain, qdata);
+  }
+
+  /// @overload
+  template <int... active_parameters, typename MaterialType, typename StateType = Empty>
+  void setMaterial(DependsOn<active_parameters...>, const MaterialType& material,
+                   qdata_type<StateType> qdata = EmptyQData)
+  {
+    setMaterial(DependsOn<active_parameters...>{}, material, EntireDomain(mesh_), qdata);
+  }
+
+  /// @overload
+  template <typename MaterialType, typename StateType = Empty>
+  void setMaterial(const MaterialType& material, const Domain& domain,
+                   std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
+  {
+    setMaterial(DependsOn<>{}, material, domain, qdata);
   }
 
   /// @overload
   template <typename MaterialType, typename StateType = Empty>
   void setMaterial(const MaterialType& material, std::shared_ptr<QuadratureData<StateType>> qdata = EmptyQData)
   {
-    setMaterial(DependsOn<>{}, material, qdata);
+    setMaterial(DependsOn<>{}, material, EntireDomain(mesh_), qdata);
   }
 
   /**
