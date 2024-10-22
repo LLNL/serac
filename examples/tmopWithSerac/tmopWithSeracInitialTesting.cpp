@@ -47,11 +47,11 @@ int main(int argc, char* argv[])
 #ifdef TWO_DIM_SETUP
   static constexpr int DIM {2};
   auto inputFilename = "../../data/meshes/circleTriMesh.g";
-  int numElements = 1; // 285;
+  int numElements = 285;
 #ifdef ONE_ELEM_TEST  
   inputFilename = "../../data/meshes/oneElemTriEquiMesh.g";
-  // auto inputFilename = "../../data/meshes/oneElemTriRectMesh.g";
-  numElements = 285;
+  // inputFilename = "../../data/meshes/oneElemTriRectMesh.g";
+  numElements = 1;
 #endif  
 #else
   static constexpr int DIM {3};
@@ -83,30 +83,42 @@ int main(int argc, char* argv[])
   residual.AddDomainIntegral(
     serac::Dimension<DIM>{}, serac::DependsOn<0>{},
     [=](double /*t*/, auto position, auto nodeDisp) {
+      // x = X + u
       auto [X, dXdxi] = position;
       auto du_dX = serac::get<1>(nodeDisp);
 #ifdef TWO_DIM_SETUP
-      // auto mu = 0.5 * (serac::inner(Jtet, Jtet) / abs(serac::det(Jtet))) - 1.0;
+      // auto mu = 0.5 * (serac::inner(Tmat, Tmat) / abs(serac::det(Tmat))) - 1.0;
       // triangular correction = [ 1, -1/sqrt(3); 0, -2/sqrt(3)]
+      serac::mat2 WInvMat = {{{1.00000000000000, -0.577350269189626}, {0, 1.15470053837925}}};
+      // serac::mat2 WInvMat = {{{0.0, 1.0}, {1.0, 0.0}}};
+      
+      // Need to compute dmu/dTmat : dTmat/dx, with mu = mu(Tmat)
+      // Tmat = Amat * WInvMat; WInvMat -> constant
+      // dmu/dTmat is mu specific
+      // dTmat/dx = dAmat/dx * WInvMat
 
-      serac::mat2 triangle_correction = {{{1.00000000000000, -0.577350269189626}, {0, 1.15470053837925}}};
-      // serac::mat2 triangle_correction = {{{1.00000000000000, 0.0}, {0, 1.0}}};
+      // Jacobian from reference to the physical/current space (i.e., dx_dxi)
+      auto Amat = dXdxi + serac::dot(du_dX, dXdxi);
+
+      // Target matrix (updated Jacobian, Tmat or T)
+      auto Tmat = serac::dot(Amat, WInvMat);
+
+      // mu metric operations
+      auto invTransTmat  = serac::inv(serac::transpose(Tmat));
+      auto TmatInnerTmat = serac::inner(Tmat, Tmat);
+      auto scale         = -1.0 / serac::det(Tmat);
+      if (serac::det(Tmat) <= 0.0) {  scale = 0.0; }
+      auto dmudTmat = scale * (0.5 * TmatInnerTmat * invTransTmat - Tmat);
+
+      // compute dTmatdx
+      // auto dTmatdx  = serac::dot(dmudTmat, WInvMat);
+
+      // compute flux contribution
+      // auto flux     = serac::dot(dmudTmat, WInvMat) * serac::det(serac::inv(WInvMat)); // dTmatdx * WInvMat;
+      auto flux     = dmudTmat; // dTmatdx * WInvMat;
       
-      auto dx_dxi   = dXdxi + serac::dot(du_dX, dXdxi); // Jacobian
-      auto Jtet     = serac::dot(dx_dxi, triangle_correction);
-      auto invJTtet = serac::inv(serac::transpose(Jtet));
-      auto JJtet    = serac::inner(Jtet, Jtet);
-      auto scale    = -1.0 / serac::det(Jtet);
-      if (serac::det(Jtet) <= 0.0)
-      {
-        scale = 0.0;
-      }
-      // static constexpr serac::mat2 I = serac::DenseIdentity<DIM>();
-      // auto flux     = scale * (0.5 * JJtet * invJTtet - Jtet) * serac::det(I + du_dX);
-      auto flux     = scale * (0.5 * JJtet * invJTtet - Jtet);
-      
-      ///// alternative mu (004, mu = serac::inner(Jtet, Jtet) - 2 * serac::det(Jtet); )
-      // auto flux     = 2.0 * (Jtet - invJTtet*serac::det(Jtet)) * serac::det(I + du_dX);
+      ///// alternative mu (004, mu = serac::inner(Tmat, Tmat) - 2 * serac::det(Tmat); )
+      // auto flux     = 2.0 * (Tmat - invTransTmat*serac::det(Tmat)) * serac::det(I + du_dX);
 #else
       // auto mu = (serac::squared_norm(J) / (3 * pow(serac::det(J), 2.0 / 3.0))) - 1.0; // serac::dot(J, J)
       using std::pow;
@@ -156,10 +168,16 @@ int main(int argc, char* argv[])
 #ifdef TWO_DIM_SETUP
 #ifdef ONE_ELEM_TEST
 // Constrain half of the dofs in the one element triangular mesh setup
-mfem::Array<int> constrainedDofs(3);
-for(auto iDof=0; iDof<3; iDof ++){
+mfem::Array<int> constrainedDofs(4);
+for(auto iDof=0; iDof<4; iDof ++){
   constrainedDofs[iDof] = iDof;
 }
+#else
+  mfem::Array<int> ess_tdof_list, ess_bdr(mesh.bdr_attributes.Max());
+  ess_bdr = 0;
+  ess_bdr[0] = 1;
+  mfem::Array<int> constrainedDofs;
+  shape_fes->GetEssentialTrueDofs(ess_bdr, constrainedDofs);
 #endif
 #else
   // Get dofs in z direction for all elements (pseudo 2D problem)
@@ -179,21 +197,37 @@ for(auto iDof=0; iDof<3; iDof ++){
   // wrap residual and provide Jacobian
   serac::mfem_ext::StdFunctionOperator residual_opr(
     totNumDofs,
+#ifdef ONE_ELEM_TEST
     [&constrainedDofs, &residual](const mfem::Vector& u, mfem::Vector& r) {
+#else
+    // [&residual](const mfem::Vector& u, mfem::Vector& r) {
+    [&constrainedDofs, &residual](const mfem::Vector& u, mfem::Vector& r) {
+#endif
       double dummy_time = 1.0;
       const mfem::Vector res = residual(dummy_time, u);
       r = res;
 #ifdef ONE_ELEM_TEST
       r.SetSubVector(constrainedDofs, 0.0);
-#endif      
+#endif
+////////////////////////////////////////
+// r.SetSubVector(constrainedDofs, 0.0); 
+////////////////////////////////////////
     },
+#ifdef ONE_ELEM_TEST
     [&constrainedDofs, &residual, &dresidualdu](const mfem::Vector& u) -> mfem::Operator& {
+#else
+    // [&residual, &dresidualdu](const mfem::Vector& u) -> mfem::Operator& {      
+    [&constrainedDofs, &residual, &dresidualdu](const mfem::Vector& u) -> mfem::Operator& {
+#endif
       double dummy_time = 1.0;
       auto [val, dr_du] = residual(dummy_time, serac::differentiate_wrt(u));
       dresidualdu       = assemble(dr_du);
 #ifdef ONE_ELEM_TEST
       dresidualdu->EliminateBC(constrainedDofs, mfem::Operator::DiagonalPolicy::DIAG_ONE);
-#endif      
+#endif
+////////////////////////////////////////
+// dresidualdu->EliminateBC(constrainedDofs, mfem::Operator::DiagonalPolicy::DIAG_ONE);  
+////////////////////////////////////////  
       return *dresidualdu;
     }
   );
@@ -214,7 +248,7 @@ for(auto iDof=0; iDof<3; iDof ++){
                                               .relative_tol   = 1.0e-8,
                                               .absolute_tol   = 1.0e-10,
                                               // .min_iterations = 1, 
-                                              .max_iterations = 50, // 2000
+                                              .max_iterations = 20, // 2000
                                               // .max_line_search_iterations = 20, //0
                                               .print_level    = 1};
 
@@ -224,7 +258,7 @@ for(auto iDof=0; iDof<3; iDof ++){
 
   mfem::ParGridFunction nodeSolGF(shape_fes.get());
   nodeSolGF.SetFromTrueDofs(node_disp_computed);
-
+nodeSolGF.Print();
 #ifdef TWO_DIM_SETUP
   auto pd = mfem::ParaViewDataCollection("sol_mesh_morphing_serac_2D", &pmesh);
 #else
