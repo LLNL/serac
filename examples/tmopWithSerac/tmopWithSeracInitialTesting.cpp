@@ -31,8 +31,8 @@
 #define TWO_DIM_SETUP
 // #undef TWO_DIM_SETUP
 
-#define ONE_ELEM_TEST
-// #undef ONE_ELEM_TEST
+// #define ONE_ELEM_TEST
+#undef ONE_ELEM_TEST
 
 // _main_init_start
 int main(int argc, char* argv[])
@@ -49,8 +49,8 @@ int main(int argc, char* argv[])
   auto inputFilename = "../../data/meshes/circleTriMesh.g";
   int numElements = 285;
 #ifdef ONE_ELEM_TEST  
-  inputFilename = "../../data/meshes/oneElemTriEquiMesh.g";
-  // inputFilename = "../../data/meshes/oneElemTriRectMesh.g";
+  // inputFilename = "../../data/meshes/oneElemTriEquiMesh.g";
+  inputFilename = "../../data/meshes/oneElemTriRectMesh.g";
   numElements = 1;
 #endif  
 #else
@@ -115,7 +115,8 @@ int main(int argc, char* argv[])
 
       // compute flux contribution
       // auto flux     = serac::dot(dmudTmat, WInvMat) * serac::det(serac::inv(WInvMat)); // dTmatdx * WInvMat;
-      auto flux     = dmudTmat; // dTmatdx * WInvMat;
+      // auto flux     = dTmatdx * WInvMat; //  dmudTmat; 
+      auto flux     = dmudTmat * WInvMat * serac::det(serac::inv(WInvMat));
       
       ///// alternative mu (004, mu = serac::inner(Tmat, Tmat) - 2 * serac::det(Tmat); )
       // auto flux     = 2.0 * (Tmat - invTransTmat*serac::det(Tmat)) * serac::det(I + du_dX);
@@ -135,7 +136,7 @@ int main(int argc, char* argv[])
       auto flux       = scale * (J - (JJ/3.0) * invJT);
 #endif
       auto source     = serac::zero{};
-      return ::serac::tuple{source, flux};
+      return ::serac::tuple{source, flux};  /// N*source + DN*flux
     },
     pmesh
   );
@@ -210,7 +211,7 @@ for(auto iDof=0; iDof<4; iDof ++){
       r.SetSubVector(constrainedDofs, 0.0);
 #endif
 ////////////////////////////////////////
-// r.SetSubVector(constrainedDofs, 0.0); 
+r.SetSubVector(constrainedDofs, 0.0); 
 ////////////////////////////////////////
     },
 #ifdef ONE_ELEM_TEST
@@ -226,7 +227,7 @@ for(auto iDof=0; iDof<4; iDof ++){
       dresidualdu->EliminateBC(constrainedDofs, mfem::Operator::DiagonalPolicy::DIAG_ONE);
 #endif
 ////////////////////////////////////////
-// dresidualdu->EliminateBC(constrainedDofs, mfem::Operator::DiagonalPolicy::DIAG_ONE);  
+dresidualdu->EliminateBC(constrainedDofs, mfem::Operator::DiagonalPolicy::DIAG_ONE);  
 ////////////////////////////////////////  
       return *dresidualdu;
     }
