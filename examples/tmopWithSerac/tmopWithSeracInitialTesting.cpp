@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
       // triangular correction = [ 1, -1/sqrt(3); 0, -2/sqrt(3)]
       serac::mat2 WInvMat = {{{1.00000000000000, -0.577350269189626}, {0, 1.15470053837925}}};
       // serac::mat2 WInvMat = {{{0.0, 1.0}, {1.0, 0.0}}};
-      
+
       // Need to compute dmu/dTmat : dTmat/dx, with mu = mu(Tmat)
       // Tmat = Amat * WInvMat; WInvMat -> constant
       // dmu/dTmat is mu specific
@@ -237,8 +237,8 @@ dresidualdu->EliminateBC(constrainedDofs, mfem::Operator::DiagonalPolicy::DIAG_O
                                         // .linear_solver = ::serac::LinearSolver::CG,
                                         .linear_solver  = serac::LinearSolver::Strumpack,
                                         .preconditioner = ::serac::Preconditioner::HypreJacobi,
-                                        .relative_tol   = 0.7*1.0e-8,
-                                        .absolute_tol   = 0.7*1.0e-10,
+                                        .relative_tol   = 1.0e-10,
+                                        .absolute_tol   = 1.0e-12,
                                         .max_iterations = DIM * numElements,
                                         .print_level    = 0};
 
@@ -253,7 +253,7 @@ dresidualdu->EliminateBC(constrainedDofs, mfem::Operator::DiagonalPolicy::DIAG_O
                                               // .max_line_search_iterations = 20, //0
                                               .print_level    = 1};
 
-  serac::EquationSolver eq_solver(nonlin_opts, lin_opts);
+  serac::EquationSolver eq_solver(nonlin_opts, lin_opts, pmesh.GetComm());
   eq_solver.setOperator(residual_opr);
   eq_solver.solve(node_disp_computed);
 
