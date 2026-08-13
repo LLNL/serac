@@ -4,6 +4,10 @@
 #include <utility>
 #include <vector>
 #include <stdexcept>
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <string>
 
 #include "mfem.hpp"
 #include "axom/slic/core/SimpleLogger.hpp"
@@ -12,6 +16,52 @@
 namespace smith {
 
 namespace {
+
+struct VectorFiniteSummary {
+  int size{0};
+  int finite_count{0};
+  int nonfinite_count{0};
+  double minimum{std::numeric_limits<double>::quiet_NaN()};
+  double maximum{std::numeric_limits<double>::quiet_NaN()};
+  double l2_norm{std::numeric_limits<double>::quiet_NaN()};
+};
+
+VectorFiniteSummary summarizeVectorFiniteValues(const mfem::Vector& vector)
+{
+  VectorFiniteSummary summary;
+  summary.size = vector.Size();
+  double sum_of_squares = 0.0;
+  double minimum = std::numeric_limits<double>::infinity();
+  double maximum = -std::numeric_limits<double>::infinity();
+  for (int i = 0; i < vector.Size(); ++i) {
+    double const value = vector(i);
+    if (!std::isfinite(value)) {
+      ++summary.nonfinite_count;
+      continue;
+    }
+    ++summary.finite_count;
+    minimum = std::min(minimum, value);
+    maximum = std::max(maximum, value);
+    sum_of_squares += value * value;
+  }
+  if (summary.finite_count > 0) {
+    summary.minimum = minimum;
+    summary.maximum = maximum;
+    summary.l2_norm = std::sqrt(sum_of_squares);
+  }
+  return summary;
+}
+
+void printVectorFiniteSummary(const std::string& label, const mfem::Vector& vector)
+{
+  auto const summary = summarizeVectorFiniteValues(vector);
+  mfem::out << label << " size=" << summary.size << " finite=" << summary.finite_count
+            << " nonfinite=" << summary.nonfinite_count;
+  if (summary.finite_count > 0) {
+    mfem::out << " min=" << summary.minimum << " max=" << summary.maximum << " l2=" << summary.l2_norm;
+  }
+  mfem::out << '\n';
+}
 
 void applyOverrides(int num_blocks, std::vector<std::unique_ptr<const mfem::Operator>>& block_op_overrides,
                     std::vector<BlockOverride> overrides)
@@ -48,7 +98,29 @@ BlockDiagonalPreconditioner::BlockDiagonalPreconditioner(std::vector<std::unique
   applyOverrides(num_blocks_, block_op_overrides_, std::move(overrides));
 }
 
-void BlockDiagonalPreconditioner::Mult(const mfem::Vector& in, mfem::Vector& out) const { solver_diag_->Mult(in, out); }
+void BlockDiagonalPreconditioner::Mult(const mfem::Vector& in, mfem::Vector& out) const
+{
+  mfem::BlockVector block_in(const_cast<mfem::Vector&>(in), block_offsets_);
+  mfem::BlockVector block_out(out, block_offsets_);
+  for (int i = 0; i < num_blocks_; ++i) {
+    auto& input_block = block_in.GetBlock(i);
+    auto& output_block = block_out.GetBlock(i);
+    try {
+      mfem_solvers_[static_cast<size_t>(i)]->Mult(input_block, output_block);
+    } catch (const std::exception& error) {
+      mfem::out << "BlockDiagonalPreconditioner block " << i << " solve failed: " << error.what() << '\n';
+      printVectorFiniteSummary("BlockDiagonalPreconditioner input block:", input_block);
+      printVectorFiniteSummary("BlockDiagonalPreconditioner output block at failure:", output_block);
+      throw;
+    }
+    if (summarizeVectorFiniteValues(output_block).nonfinite_count > 0) {
+      printVectorFiniteSummary("BlockDiagonalPreconditioner input block " + std::to_string(i) + ":", input_block);
+      printVectorFiniteSummary("BlockDiagonalPreconditioner nonfinite output block " + std::to_string(i) + ":",
+                               output_block);
+      MFEM_VERIFY(false, "BlockDiagonalPreconditioner produced nonfinite values in block " << i);
+    }
+  }
+}
 
 void BlockDiagonalPreconditioner::SetOperator(const mfem::Operator& jacobian)
 {

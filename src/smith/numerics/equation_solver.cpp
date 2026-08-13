@@ -16,6 +16,7 @@
 #include <limits>
 #include <string>
 #include <tuple>
+#include <chrono>
 
 #include "smith/smith_config.hpp"
 #include "smith/infrastructure/profiling.hpp"
@@ -25,6 +26,74 @@
 namespace smith {
 
 namespace {
+bool solveTimingEnabled()
+{
+  static const bool enabled = [] {
+    const char* value = std::getenv("SMITH_SOLVE_TIMING");
+    return value != nullptr && std::string(value) != "0";
+  }();
+  return enabled;
+}
+
+double wallTimeSeconds()
+{
+  using clock = std::chrono::steady_clock;
+  return std::chrono::duration<double>(clock::now().time_since_epoch()).count();
+}
+
+void printMaxTiming(const std::string& label, double local_elapsed_seconds)
+{
+  double max_elapsed_seconds = local_elapsed_seconds;
+  MPI_Allreduce(&local_elapsed_seconds, &max_elapsed_seconds, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  SLIC_INFO_ROOT(axom::fmt::format("[solve timing] {}: {:.6f} s", label, max_elapsed_seconds));
+}
+
+struct VectorFiniteSummary {
+  int size{0};
+  int finite_count{0};
+  int nonfinite_count{0};
+  double minimum{std::numeric_limits<double>::quiet_NaN()};
+  double maximum{std::numeric_limits<double>::quiet_NaN()};
+  double l2_norm{std::numeric_limits<double>::quiet_NaN()};
+};
+
+VectorFiniteSummary summarizeVectorFiniteValues(const mfem::Vector& vector)
+{
+  VectorFiniteSummary summary;
+  summary.size = vector.Size();
+  double sum_of_squares = 0.0;
+  double minimum = std::numeric_limits<double>::infinity();
+  double maximum = -std::numeric_limits<double>::infinity();
+  for (int i = 0; i < vector.Size(); ++i) {
+    double const value = vector(i);
+    if (!std::isfinite(value)) {
+      ++summary.nonfinite_count;
+      continue;
+    }
+    ++summary.finite_count;
+    minimum = std::min(minimum, value);
+    maximum = std::max(maximum, value);
+    sum_of_squares += value * value;
+  }
+  if (summary.finite_count > 0) {
+    summary.minimum = minimum;
+    summary.maximum = maximum;
+    summary.l2_norm = std::sqrt(sum_of_squares);
+  }
+  return summary;
+}
+
+void printVectorFiniteSummary(const std::string& label, const mfem::Vector& vector)
+{
+  auto const summary = summarizeVectorFiniteValues(vector);
+  mfem::out << label << " size=" << summary.size << " finite=" << summary.finite_count
+            << " nonfinite=" << summary.nonfinite_count;
+  if (summary.finite_count > 0) {
+    mfem::out << " min=" << summary.minimum << " max=" << summary.maximum << " l2=" << summary.l2_norm;
+  }
+  mfem::out << '\n';
+}
+
 /**
  * @brief Simple solver wrapper that only applies a preconditioner.
  */
@@ -211,27 +280,66 @@ class NewtonSolver : public mfem::NewtonSolver, public ConvergenceManagedNonline
   void assembleJacobian(const mfem::Vector& x) const
   {
     SMITH_MARK_FUNCTION;
+    const bool timing_enabled = solveTimingEnabled();
+    const double start_time = timing_enabled ? wallTimeSeconds() : 0.0;
     if (grad_monolithic) {
       delete grad;
       grad = nullptr;
       grad_monolithic = false;
     }
+    const double get_gradient_start_time = timing_enabled ? wallTimeSeconds() : 0.0;
     mfem::Operator& assembled_gradient = oper->GetGradient(x);
+    if (timing_enabled) {
+      printMaxTiming(axom::fmt::format("Newton GetGradient size={}", assembled_gradient.Height()),
+                     wallTimeSeconds() - get_gradient_start_time);
+    }
+    const double monolithic_start_time = timing_enabled ? wallTimeSeconds() : 0.0;
     grad_monolithic = monolithicizeOperatorIfNeeded(linear_options, assembled_gradient, grad);
+    if (timing_enabled) {
+      printMaxTiming(axom::fmt::format("Newton monolithicize size={} active={}", grad->Height(), grad_monolithic),
+                     wallTimeSeconds() - monolithic_start_time);
+      printMaxTiming(axom::fmt::format("Newton assembleJacobian total size={}", grad->Height()),
+                     wallTimeSeconds() - start_time);
+    }
   }
 
   /// set the preconditioner for the linear solver
   void setPreconditioner() const
   {
     SMITH_MARK_FUNCTION;
+    const bool timing_enabled = solveTimingEnabled();
+    const double start_time = timing_enabled ? wallTimeSeconds() : 0.0;
     prec->SetOperator(*grad);
+    if (timing_enabled) {
+      printMaxTiming(axom::fmt::format("Newton SetOperator/linear setup size={}", grad->Height()),
+                     wallTimeSeconds() - start_time);
+    }
   }
 
   /// solve the linear system
   void solveLinearSystem(const mfem::Vector& r_, mfem::Vector& c_) const
   {
     SMITH_MARK_FUNCTION;
-    prec->Mult(r_, c_);  // c = [DF(x_i)]^{-1} [F(x_i)-b]
+    const bool timing_enabled = solveTimingEnabled();
+    const double start_time = timing_enabled ? wallTimeSeconds() : 0.0;
+    if (summarizeVectorFiniteValues(r_).nonfinite_count > 0) {
+      printVectorFiniteSummary("Newton linear solve input residual has nonfinite values:", r_);
+    }
+    try {
+      prec->Mult(r_, c_);  // c = [DF(x_i)]^{-1} [F(x_i)-b]
+    } catch (const std::exception& error) {
+      mfem::out << "Newton linear solve failed: " << error.what() << '\n';
+      printVectorFiniteSummary("Newton linear solve input residual:", r_);
+      printVectorFiniteSummary("Newton linear solve output correction at failure:", c_);
+      throw;
+    }
+    if (summarizeVectorFiniteValues(c_).nonfinite_count > 0) {
+      printVectorFiniteSummary("Newton linear solve output correction has nonfinite values:", c_);
+    }
+    if (timing_enabled) {
+      printMaxTiming(axom::fmt::format("Newton linear solve size={}", grad ? grad->Height() : r_.Size()),
+                     wallTimeSeconds() - start_time);
+    }
   }
 
   /// @overload
@@ -248,11 +356,11 @@ class NewtonSolver : public mfem::NewtonSolver, public ConvergenceManagedNonline
     ConvergenceStatus status = evaluateConvergence(x, r);
     real_t norm = status.global_norm;
     initial_norm = norm;
-    if (norm == 0.0) return;
 
     if (print_level == 1) {
       mfem::out << "Newton iteration " << std::setw(3) << 0 << " : ||r|| = " << std::setw(13) << norm << "\n";
     }
+    if (norm == 0.0) return;
 
     prec->iterative_mode = false;
 
@@ -844,11 +952,11 @@ class TrustRegion : public mfem::NewtonSolver, public ConvergenceManagedNonlinea
     real_t norm = status.global_norm;
     real_t norm_goal = status.global_goal;
     initial_norm = norm;
-    if (norm == 0.0) return;
 
     if (print_level == 1) {
       mfem::out << "TrustRegion iteration " << std::setw(3) << 0 << " : ||r|| = " << std::setw(13) << norm << "\n";
     }
+    if (norm == 0.0) return;
 
     prec->iterative_mode = false;
     tr_precond.iterative_mode = false;

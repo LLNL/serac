@@ -8,6 +8,7 @@
 
 #include <vector>
 #include <memory>
+#include <string>
 #include <mpi.h>
 #include "smith/differentiable_numerics/field_state.hpp"
 #include "smith/numerics/solver_config.hpp"
@@ -29,6 +30,7 @@ class SystemSolver {
     double relaxation_factor = 1.0;                    ///< Per-stage relaxation factor. Values in (0, 1) under-relax
                                                        ///< the update: x_new = omega * x_solved + (1 - omega) * x_old.
                                                        ///< A value of 1.0 (default) means no relaxation (full update).
+    std::string name;                                  ///< Optional label printed in verbose solves.
   };
 
   /// @brief Construct a monolithic SystemSolver from a single block solver.
@@ -50,6 +52,13 @@ class SystemSolver {
   /// @param relaxation_factor Per-stage relaxation factor in `(0, 1]`.
   void addSubsystemSolver(const std::vector<size_t>& block_indices, std::shared_ptr<NonlinearBlockSolverBase> solver,
                           double relaxation_factor = 1.0);
+
+  /// @brief Convenience method to add a named solver stage.
+  void addSubsystemSolver(const std::string& name, const std::vector<size_t>& block_indices,
+                          std::shared_ptr<NonlinearBlockSolverBase> solver, double relaxation_factor = 1.0);
+
+  /// @brief Set verbosity for staggered-stage progress output.
+  void setPrintLevel(int print_level) { print_level_ = print_level; }
 
   /// @brief Append stages from another solver using a local-to-global block mapping.
   /// @param subsystem_solver Source solver whose stages operate on subsystem-local block indices.
@@ -86,6 +95,7 @@ class SystemSolver {
   int max_staggered_iterations_;  ///< Maximum number of staggered iterations.
   bool exact_staggered_steps_;    ///< If true, no early-exit convergence check.
   std::vector<Stage> stages_;     ///< Solver stages for the staggered iterations.
+  int print_level_{0};            ///< Verbosity for staggered-stage progress output.
 };
 
 }  // namespace smith

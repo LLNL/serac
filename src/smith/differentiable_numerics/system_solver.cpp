@@ -15,10 +15,36 @@
 #include <numeric>
 #include <unordered_map>
 #include <string>
+#include <chrono>
+#include <cstdlib>
 #include <axom/slic.hpp>
 #include <axom/fmt.hpp>
 
 namespace smith {
+
+namespace {
+bool solveTimingEnabled()
+{
+  static const bool enabled = [] {
+    const char* value = std::getenv("SMITH_SOLVE_TIMING");
+    return value != nullptr && std::string(value) != "0";
+  }();
+  return enabled;
+}
+
+double wallTimeSeconds()
+{
+  using clock = std::chrono::steady_clock;
+  return std::chrono::duration<double>(clock::now().time_since_epoch()).count();
+}
+
+void printMaxTiming(const std::string& label, double local_elapsed_seconds)
+{
+  double max_elapsed_seconds = local_elapsed_seconds;
+  MPI_Allreduce(&local_elapsed_seconds, &max_elapsed_seconds, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  SLIC_INFO_ROOT(axom::fmt::format("[solve timing] {}: {:.6f} s", label, max_elapsed_seconds));
+}
+}  // namespace
 
 SystemSolver::SystemSolver(std::shared_ptr<NonlinearBlockSolverBase> single_solver)
     : max_staggered_iterations_(1), exact_staggered_steps_(false)
@@ -34,12 +60,19 @@ SystemSolver::SystemSolver(int max_staggered_iterations, bool exact_staggered_st
 
 void SystemSolver::addSubsystemSolver(const std::vector<size_t>& block_indices,
                                       std::shared_ptr<NonlinearBlockSolverBase> solver, double relaxation_factor)
+
+{
+  addSubsystemSolver("", block_indices, std::move(solver), relaxation_factor);
+}
+
+void SystemSolver::addSubsystemSolver(const std::string& name, const std::vector<size_t>& block_indices,
+                                      std::shared_ptr<NonlinearBlockSolverBase> solver, double relaxation_factor)
 {
   SLIC_ERROR_IF(!solver, "SystemSolver stage solver must be non-null");
   SLIC_ERROR_IF(relaxation_factor <= 0.0 || relaxation_factor > 1.0,
                 axom::fmt::format("Stage relaxation_factor {} must be in (0, 1]", relaxation_factor));
 
-  stages_.push_back(Stage{block_indices, std::move(solver), relaxation_factor});
+  stages_.push_back(Stage{block_indices, std::move(solver), relaxation_factor, name});
 }
 
 void SystemSolver::appendStagesWithBlockMapping(const SystemSolver& subsystem_solver,
@@ -60,7 +93,7 @@ void SystemSolver::appendStagesWithBlockMapping(const SystemSolver& subsystem_so
         remapped_block_indices.push_back(global_block_indices[local_block_index]);
       }
     }
-    addSubsystemSolver(remapped_block_indices, stage.solver, stage.relaxation_factor);
+    addSubsystemSolver(stage.name, remapped_block_indices, stage.solver, stage.relaxation_factor);
   }
 }
 
@@ -142,10 +175,18 @@ std::vector<FieldState> SystemSolver::solve(const std::vector<WeakForm*>& residu
   }
 
   for (int iter = 0; iter < max_staggered_iterations_; ++iter) {
+    if (print_level_ > 0 && active_stages.size() > 1) {
+      SLIC_INFO_ROOT(
+          axom::fmt::format("Starting staggered outer iteration {}/{}", iter + 1, max_staggered_iterations_));
+    }
     // --- Run each stage ---
     for (size_t stage_idx = 0; stage_idx < active_stages.size(); ++stage_idx) {
       const auto& stage = active_stages[stage_idx];
       size_t num_stage_blocks = stage.block_indices.size();
+      if (print_level_ > 0) {
+        std::string stage_name = stage.name.empty() ? axom::fmt::format("stage {}", stage_idx) : stage.name;
+        SLIC_INFO_ROOT(axom::fmt::format("Starting {} solve", stage_name));
+      }
 
       std::vector<WeakForm*> stage_residuals;
       std::vector<std::vector<size_t>> stage_block_indices;
@@ -168,9 +209,15 @@ std::vector<FieldState> SystemSolver::solve(const std::vector<WeakForm*>& residu
         stage_block_indices.push_back(row_indices);
       }
 
+      const bool timing_enabled = solveTimingEnabled();
+      const double stage_start_time = timing_enabled ? wallTimeSeconds() : 0.0;
       std::vector<FieldState> stage_solutions =
           block_solve(stage_residuals, stage_block_indices, shape_disp, stage_states, stage_params, time_info,
                       stage.solver.get(), stage_bc_managers);
+      if (timing_enabled) {
+        std::string stage_name = stage.name.empty() ? axom::fmt::format("stage {}", stage_idx) : stage.name;
+        printMaxTiming(axom::fmt::format("SystemSolver {} solve", stage_name), wallTimeSeconds() - stage_start_time);
+      }
 
       // Propagate updated fields to every residual input that references the solved field.
       // Match by field name (looked up via the pre-computed routing map): coupling fields appear
@@ -242,7 +289,7 @@ std::shared_ptr<SystemSolver> SystemSolver::singleBlockSolver(size_t block_index
           stage_solver = cloned_solver;
         }
       }
-      Stage single_stage{{0}, stage_solver, stage.relaxation_factor};
+      Stage single_stage{{0}, stage_solver, stage.relaxation_factor, stage.name};
       result->addSubsystemSolver(single_stage.block_indices, single_stage.solver, single_stage.relaxation_factor);
       return result;
     }
@@ -256,7 +303,7 @@ std::shared_ptr<SystemSolver> SystemSolver::singleBlockSolver(size_t block_index
           stage_solver = cloned_solver;
         }
       }
-      Stage single_stage{{0}, stage_solver, stage.relaxation_factor};
+      Stage single_stage{{0}, stage_solver, stage.relaxation_factor, stage.name};
       result->addSubsystemSolver(single_stage.block_indices, single_stage.solver, single_stage.relaxation_factor);
       return result;
     }

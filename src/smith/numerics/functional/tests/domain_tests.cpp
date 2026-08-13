@@ -40,6 +40,15 @@ mfem::Mesh import_mesh(std::string meshfile)
   return mesh;
 }
 
+std::vector<int> toVector(const mfem::Array<int>& array)
+{
+  std::vector<int> values(static_cast<size_t>(array.Size()));
+  for (int i = 0; i < array.Size(); ++i) {
+    values[static_cast<size_t>(i)] = array[i];
+  }
+  return values;
+}
+
 struct IdentityFunctor {
   template <typename Arg1, typename Arg2>
   SMITH_HOST_DEVICE auto operator()(Arg1, Arg2) const
@@ -431,6 +440,32 @@ TEST(domain, of3dElementsFindsDofs)
   dof_indices = d2.dof_list(&fes);
 
   EXPECT_EQ(dof_indices.Size(), 113);
+}
+
+TEST(domain, differenceOf3dBodyDomainsFindsDofs)
+{
+  constexpr int dim = 3;
+  constexpr int p = 1;
+  auto meshInput = buildMeshFromFile(SMITH_REPO_DIR "/data/meshes/SplitCubeTest.g");
+  auto mesh = smith::mesh::refineAndDistribute(std::move(meshInput), 0, 0);
+
+  Domain body_1 = Domain::ofElements(*mesh, by_attr<dim>(1));
+  Domain body_2 = Domain::ofElements(*mesh, by_attr<dim>(2));
+  Domain entire_body = EntireDomain(*mesh);
+
+  Domain not_body_1 = entire_body - body_1;
+  Domain not_body_2 = entire_body - body_2;
+
+  EXPECT_EQ((body_1 & body_2).total_elements(), 0);
+  EXPECT_EQ((body_1 | body_2).total_elements(), entire_body.total_elements());
+  EXPECT_EQ(not_body_1.total_elements(), body_2.total_elements());
+  EXPECT_EQ(not_body_2.total_elements(), body_1.total_elements());
+
+  auto fec = mfem::H1_FECollection(p, dim);
+  auto fes = mfem::ParFiniteElementSpace(mesh.get(), &fec);
+
+  EXPECT_EQ(toVector(not_body_1.dof_list(&fes)), toVector(body_2.dof_list(&fes)));
+  EXPECT_EQ(toVector(not_body_2.dof_list(&fes)), toVector(body_1.dof_list(&fes)));
 }
 
 TEST(domain, of2dBoundaryElementsFindsDofs)

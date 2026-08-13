@@ -53,6 +53,13 @@ class ParaviewWriter {
   {
   }
 
+  ParaviewWriter(const ParaviewWriter&) = delete;
+  ParaviewWriter& operator=(const ParaviewWriter&) = delete;
+  ParaviewWriter(ParaviewWriter&&) noexcept = default;
+  ParaviewWriter& operator=(ParaviewWriter&&) noexcept = default;
+
+  ~ParaviewWriter() { pv.reset(); }
+
   /// @brief write paraview output from vector of finite element states. states must be passed in with a consistent
   /// order as how the ParaviewWriter was constructed (consistent order of spaces)
   void write(size_t step, double time, const std::vector<const FiniteElementState*>& current_states)
