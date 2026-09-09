@@ -79,17 +79,17 @@ struct PlasticMechanicsSystem : public SystemBase {
    * @brief Transform tensor variable stored as [dim * dim, 1] to [dim, dim]
    */
   template <typename T>
-  SMITH_HOST_DEVICE tensor<T, dim, dim> recoverTensor(const tensor<T, dim * dim> F_state)
+  SMITH_HOST_DEVICE tensor<T, dim, dim> recoverTensor(const tensor<T, dim * dim>& f_state) const
   {
-    tensor<T, dim, dim> F_state_tensor{};
+    tensor<T, dim, dim> f_state_tensor{};
 
     for (int i = 0; i < dim; ++i) {
       for (int j = 0; j < dim; ++j) {
-        F_state_tensor(i, j) = F_state(i * dim + j);
+        f_state_tensor(i, j) = f_state(i * dim + j);
       }
     }
 
-    return F_state_tensor;
+    return f_state_tensor;
   }
 
   /**
