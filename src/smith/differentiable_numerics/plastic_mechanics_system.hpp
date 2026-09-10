@@ -27,7 +27,7 @@ namespace smith {
  * @tparam disp_order Order of the displacement basis.
  * @tparam parameter_space Finite element spaces for optional parameters.
  *
- * This system rely on a fixed-point iteration to solve plasticity equivalent to the traditional
+ * This system relies on a fixed-point iteration to solve plasticity, equivalent to a traditional
  * inner-outer Newton method.
  * n in [0, N] denotes the timestep and k in [0, L] denotes the fixed-point iteration count.
  * At every new timestep n+1, first predict new displacement by [u^{n+1,k}, Fp^{n+1,k}, epsilon_p^{n+1,k}] --->
