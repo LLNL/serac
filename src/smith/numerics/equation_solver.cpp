@@ -36,6 +36,85 @@ bool solveTimingEnabled()
   return enabled;
 }
 
+bool matrixDiagnosticsEnabled()
+{
+  static const bool enabled = [] {
+    const char* value = std::getenv("SMITH_MATRIX_DIAGNOSTICS");
+    return value != nullptr && std::string(value) != "0";
+  }();
+  return enabled;
+}
+
+void printMatrixDiagnostics(const mfem::HypreParMatrix& matrix)
+{
+  mfem::SparseMatrix diagonal;
+  mfem::SparseMatrix off_diagonal;
+  HYPRE_BigInt* column_map = nullptr;
+  matrix.GetDiag(diagonal);
+  matrix.GetOffd(off_diagonal, column_map);
+
+  int local_zero_rows = 0;
+  double local_min_nonzero_row_norm = std::numeric_limits<double>::infinity();
+  double local_max_row_norm = 0.0;
+  std::vector<HYPRE_BigInt> local_zero_row_indices;
+  auto accumulate_row_norm = [](const mfem::SparseMatrix& block, int row) {
+    double norm = 0.0;
+    for (int entry = block.GetI()[row]; entry < block.GetI()[row + 1]; ++entry) {
+      norm += std::abs(block.GetData()[entry]);
+    }
+    return norm;
+  };
+  for (int row = 0; row < diagonal.Height(); ++row) {
+    double const row_norm = accumulate_row_norm(diagonal, row) + accumulate_row_norm(off_diagonal, row);
+    if (row_norm == 0.0) {
+      ++local_zero_rows;
+      if (local_zero_row_indices.size() < 16) {
+        local_zero_row_indices.push_back(matrix.RowPart()[0] + row);
+      }
+    } else {
+      local_min_nonzero_row_norm = std::min(local_min_nonzero_row_norm, row_norm);
+      local_max_row_norm = std::max(local_max_row_norm, row_norm);
+    }
+  }
+
+  int global_zero_rows = 0;
+  double global_min_nonzero_row_norm = 0.0;
+  double global_max_row_norm = 0.0;
+  MPI_Allreduce(&local_zero_rows, &global_zero_rows, 1, MPI_INT, MPI_SUM, matrix.GetComm());
+  MPI_Allreduce(&local_min_nonzero_row_norm, &global_min_nonzero_row_norm, 1, MPI_DOUBLE, MPI_MIN, matrix.GetComm());
+  MPI_Allreduce(&local_max_row_norm, &global_max_row_norm, 1, MPI_DOUBLE, MPI_MAX, matrix.GetComm());
+  SLIC_INFO_ROOT(axom::fmt::format(
+      "Linear matrix rows={} columns={} nnz={} zero_rows={} min_nonzero_row_l1={:.12e} max_row_l1={:.12e}",
+      matrix.M(), matrix.N(), matrix.NNZ(), global_zero_rows, global_min_nonzero_row_norm, global_max_row_norm));
+
+  int rank = 0;
+  MPI_Comm_rank(matrix.GetComm(), &rank);
+  for (HYPRE_BigInt row : local_zero_row_indices) {
+    SLIC_INFO(axom::fmt::format("Linear matrix rank={} zero global row={}", rank, row));
+  }
+
+  int comm_size = 1;
+  MPI_Comm_size(matrix.GetComm(), &comm_size);
+  if (comm_size == 1) {
+    std::vector<double> column_norms(static_cast<size_t>(diagonal.Width()), 0.0);
+    for (int row = 0; row < diagonal.Height(); ++row) {
+      for (int entry = diagonal.GetI()[row]; entry < diagonal.GetI()[row + 1]; ++entry) {
+        column_norms[static_cast<size_t>(diagonal.GetJ()[entry])] += std::abs(diagonal.GetData()[entry]);
+      }
+    }
+    std::vector<int> zero_columns;
+    for (int column = 0; column < diagonal.Width(); ++column) {
+      if (column_norms[static_cast<size_t>(column)] == 0.0) {
+        zero_columns.push_back(column);
+      }
+    }
+    SLIC_INFO_ROOT(axom::fmt::format("Linear matrix zero_columns={}", zero_columns.size()));
+    for (size_t i = 0; i < std::min<size_t>(zero_columns.size(), 16); ++i) {
+      SLIC_INFO_ROOT(axom::fmt::format("Linear matrix zero global column={}", zero_columns[i]));
+    }
+  }
+}
+
 double wallTimeSeconds()
 {
   using clock = std::chrono::steady_clock;
@@ -339,7 +418,12 @@ class NewtonSolver : public mfem::NewtonSolver, public ConvergenceManagedNonline
     if (print_level == 1) {
       mfem::out << "Newton iteration " << std::setw(3) << 0 << " : ||r|| = " << std::setw(13) << norm << "\n";
     }
-    if (norm == 0.0) return;
+    if (norm == 0.0) {
+      converged = true;
+      final_iter = 0;
+      final_norm = 0.0;
+      return;
+    }
 
     prec->iterative_mode = false;
 
@@ -383,6 +467,9 @@ class NewtonSolver : public mfem::NewtonSolver, public ConvergenceManagedNonline
       add(x0, -stepScale, c, x);
       status = evaluateConvergence(x, r);
       norm = status.global_norm;
+      if (print_level >= 2) {
+        mfem::out << "Newton line search trial: scale=" << -stepScale << " ||r||=" << norm << '\n';
+      }
 
       const int max_ls_iters = nonlinear_options.max_line_search_iterations;
       static constexpr real_t reduction = 0.5;
@@ -402,6 +489,9 @@ class NewtonSolver : public mfem::NewtonSolver, public ConvergenceManagedNonline
         add(x0, -stepScale, c, x);
         status = evaluateConvergence(x, r);
         norm = status.global_norm;
+        if (print_level >= 2) {
+          mfem::out << "Newton line search trial: scale=" << -stepScale << " ||r||=" << norm << '\n';
+        }
       }
 
       // try the opposite direction and linesearch back from there
@@ -410,6 +500,9 @@ class NewtonSolver : public mfem::NewtonSolver, public ConvergenceManagedNonline
         add(x0, stepScale, c, x);
         status = evaluateConvergence(x, r);
         norm = status.global_norm;
+        if (print_level >= 2) {
+          mfem::out << "Newton line search trial: scale=" << stepScale << " ||r||=" << norm << '\n';
+        }
 
         ls_iter = 0;
         for (; !is_improved(norm, stepScale) && ls_iter < max_ls_iters; ++ls_iter, ++ls_iter_sum) {
@@ -417,6 +510,9 @@ class NewtonSolver : public mfem::NewtonSolver, public ConvergenceManagedNonline
           add(x0, stepScale, c, x);
           status = evaluateConvergence(x, r);
           norm = status.global_norm;
+          if (print_level >= 2) {
+            mfem::out << "Newton line search trial: scale=" << stepScale << " ||r||=" << norm << '\n';
+          }
         }
 
         // ok, the opposite direction was also terrible, lets go back, cut in half 1 last time and accept it hoping for
@@ -427,6 +523,9 @@ class NewtonSolver : public mfem::NewtonSolver, public ConvergenceManagedNonline
           add(x0, -stepScale, c, x);
           status = evaluateConvergence(x, r);
           norm = status.global_norm;
+          if (print_level >= 2) {
+            mfem::out << "Newton line search trial: scale=" << -stepScale << " ||r||=" << norm << '\n';
+          }
         }
       }
 
@@ -1343,6 +1442,10 @@ void StrumpackSolver::SetOperator(const mfem::Operator& op)
   // If it is, make a monolithic system from the underlying blocks
   if (block_operator) {
     monolithic_mat_ = buildMonolithicMatrix(*block_operator);
+
+    if (matrixDiagnosticsEnabled()) {
+      printMatrixDiagnostics(*monolithic_mat_);
+    }
 
     strumpack_mat_ = std::make_unique<mfem::STRUMPACKRowLocMatrix>(*monolithic_mat_);
   } else {

@@ -60,6 +60,9 @@ class SystemSolver {
   /// @brief Set verbosity for staggered-stage progress output.
   void setPrintLevel(int print_level) { print_level_ = print_level; }
 
+  /// @brief Throw after a nonlinear stage reports nonconvergence.
+  void setFailOnNonconvergence(bool fail) { fail_on_nonconvergence_ = fail; }
+
   /// @brief Append stages from another solver using a local-to-global block mapping.
   /// @param subsystem_solver Source solver whose stages operate on subsystem-local block indices.
   /// @param global_block_indices Mapping from subsystem-local block index to global block index.
@@ -96,6 +99,7 @@ class SystemSolver {
   bool exact_staggered_steps_;    ///< If true, no early-exit convergence check.
   std::vector<Stage> stages_;     ///< Solver stages for the staggered iterations.
   int print_level_{0};            ///< Verbosity for staggered-stage progress output.
+  bool fail_on_nonconvergence_{false};  ///< Whether a failed nonlinear stage aborts the solve.
 };
 
 }  // namespace smith

@@ -226,6 +226,47 @@ class FunctionalWeakForm<spatial_dim, OutputSpace, Parameters<InputSpaces...>,
   }
 
   /**
+   * @brief Add a boundary integral with value and tangential-derivative test contributions.
+   *
+   * The integrand returns `tuple{source, flux}`. The resulting weak contribution is
+   * `source * test_value + flux * test_surface_derivative`.
+   */
+  template <typename BoundaryIntegrandType, int... all_params>
+  void addBoundaryDifferentialIntegralImpl(std::string boundary_name, BoundaryIntegrandType integrand,
+                                           std::integer_sequence<int, all_params...>)
+  {
+    weak_form_->AddBoundaryIntegral(
+        Dimension<spatial_dim - 1>{}, DependsOn<all_params...>{},
+        [this, integrand](double /*time*/, auto X, auto... params) { return integrand(timeInfo(), X, params...); },
+        mesh_->domain(boundary_name));
+
+    v_dot_weak_form_residual_->AddBoundaryIntegral(
+        Dimension<spatial_dim - 1>{}, DependsOn<0, 1 + all_params...>{},
+        [this, integrand](double /*time*/, auto X, auto V, auto... params) {
+          auto [source, flux] = integrand(timeInfo(), X, params...);
+          return smith::inner(get<VALUE>(V), source) + smith::inner(get<DERIVATIVE>(V), flux);
+        },
+        mesh_->domain(boundary_name));
+  }
+
+  /// @brief Add a differential boundary integral depending only on selected input fields.
+  template <int... active_parameters, typename BoundaryIntegrandType>
+  void addBoundaryDifferentialIntegral(DependsOn<active_parameters...>, std::string boundary_name,
+                                       BoundaryIntegrandType integrand)
+  {
+    addBoundaryDifferentialIntegralImpl(boundary_name, integrand,
+                                        std::integer_sequence<int, active_parameters...>{});
+  }
+
+  /// @brief Add a differential boundary integral depending on all input fields.
+  template <typename BoundaryIntegrandType>
+  void addBoundaryDifferentialIntegral(std::string boundary_name, const BoundaryIntegrandType& integrand)
+  {
+    addBoundaryDifferentialIntegralImpl(boundary_name, integrand,
+                                        std::make_integer_sequence<int, sizeof...(InputSpaces)>{});
+  }
+
+  /**
    * @brief Add a interior boundary integral term to the weak form
    *
    * @tparam InteriorIntegrandType The type of the interior boundary integral function.

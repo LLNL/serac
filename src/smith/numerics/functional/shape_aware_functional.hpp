@@ -166,6 +166,16 @@ SMITH_HOST_DEVICE auto compute_boundary_area_correction(const position_type& X, 
   return area_correction;
 }
 
+template <typename return_type, typename correction_type>
+SMITH_HOST_DEVICE auto apply_boundary_area_correction(const return_type& value, const correction_type& correction)
+{
+  if constexpr (smith::is_tuple<return_type>::value) {
+    return smith::apply([&](const auto&... component) { return smith::tuple{component * correction...}; }, value);
+  } else {
+    return value * correction;
+  }
+}
+
 /**
  * @brief A helper function to modify all of the trial function input derivatives according to the given shape
  * displacement for integrands without state variables
@@ -572,7 +582,8 @@ class ShapeAwareFunctional<shape, test(trials...), exec> {
                                       QFuncArgs... qfunc_args) const
     {
       auto unmodified_qf_return = integrand_(time, x + shape_val, qfunc_args...);
-      return unmodified_qf_return * detail::compute_boundary_area_correction(x, shape_val);
+      return detail::apply_boundary_area_correction(unmodified_qf_return,
+                                                    detail::compute_boundary_area_correction(x, shape_val));
     }
   };
 

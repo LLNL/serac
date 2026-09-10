@@ -7,6 +7,7 @@
 #include "smith/differentiable_numerics/system_solver.hpp"
 #include "smith/differentiable_numerics/nonlinear_block_solver.hpp"
 #include "smith/differentiable_numerics/nonlinear_solve.hpp"
+#include "smith/numerics/equation_solver.hpp"
 #include "smith/physics/weak_form.hpp"
 #include "smith/physics/boundary_conditions/boundary_condition_manager.hpp"
 #include "mfem.hpp"
@@ -16,7 +17,9 @@
 #include <unordered_map>
 #include <string>
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
+#include <stdexcept>
 #include <axom/slic.hpp>
 #include <axom/fmt.hpp>
 
@@ -163,6 +166,24 @@ std::vector<FieldState> SystemSolver::solve(const std::vector<WeakForm*>& residu
     return res;
   };
 
+  auto residual_norm = [](const mfem::Vector& residual) {
+    double local_squared_norm = residual * residual;
+    double global_squared_norm = 0.0;
+    MPI_Allreduce(&local_squared_norm, &global_squared_norm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    return std::sqrt(global_squared_norm);
+  };
+
+  auto print_stage_residuals = [&](const Stage& stage, const std::string& position) {
+    if (print_level_ <= 0) {
+      return;
+    }
+    for (size_t global_row : stage.block_indices) {
+      auto residual = eval_residual_and_zero_bcs(global_row);
+      SLIC_INFO_ROOT(axom::fmt::format("{} residual {} ||r||={:.12e}", position,
+                                      residual_evals[global_row]->name(), residual_norm(residual)));
+    }
+  };
+
   // Evaluate and register true initial residuals before block sweeps mutate the state.
   for (size_t stage_idx = 0; stage_idx < active_stages.size(); ++stage_idx) {
     const auto& stage = active_stages[stage_idx];
@@ -187,6 +208,7 @@ std::vector<FieldState> SystemSolver::solve(const std::vector<WeakForm*>& residu
         std::string stage_name = stage.name.empty() ? axom::fmt::format("stage {}", stage_idx) : stage.name;
         SLIC_INFO_ROOT(axom::fmt::format("Starting {} solve", stage_name));
       }
+      print_stage_residuals(stage, "Initial");
 
       std::vector<WeakForm*> stage_residuals;
       std::vector<std::vector<size_t>> stage_block_indices;
@@ -214,6 +236,19 @@ std::vector<FieldState> SystemSolver::solve(const std::vector<WeakForm*>& residu
       std::vector<FieldState> stage_solutions =
           block_solve(stage_residuals, stage_block_indices, shape_disp, stage_states, stage_params, time_info,
                       stage.solver.get(), stage_bc_managers);
+
+      if (const auto* nonlinear_solver = dynamic_cast<const NonlinearBlockSolver*>(stage.solver.get());
+          nonlinear_solver && !nonlinear_solver->nonlinear_solver_->nonlinearSolver().GetConverged()) {
+        const auto& solver = nonlinear_solver->nonlinear_solver_->nonlinearSolver();
+        std::string stage_name = stage.name.empty() ? axom::fmt::format("stage {}", stage_idx) : stage.name;
+        std::string message = axom::fmt::format(
+            "Nonlinear stage '{}' failed after {} iteration(s), final residual {:.12e}", stage_name,
+            solver.GetNumIterations(), solver.GetFinalNorm());
+        if (fail_on_nonconvergence_) {
+          throw std::runtime_error(message);
+        }
+        SLIC_WARNING_ROOT(message);
+      }
       if (timing_enabled) {
         std::string stage_name = stage.name.empty() ? axom::fmt::format("stage {}", stage_idx) : stage.name;
         printMaxTiming(axom::fmt::format("SystemSolver {} solve", stage_name), wallTimeSeconds() - stage_start_time);
@@ -239,6 +274,7 @@ std::vector<FieldState> SystemSolver::solve(const std::vector<WeakForm*>& residu
           }
         }
       }
+      print_stage_residuals(stage, "Final");
     }
 
     // --- Convergence check (skipped in exact-steps mode, single-iteration mode,

@@ -72,6 +72,29 @@ class DirichletBoundaryConditions {
     setVectorBCs<spatial_dim>(domain, components, applied_displacement);
   }
 
+  /// @brief Specify vector Dirichlet data using an MFEM vector coefficient.
+  void setVectorBCs(const Domain& domain, std::shared_ptr<mfem::VectorCoefficient> applied_displacement)
+  {
+    SLIC_ERROR_IF(applied_displacement->GetVDim() != space_.GetVDim(),
+                  "Vector boundary condition coefficient dimension does not match field dimension");
+
+    auto scalar_dofs = domain.dof_list(&space_);
+    mfem::Array<int> true_dofs;
+    for (int component = 0; component < space_.GetVDim(); ++component) {
+      auto vector_dofs = scalar_dofs;
+      space_.DofsToVDofs(component, vector_dofs);
+      for (int vector_dof : vector_dofs) {
+        int true_dof = space_.GetLocalTDofNumber(vector_dof);
+        if (true_dof >= 0) {
+          true_dofs.Append(true_dof);
+        }
+      }
+    }
+    true_dofs.Sort();
+    true_dofs.Unique();
+    bcs_.addEssentialByTrueDofs(true_dofs, std::move(applied_displacement), space_);
+  }
+
   /// @brief Specify time and space varying Dirichlet boundary conditions over a domain.
   /// @param domain All dofs in this domain have boundary conditions applied to it.
   /// @param applied_displacement applied_displacement is a functor which takes time, and a

@@ -101,12 +101,22 @@ SMITH_HOST_DEVICE auto apply_qf(const lambda& qf, double t, const coords_type& x
   return apply_qf_helper(qf, t, x_q, arg_tuple, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>{});
 }
 
+template <typename T>
+SMITH_HOST_DEVICE auto as_source_and_flux(const T& value)
+{
+  if constexpr (smith::is_tuple<T>::value) {
+    return value;
+  } else {
+    return smith::tuple{value, smith::zero{}};
+  }
+}
+
 template <int i, int dim, typename... trials, typename lambda>
 auto get_derivative_type(lambda qf)
 {
   using qf_arguments = smith::tuple<typename QFunctionArgument<trials, smith::Dimension<dim>>::type...>;
-  return tuple{get_gradient(apply_qf(qf, double{}, tensor<double, dim + 1>{}, make_dual_wrt<i>(qf_arguments{}))),
-               zero{}};
+  return get_gradient(
+      as_source_and_flux(apply_qf(qf, double{}, tensor<double, dim + 1>{}, make_dual_wrt<i>(qf_arguments{}))));
 };
 
 template <typename lambda, int n, typename... T>
@@ -115,8 +125,8 @@ SMITH_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, 
 {
   constexpr int dim = 2;
   using first_arg_t = smith::tuple<tensor<double, dim>, tensor<double, dim>>;
-  using return_type = decltype(qf(double{}, first_arg_t{}, T{}[0]...));
-  tensor<tuple<return_type, zero>, n> outputs{};
+  using return_type = decltype(as_source_and_flux(qf(double{}, first_arg_t{}, T{}[0]...)));
+  tensor<return_type, n> outputs{};
   for (int i = 0; i < n; i++) {
     tensor<double, dim> x_q;
     tensor<double, dim> J_q;
@@ -126,7 +136,7 @@ SMITH_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, 
     }
     double scale = norm(cross(J_q));
 
-    get<0>(outputs[i]) = qf(t, smith::tuple{x_q, J_q}, inputs[i]...) * scale;
+    outputs[i] = as_source_and_flux(qf(t, smith::tuple{x_q, J_q}, inputs[i]...)) * scale;
   }
   return outputs;
 }
@@ -137,8 +147,8 @@ SMITH_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, 
 {
   constexpr int dim = 3;
   using first_arg_t = smith::tuple<tensor<double, dim>, tensor<double, dim, dim - 1>>;
-  using return_type = decltype(qf(double{}, first_arg_t{}, T{}[0]...));
-  tensor<tuple<return_type, zero>, n> outputs{};
+  using return_type = decltype(as_source_and_flux(qf(double{}, first_arg_t{}, T{}[0]...)));
+  tensor<return_type, n> outputs{};
   for (int i = 0; i < n; i++) {
     tensor<double, dim> x_q;
     tensor<double, dim, dim - 1> J_q;
@@ -150,7 +160,7 @@ SMITH_HOST_DEVICE auto batch_apply_qf(lambda qf, double t, const tensor<double, 
     }
     double scale = norm(cross(J_q));
 
-    get<0>(outputs[i]) = qf(t, smith::tuple{x_q, J_q}, inputs[i]...) * scale;
+    outputs[i] = as_source_and_flux(qf(t, smith::tuple{x_q, J_q}, inputs[i]...)) * scale;
   }
   return outputs;
 }
@@ -205,22 +215,31 @@ void evaluation_kernel_impl(trial_element_type trial_elements, test_element, dou
   }
 }
 
-//clang-format off
+template <typename S, typename T>
+SMITH_HOST_DEVICE auto apply_input_chain_rule(const S& dfdx, const T& dx)
+{
+  if constexpr (std::is_same_v<S, smith::zero>) {
+    return smith::zero{};
+  } else {
+    return smith::chain_rule(smith::get<0>(dfdx), smith::get<0>(dx)) +
+           smith::chain_rule(smith::get<1>(dfdx), smith::get<1>(dx));
+  }
+}
+
 template <typename S, typename T>
 SMITH_HOST_DEVICE auto chain_rule(const S& dfdx, const T& dx)
 {
-  return smith::chain_rule(smith::get<0>(smith::get<0>(dfdx)), smith::get<0>(dx)) +
-         smith::chain_rule(smith::get<1>(smith::get<0>(dfdx)), smith::get<1>(dx));
+  return smith::tuple{apply_input_chain_rule(smith::get<0>(dfdx), dx),
+                      apply_input_chain_rule(smith::get<1>(dfdx), dx)};
 }
-//clang-format on
 
 template <typename derivative_type, int n, typename T>
 SMITH_HOST_DEVICE auto batch_apply_chain_rule(derivative_type* qf_derivatives, const tensor<T, n>& inputs)
 {
   using return_type = decltype(chain_rule(derivative_type{}, T{}));
-  tensor<tuple<return_type, zero>, n> outputs{};
+  tensor<return_type, n> outputs{};
   for (int i = 0; i < n; i++) {
-    get<0>(outputs[i]) = chain_rule(qf_derivatives[i], inputs[i]);
+    outputs[i] = chain_rule(qf_derivatives[i], inputs[i]);
   }
   return outputs;
 }

@@ -552,6 +552,8 @@ TEST(domain, ofInteriorBoundaryElements)
   auto [trial_fespace, trial_fec] = smith::generateParFiniteElementSpace<trial_space>(mesh.get());
   mfem::Vector U(trial_fespace->TrueVSize());
 
+  EXPECT_EQ(d0.dof_list(trial_fespace.get()).Size(), 4);
+
   // Calculate the area of the internal boundary region
   Functional<test_space(trial_space)> totalArea({trial_fespace.get()});
 
