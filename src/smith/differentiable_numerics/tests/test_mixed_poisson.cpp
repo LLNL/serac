@@ -193,7 +193,7 @@ TEST_P(BlockPreconditionerTest, BlockSolve)
   auto dt = graph->create_state<double, double>(0.025);
   size_t cycle = 0;
   const auto time_info = smith::TimeInfo(time.get(), dt.get(), cycle);
-  std::unique_ptr<mfem::Solver> diff_precond;
+  std::unique_ptr<mfem::Solver> diffusion_precond;
   std::vector<smith::FieldState> params;
   auto& flux_params = params;
   auto& potential_params = params;
@@ -221,18 +221,15 @@ TEST_P(BlockPreconditionerTest, BlockSolve)
       linear_options.preconditioner = smith::Preconditioner::BlockSchur;
       linear_options.block_schur_type = smith::BlockSchurType::Full;
       linear_options.schur_approx_type = smith::SchurApproxType::Custom;
-      {
-        std::vector<smith::BlockProviderOverride> overrides;
-        overrides.push_back(smith::makeWeakFormBlockProviderOverride(
-            1, potential_diffusion_form, shape_disp, {potential}, {1.0}, time_info, potential_bc_manager.get()));
+      std::vector<smith::BlockProviderOverride> overrides;
+      overrides.push_back(smith::makeWeakFormBlockProviderOverride(1, potential_diffusion_form, shape_disp, {potential},
+                                                                   {1.0}, time_info, potential_bc_manager.get()));
 
-        auto solvers =
-            smith::buildBlockPreconditionerSubSolvers(linear_options.sub_block_linear_solver_options, mesh->getComm());
+      auto solvers =
+          smith::buildBlockPreconditionerSubSolvers(linear_options.sub_block_linear_solver_options, mesh->getComm());
 
-        diff_precond =
-            std::make_unique<smith::BlockSchurPreconditioner>(std::move(solvers), linear_options.block_schur_type,
-                                                              linear_options.schur_approx_type, std::move(overrides));
-      }
+      diffusion_precond = std::make_unique<smith::BlockSchurPreconditioner>(
+          std::move(solvers), linear_options.block_schur_type, linear_options.schur_approx_type, std::move(overrides));
       break;
   }
 
@@ -244,8 +241,9 @@ TEST_P(BlockPreconditionerTest, BlockSolve)
   nonlin_opts.print_level = linear_options.print_level;
 
   auto nonlinear_block_solver =
-      diff_precond ? smith::buildNonlinearBlockSolver(nonlin_opts, linear_options, *mesh, std::move(diff_precond))
-                   : smith::buildNonlinearBlockSolver(nonlin_opts, linear_options, *mesh);
+      diffusion_precond
+          ? smith::buildNonlinearBlockSolver(nonlin_opts, linear_options, *mesh, std::move(diffusion_precond))
+          : smith::buildNonlinearBlockSolver(nonlin_opts, linear_options, *mesh);
 
   auto sols = block_solve({&con_form, &bal_form}, {{0, 1}, {0, 1}}, shape_disp, {con_arguments, bal_arguments},
                           {flux_params, potential_params}, time_info, nonlinear_block_solver.get(),

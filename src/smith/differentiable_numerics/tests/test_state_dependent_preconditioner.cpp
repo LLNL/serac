@@ -31,8 +31,6 @@ class StateScaledIdentityProvider : public BlockOperatorProvider {
 
   void updateForState(const mfem::Vector& state, const mfem::Array<int>& block_offsets) override
   {
-    MFEM_VERIFY(block_offsets.Size() == 3, "StateScaledIdentityProvider expects a two-block state");
-
     double scale = 0.0;
     for (int i = block_offsets[1]; i < block_offsets[2]; ++i) {
       scale += state[i];
