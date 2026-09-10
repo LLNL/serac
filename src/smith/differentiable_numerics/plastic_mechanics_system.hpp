@@ -6,7 +6,7 @@
 
 /**
  * @file plastic_mechanics_system.hpp
- * @brief Defines the PlasticMechanicsystem struct and its factory function
+ * @brief Defines the PlasticMechanicsSystem struct and its factory function.
  */
 
 #pragma once
