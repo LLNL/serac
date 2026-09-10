@@ -192,7 +192,7 @@ struct PlasticMechanicsSystem : public SystemBase {
 };
 
 /**
- * @brief Factory function to build a chemomechanics system with L2 state variables.
+ * @brief Factory function to build a plastic mechanics system with L2 internal variables.
  */
 template <int dim, int disp_order, typename... parameter_space>
 std::shared_ptr<PlasticMechanicsSystem<dim, disp_order, parameter_space...>> buildPlasticMechanicsSystem(
