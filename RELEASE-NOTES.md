@@ -79,5 +79,7 @@ The Smith project release numbers follow [Semantic Versioning](http://semver.org
 ###  Security
 - Use this section in case of vulnerabilities
 
-[Version 0.2.0]: https://github.com/llnl/smith/releases/tag/v0.2.0
+
+[Unreleased]:    https://github.com/LLNL/smith/compare/v0.2.0...develop
+[Version 0.2.0]: https://github.com/LLNL/smith/compare/v0.1.0...v0.2.0
 [Version 0.1.0]: https://github.com/llnl/smith/releases/tag/v0.1.0
