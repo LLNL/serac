@@ -438,6 +438,9 @@ struct LinearSolverOptions {
   /// Maximum number of iterations
   int max_iterations = 300;
 
+  /// Number of GMRES iterations before restarting
+  int gmres_restart = 50;
+
   /// Debugging print level for the linear solver
   int print_level = 0;
 

@@ -1309,9 +1309,13 @@ std::unique_ptr<mfem::Solver> buildLinearSolver(LinearSolverOptions linear_opts,
     case LinearSolver::CG:
       iter_lin_solver = std::make_unique<mfem::CGSolver>(comm);
       break;
-    case LinearSolver::GMRES:
-      iter_lin_solver = std::make_unique<mfem::GMRESSolver>(comm);
+    case LinearSolver::GMRES: {
+      MFEM_VERIFY(linear_opts.gmres_restart > 0, "GMRES restart size must be positive");
+      auto gmres = std::make_unique<mfem::GMRESSolver>(comm);
+      gmres->SetKDim(linear_opts.gmres_restart);
+      iter_lin_solver = std::move(gmres);
       break;
+    }
 #ifdef SMITH_USE_PETSC
     case LinearSolver::PetscCG:
       iter_lin_solver = std::make_unique<smith::mfem_ext::PetscKSPSolver>(comm, KSPCG, std::string());
