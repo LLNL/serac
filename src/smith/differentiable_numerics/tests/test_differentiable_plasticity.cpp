@@ -316,7 +316,6 @@ TEST(DifferentiablePlasticity, PlasticLoadingFinitDiff)
   LinearSolverOptions defgrad_lin_opts = strain_lin_opts;
   defgrad_lin_opts.element_block_options.factorization_reuse = ElementBlockFactorizationReuse::AcrossTimesteps;
 
-
   int serial_refinement = 0;
   int parallel_refinement = 0;
 

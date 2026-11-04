@@ -65,7 +65,8 @@ std::unique_ptr<mfem::SparseMatrix> buildElementDofMap(const std::vector<std::sh
   for (size_t uid = 0; uid < unknowns.size(); ++uid) {
     const auto& space = unknowns[uid]->space();
     SLIC_ERROR_IF(space.GetParMesh() != pmesh, "buildElementDofMap: All fields must have the same mesh");
-    SLIC_ERROR_IF(space.GetNE() != num_elements, "buildElementDofMap: All fields must have the same number of elements");
+    SLIC_ERROR_IF(space.GetNE() != num_elements,
+                  "buildElementDofMap: All fields must have the same number of elements");
     SLIC_ERROR_IF(space.TrueVSize() != block_offsets[static_cast<int>(uid + 1)] - block_offsets[static_cast<int>(uid)],
                   "buildElementDofMap: Field true vector size does not match block offsets");
 
@@ -74,7 +75,8 @@ std::unique_ptr<mfem::SparseMatrix> buildElementDofMap(const std::vector<std::sh
       space.GetElementVDofs(e, element_vdofs);
 
       for (int vdof : element_vdofs) {
-        SLIC_ERROR_IF(vdof < 0, "buildElementDofMap: Expect non-negative dof index for element-wise discontinuous fields");
+        SLIC_ERROR_IF(vdof < 0,
+                      "buildElementDofMap: Expect non-negative dof index for element-wise discontinuous fields");
 
         const int combined_dof = block_offsets[static_cast<int>(uid)] + vdof;
         element_dof_map->Set(e, combined_dof, 1.0);

@@ -1228,7 +1228,8 @@ void DirectElementBlockSolver::SetOperator(const mfem::Operator& op)
   SMITH_MARK_FUNCTION;
   SLIC_ERROR_IF(!element_dof_map_, "Element-to-DOF map must be configured first");
 
-  const bool refactor = element_block_opts_.factorization_reuse == ElementBlockFactorizationReuse::None || !factorization_valid_;
+  const bool refactor =
+      element_block_opts_.factorization_reuse == ElementBlockFactorizationReuse::None || !factorization_valid_;
 
   if (refactor) {
     // Check if this is a block operator
