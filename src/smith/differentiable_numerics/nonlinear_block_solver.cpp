@@ -301,6 +301,9 @@ std::vector<NonlinearBlockSolverBase::FieldPtr> NonlinearBlockSolver::solveAdjoi
   }
 
   auto& linear_solver = nonlinear_solver_->linearSolver();
+  if (auto* element_block_solver = dynamic_cast<DirectElementBlockSolver*>(&linear_solver)) {
+    element_block_solver->resetFactorizationForAdjointSolve();
+  }
 
   // If it's a 1x1 system, pass the operator directly to avoid potential BlockOperator issues with smoothers
   if (num_rows == 1) {

@@ -1078,6 +1078,10 @@ void EquationSolver::resetConvergenceState() const
 void EquationSolver::solve(mfem::Vector& x) const
 {
   resetConvergenceState();
+  if (auto* element_block_solver = dynamic_cast<DirectElementBlockSolver*>(lin_solver_.get())) {
+    element_block_solver->resetFactorizationForNewtonSolve();
+  }
+
   mfem::Vector zero(x);
   zero = 0.0;
   // KINSOL does not handle non-zero RHS, so we enforce that the RHS
@@ -1197,42 +1201,73 @@ void StrumpackSolver::SetOperator(const mfem::Operator& op)
 
 void DirectElementBlockSolver::Mult(const mfem::Vector& input, mfem::Vector& output) const
 {
-  MFEM_VERIFY(direct_solver_, "SetOperator must be called before Mult");
-  direct_solver_->Mult(input, output);
+  SMITH_MARK_FUNCTION;
+  SLIC_ERROR_IF(!operator_is_set_, "SetOperator must be called before Mult");
+  SLIC_ERROR_IF(!factorization_valid_, "Dense matrix factorization must be computed before Mult");
+
+  output.SetSize(input.Size());
+  output = 0.0;
+
+  for (int e = 0; e < num_element_solvers_; ++e) {
+    element_dofs_.MakeRef(element_dof_map_->GetRowColumns(e), element_dof_map_->RowSize(e));
+    input.GetSubVector(element_dofs_, element_rhs_);
+    element_solution_.SetSize(element_dofs_.Size());
+
+    if (element_rhs_.Norml2() == 0.0) {
+      element_solution_ = 0.0;
+    } else {
+      element_solvers_[e]->Mult(element_rhs_, element_solution_);
+    }
+
+    output.AddElementVector(element_dofs_, element_solution_);
+  }
 }
 
 void DirectElementBlockSolver::SetOperator(const mfem::Operator& op)
 {
+  SMITH_MARK_FUNCTION;
   SLIC_ERROR_IF(!element_dof_map_, "Element-to-DOF map must be configured first");
 
-  // Check if this is a block operator
-  auto* block_operator = dynamic_cast<const mfem::BlockOperator*>(&op);
+  const bool refactor = element_block_opts_.factorization_reuse == ElementBlockFactorizationReuse::None || !factorization_valid_;
 
-  std::unique_ptr<mfem::HypreParMatrix> monolithic_matrix;
-  const mfem::HypreParMatrix* matrix = nullptr;
-  // If it is, make a monolithic system from the underlying blocks
-  if (block_operator) {
-    monolithic_matrix = buildMonolithicMatrix(*block_operator);
-    matrix = monolithic_matrix.get();
-  } else {
-    // If this is not a block system, check that the input operator is a HypreParMatrix as expected
-    matrix = dynamic_cast<const mfem::HypreParMatrix*>(&op);
-    SLIC_ERROR_ROOT_IF(!matrix, "Matrix must be an assembled HypreParMatrix for use with DirectElementBlockSolver");
+  if (refactor) {
+    // Check if this is a block operator
+    auto* block_operator = dynamic_cast<const mfem::BlockOperator*>(&op);
+
+    std::unique_ptr<mfem::HypreParMatrix> monolithic_matrix;
+    const mfem::HypreParMatrix* matrix = nullptr;
+    // If it is, make a monolithic system from the underlying blocks
+    if (block_operator) {
+      monolithic_matrix = buildMonolithicMatrix(*block_operator);
+      matrix = monolithic_matrix.get();
+    } else {
+      // If this is not a block system, check that the input operator is a HypreParMatrix as expected
+      matrix = dynamic_cast<const mfem::HypreParMatrix*>(&op);
+      SLIC_ERROR_ROOT_IF(!matrix, "Matrix must be an assembled HypreParMatrix for use with DirectElementBlockSolver");
+    }
+
+    mfem::SparseMatrix diagonal, off_diagonal;
+    HYPRE_BigInt* column_map = nullptr;
+
+    matrix->GetDiag(diagonal);
+    matrix->GetOffd(off_diagonal, column_map);
+
+    SLIC_ERROR_IF(off_diagonal.NumNonZeroElems() != 0, "Element blocks contain off-rank coupling");
+    SLIC_ERROR_IF(diagonal.Width() != element_dof_map_->Width(), "Element-to-DOF map has incompatible dimensions");
+
+    for (int e = 0; e < num_element_solvers_; ++e) {
+      element_dofs_.MakeRef(element_dof_map_->GetRowColumns(e), element_dof_map_->RowSize(e));
+      element_matrix_.SetSize(element_dofs_.Size());
+      diagonal.GetSubMatrix(element_dofs_, element_dofs_, element_matrix_);
+      element_solvers_[e]->SetOperator(element_matrix_);
+    }
+
+    factorization_valid_ = true;
   }
-
-  mfem::SparseMatrix diagonal, off_diagonal;
-  HYPRE_BigInt* column_map = nullptr;
-
-  matrix->GetDiag(diagonal);
-  matrix->GetOffd(off_diagonal, column_map);
-
-  SLIC_ERROR_IF(off_diagonal.NumNonZeroElems() != 0, "Element blocks contain off-rank coupling");
-  SLIC_ERROR_IF(diagonal.Width() != element_dof_map_->Width(), "Element-to-DOF map has incompatible dimensions");
-
-  direct_solver_ = std::make_unique<mfem::DirectSubBlockSolver>(diagonal, *element_dof_map_);
 
   height = op.Height();
   width = op.Width();
+  operator_is_set_ = true;
 }
 
 void DirectElementBlockSolver::setElementDofMap(std::unique_ptr<mfem::SparseMatrix> element_dof_map)
@@ -1241,6 +1276,33 @@ void DirectElementBlockSolver::setElementDofMap(std::unique_ptr<mfem::SparseMatr
   SLIC_ERROR_IF(!element_dof_map->Finalized(), "Element-to-DOF map must be finalized");
 
   element_dof_map_ = std::move(element_dof_map);
+  num_element_solvers_ = element_dof_map_->NumRows();
+
+  element_solvers_.clear();
+  element_solvers_.reserve(num_element_solvers_);
+  for (int e = 0; e < num_element_solvers_; ++e) {
+    element_solvers_.push_back(std::make_unique<mfem::DenseMatrixInverse>(element_block_opts_.is_spd));
+  }
+
+  operator_is_set_ = false;
+  factorization_valid_ = false;
+}
+
+void DirectElementBlockSolver::resetFactorizationForNewtonSolve()
+{
+  if (element_block_opts_.factorization_reuse == ElementBlockFactorizationReuse::WithinNewtonSolve) {
+    factorization_valid_ = false;
+    operator_is_set_ = false;
+  }
+}
+
+void DirectElementBlockSolver::resetFactorizationForAdjointSolve()
+{
+  if (element_block_opts_.factorization_reuse == ElementBlockFactorizationReuse::WithinNewtonSolve ||
+      !element_block_opts_.is_spd) {
+    factorization_valid_ = false;
+    operator_is_set_ = false;
+  }
 }
 
 std::unique_ptr<mfem::NewtonSolver> buildNonlinearSolver(NonlinearSolverOptions nonlinear_opts,
@@ -1334,7 +1396,7 @@ std::pair<std::unique_ptr<mfem::Solver>, std::unique_ptr<mfem::Solver>> buildLin
 #endif
 
   if (linear_opts.linear_solver == LinearSolver::ElementBlock) {
-    auto lin_solver = std::make_unique<DirectElementBlockSolver>();
+    auto lin_solver = std::make_unique<DirectElementBlockSolver>(linear_opts.element_block_options);
     return {std::move(lin_solver), std::move(preconditioner)};
   }
 

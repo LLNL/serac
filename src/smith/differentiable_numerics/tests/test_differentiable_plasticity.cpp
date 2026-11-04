@@ -122,11 +122,14 @@ TEST(DifferentiablePlasticity, J2SmallStrainLinearHardening)
   NonlinearSolverOptions state_nonlin_opts = nonlin_opts;
   state_nonlin_opts.relative_tol = 1e-7;
   state_nonlin_opts.absolute_tol = 1e-8;
-  LinearSolverOptions state_lin_opts = lin_opts;
-  state_lin_opts.linear_solver = LinearSolver::ElementBlock;
-  state_lin_opts.preconditioner = Preconditioner::None;
-  state_lin_opts.relative_tol = 1e-10;
-  state_lin_opts.absolute_tol = 1e-10;
+
+  LinearSolverOptions strain_lin_opts = lin_opts;
+  strain_lin_opts.linear_solver = LinearSolver::ElementBlock;
+  strain_lin_opts.preconditioner = Preconditioner::None;
+  strain_lin_opts.element_block_options = {true, ElementBlockFactorizationReuse::None};
+
+  LinearSolverOptions defgrad_lin_opts = strain_lin_opts;
+  defgrad_lin_opts.element_block_options.factorization_reuse = ElementBlockFactorizationReuse::AcrossTimesteps;
 
   int serial_refinement = 0;
   int parallel_refinement = 0;
@@ -143,8 +146,8 @@ TEST(DifferentiablePlasticity, J2SmallStrainLinearHardening)
 
   auto staggered_coupled_solver = std::make_shared<SystemSolver>(50);
   auto primal_block_solver = buildNonlinearBlockSolver(primal_nonlin_opts, primal_lin_opts, *mesh);
-  auto strain_block_solver = buildNonlinearBlockSolver(state_nonlin_opts, state_lin_opts, *mesh);
-  auto defgrad_block_solver = buildNonlinearBlockSolver(state_nonlin_opts, state_lin_opts, *mesh);
+  auto strain_block_solver = buildNonlinearBlockSolver(state_nonlin_opts, strain_lin_opts, *mesh);
+  auto defgrad_block_solver = buildNonlinearBlockSolver(state_nonlin_opts, defgrad_lin_opts, *mesh);
 
   staggered_coupled_solver->addSubsystemSolver({0}, primal_block_solver);
   staggered_coupled_solver->addSubsystemSolver({2}, strain_block_solver);
@@ -304,11 +307,15 @@ TEST(DifferentiablePlasticity, PlasticLoadingFinitDiff)
   state_nonlin_opts.relative_tol = 1e-7;
   state_nonlin_opts.absolute_tol = 1e-8;
   state_nonlin_opts.print_level = 0;
-  LinearSolverOptions state_lin_opts = lin_opts;
-  state_lin_opts.linear_solver = LinearSolver::ElementBlock;
-  state_lin_opts.preconditioner = Preconditioner::None;
-  state_lin_opts.relative_tol = 1e-10;
-  state_lin_opts.absolute_tol = 1e-10;
+
+  LinearSolverOptions strain_lin_opts = lin_opts;
+  strain_lin_opts.linear_solver = LinearSolver::ElementBlock;
+  strain_lin_opts.preconditioner = Preconditioner::None;
+  strain_lin_opts.element_block_options = {true, ElementBlockFactorizationReuse::None};
+
+  LinearSolverOptions defgrad_lin_opts = strain_lin_opts;
+  defgrad_lin_opts.element_block_options.factorization_reuse = ElementBlockFactorizationReuse::AcrossTimesteps;
+
 
   int serial_refinement = 0;
   int parallel_refinement = 0;
@@ -325,8 +332,8 @@ TEST(DifferentiablePlasticity, PlasticLoadingFinitDiff)
 
   auto staggered_coupled_solver = std::make_shared<SystemSolver>(100);
   auto primal_block_solver = buildNonlinearBlockSolver(primal_nonlin_opts, primal_lin_opts, *mesh);
-  auto strain_block_solver = buildNonlinearBlockSolver(state_nonlin_opts, state_lin_opts, *mesh);
-  auto defgrad_block_solver = buildNonlinearBlockSolver(state_nonlin_opts, state_lin_opts, *mesh);
+  auto strain_block_solver = buildNonlinearBlockSolver(state_nonlin_opts, strain_lin_opts, *mesh);
+  auto defgrad_block_solver = buildNonlinearBlockSolver(state_nonlin_opts, defgrad_lin_opts, *mesh);
 
   staggered_coupled_solver->addSubsystemSolver({0}, primal_block_solver);
   staggered_coupled_solver->addSubsystemSolver({2}, strain_block_solver);
@@ -378,7 +385,7 @@ TEST(DifferentiablePlasticity, PlasticLoadingFinitDiff)
   auto disp_squared = 0.5 * innerProduct(displacement, displacement);
   gretl::set_as_objective(disp_squared);
 
-  EXPECT_GT(checkGradWrt(disp_squared, shape_disp, 2e-4, 4, true), 0.95);
+  EXPECT_GT(checkGradWrt(disp_squared, shape_disp, 1e-3, 4, true), 0.95);
   EXPECT_GT(checkGradWrt(disp_squared, params[0], 1e-2, 4, true), 0.95);
   EXPECT_GT(checkGradWrt(disp_squared, params[1], 1e-1, 4, true), 0.95);
 

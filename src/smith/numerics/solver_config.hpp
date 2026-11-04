@@ -279,6 +279,30 @@ struct AMGFContactOptions {
 };
 
 /**
+ * @brief Factorization reuse types
+ */
+enum class ElementBlockFactorizationReuse
+{
+  None,
+  WithinNewtonSolve,
+  AcrossTimesteps
+};
+
+/**
+ * @brief Stores the configuration information for a element block solver
+ */
+struct ElementBlockOptions {
+  /**
+   * @brief If submatrix for each element block is symmetric positive definite
+   */
+  bool is_spd = false;
+  /**
+   * @brief The dense matrix factorization for each element block is reusable in a specified lifespan
+   */
+  ElementBlockFactorizationReuse factorization_reuse = ElementBlockFactorizationReuse::None;
+};
+
+/**
  * @brief Preconditioner types supported by PETSc
  */
 enum class PetscPCType
@@ -432,6 +456,9 @@ struct LinearSolverOptions {
 
   /// PETSc preconditioner type
   PetscPCType petsc_preconditioner = PetscPCType::JACOBI;
+
+  /// Element block solver options
+  ElementBlockOptions element_block_options = ElementBlockOptions{};
 
   /// Relative tolerance
   double relative_tol = 1.0e-8;

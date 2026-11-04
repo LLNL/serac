@@ -216,14 +216,14 @@ class SuperLUSolver : public mfem::Solver {
 };
 
 /**
- * @brief Direct solver using mfem DirectSubBlockSolver that traverse the subsystems associated with each element
+ * @brief Direct solver that traverses the algebraic subsystems associated with each element
  */
 class DirectElementBlockSolver : public mfem::Solver {
  public:
-  DirectElementBlockSolver() = default;
+  DirectElementBlockSolver(ElementBlockOptions element_block_opts) : element_block_opts_(element_block_opts) {}
 
   /**
-   * @brief Factor and solve the linear system y = Op^{-1} x using DirectSubBlockSolver
+   * @brief Solve the factored element subsystems and assemble y = Op^{-1} x
    *
    * @param input The input RHS vector
    * @param output The output solution vector
@@ -235,22 +235,42 @@ class DirectElementBlockSolver : public mfem::Solver {
    *
    * @param op The matrix operator to decompose into element-wise sub-blocks
    * @pre This operator must be an assembled HypreParMatrix or a BlockOperator
-   * with all blocks either null or HypreParMatrixs for compatibility with
-   * DirectSubBlockSolver
+   * with all blocks either null or HypreParMatrices
    */
   void SetOperator(const mfem::Operator& op);
 
   /**
    * @brief Set the element to dof map to extract sub blocks and route back local solutions to global system
-   * 
+   *
    * @param element_dof_map The boolean matrix that indicate ownership of each dof
    * A(i, j) = 1.0 means dof j belongs to element i
    */
   void setElementDofMap(std::unique_ptr<mfem::SparseMatrix> element_dof_map);
 
+  /**
+   * @brief Reset the factorization before each Newton solve when it cannot be reused between solves
+   */
+  void resetFactorizationForNewtonSolve();
+
+  /**
+   * @brief Reset the factorization around an adjoint solve when it cannot be safely reused
+   */
+  void resetFactorizationForAdjointSolve();
+
  private:
+  ElementBlockOptions element_block_opts_;
+
+  int num_element_solvers_ = 0;
+  bool operator_is_set_ = false;
+  bool factorization_valid_ = false;
+
   std::unique_ptr<mfem::SparseMatrix> element_dof_map_;
-  std::unique_ptr<mfem::DirectSubBlockSolver> direct_solver_;
+  std::vector<std::unique_ptr<mfem::DenseMatrixInverse>> element_solvers_;
+
+  mfem::DenseMatrix element_matrix_;
+  mutable mfem::Array<int> element_dofs_;
+  mutable mfem::Vector element_rhs_;
+  mutable mfem::Vector element_solution_;
 };
 
 #ifdef MFEM_USE_STRUMPACK
