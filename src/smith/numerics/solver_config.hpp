@@ -17,7 +17,6 @@
 
 #include "mfem.hpp"
 #include "smith/infrastructure/format.hpp"
-#include "smith/numerics/block_preconditioner.hpp"
 
 namespace smith {
 
@@ -409,6 +408,39 @@ inline std::map<std::string, Preconditioner> preconditionerMap = {
     {"BlockTriangular", Preconditioner::BlockTriangular},
     {"BlockSchur", Preconditioner::BlockSchur},
     {"None", Preconditioner::None},
+};
+
+/**
+ * @enum BlockTriangularType
+ * @brief Selects the block triangular sweep used by BlockTriangularPreconditioner.
+ */
+enum class BlockTriangularType
+{
+  Lower,    /**< Forward (lower triangular) sweep. */
+  Upper,    /**< Backward (upper triangular) sweep. */
+  Symmetric /**< Apply a symmetric combination of lower and upper sweeps. */
+};
+
+/**
+ * @enum BlockSchurType
+ * @brief Selects the block Schur preconditioner variant.
+ */
+enum class BlockSchurType
+{
+  Diagonal, /**< Block diagonal: apply $ A_{11}^{-1} $ and $ S^{-1} $ only. */
+  Lower,    /**< Lower factor form. */
+  Upper,    /**< Upper factor form. */
+  Full      /**< Full factor form (lower, diagonal, upper). */
+};
+
+/**
+ * @enum SchurApproxType
+ * @brief Selects how the (1,1) Schur operator is approximated.
+ */
+enum class SchurApproxType
+{
+  DiagInv, /**< Use assembled \f$ S \approx A_{22} - A_{21} \\mathrm{diag}(A_{11})^{-1} A_{12} \f$. */
+  A22Only  /**< Use \f$ S \approx A_{22} \f$. */
 };
 
 // _linear_options_start

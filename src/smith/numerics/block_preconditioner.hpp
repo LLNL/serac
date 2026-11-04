@@ -8,6 +8,7 @@
 
 #include "mfem.hpp"
 
+#include "smith/numerics/solver_config.hpp"
 #include "smith/numerics/state_dependent_solver.hpp"
 
 namespace smith {
@@ -218,17 +219,6 @@ class BlockDiagonalPreconditioner : public BlockPreconditioner {
 };
 
 /**
- * @enum BlockTriangularType
- * @brief Selects the block triangular sweep used by BlockTriangularPreconditioner.
- */
-enum class BlockTriangularType
-{
-  Lower,    /**< Forward (lower triangular) sweep. */
-  Upper,    /**< Backward (upper triangular) sweep. */
-  Symmetric /**< Apply a symmetric combination of lower and upper sweeps. */
-};
-
-/**
  * @class BlockTriangularPreconditioner
  * @brief Simple block triangular preconditioner for block systems.
  *
@@ -288,28 +278,6 @@ class BlockTriangularPreconditioner : public BlockPreconditioner {
    * @param out The block output vector P_upper^-1(b_1, ..., b_n)
    */
   void UpperSweep(const mfem::Vector& in, mfem::Vector& out) const;
-};
-
-/**
- * @enum BlockSchurType
- * @brief Selects the block Schur preconditioner variant.
- */
-enum class BlockSchurType
-{
-  Diagonal, /**< Block diagonal: apply $ A_{11}^{-1} $ and $ S^{-1} $ only. */
-  Lower,    /**< Lower factor form. */
-  Upper,    /**< Upper factor form. */
-  Full      /**< Full factor form (lower, diagonal, upper). */
-};
-
-/**
- * @enum SchurApproxType
- * @brief Selects how the (1,1) Schur operator is approximated.
- */
-enum class SchurApproxType
-{
-  DiagInv, /**< Use assembled \f$ S \approx A_{22} - A_{21} \\mathrm{diag}(A_{11})^{-1} A_{12} \f$. */
-  A22Only  /**< Use \f$ S \approx A_{22} \f$. */
 };
 
 /**
