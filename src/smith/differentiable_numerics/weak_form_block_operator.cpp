@@ -52,18 +52,18 @@ class WeakFormBlockOperatorBuilder {
     validate();
   }
 
-  std::unique_ptr<mfem::HypreParMatrix> build() const { return build(smith::getConstFieldPointers(fields_)); }
+  std::unique_ptr<mfem::HypreParMatrix> build() const { return buildFromFields(smith::getConstFieldPointers(fields_)); }
 
   std::unique_ptr<mfem::HypreParMatrix> updateAndBuild(const mfem::Vector& state,
                                                        const mfem::Array<int>& block_offsets) const
   {
     auto operator_fields = copyFieldValues(fields_);
     updateFieldsFromState(operator_fields, state, block_offsets);
-    return build(smith::getConstFieldPointers(operator_fields));
+    return buildFromFields(smith::getConstFieldPointers(operator_fields));
   }
 
  private:
-  std::unique_ptr<mfem::HypreParMatrix> build(const std::vector<const FiniteElementState*>& fields) const
+  std::unique_ptr<mfem::HypreParMatrix> buildFromFields(const std::vector<const FiniteElementState*>& fields) const
   {
     auto op = weak_form_.jacobian(time_info_, shape_disp_.get().get(), fields, jacobian_weights_);
     if (!op) {
