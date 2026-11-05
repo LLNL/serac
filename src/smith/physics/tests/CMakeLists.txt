@@ -45,9 +45,15 @@ if (TRIBOL_FOUND)
         contact_solid_adjoint.cpp)
     if (ENZYME_FOUND)
         list(APPEND physics_serial_tribol_test_sources 
-                    contact_finite_diff.cpp
                     tribol_finite_diff.cpp)
     endif()
+
+    # Do not run the following test(s) when building on tuo or similar machines, for now
+    # https://github.com/llnl/smith/issues/1704
+    if (ENZYME_FOUND AND NOT ENABLE_HIP)
+        list(APPEND contact_finite_diff.cpp)
+    endif()
+
     list(APPEND physics_serial_test_sources
         ${physics_serial_tribol_test_sources})
 endif()
