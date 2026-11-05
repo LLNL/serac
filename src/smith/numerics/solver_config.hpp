@@ -443,6 +443,18 @@ enum class SchurApproxType
   A22Only  /**< Use \f$ S \approx A_{22} \f$. */
 };
 
+/// Configuration for block triangular and block Schur preconditioners
+struct BlockPreconditionerOptions {
+  /// Block triangular preconditioner factorization type
+  BlockTriangularType block_triangular_type = BlockTriangularType::Lower;
+
+  /// Block Schur preconditioner factorization type
+  BlockSchurType block_schur_type = BlockSchurType::Full;
+
+  /// Schur approximation type
+  SchurApproxType schur_approx_type = SchurApproxType::DiagInv;
+};
+
 // _linear_options_start
 /// Parameters for an iterative linear solution scheme
 struct LinearSolverOptions {
@@ -479,14 +491,8 @@ struct LinearSolverOptions {
   /// Subblock linear solver options for block preconditioners
   std::vector<LinearSolverOptions> sub_block_linear_solver_options = {};
 
-  /// Block Triangular Preconditioner factorization type
-  BlockTriangularType block_triangular_type = BlockTriangularType::Lower;
-
-  /// Block Schur preconditioner factorization type
-  BlockSchurType block_schur_type = BlockSchurType::Full;
-
-  /// Schur approximation type
-  SchurApproxType schur_approx_type = SchurApproxType::DiagInv;
+  /// Block preconditioner options
+  BlockPreconditionerOptions block_preconditioner_options = BlockPreconditionerOptions{};
 };
 // _linear_options_end
 

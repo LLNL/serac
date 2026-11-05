@@ -1491,11 +1491,12 @@ std::unique_ptr<mfem::Solver> buildPreconditioner(LinearSolverOptions linear_opt
     if (preconditioner == Preconditioner::BlockDiagonal) {
       preconditioner_solver = std::make_unique<BlockDiagonalPreconditioner>(std::move(inner_solvers));
     } else if (preconditioner == Preconditioner::BlockTriangular) {
-      preconditioner_solver =
-          std::make_unique<BlockTriangularPreconditioner>(std::move(inner_solvers), linear_opts.block_triangular_type);
+      preconditioner_solver = std::make_unique<BlockTriangularPreconditioner>(
+          std::move(inner_solvers), linear_opts.block_preconditioner_options.block_triangular_type);
     } else if (preconditioner == Preconditioner::BlockSchur) {
       preconditioner_solver = std::make_unique<BlockSchurPreconditioner>(
-          std::move(inner_solvers), linear_opts.block_schur_type, linear_opts.schur_approx_type);
+          std::move(inner_solvers), linear_opts.block_preconditioner_options.block_schur_type,
+          linear_opts.block_preconditioner_options.schur_approx_type);
     }
   } else {
     SLIC_ERROR_ROOT_IF(preconditioner != Preconditioner::None, "Unknown preconditioner type requested");

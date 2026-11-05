@@ -203,23 +203,23 @@ TEST_P(BlockPreconditionerTest, BlockSolve)
   switch (test_params.precond_type) {
     case BlockPrecondType::SchurLower:
       linear_options.preconditioner = smith::Preconditioner::BlockSchur;
-      linear_options.block_schur_type = smith::BlockSchurType::Lower;
+      linear_options.block_preconditioner_options.block_schur_type = smith::BlockSchurType::Lower;
       break;
     case BlockPrecondType::SchurUpper:
       linear_options.preconditioner = smith::Preconditioner::BlockSchur;
-      linear_options.block_schur_type = smith::BlockSchurType::Upper;
+      linear_options.block_preconditioner_options.block_schur_type = smith::BlockSchurType::Upper;
       break;
     case BlockPrecondType::SchurDiag:
       linear_options.preconditioner = smith::Preconditioner::BlockSchur;
-      linear_options.block_schur_type = smith::BlockSchurType::Diagonal;
+      linear_options.block_preconditioner_options.block_schur_type = smith::BlockSchurType::Diagonal;
       break;
     case BlockPrecondType::SchurFull:
       linear_options.preconditioner = smith::Preconditioner::BlockSchur;
-      linear_options.block_schur_type = smith::BlockSchurType::Full;
+      linear_options.block_preconditioner_options.block_schur_type = smith::BlockSchurType::Full;
       break;
     case BlockPrecondType::SchurFullCustom:
       linear_options.preconditioner = smith::Preconditioner::BlockSchur;
-      linear_options.block_schur_type = smith::BlockSchurType::Full;
+      linear_options.block_preconditioner_options.block_schur_type = smith::BlockSchurType::Full;
       auto schur = smith::weakFormSchur(potential_diffusion_form, shape_disp, {potential}, {1.0}, time_info,
                                         potential_bc_manager.get());
 
@@ -227,7 +227,7 @@ TEST_P(BlockPreconditionerTest, BlockSolve)
           smith::buildBlockPreconditionerSubSolvers(linear_options.sub_block_linear_solver_options, mesh->getComm());
 
       diffusion_precond = std::make_unique<smith::BlockSchurPreconditioner>(
-          std::move(solvers), linear_options.block_schur_type, std::move(schur));
+          std::move(solvers), linear_options.block_preconditioner_options.block_schur_type, std::move(schur));
       break;
   }
 
