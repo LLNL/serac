@@ -44,6 +44,18 @@ enum class ElementType
 };
 
 /**
+ * @brief Check whether two finite element spaces are compatible
+ *
+ * Compatible spaces use the same mesh, finite element collection, vector
+ * dimension, and ordering.
+ *
+ * @param left The first finite element space
+ * @param right The second finite element space
+ * @return True if the finite element spaces are compatible, otherwise false
+ */
+bool sameFiniteElementSpace(const mfem::FiniteElementSpace& left, const mfem::FiniteElementSpace& right);
+
+/**
  * @brief Class for encapsulating the data associated with a vector derived
  * from a MFEM finite element space. Specifically, it contains the information
  * needed for both primal finite element state fields and dual finite element vectors.

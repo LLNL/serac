@@ -15,13 +15,6 @@
 
 namespace smith {
 
-/**
- * @brief Check if two finite element spaces are the same
- *
- * @param left
- * @param right
- * @return Bool which is true if the spaces are the same, otherwise false
- */
 bool sameFiniteElementSpace(const mfem::FiniteElementSpace& left, const mfem::FiniteElementSpace& right)
 {
   bool sameMesh = (left.GetMesh() == right.GetMesh());

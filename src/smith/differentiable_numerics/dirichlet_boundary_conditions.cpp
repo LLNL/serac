@@ -8,10 +8,10 @@
 #include "smith/differentiable_numerics/dirichlet_boundary_conditions.hpp"
 #include "smith/physics/boundary_conditions/boundary_condition_manager.hpp"
 #include "smith/physics/boundary_conditions/boundary_condition.hpp"
+#include "smith/physics/state/finite_element_vector.hpp"
 
 #include <algorithm>
 #include <cmath>
-#include <cstring>
 
 namespace smith {
 
@@ -99,12 +99,8 @@ void DirichletBoundaryConditions::setFieldValueSource(const FieldState& prescrib
 
   const auto& field = *prescribed_field.get();
   const auto& prescribed_space = field.space();
-  const bool same_space =
-      prescribed_space.GetMesh() == space_.GetMesh() &&
-      std::strcmp(prescribed_space.FEColl()->Name(), space_.FEColl()->Name()) == 0 &&
-      prescribed_space.GetVDim() == space_.GetVDim() && prescribed_space.GetOrdering() == space_.GetOrdering() &&
-      prescribed_space.GetVSize() == space_.GetVSize() && prescribed_space.GetTrueVSize() == space_.GetTrueVSize();
-  SLIC_ERROR_IF(!same_space, "Prescribed boundary-condition field and constrained field have incompatible spaces");
+  SLIC_ERROR_IF(!sameFiniteElementSpace(prescribed_space, space_),
+                "Prescribed boundary-condition field and constrained field have incompatible spaces");
 
   bcs_.setPrescribedFieldName(field.name());
   value_source_ = ValueSource::Field;
