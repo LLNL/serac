@@ -752,11 +752,10 @@ def on_rz():
     return False
 
 
-# NOTE: sys.argv[0] is based-on the script that is calling get_script_dir (e.g. build_tpls.py). This is to properly
-# handle the case where this `scripts/llnl` directory is being symlinked by Smith. 
-_SCRIPT_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
 def get_script_dir():
-    return _SCRIPT_DIR
+    # NOTE: sys.argv[0] is based-on the script that is calling get_script_dir (e.g. build_tpls.py). This is to properly
+    # handle the case where this `scripts/llnl` directory is being symlinked by Smith. 
+    return os.path.dirname(os.path.abspath(sys.argv[0]))
 
 
 _project_name = ""
