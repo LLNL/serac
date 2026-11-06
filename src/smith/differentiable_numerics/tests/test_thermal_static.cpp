@@ -188,7 +188,7 @@ TEST_F(ThermalStaticFixture, PrescribedTemperatureParameterField)
 
   double k = 1.0;
   thermal_system->setMaterial([=](const TimeInfo& /*t_info*/, auto /*temperature*/, auto grad_temperature,
-                                 auto /*prescribed_temperature*/) { return smith::tuple{0.0, -k * grad_temperature}; },
+                                  auto /*prescribed_temperature*/) { return smith::tuple{0.0, -k * grad_temperature}; },
                               "entire_body");
 
   FieldState prescribed_temperature = thermal_system->field_store->getParameterFields()[0];
