@@ -403,10 +403,9 @@ if (NOT SMITH_THIRD_PARTY_LIBRARIES_FOUND)
         set(MFEM_FOUND TRUE CACHE BOOL "" FORCE)
 
         # Patch the mfem target with the correct include directories
-        get_target_property(_mfem_includes mfem INCLUDE_DIRECTORIES)
-        target_include_directories(mfem SYSTEM INTERFACE ${_mfem_includes})
-        target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${SMITH_SOURCE_DIR}>)
-        target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/mfem>)
+        target_include_directories(mfem SYSTEM BEFORE INTERFACE
+            $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/mfem>
+            $<BUILD_INTERFACE:${SMITH_SOURCE_DIR}/mfem>)
 
         # Restore flags and apply asan to mfem target directly
         if(APPLE AND ENABLE_ASAN)
@@ -686,7 +685,7 @@ if (NOT SMITH_THIRD_PARTY_LIBRARIES_FOUND)
             endforeach()
             if(_existing_dirs)
                 if(NOT "${_existing_dirs}" STREQUAL "${_dirs}")
-                    message(STATUS "Removed non-existant include directories from target '${_target}'")
+                    message(STATUS "Removed non-existent include directories from target '${_target}'")
                 endif()
                 set_target_properties(${_target} PROPERTIES
                                       INTERFACE_INCLUDE_DIRECTORIES "${_existing_dirs}" )
