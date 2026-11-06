@@ -13,8 +13,9 @@
 #pragma once
 
 #include <memory>
-#include <set>
 #include <optional>
+#include <set>
+#include <string>
 #include <vector>
 
 #include "smith/physics/boundary_conditions/boundary_condition.hpp"
@@ -112,6 +113,19 @@ class BoundaryConditionManager {
    */
   const std::vector<BoundaryCondition>& essentials() const { return ess_bdr_; }
 
+  /**
+   * @brief Associate the essential DOFs with values stored in a finite-element field.
+   *
+   * The field is resolved by name from the inputs to a differentiable solve. Repeated calls with the same field are
+   * permitted so one field can prescribe values on multiple domains or vector components.
+   *
+   * @param[in] field_name Name of the field containing prescribed values.
+   */
+  void setPrescribedFieldName(const std::string& field_name);
+
+  /// @brief Return the name of the field supplying prescribed values, if one has been configured.
+  const std::optional<std::string>& prescribedFieldName() const { return prescribed_field_name_; }
+
  private:
   /**
    * @brief Updates the "cached" list of all DOF indices
@@ -134,6 +148,11 @@ class BoundaryConditionManager {
    * @see https://mfem.org/mesh-formats/
    */
   std::set<int> attrs_in_use_;
+
+  /**
+   * @brief Name of a finite-element field that supplies prescribed values on all essential DOFs.
+   */
+  std::optional<std::string> prescribed_field_name_;
 
   /**
    * @brief The set of true DOF indices corresponding

@@ -177,6 +177,42 @@ TEST_F(ThermalStaticFixture, HeatSourceWithDependsOn)
   EXPECT_LT(error, 1e-3);
 }
 
+TEST_F(ThermalStaticFixture, PrescribedTemperatureParameterField)
+{
+  NonlinearSolverOptions solver_options;
+  solver_options.relative_tol = 1.0e-12;
+  LinearSolverOptions linear_options;
+
+  auto thermal_system = buildThermalSystem<2, 1>(solver_options, linear_options, ThermalOptions{}, mesh,
+                                                 FieldType<H1<1>>("prescribed_temperature"));
+
+  double k = 1.0;
+  thermal_system->setMaterial([=](const TimeInfo& /*t_info*/, auto /*temperature*/, auto grad_temperature,
+                                 auto /*prescribed_temperature*/) { return smith::tuple{0.0, -k * grad_temperature}; },
+                              "entire_body");
+
+  FieldState prescribed_temperature = thermal_system->field_store->getParameterFields()[0];
+  prescribed_temperature.get()->setFromFieldFunction([](tensor<double, 2> X) {
+    const double interior_perturbation = X[0] * (1.0 - X[0]) * X[1] * (1.0 - X[1]);
+    return X[0] + 2.0 * X[1] + interior_perturbation;
+  });
+
+  // TODO: Consider implementing physics-specific setTemperatureBC?
+  thermal_system->temperature_bc->setScalarBCs(mesh->entireBoundary(), prescribed_temperature);
+
+  TimeInfo t_info(0.0, 1.0);
+  auto [new_states, reactions] = makeAdvancer(thermal_system)
+                                     ->advanceState(t_info, thermal_system->field_store->getShapeDisp(),
+                                                    thermal_system->field_store->getAllFields(),
+                                                    thermal_system->field_store->getParameterFields());
+
+  const size_t temperature_index = thermal_system->field_store->getFieldIndex("temperature");
+  auto temperature = new_states[temperature_index];
+  mfem::FunctionCoefficient exact_temperature([](const mfem::Vector& X) { return X[0] + 2.0 * X[1]; });
+
+  EXPECT_LT(computeL2Error(*temperature.get(), exact_temperature), 1.0e-10);
+}
+
 int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);

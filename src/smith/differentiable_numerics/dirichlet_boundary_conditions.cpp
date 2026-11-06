@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 namespace smith {
 
@@ -82,6 +83,69 @@ DirichletBoundaryConditions::DirichletBoundaryConditions(const mfem::ParMesh& mf
 DirichletBoundaryConditions::DirichletBoundaryConditions(const Mesh& mesh, mfem::ParFiniteElementSpace& space)
     : DirichletBoundaryConditions(mesh.mfemParMesh(), space)
 {
+}
+
+void DirichletBoundaryConditions::setCoefficientValueSource()
+{
+  SLIC_ERROR_IF(value_source_ == ValueSource::Field,
+                "Coefficient-valued and field-valued boundary conditions cannot be mixed for one field");
+  value_source_ = ValueSource::Coefficient;
+}
+
+void DirichletBoundaryConditions::setFieldValueSource(const FieldState& prescribed_field)
+{
+  SLIC_ERROR_IF(value_source_ == ValueSource::Coefficient,
+                "Coefficient-valued and field-valued boundary conditions cannot be mixed for one field");
+
+  const auto& field = *prescribed_field.get();
+  const auto& prescribed_space = field.space();
+  const bool same_space =
+      prescribed_space.GetMesh() == space_.GetMesh() &&
+      std::strcmp(prescribed_space.FEColl()->Name(), space_.FEColl()->Name()) == 0 &&
+      prescribed_space.GetVDim() == space_.GetVDim() && prescribed_space.GetOrdering() == space_.GetOrdering() &&
+      prescribed_space.GetVSize() == space_.GetVSize() && prescribed_space.GetTrueVSize() == space_.GetTrueVSize();
+  SLIC_ERROR_IF(!same_space, "Prescribed boundary-condition field and constrained field have incompatible spaces");
+
+  bcs_.setPrescribedFieldName(field.name());
+  value_source_ = ValueSource::Field;
+}
+
+void DirichletBoundaryConditions::setScalarBCs(const Domain& domain, const FieldState& prescribed_field)
+{
+  setFieldValueSource(prescribed_field);
+  SLIC_ERROR_IF(space_.GetVDim() != 1, "Scalar field boundary conditions require a scalar constrained field");
+
+  auto dof_list = domain.dof_list(&space_);
+  space_.DofsToVDofs(0, dof_list);
+  auto selector_coefficient = std::make_shared<mfem::ConstantCoefficient>(0.0);
+  bcs_.addEssential(dof_list, selector_coefficient, space_, 0);
+}
+
+void DirichletBoundaryConditions::setVectorBCs(const Domain& domain, std::vector<int> components,
+                                               const FieldState& prescribed_field)
+{
+  setFieldValueSource(prescribed_field);
+  const int field_dim = space_.GetVDim();
+  auto scalar_dofs = domain.dof_list(&space_);
+  for (int component : components) {
+    SLIC_ERROR_IF(component < 0 || component >= field_dim,
+                  std::format("Trying to set boundary conditions on a field with dim {}, using component {}", field_dim,
+                              component));
+    auto vector_dofs = scalar_dofs;
+    space_.DofsToVDofs(component, vector_dofs);
+    auto selector_coefficient = std::make_shared<mfem::ConstantCoefficient>(0.0);
+    bcs_.addEssential(vector_dofs, selector_coefficient, space_, component);
+  }
+}
+
+void DirichletBoundaryConditions::setVectorBCs(const Domain& domain, const FieldState& prescribed_field)
+{
+  const int field_dim = space_.GetVDim();
+  std::vector<int> components(static_cast<size_t>(field_dim));
+  for (int component = 0; component < field_dim; ++component) {
+    components[static_cast<size_t>(component)] = component;
+  }
+  setVectorBCs(domain, std::move(components), prescribed_field);
 }
 
 const BoundaryConditionManager& DirichletBoundaryConditions::getSecondDerivativeManager() const

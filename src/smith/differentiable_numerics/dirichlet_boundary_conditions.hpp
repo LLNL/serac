@@ -13,7 +13,9 @@
 #pragma once
 
 #include <optional>
+#include <utility>
 
+#include "smith/differentiable_numerics/field_state.hpp"
 #include "smith/physics/boundary_conditions/boundary_condition_manager.hpp"
 
 namespace smith {
@@ -41,6 +43,7 @@ class DirichletBoundaryConditions {
   template <int spatial_dim, typename AppliedDisplacementFunction>
   void setVectorBCs(const Domain& domain, std::vector<int> components, AppliedDisplacementFunction applied_displacement)
   {
+    setCoefficientValueSource();
     int field_dim = space_.GetVDim();
     for (auto component : components) {
       SLIC_ERROR_IF(component >= field_dim || component < 0,
@@ -80,6 +83,7 @@ class DirichletBoundaryConditions {
   template <int spatial_dim, typename AppliedDisplacementFunction>
   void setScalarBCs(const Domain& domain, AppliedDisplacementFunction applied_displacement)
   {
+    setCoefficientValueSource();
     auto mfem_coefficient_function = [applied_displacement](const mfem::Vector& X_mfem, double t) {
       auto X = make_tensor<spatial_dim>([&X_mfem](int k) { return X_mfem[k]; });
       return applied_displacement(t, X);
@@ -96,6 +100,7 @@ class DirichletBoundaryConditions {
   template <int spatial_dim, typename AppliedDisplacementFunction>
   void setScalarBCsOnLocalDofs(const mfem::Array<int>& local_dofs, AppliedDisplacementFunction applied_displacement)
   {
+    setCoefficientValueSource();
     auto mfem_coefficient_function = [applied_displacement](const mfem::Vector& X_mfem, double t) {
       auto X = make_tensor<spatial_dim>([&X_mfem](int k) { return X_mfem[k]; });
       return applied_displacement(t, X);
@@ -104,6 +109,43 @@ class DirichletBoundaryConditions {
     auto component_disp_bdr_coef_ = std::make_shared<mfem::FunctionCoefficient>(mfem_coefficient_function);
     bcs_.addEssential(local_dofs, component_disp_bdr_coef_, space_, 0);
   }
+
+  /**
+   * @brief Prescribe scalar values from a finite-element field over a domain.
+   *
+   * Only values on the DOFs selected by @p domain are used. The prescribed field must have the same finite-element
+   * space as the constrained field and must be an input to the differentiable solve.
+   *
+   * @warning Reverse-mode sensitivity through the prescribed boundary values is not yet propagated. Uses of the field
+   * in weak forms retain their existing differentiation behavior.
+   *
+   * @param[in] domain Domain whose scalar DOFs are constrained.
+   * @param[in] prescribed_field Full-volume field containing the prescribed values.
+   */
+  void setScalarBCs(const Domain& domain, const FieldState& prescribed_field);
+
+  /**
+   * @brief Prescribe selected vector components from a finite-element field over a domain.
+   *
+   * @warning Reverse-mode sensitivity through the prescribed boundary values is not yet propagated. Uses of the field
+   * in weak forms retain their existing differentiation behavior.
+   *
+   * @param[in] domain Domain whose vector DOFs are constrained.
+   * @param[in] components Vector components to constrain.
+   * @param[in] prescribed_field Full-volume field containing the prescribed values.
+   */
+  void setVectorBCs(const Domain& domain, std::vector<int> components, const FieldState& prescribed_field);
+
+  /**
+   * @brief Prescribe all vector components from a finite-element field over a domain.
+   *
+   * @warning Reverse-mode sensitivity through the prescribed boundary values is not yet propagated. Uses of the field
+   * in weak forms retain their existing differentiation behavior.
+   *
+   * @param[in] domain Domain whose vector DOFs are constrained.
+   * @param[in] prescribed_field Full-volume field containing the prescribed values.
+   */
+  void setVectorBCs(const Domain& domain, const FieldState& prescribed_field);
 
   /// @brief Constrain the dofs of a scalar field over a domain
   template <int spatial_dim>
@@ -173,11 +215,23 @@ class DirichletBoundaryConditions {
   const smith::BoundaryConditionManager& getSecondDerivativeManager() const;
 
  private:
+  enum class ValueSource
+  {
+    Unset,
+    Coefficient,
+    Field
+  };
+
+  void setCoefficientValueSource();
+  void setFieldValueSource(const FieldState& prescribed_field);
+
   void rebuildSecondDerivativeManager(BoundaryConditionManager& target) const;
 
   const mfem::ParMesh& mfem_mesh_;       ///< for constructing derivative-level managers
   smith::BoundaryConditionManager bcs_;  ///< boundary condition manager that does the heavy lifting
   mfem::ParFiniteElementSpace& space_;   ///< save the space for the field which will be constrained
+
+  ValueSource value_source_ = ValueSource::Unset;  ///< Representation used to supply prescribed values.
 
   mutable std::optional<BoundaryConditionManager> second_derivative_manager_;
 };

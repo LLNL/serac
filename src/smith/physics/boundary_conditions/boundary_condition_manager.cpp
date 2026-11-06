@@ -12,6 +12,14 @@
 
 namespace smith {
 
+void BoundaryConditionManager::setPrescribedFieldName(const std::string& field_name)
+{
+  SLIC_ERROR_IF(field_name.empty(), "A prescribed boundary-condition field must have a name");
+  SLIC_ERROR_IF(prescribed_field_name_ && *prescribed_field_name_ != field_name,
+                "A boundary-condition manager cannot use more than one prescribed field");
+  prescribed_field_name_ = field_name;
+}
+
 void BoundaryConditionManager::addEssential(const std::set<int>& ess_bdr, smith::GeneralCoefficient ess_bdr_coef,
                                             mfem::ParFiniteElementSpace& space, const std::optional<int> component)
 {

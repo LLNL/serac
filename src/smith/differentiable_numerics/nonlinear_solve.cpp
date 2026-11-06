@@ -6,6 +6,28 @@
 
 namespace smith {
 
+namespace {
+
+FEFieldPtr findPrescribedBoundaryField(const BoundaryConditionManager* bc_manager,
+                                       const std::vector<FEFieldPtr>& input_fields, size_t first_parameter)
+{
+  if (!bc_manager || !bc_manager->prescribedFieldName()) {
+    return nullptr;
+  }
+
+  const std::string& field_name = *bc_manager->prescribedFieldName();
+  for (size_t i = first_parameter; i < input_fields.size(); ++i) {
+    if (input_fields[i]->name() == field_name) {
+      return input_fields[i];
+    }
+  }
+
+  SLIC_ERROR("Prescribed boundary-condition field '" << field_name << "' is not a parameter input to the weak form");
+  return nullptr;
+}
+
+}  // namespace
+
 /// @brief apply boundary conditions
 void applyBoundaryConditions(double time, const smith::BoundaryConditionManager* bc_manager,
                              smith::FEFieldPtr& primal_field, const smith::FEFieldPtr& bc_field_ptr)
@@ -113,6 +135,12 @@ std::vector<FieldState> block_solve(const std::vector<WeakForm*>& residual_evals
       }
     }
 
+    std::vector<FEFieldPtr> prescribed_fields(num_rows);
+    for (size_t row_i = 0; row_i < num_rows; ++row_i) {
+      prescribed_fields[row_i] =
+          findPrescribedBoundaryField(bc_managers[row_i], input_fields[row_i], num_state_inputs[row_i]);
+    }
+
     std::vector<FEFieldPtr> diagonal_fields(num_rows);
     for (size_t row_i = 0; row_i < num_rows; ++row_i) {
       size_t prime_unknown_row_i = block_indices[row_i][row_i];
@@ -123,7 +151,7 @@ std::vector<FieldState> block_solve(const std::vector<WeakForm*>& residual_evals
 
     for (size_t row_i = 0; row_i < num_rows; ++row_i) {
       FEFieldPtr primal_field_row_i = diagonal_fields[row_i];
-      applyBoundaryConditions(time_info.time(), bc_managers[row_i], primal_field_row_i, nullptr);
+      applyBoundaryConditions(time_info.time(), bc_managers[row_i], primal_field_row_i, prescribed_fields[row_i]);
     }
 
     for (size_t row_i = 0; row_i < num_rows; ++row_i) {
@@ -145,7 +173,7 @@ std::vector<FieldState> block_solve(const std::vector<WeakForm*>& residual_evals
       for (size_t row_i = 0; row_i < num_rows; ++row_i) {
         FEFieldPtr primal_field_row_i = diagonal_fields[row_i];
         *primal_field_row_i = *unknowns[row_i];
-        applyBoundaryConditions(time_info.time(), bc_managers[row_i], primal_field_row_i, nullptr);
+        applyBoundaryConditions(time_info.time(), bc_managers[row_i], primal_field_row_i, prescribed_fields[row_i]);
       }
       for (size_t row_i = 0; row_i < num_rows; ++row_i) {
         residuals[row_i] = residual_evals[row_i]->residual(time_info, shape_disp_ptr.get(),
@@ -165,7 +193,7 @@ std::vector<FieldState> block_solve(const std::vector<WeakForm*>& residual_evals
       for (size_t row_i = 0; row_i < num_rows; ++row_i) {
         FEFieldPtr primal_field_row_i = diagonal_fields[row_i];
         *primal_field_row_i = *unknowns[row_i];
-        applyBoundaryConditions(time_info.time(), bc_managers[row_i], primal_field_row_i, nullptr);
+        applyBoundaryConditions(time_info.time(), bc_managers[row_i], primal_field_row_i, prescribed_fields[row_i]);
       }
 
       for (size_t row_i = 0; row_i < num_rows; ++row_i) {
@@ -240,6 +268,12 @@ std::vector<FieldState> block_solve(const std::vector<WeakForm*>& residual_evals
       }
     }
 
+    std::vector<FEFieldPtr> prescribed_fields(num_rows);
+    for (size_t row_i = 0; row_i < num_rows; ++row_i) {
+      prescribed_fields[row_i] =
+          findPrescribedBoundaryField(bc_managers[row_i], input_fields[row_i], num_state_inputs[row_i]);
+    }
+
     // if the field is a primal variable we solved before,
     // make a copy so we don't accidentally override the original copy
     std::vector<FEFieldPtr> diagonal_fields(num_rows);
@@ -262,7 +296,7 @@ std::vector<FieldState> block_solve(const std::vector<WeakForm*>& residual_evals
     // Need to double check for time-dependent boundary conditions
     for (size_t row_i = 0; row_i < num_rows; ++row_i) {
       FEFieldPtr primal_field_row_i = diagonal_fields[row_i];
-      applyBoundaryConditions(time_info.time(), bc_managers[row_i], primal_field_row_i, nullptr);
+      applyBoundaryConditions(time_info.time(), bc_managers[row_i], primal_field_row_i, prescribed_fields[row_i]);
     }
 
     solver->clearMemory();
