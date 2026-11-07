@@ -136,11 +136,11 @@ void DirichletBoundaryConditions::rebuildSecondDerivativeManager(BoundaryConditi
 
     if (is_vector_valued(bc.coefficient())) {
       auto deriv_coef = std::make_shared<SecondTimeDerivativeVectorCoefficient>(
-          get<std::shared_ptr<mfem::VectorCoefficient>>(bc.coefficient()));
+          std::get<std::shared_ptr<mfem::VectorCoefficient>>(bc.coefficient()));
       target.addEssentialByTrueDofs(bc.getTrueDofList(), deriv_coef, space_);
     } else {
       auto deriv_coef = std::make_shared<SecondTimeDerivativeScalarCoefficient>(
-          get<std::shared_ptr<mfem::Coefficient>>(bc.coefficient()));
+          std::get<std::shared_ptr<mfem::Coefficient>>(bc.coefficient()));
       target.addEssential(bc.getLocalDofList(), deriv_coef, space_, bc.component());
     }
   }

@@ -18,6 +18,7 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <variant>
 #include <cstddef>
 
 #include "smith/infrastructure/logger.hpp"
@@ -32,7 +33,7 @@ struct PrescribedFieldReference {
 };
 
 /** @brief Source of values for an essential boundary condition. */
-using BoundaryValue = variant<GeneralCoefficient, PrescribedFieldReference>;
+using BoundaryValue = std::variant<GeneralCoefficient, PrescribedFieldReference>;
 
 /**
  * @brief Boundary condition information bundle
@@ -149,7 +150,7 @@ class BoundaryCondition {
   const GeneralCoefficient& coefficient() const;
 
   /// @brief Returns the prescribed-field reference, or nullptr for a coefficient-valued condition.
-  const PrescribedFieldReference* prescribedField() const { return get_if<PrescribedFieldReference>(&value_); }
+  const PrescribedFieldReference* prescribedField() const { return std::get_if<PrescribedFieldReference>(&value_); }
 
   /// @brief Returns constrained vector component, if any.
   const std::optional<int>& component() const { return component_; }
