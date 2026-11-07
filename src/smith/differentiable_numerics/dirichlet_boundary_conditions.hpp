@@ -43,7 +43,6 @@ class DirichletBoundaryConditions {
   template <int spatial_dim, typename AppliedDisplacementFunction>
   void setVectorBCs(const Domain& domain, std::vector<int> components, AppliedDisplacementFunction applied_displacement)
   {
-    setCoefficientValueSource();
     int field_dim = space_.GetVDim();
     for (auto component : components) {
       SLIC_ERROR_IF(component >= field_dim || component < 0,
@@ -83,7 +82,6 @@ class DirichletBoundaryConditions {
   template <int spatial_dim, typename AppliedDisplacementFunction>
   void setScalarBCs(const Domain& domain, AppliedDisplacementFunction applied_displacement)
   {
-    setCoefficientValueSource();
     auto mfem_coefficient_function = [applied_displacement](const mfem::Vector& X_mfem, double t) {
       auto X = make_tensor<spatial_dim>([&X_mfem](int k) { return X_mfem[k]; });
       return applied_displacement(t, X);
@@ -100,7 +98,6 @@ class DirichletBoundaryConditions {
   template <int spatial_dim, typename AppliedDisplacementFunction>
   void setScalarBCsOnLocalDofs(const mfem::Array<int>& local_dofs, AppliedDisplacementFunction applied_displacement)
   {
-    setCoefficientValueSource();
     auto mfem_coefficient_function = [applied_displacement](const mfem::Vector& X_mfem, double t) {
       auto X = make_tensor<spatial_dim>([&X_mfem](int k) { return X_mfem[k]; });
       return applied_displacement(t, X);
@@ -209,29 +206,18 @@ class DirichletBoundaryConditions {
   ///
   /// For a value-level essential boundary condition @c u_b(t), this manager constrains a dependent
   /// second-derivative field to @c u_b''(t), computed by one-sided three-point forward FD with step
-  /// @c h = 1e-4 * max(1,|t|).
+  /// @c h = 1e-4 * max(1,|t|). Prescribed finite-element fields are treated as time-independent and
+  /// constrain the second derivative to zero.
   ///
   /// Rebuilt on each call from current value-level essentials, so late additions are reflected.
   const smith::BoundaryConditionManager& getSecondDerivativeManager() const;
 
  private:
-  enum class ValueSource
-  {
-    Unset,
-    Coefficient,
-    Field
-  };
-
-  void setCoefficientValueSource();
-  void setFieldValueSource(const FieldState& prescribed_field);
-
   void rebuildSecondDerivativeManager(BoundaryConditionManager& target) const;
 
   const mfem::ParMesh& mfem_mesh_;       ///< for constructing derivative-level managers
   smith::BoundaryConditionManager bcs_;  ///< boundary condition manager that does the heavy lifting
   mfem::ParFiniteElementSpace& space_;   ///< save the space for the field which will be constrained
-
-  ValueSource value_source_ = ValueSource::Unset;  ///< Representation used to supply prescribed values.
 
   mutable std::optional<BoundaryConditionManager> second_derivative_manager_;
 };

@@ -7,8 +7,12 @@
 #include "gtest/gtest.h"
 
 #include "gretl/data_store.hpp"
-#include <tuple>
+#include <algorithm>
+#include <cmath>
 #include <memory>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 #include "smith/infrastructure/application_manager.hpp"
 #include "smith/numerics/solver_config.hpp"
@@ -53,6 +57,33 @@ static constexpr int order = 1;
 using ShapeDispSpace = H1<1, dim>;
 using VectorSpace = H1<order, dim>;
 using ScalarParameterSpace = L2<0>;
+
+namespace {
+
+constexpr int prescribed_bc_dim = 2;
+
+struct LinearIsotropicIgnoringParameters {
+  using State = Empty;
+
+  template <typename GradUType, typename GradVType, typename... ParameterTypes>
+  SMITH_HOST_DEVICE auto operator()(const TimeInfo&, State& state, const GradUType& grad_u, const GradVType&,
+                                    const ParameterTypes&...) const
+  {
+    return solid_mechanics::LinearIsotropic{.density = density, .K = bulk_modulus, .G = shear_modulus}(state, grad_u);
+  }
+
+  double density;
+  double bulk_modulus;
+  double shear_modulus;
+};
+
+bool allNodesAtX(const std::vector<vec2>& nodes, double x)
+{
+  constexpr double tol = 1.0e-12;
+  return std::all_of(nodes.begin(), nodes.end(), [=](const vec2& node) { return std::abs(node[0] - x) < tol; });
+}
+
+}  // namespace
 
 struct SolidMechanicsMeshFixture : public testing::Test {
   LinearSolverOptions solid_linear_options{.linear_solver = LinearSolver::CG,
@@ -148,6 +179,69 @@ TEST_F(SolidMechanicsMeshFixture, CycleZeroSolverFallbackBuildsWithoutMainSolver
   ASSERT_NE(cz->solver, nullptr);
   EXPECT_EQ(cz->solver->maxStaggeredIterations(), 1);
   EXPECT_FALSE(cz->solver->exactStaggeredSteps());
+}
+
+TEST(PrescribedFieldBoundaryConditions, MixedSolidDisplacementSources)
+{
+  axom::sidre::DataStore datastore;
+  StateManager::reset();
+  StateManager::initialize(datastore, "prescribed_field_solid_bcs");
+
+  auto mfem_mesh = mfem::Mesh::MakeCartesian2D(4, 4, mfem::Element::QUADRILATERAL, true, 1.0, 1.0);
+  auto mesh = std::make_shared<Mesh>(std::move(mfem_mesh), "prescribed_field_solid_mesh");
+  mesh->addDomainOfBoundaryElements("left", [](std::vector<vec2> nodes, int) { return allNodesAtX(nodes, 0.0); });
+  mesh->addDomainOfBoundaryElements("right", [](std::vector<vec2> nodes, int) { return allNodesAtX(nodes, 1.0); });
+
+  NonlinearSolverOptions nonlinear_options{
+      .nonlin_solver = NonlinearSolver::Newton, .relative_tol = 1.0e-12, .absolute_tol = 1.0e-12};
+  LinearSolverOptions linear_options{.linear_solver = LinearSolver::SuperLU};
+  auto solid_system = buildSolidMechanicsSystem<prescribed_bc_dim, 1, QuasiStaticSecondOrderTimeIntegrationRule>(
+      nonlinear_options, linear_options, SolidMechanicsOptions{}, mesh,
+      FieldType<H1<1, prescribed_bc_dim>>("prescribed_displacement"));
+
+  constexpr double youngs_modulus = 100.0;
+  constexpr double poisson_ratio = 0.25;
+  constexpr double shear_modulus = youngs_modulus / (2.0 * (1.0 + poisson_ratio));
+  constexpr double bulk_modulus = youngs_modulus / (3.0 * (1.0 - 2.0 * poisson_ratio));
+  constexpr double lambda = bulk_modulus - 2.0 * shear_modulus / 3.0;
+  constexpr double extension = 0.01;
+  constexpr double lateral_contraction = lambda * extension / (lambda + 2.0 * shear_modulus);
+
+  solid_system->setMaterial(
+      LinearIsotropicIgnoringParameters{.density = 1.0, .bulk_modulus = bulk_modulus, .shear_modulus = shear_modulus},
+      mesh->entireBodyName());
+
+  auto prescribed_displacement = solid_system->field_store->getParameterFields()[0];
+  prescribed_displacement.get()->setFromFieldFunction([=](tensor<double, prescribed_bc_dim> X) {
+    tensor<double, prescribed_bc_dim> displacement{};
+    displacement[0] = extension * X[0];
+    displacement[1] = -lateral_contraction * X[1];
+    return displacement;
+  });
+
+  solid_system->disp_bc->setVectorBCs(mesh->domain("left"), prescribed_displacement);
+  solid_system->disp_bc->setVectorBCs(mesh->domain("right"), {1}, prescribed_displacement);
+  solid_system->disp_bc->setVectorBCs<prescribed_bc_dim>(mesh->domain("right"), {0},
+                                                         [=](double, tensor<double, prescribed_bc_dim>) {
+                                                           tensor<double, prescribed_bc_dim> displacement{};
+                                                           displacement[0] = extension;
+                                                           return displacement;
+                                                         });
+
+  auto [new_states, reactions] =
+      makeAdvancer(solid_system)
+          ->advanceState(TimeInfo(0.0, 1.0), solid_system->field_store->getShapeDisp(),
+                         solid_system->field_store->getAllFields(), solid_system->field_store->getParameterFields());
+
+  auto displacement = new_states[solid_system->field_store->getFieldIndex("displacement")];
+  mfem::VectorFunctionCoefficient exact_displacement(prescribed_bc_dim,
+                                                     [=](const mfem::Vector& X, mfem::Vector& value) {
+                                                       value[0] = extension * X[0];
+                                                       value[1] = -lateral_contraction * X[1];
+                                                     });
+  EXPECT_LT(computeL2Error(*displacement.get(), exact_displacement), 1.0e-10);
+
+  StateManager::reset();
 }
 
 TEST(ImplicitNewmarkSecondOrderRule, CycleZeroModeUsesFourthArgumentAsCurrentAcceleration)

@@ -13,11 +13,22 @@
 
 namespace smith {
 
+namespace {
+
+void validatePrescribedField(const FiniteElementState& prescribed_field, const mfem::ParFiniteElementSpace& space)
+{
+  SLIC_ERROR_IF(prescribed_field.name().empty(), "A prescribed boundary-condition field must have a name");
+  SLIC_ERROR_IF(!sameFiniteElementSpace(prescribed_field.space(), space),
+                "Prescribed boundary-condition field and constrained field have incompatible spaces");
+}
+
+}  // namespace
+
 BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component,
                                      const mfem::ParFiniteElementSpace& space, const std::set<int>& attrs)
-    : coef_(coef), component_(component), attr_markers_(space.GetMesh()->bdr_attributes.Max()), space_(space)
+    : value_(coef), component_(component), attr_markers_(space.GetMesh()->bdr_attributes.Max()), space_(space)
 {
-  if (get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_)) {
+  if (get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef)) {
     SLIC_ERROR_ROOT_IF(component_, "A vector coefficient must be applied to all components");
   }
 
@@ -31,14 +42,47 @@ BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optiona
   setDofListsFromAttributeMarkers();
 }
 
+BoundaryCondition::BoundaryCondition(const FiniteElementState& prescribed_field, const std::optional<int> component,
+                                     const mfem::ParFiniteElementSpace& space, const std::set<int>& attrs)
+    : value_(PrescribedFieldReference{prescribed_field.name()}),
+      component_(component),
+      attr_markers_(space.GetMesh()->bdr_attributes.Max()),
+      space_(space)
+{
+  validatePrescribedField(prescribed_field, space);
+
+  attr_markers_ = 0;
+  for (const int attr : attrs) {
+    SLIC_ASSERT_MSG(attr <= attr_markers_.Size(), "Attribute specified larger than what is found in the mesh.");
+    attr_markers_[attr - 1] = 1;
+  }
+
+  setDofListsFromAttributeMarkers();
+}
+
 BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component,
                                      const mfem::ParFiniteElementSpace& space, const mfem::Array<int>& true_dofs)
-    : coef_(coef), component_(component), attr_markers_(0), space_(space)
+    : value_(coef), component_(component), attr_markers_(0), space_(space)
 {
-  if (get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_)) {
+  if (get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef)) {
     SLIC_ERROR_IF(component_, "A vector coefficient must be applied to all components");
   }
   setTrueDofList(true_dofs);
+}
+
+BoundaryCondition::BoundaryCondition(const FiniteElementState& prescribed_field, const std::optional<int> component,
+                                     const mfem::ParFiniteElementSpace& space, const mfem::Array<int>& true_dofs)
+    : value_(PrescribedFieldReference{prescribed_field.name()}), component_(component), attr_markers_(0), space_(space)
+{
+  validatePrescribedField(prescribed_field, space);
+  setTrueDofList(true_dofs);
+}
+
+const GeneralCoefficient& BoundaryCondition::coefficient() const
+{
+  const auto* coef = get_if<GeneralCoefficient>(&value_);
+  SLIC_ERROR_IF(!coef, "A field-valued boundary condition does not have a coefficient");
+  return *coef;
 }
 
 void BoundaryCondition::setTrueDofList(const mfem::Array<int>& true_dofs)
@@ -82,6 +126,8 @@ void BoundaryCondition::setDofListsFromAttributeMarkers()
 
 void BoundaryCondition::setDofs(mfem::Vector& vector, const double time) const
 {
+  const auto* coef = get_if<GeneralCoefficient>(&value_);
+  SLIC_ERROR_IF(!coef, "A prescribed field is required to set field-valued boundary-condition DOFs");
   SLIC_ERROR_IF(space_.GetTrueVSize() != vector.Size(),
                 "State to project and boundary condition space are not compatible.");
 
@@ -93,14 +139,14 @@ void BoundaryCondition::setDofs(mfem::Vector& vector, const double time) const
                  [&space = space_](int ldof) { return space.VDofToDof(ldof); });
 
   // the only reason to store a VectorCoefficient is to act on all components
-  if (is_vector_valued(coef_)) {
-    auto vec_coef = get<std::shared_ptr<mfem::VectorCoefficient>>(coef_);
+  if (is_vector_valued(*coef)) {
+    auto vec_coef = get<std::shared_ptr<mfem::VectorCoefficient>>(*coef);
     vec_coef->SetTime(time);
     state.project(*vec_coef, dof_list);
   } else {
     // an mfem::Coefficient could be used to describe a scalar-valued function, or
     // a single component of a vector-valued function
-    auto scalar_coef = get<std::shared_ptr<mfem::Coefficient>>(coef_);
+    auto scalar_coef = get<std::shared_ptr<mfem::Coefficient>>(*coef);
     scalar_coef->SetTime(time);
     if (component_) {
       state.project(*scalar_coef, dof_list, *component_);
@@ -112,6 +158,17 @@ void BoundaryCondition::setDofs(mfem::Vector& vector, const double time) const
 
   for (int i : true_dofs_) {
     vector(i) = state(i);
+  }
+}
+
+void BoundaryCondition::setDofs(mfem::Vector& vector, const FiniteElementState& prescribed_field) const
+{
+  SLIC_ERROR_IF(!prescribedField(), "A coefficient-valued boundary condition does not use a prescribed field");
+  SLIC_ERROR_IF(space_.GetTrueVSize() != vector.Size(),
+                "State to set and boundary condition space are not compatible.");
+
+  for (int i : true_dofs_) {
+    vector(i) = prescribed_field(i);
   }
 }
 

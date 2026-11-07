@@ -12,13 +12,21 @@
 
 namespace smith {
 
-void BoundaryConditionManager::setPrescribedFieldName(const std::string& field_name)
+namespace {
+
+mfem::Array<int> getTrueDofs(const mfem::Array<int>& local_dofs, mfem::ParFiniteElementSpace& space)
 {
-  SLIC_ERROR_IF(field_name.empty(), "A prescribed boundary-condition field must have a name");
-  SLIC_ERROR_IF(prescribed_field_name_ && *prescribed_field_name_ != field_name,
-                "A boundary-condition manager cannot use more than one prescribed field");
-  prescribed_field_name_ = field_name;
+  mfem::Array<int> true_dofs;
+  for (int local_dof : local_dofs) {
+    const int true_dof = space.GetLocalTDofNumber(local_dof);
+    if (true_dof >= 0) {
+      true_dofs.Append(true_dof);
+    }
+  }
+  return true_dofs;
 }
+
+}  // namespace
 
 void BoundaryConditionManager::addEssential(const std::set<int>& ess_bdr, smith::GeneralCoefficient ess_bdr_coef,
                                             mfem::ParFiniteElementSpace& space, const std::optional<int> component)
@@ -42,13 +50,17 @@ void BoundaryConditionManager::addEssential(const mfem::Array<int>& local_dofs,
                                             mfem::ParFiniteElementSpace& space, std::optional<int> component)
 {
   // translate vector ldofs to tdofs (discarding ldofs that are not owned by this rank)
-  mfem::Array<int> true_dofs;
-  for (int j = 0; j < local_dofs.Size(); ++j) {
-    int tdof = space.GetLocalTDofNumber(local_dofs[j]);
-    if (tdof >= 0) true_dofs.Append(tdof);
-  }
-
+  auto true_dofs = getTrueDofs(local_dofs, space);
   ess_bdr_.emplace_back(ess_bdr_coef, component, space, true_dofs);
+  all_dofs_valid_ = false;
+}
+
+void BoundaryConditionManager::addEssential(const mfem::Array<int>& local_dofs,
+                                            const FiniteElementState& prescribed_field,
+                                            mfem::ParFiniteElementSpace& space, std::optional<int> component)
+{
+  auto true_dofs = getTrueDofs(local_dofs, space);
+  ess_bdr_.emplace_back(prescribed_field, component, space, true_dofs);
   all_dofs_valid_ = false;
 }
 

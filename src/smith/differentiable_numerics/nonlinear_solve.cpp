@@ -4,45 +4,61 @@
 #include "smith/differentiable_numerics/nonlinear_solve.hpp"
 #include "smith/differentiable_numerics/nonlinear_block_solver.hpp"
 
+#include <string>
+#include <unordered_map>
+
 namespace smith {
 
 namespace {
 
-FEFieldPtr findPrescribedBoundaryField(const BoundaryConditionManager* bc_manager,
-                                       const std::vector<FEFieldPtr>& input_fields, size_t first_parameter)
+using ResolvedBoundaryFields = std::unordered_map<std::string, FEFieldPtr>;
+
+ResolvedBoundaryFields findPrescribedBoundaryFields(const BoundaryConditionManager* bc_manager,
+                                                    const std::vector<FEFieldPtr>& input_fields, size_t first_parameter)
 {
-  if (!bc_manager || !bc_manager->prescribedFieldName()) {
-    return nullptr;
+  ResolvedBoundaryFields prescribed_fields;
+  if (!bc_manager) {
+    return prescribed_fields;
   }
 
-  const std::string& field_name = *bc_manager->prescribedFieldName();
-  for (size_t i = first_parameter; i < input_fields.size(); ++i) {
-    if (input_fields[i]->name() == field_name) {
-      return input_fields[i];
+  for (const auto& bc : bc_manager->essentials()) {
+    const auto* prescribed_field = bc.prescribedField();
+    if (!prescribed_field || prescribed_fields.contains(prescribed_field->name)) {
+      continue;
     }
+
+    for (size_t i = first_parameter; i < input_fields.size(); ++i) {
+      if (input_fields[i]->name() == prescribed_field->name) {
+        prescribed_fields.emplace(prescribed_field->name, input_fields[i]);
+        break;
+      }
+    }
+
+    SLIC_ERROR_IF(!prescribed_fields.contains(prescribed_field->name),
+                  "Prescribed boundary-condition field '" << prescribed_field->name
+                                                          << "' is not a parameter input to the weak form");
   }
 
-  SLIC_ERROR("Prescribed boundary-condition field '" << field_name << "' is not a parameter input to the weak form");
-  return nullptr;
+  return prescribed_fields;
 }
 
 }  // namespace
 
 /// @brief apply boundary conditions
 void applyBoundaryConditions(double time, const smith::BoundaryConditionManager* bc_manager,
-                             smith::FEFieldPtr& primal_field, const smith::FEFieldPtr& bc_field_ptr)
+                             smith::FEFieldPtr& primal_field, const ResolvedBoundaryFields& prescribed_fields)
 {
   if (!bc_manager) {
     return;
   }
-  if (bc_field_ptr) {
-    auto constrained_dofs = bc_manager->allEssentialTrueDofs();
-    for (int i = 0; i < constrained_dofs.Size(); i++) {
-      int j = constrained_dofs[i];
-      (*primal_field)[j] = (*bc_field_ptr)(j);
-    }
-  } else {
-    for (auto& bc : bc_manager->essentials()) {
+
+  for (const auto& bc : bc_manager->essentials()) {
+    if (const auto* prescribed_field = bc.prescribedField()) {
+      const auto field = prescribed_fields.find(prescribed_field->name);
+      SLIC_ERROR_IF(field == prescribed_fields.end(),
+                    "Prescribed boundary-condition field '" << prescribed_field->name << "' was not resolved");
+      bc.setDofs(*primal_field, *field->second);
+    } else {
       bc.setDofs(*primal_field, time);
     }
   }
@@ -135,10 +151,10 @@ std::vector<FieldState> block_solve(const std::vector<WeakForm*>& residual_evals
       }
     }
 
-    std::vector<FEFieldPtr> prescribed_fields(num_rows);
+    std::vector<ResolvedBoundaryFields> prescribed_fields(num_rows);
     for (size_t row_i = 0; row_i < num_rows; ++row_i) {
       prescribed_fields[row_i] =
-          findPrescribedBoundaryField(bc_managers[row_i], input_fields[row_i], num_state_inputs[row_i]);
+          findPrescribedBoundaryFields(bc_managers[row_i], input_fields[row_i], num_state_inputs[row_i]);
     }
 
     std::vector<FEFieldPtr> diagonal_fields(num_rows);
@@ -268,10 +284,10 @@ std::vector<FieldState> block_solve(const std::vector<WeakForm*>& residual_evals
       }
     }
 
-    std::vector<FEFieldPtr> prescribed_fields(num_rows);
+    std::vector<ResolvedBoundaryFields> prescribed_fields(num_rows);
     for (size_t row_i = 0; row_i < num_rows; ++row_i) {
       prescribed_fields[row_i] =
-          findPrescribedBoundaryField(bc_managers[row_i], input_fields[row_i], num_state_inputs[row_i]);
+          findPrescribedBoundaryFields(bc_managers[row_i], input_fields[row_i], num_state_inputs[row_i]);
     }
 
     // if the field is a primal variable we solved before,

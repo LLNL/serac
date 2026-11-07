@@ -4,6 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#include <algorithm>
 #include <cmath>
 #include <gtest/gtest.h>
 #include "smith/differentiable_numerics/thermal_system.hpp"
@@ -15,6 +16,16 @@
 #include "smith/infrastructure/application_manager.hpp"
 
 using namespace smith;
+
+namespace {
+
+bool allNodesAtX(const std::vector<vec2>& nodes, double x)
+{
+  constexpr double tol = 1.0e-12;
+  return std::all_of(nodes.begin(), nodes.end(), [=](const vec2& node) { return std::abs(node[0] - x) < tol; });
+}
+
+}  // namespace
 
 struct ThermalStaticFixture : public testing::Test {
   axom::sidre::DataStore datastore;
@@ -179,6 +190,9 @@ TEST_F(ThermalStaticFixture, HeatSourceWithDependsOn)
 
 TEST_F(ThermalStaticFixture, PrescribedTemperatureParameterField)
 {
+  mesh->addDomainOfBoundaryElements("left", [](std::vector<vec2> nodes, int) { return allNodesAtX(nodes, 0.0); });
+  mesh->addDomainOfBoundaryElements("right", [](std::vector<vec2> nodes, int) { return allNodesAtX(nodes, 1.0); });
+
   NonlinearSolverOptions solver_options;
   solver_options.relative_tol = 1.0e-12;
   LinearSolverOptions linear_options;
@@ -194,11 +208,21 @@ TEST_F(ThermalStaticFixture, PrescribedTemperatureParameterField)
   FieldState prescribed_temperature = thermal_system->field_store->getParameterFields()[0];
   prescribed_temperature.get()->setFromFieldFunction([](tensor<double, 2> X) {
     const double interior_perturbation = X[0] * (1.0 - X[0]) * X[1] * (1.0 - X[1]);
-    return X[0] + 2.0 * X[1] + interior_perturbation;
+    return X[0] + interior_perturbation;
   });
 
-  // TODO: Consider implementing physics-specific setTemperatureBC?
-  thermal_system->temperature_bc->setScalarBCs(mesh->entireBoundary(), prescribed_temperature);
+  thermal_system->temperature_bc->setScalarBCs<2>(mesh->domain("left"), [](double, tensor<double, 2>) { return 0.0; });
+  thermal_system->temperature_bc->setScalarBCs(mesh->domain("right"), prescribed_temperature);
+
+  const auto& second_derivative_bcs = thermal_system->temperature_bc->getSecondDerivativeManager();
+  mfem::Vector second_derivative(prescribed_temperature.get()->space().GetTrueVSize());
+  second_derivative = 1.0;
+  for (const auto& bc : second_derivative_bcs.essentials()) {
+    bc.setDofs(second_derivative);
+  }
+  for (int dof : second_derivative_bcs.allEssentialTrueDofs()) {
+    EXPECT_DOUBLE_EQ(second_derivative[dof], 0.0);
+  }
 
   TimeInfo t_info(0.0, 1.0);
   auto [new_states, reactions] = makeAdvancer(thermal_system)
@@ -208,8 +232,41 @@ TEST_F(ThermalStaticFixture, PrescribedTemperatureParameterField)
 
   const size_t temperature_index = thermal_system->field_store->getFieldIndex("temperature");
   auto temperature = new_states[temperature_index];
-  mfem::FunctionCoefficient exact_temperature([](const mfem::Vector& X) { return X[0] + 2.0 * X[1]; });
+  mfem::FunctionCoefficient exact_temperature([](const mfem::Vector& X) { return X[0]; });
 
+  EXPECT_LT(computeL2Error(*temperature.get(), exact_temperature), 1.0e-10);
+}
+
+TEST_F(ThermalStaticFixture, MultiplePrescribedBoundaryFields)
+{
+  mesh->addDomainOfBoundaryElements("left", [](std::vector<vec2> nodes, int) { return allNodesAtX(nodes, 0.0); });
+  mesh->addDomainOfBoundaryElements("right", [](std::vector<vec2> nodes, int) { return allNodesAtX(nodes, 1.0); });
+
+  NonlinearSolverOptions solver_options;
+  solver_options.relative_tol = 1.0e-12;
+  LinearSolverOptions linear_options;
+  auto thermal_system =
+      buildThermalSystem<2, 1>(solver_options, linear_options, ThermalOptions{}, mesh,
+                               FieldType<H1<1>>("left_temperature"), FieldType<H1<1>>("right_temperature"));
+
+  thermal_system->setMaterial(
+      [](const TimeInfo&, auto, auto grad_temperature, auto, auto) { return smith::tuple{0.0, -grad_temperature}; },
+      "entire_body");
+
+  const auto& prescribed_fields = thermal_system->field_store->getParameterFields();
+  prescribed_fields[0].get()->setFromFieldFunction([](tensor<double, 2>) { return -1.0; });
+  prescribed_fields[1].get()->setFromFieldFunction([](tensor<double, 2>) { return 2.0; });
+
+  thermal_system->temperature_bc->setScalarBCs(mesh->domain("left"), prescribed_fields[0]);
+  thermal_system->temperature_bc->setScalarBCs(mesh->domain("right"), prescribed_fields[1]);
+
+  TimeInfo t_info(0.0, 1.0);
+  auto [new_states, reactions] = makeAdvancer(thermal_system)
+                                     ->advanceState(t_info, thermal_system->field_store->getShapeDisp(),
+                                                    thermal_system->field_store->getAllFields(), prescribed_fields);
+
+  auto temperature = new_states[thermal_system->field_store->getFieldIndex("temperature")];
+  mfem::FunctionCoefficient exact_temperature([](const mfem::Vector& X) { return -1.0 + 3.0 * X[0]; });
   EXPECT_LT(computeL2Error(*temperature.get(), exact_temperature), 1.0e-10);
 }
 

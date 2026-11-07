@@ -15,6 +15,7 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <string>
 #include <type_traits>
 #include <utility>
 #include <cstddef>
@@ -24,6 +25,14 @@
 #include "smith/physics/state/finite_element_vector.hpp"
 
 namespace smith {
+
+/** @brief Reference to a finite-element field that supplies prescribed boundary values. */
+struct PrescribedFieldReference {
+  std::string name;  ///< Name used to resolve the field from solve inputs.
+};
+
+/** @brief Source of values for an essential boundary condition. */
+using BoundaryValue = variant<GeneralCoefficient, PrescribedFieldReference>;
 
 /**
  * @brief Boundary condition information bundle
@@ -43,6 +52,16 @@ class BoundaryCondition {
                     const mfem::ParFiniteElementSpace& space, const std::set<int>& attrs);
 
   /**
+   * @brief Construct a boundary condition supplied by a finite-element field over boundary attributes
+   * @param[in] prescribed_field Field supplying the prescribed values
+   * @param[in] component The zero-indexed vector component, or null for all components
+   * @param[in] space The finite element space on which this BC is applied
+   * @param[in] attrs Boundary attributes on which this BC is applied
+   */
+  BoundaryCondition(const FiniteElementState& prescribed_field, const std::optional<int> component,
+                    const mfem::ParFiniteElementSpace& space, const std::set<int>& attrs);
+
+  /**
    * @brief Minimal constructor for setting the true DOFs directly
    * @param[in] coef Either a mfem::Coefficient or mfem::VectorCoefficient representing the BC
    * @param[in] component The zero-indexed vector component if the BC applies to just one component,
@@ -51,6 +70,16 @@ class BoundaryCondition {
    * @param[in] space The finite element space on which this BC is applied.
    */
   BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component,
+                    const mfem::ParFiniteElementSpace& space, const mfem::Array<int>& true_dofs);
+
+  /**
+   * @brief Construct a boundary condition supplied by a finite-element field over explicit true DOFs
+   * @param[in] prescribed_field Field supplying the prescribed values
+   * @param[in] component The zero-indexed vector component, or null for all components
+   * @param[in] space The finite element space on which this BC is applied
+   * @param[in] true_dofs The vector indices constrained by this BC
+   */
+  BoundaryCondition(const FiniteElementState& prescribed_field, const std::optional<int> component,
                     const mfem::ParFiniteElementSpace& space, const mfem::Array<int>& true_dofs);
 
   /**
@@ -110,8 +139,17 @@ class BoundaryCondition {
    */
   const mfem::Array<int>& getLocalDofList() const { return local_dofs_; }
 
-  /// @brief Returns stored coefficient.
-  const GeneralCoefficient& coefficient() const { return coef_; }
+  /// @brief Returns the source of prescribed values.
+  const BoundaryValue& value() const { return value_; }
+
+  /**
+   * @brief Returns the stored coefficient
+   * @pre This boundary condition must be coefficient-valued
+   */
+  const GeneralCoefficient& coefficient() const;
+
+  /// @brief Returns the prescribed-field reference, or nullptr for a coefficient-valued condition.
+  const PrescribedFieldReference* prescribedField() const { return get_if<PrescribedFieldReference>(&value_); }
 
   /// @brief Returns constrained vector component, if any.
   const std::optional<int>& component() const { return component_; }
@@ -122,6 +160,14 @@ class BoundaryCondition {
    * @param[inout] state The field to project over
    */
   void setDofs(mfem::Vector& state, const double time = 0.0) const;
+
+  /**
+   * @brief Copy prescribed field values onto the constrained DOFs
+   * @param[inout] state The field to modify
+   * @param[in] prescribed_field Resolved field supplying prescribed values
+   * @pre This boundary condition must be field-valued
+   */
+  void setDofs(mfem::Vector& state, const FiniteElementState& prescribed_field) const;
 
   /**
    * @brief Modify the system of equations \f$Ax=b\f$ by replacing equations that correspond to
@@ -168,9 +214,9 @@ class BoundaryCondition {
   void setTrueDofList(const mfem::Array<int>& true_dofs);
 
   /**
-   * @brief A coefficient containing either a mfem::Coefficient or an mfem::VectorCoefficient
+   * @brief The coefficient or finite-element field supplying prescribed values
    */
-  GeneralCoefficient coef_;
+  BoundaryValue value_;
   /**
    * @brief The vector component affected by this BC (empty implies all components)
    */
